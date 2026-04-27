@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the init command without any pre-configured scope."
         },
         {
+          "description": "Enables the launch_test_suite command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-launch-test-suite",
+          "markdownDescription": "Enables the launch_test_suite command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the launch_test_suite command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-launch-test-suite",
+          "markdownDescription": "Denies the launch_test_suite command without any pre-configured scope."
+        },
+        {
           "description": "Enables the show_interstitial command without any pre-configured scope.",
           "type": "string",
           "const": "allow-show-interstitial",
@@ -331,10 +343,34 @@
           "markdownDescription": "Denies the show_rewarded command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands to the webview.\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-show-rewarded`\n- `allow-show-interstitial`",
+          "description": "Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands, the LevelPlay Test Suite launcher, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state / interstitial-state.\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-show-rewarded`\n- `allow-show-interstitial`\n- `allow-launch-test-suite`\n- `allow-registerListener`\n- `allow-removeListener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands to the webview.\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-show-rewarded`\n- `allow-show-interstitial`"
+          "markdownDescription": "Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands, the LevelPlay Test Suite launcher, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state / interstitial-state.\n#### This default permission set includes:\n\n- `allow-init`\n- `allow-show-rewarded`\n- `allow-show-interstitial`\n- `allow-launch-test-suite`\n- `allow-registerListener`\n- `allow-removeListener`"
+        },
+        {
+          "description": "Allows the webview to register event listeners for plugin-emitted events (rewarded-state, interstitial-state).",
+          "type": "string",
+          "const": "allow-registerListener",
+          "markdownDescription": "Allows the webview to register event listeners for plugin-emitted events (rewarded-state, interstitial-state)."
+        },
+        {
+          "description": "Denies the webview from registering event listeners.",
+          "type": "string",
+          "const": "deny-registerListener",
+          "markdownDescription": "Denies the webview from registering event listeners."
+        },
+        {
+          "description": "Allows the webview to remove previously-registered event listeners.",
+          "type": "string",
+          "const": "allow-removeListener",
+          "markdownDescription": "Allows the webview to remove previously-registered event listeners."
+        },
+        {
+          "description": "Denies the webview from removing event listeners.",
+          "type": "string",
+          "const": "deny-removeListener",
+          "markdownDescription": "Denies the webview from removing event listeners."
         }
       ]
     }
