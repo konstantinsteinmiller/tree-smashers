@@ -4,6 +4,7 @@ export { LocalStorageStrategy } from './LocalStorageStrategy'
 export { CrazyGamesStrategy } from './CrazyGamesStrategy'
 export type { CrazySdkDataGetter } from './CrazyGamesStrategy'
 export { GlitchStrategy } from './GlitchStrategy'
+export { GameDistributionStrategy } from './GameDistributionStrategy'
 export type {
   GlitchStrategyConfig,
   ConflictChoice,

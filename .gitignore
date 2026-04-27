@@ -25,6 +25,10 @@ coverage
 *.env
 .env
 .env.*
+# Non-secret build state checked in so multiple dev machines stay in
+# sync (Android versionCode counter — Play Console rejects re-uploads
+# of the same code, so the latest value MUST be committed).
+!.env.tauri.remote
 
 # Editor directories and files
 .vscode/settings.json

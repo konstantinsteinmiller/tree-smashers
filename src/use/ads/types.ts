@@ -42,6 +42,24 @@ export interface AdProvider {
   readonly isRewardedReady: Ref<boolean>
   /** Reactive: true when an interstitial is loaded and showable now. */
   readonly isInterstitialReady: Ref<boolean>
+  /**
+   * Reactive: true when the active SDK has detected that the player's
+   * browser is blocking ad requests (uBlock, AdGuard, Brave Shields,
+   * Pi-hole, etc.). Used by the in-game `AdsBlockedModal` to explain why
+   * the watch-ad button just refused to grant a reward.
+   *
+   * Each provider populates this differently:
+   *   - CrazyGames    → `sdk.ad.hasAdblock()` at init + error.code on show.
+   *   - GameDistribution → SDK_ERROR events with `Blocked:` messages.
+   *   - LevelPlay (native) → always false; mobile SDKs aren't subject to
+   *                          browser-extension blockers.
+   *   - Noop           → always false.
+   *
+   * IMPORTANT: granting rewards when ads were blocked is against most
+   * platforms' TOS (and the publisher won't pay you). The modal is the
+   * honest path — explain, don't reward.
+   */
+  readonly isAdsBlocked: Ref<boolean>
   init: () => Promise<void>
   showRewardedAd: () => Promise<boolean>
   showMidgameAd: () => Promise<void>

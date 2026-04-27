@@ -47,6 +47,12 @@ const iosInterstitialAdUnit = import.meta.env.VITE_APP_LEVELPLAY_IOS_INTERSTITIA
 const isReady = ref(false)
 const isRewardedReady = ref(false)
 const isInterstitialReady = ref(false)
+// LevelPlay is mobile-native (Android / iOS via Tauri plugin) — there's
+// no browser extension layer to intercept ad requests, so the
+// `AdProvider.isAdsBlocked` flag stays false. The shared
+// `AdsBlockedModal` therefore never fires on native builds; "no fill"
+// shows up via the per-format readiness ref instead.
+const isAdsBlocked = ref(false)
 let initStarted = false
 
 // On-screen debug surface — exported as `levelPlayDebug` and rendered
@@ -104,6 +110,7 @@ export const createLevelPlayProvider = (): AdProvider => ({
   isReady,
   isRewardedReady,
   isInterstitialReady,
+  isAdsBlocked,
   init: async () => {
     if (initStarted) return
     initStarted = true

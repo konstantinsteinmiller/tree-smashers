@@ -10,7 +10,12 @@
 // gates: when CG is active we assume both formats are showable. The SDK
 // will surface "no fill" via the adError callback at request time.
 import { computed } from 'vue'
-import { isSdkActive, showRewardedAd, showMidgameAd } from '@/use/useCrazyGames'
+import {
+  isCrazyAdsBlocked,
+  isSdkActive,
+  showMidgameAd,
+  showRewardedAd
+} from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease } from '@/use/useMatch'
 import type { AdProvider } from './types'
 
@@ -21,6 +26,7 @@ export const createCrazyGamesProvider = (): AdProvider => {
     isReady,
     isRewardedReady: isReady,
     isInterstitialReady: isReady,
+    isAdsBlocked: isCrazyAdsBlocked,
     init: async () => {
     },
     showRewardedAd,

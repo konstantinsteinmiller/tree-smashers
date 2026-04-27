@@ -12,6 +12,7 @@ import FLogoProgress from '@/components/atoms/FLogoProgress.vue'
 import FPerfMeter from '@/components/atoms/FPerfMeter.vue'
 import LevelPlayDebugOverlay from '@/components/atoms/LevelPlayDebugOverlay.vue'
 import SaveStatusBanner from '@/components/atoms/SaveStatusBanner.vue'
+import AdsBlockedModal from '@/components/atoms/AdsBlockedModal.vue'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
 import { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isNative, orientation } from '@/use/useUser'
 import { glitchLicenseStatus } from '@/use/useGlitchLicense'
@@ -146,6 +147,7 @@ const plattformText = isWaveDash
     FPerfMeter(:offset-y="52")
     LevelPlayDebugOverlay(v-if="isNative && isDebug")
     SaveStatusBanner
+    AdsBlockedModal
     RouterView
 
   div.relative.w-full.h-full(v-else-if="isGlitchDenied")

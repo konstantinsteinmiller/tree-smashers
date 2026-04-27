@@ -38,7 +38,17 @@ android {
         applicationId = "com.chaos.arena"
         minSdk = 24
         targetSdk = 36
-        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
+        // versionCode source of truth (in priority order):
+        //   1. ANDROID_VERSION_CODE env var — set by CI to a monotonically
+        //      increasing integer (e.g. ${{ github.run_number }} on GHA).
+        //      Play Console rejects uploads whose code does not exceed the
+        //      previous one, so CI is the only safe place to authoritatively
+        //      bump it.
+        //   2. tauri.properties (`tauri.android.versionCode`) — populated by
+        //      `tauri android build` when present, used for local builds.
+        //   3. literal "1" — first-ever build fallback.
+        versionCode = (System.getenv("ANDROID_VERSION_CODE")
+            ?: tauriProperties.getProperty("tauri.android.versionCode", "1")).toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
     signingConfigs {
@@ -92,13 +102,22 @@ android {
 afterEvaluate {
     tasks.matching { it.name.startsWith("bundle") && it.name.endsWith("Release") }.configureEach {
         doLast {
+            // Mirror the produced AAB to a package-named copy
+            // (`com.chaos.arena.aab`) for upload tooling, while leaving
+            // the original `app-universal-release.aab` in place. The
+            // earlier version of this block did `renameTo`, which broke
+            // AGP's `produceUniversalReleaseBundleIdeListingFile` task
+            // (added in AGP 8.x): it runs AFTER our `doLast` and expects
+            // the original filename to still exist. `copyTo` with
+            // `overwrite = true` keeps both files around — Gradle is
+            // happy, upload scripts that look for the package-named
+            // file are happy.
             val bundleRoot = layout.buildDirectory.dir("outputs/bundle").get().asFile
             bundleRoot.listFiles()?.filter { it.isDirectory }?.forEach { variantDir ->
                 variantDir.listFiles { _, name -> name.endsWith(".aab") }?.forEach { aab ->
                     val target = File(aab.parentFile, "${android.defaultConfig.applicationId}.aab")
                     if (aab.name != target.name) {
-                        if (target.exists()) target.delete()
-                        aab.renameTo(target)
+                        aab.copyTo(target, overwrite = true)
                     }
                 }
             }

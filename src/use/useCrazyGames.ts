@@ -60,6 +60,19 @@ export const isSdkMuted = ref<boolean | null>(null)
 export const crazyPlayerName = ref<string | null>(null)
 
 /**
+ * Reactive: true once we've detected that the player's browser is blocking
+ * CrazyGames ad requests (uBlock, AdGuard, Brave Shields, etc.). Two
+ * sources feed this:
+ *   1. `sdk.ad.hasAdblock()` — explicit method exposed by CG SDK v3,
+ *      probed at init time. Fast path.
+ *   2. `adError({ code: 'adblocker' })` — reported by the SDK at show
+ *      time. Catches blockers that activated AFTER init (e.g. user
+ *      enabled the extension while the game was running).
+ * Wired into `AdProvider.isAdsBlocked` via `CrazyGamesProvider`.
+ */
+export const isCrazyAdsBlocked = ref(false)
+
+/**
  * Two-letter language code derived from `sdk.user.systemInfo.locale`
  * (e.g. `en` from `en-US`). `null` when the SDK didn't expose one.
  */
@@ -119,6 +132,7 @@ export const initCrazyGames = async (): Promise<void> => {
 
   await captureSdkProfile()
   registerMuteListener()
+  probeAdBlocker()
 }
 
 /**
@@ -338,6 +352,41 @@ export const setCrazyMuted = (muted: boolean): void => {
 // new code.
 export const addCrazyMuteListener = onCrazyMuteChange
 
+// ─── Ad-blocker detection ─────────────────────────────────────────────────
+
+/**
+ * Probe the SDK's `ad.hasAdblock()` method at init time. The method may
+ * be sync (boolean) or async (Promise<boolean>) depending on SDK build —
+ * normalize to async. Failure to call (method missing on older shims) is
+ * NOT treated as "blocked" — we'd rather under-report than misfire the
+ * modal at users without blockers.
+ */
+const probeAdBlocker = (): void => {
+  const fn = sdk?.ad?.hasAdblock
+  if (typeof fn !== 'function') return
+  try {
+    const result = fn.call(sdk.ad)
+    Promise.resolve(result).then(
+      (v) => {
+        if (typeof v === 'boolean') isCrazyAdsBlocked.value = v
+      },
+      (e) => console.warn('[crazygames] hasAdblock rejected', e)
+    )
+  } catch (e) {
+    console.warn('[crazygames] hasAdblock threw', e)
+  }
+}
+
+/** Map an SDK adError to whether it indicates an ad-blocker. CG v3 uses
+ *  `error.code === 'adblocker'`; older shims may stuff the same info into
+ *  `message`. We check both to be robust across SDK builds. */
+const isAdBlockerError = (err: any): boolean => {
+  const code = String(err?.code ?? '').toLowerCase()
+  if (code === 'adblocker' || code === 'adblock') return true
+  const msg = String(err?.message ?? err ?? '').toLowerCase()
+  return msg.includes('adblock') || msg.includes('blocked by client')
+}
+
 // ─── Rewarded video ads ───────────────────────────────────────────────────
 
 /**
@@ -372,12 +421,14 @@ export const showRewardedAd = (): Promise<boolean> => {
         },
         adError: (err: unknown) => {
           console.warn('[crazygames] rewarded ad error', err)
+          if (isAdBlockerError(err)) isCrazyAdsBlocked.value = true
           resumeAfterAd()
           resolve(false)
         }
       })
     } catch (e) {
       console.warn('[crazygames] requestAd threw', e)
+      if (isAdBlockerError(e)) isCrazyAdsBlocked.value = true
       resumeAfterAd()
       resolve(false)
     }
@@ -416,12 +467,14 @@ export const showMidgameAd = (): Promise<void> => {
         },
         adError: (err: unknown) => {
           console.warn('[crazygames] midgame ad error', err)
+          if (isAdBlockerError(err)) isCrazyAdsBlocked.value = true
           resumeAfterAd()
           resolve()
         }
       })
     } catch (e) {
       console.warn('[crazygames] requestAd midgame threw', e)
+      if (isAdBlockerError(e)) isCrazyAdsBlocked.value = true
       resumeAfterAd()
       resolve()
     }

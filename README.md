@@ -44,16 +44,20 @@ WIP: [playable demo](https://konstantinsteinmiller.github.io/chaos-arena/)
         - [ ] create Demo build
   - [x] build for windows
       - [x] exit button for native games
-    - [ ] build for android
-    - [ ] build for ios
+    - [x] build for android
+    - [x] build for ios
     - [ ] Poki.io launch
-    - [ ] Crazy Web games SDK
+    - [ ] Game Distribution launch
+    - [ ] Explore Amazon Games launch
+    - [ ] Itch launch
+    - [ ] wavedash launch
+    - [ ] Glitch launch
+    - [x] Crazy Web games SDK
         - [x] pass QA of Crazy Web Games Basic Launch
         - [x] add obfuscation for native and crazy build
         - [x] sitelock for crazywebgames domains
         - [x] make game launchable
         - [x] ads
-        - [ ] performance tracking
 
 - [x] complete Translations
 - [x] full-version protection for web

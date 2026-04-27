@@ -12,6 +12,9 @@ export const createNoopProvider = (): AdProvider => {
     isReady: off,
     isRewardedReady: off,
     isInterstitialReady: off,
+    // No backend → no blocker concept. Always false so the modal never
+    // appears in non-ad builds.
+    isAdsBlocked: off,
     init: async () => {
     },
     showRewardedAd: async () => false,

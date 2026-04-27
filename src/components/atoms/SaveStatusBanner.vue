@@ -82,13 +82,13 @@ watch(hasBonusToShow, (on) => {
       div.flex-1
         div.font-bold Cloud sync paused
         div.text-xs(class="text-amber-100") Playing offline. Your progress is saved here.
-      button.text-xs.font-bold.rounded.bg-white.text-amber-800.disabled:opacity-50(
-        class="px-2 py-1"
+      button.text-xs.font-bold.rounded.bg-white.text-amber-800(
+        class="px-2 py-1 disabled:opacity-50"
         :disabled="retryInFlight"
         @click="onRetry"
       ) {{ retryInFlight ? '…' : 'Retry' }}
-      button.text-lg.font-bold(
-        class="text-amber-100/80 px-1"
+      button.text-lg.font-bold.px-1(
+        class="text-amber-100/80"
         @click="onDismissOffline"
         aria-label="dismiss"
       ) ×

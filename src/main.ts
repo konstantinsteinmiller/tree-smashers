@@ -13,7 +13,7 @@ import { GAME_USER_LANGUAGE } from '@/utils/constants.ts'
 import { LANGUAGES } from '@/utils/enums'
 import { initCrazyGames, createCrazyGamesSaveStrategy, crazyLocale } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
-import useUser, { isCrazyWeb, isWaveDash, isGlitch } from '@/use/useUser'
+import useUser, { isCrazyWeb, isWaveDash, isGlitch, isGameDistribution } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { LocalStorageStrategy } from '@/utils/save/LocalStorageStrategy'
@@ -42,7 +42,9 @@ const bootstrap = async () => {
     ? ((await import('@/utils/glitchPlugin')).createGlitchSaveStrategy() ?? new LocalStorageStrategy())
     : isCrazyWeb
       ? createCrazyGamesSaveStrategy()
-      : new LocalStorageStrategy()
+      : isGameDistribution
+        ? ((await import('@/utils/gameDistributionPlugin')).createGameDistributionSaveStrategy() ?? new LocalStorageStrategy())
+        : new LocalStorageStrategy()
   const saveManager = new SaveManager(strategy)
   // Install the reactive bridge BEFORE init() so the boot-time sanity
   // guard's hydrate-state transitions are observable from useSaveStatus
@@ -55,6 +57,18 @@ const bootstrap = async () => {
   if (isGlitch) {
     const { glitchPlugin } = await import('@/utils/glitchPlugin')
     glitchPlugin()
+  }
+
+  // GameDistribution: kick off SDK script injection in parallel with the
+  // rest of the boot. We don't await — the AdProvider's `init()` (called
+  // post-mount via `initAds()`) will await the same promise, so by the
+  // time the player can see "watch ad" buttons the SDK is ready. Saves
+  // ~1-2 seconds of perceived loading vs awaiting here on the critical
+  // path.
+  if (isGameDistribution) {
+    void import('@/utils/gameDistributionPlugin').then(({ gameDistributionPlugin }) => {
+      gameDistributionPlugin()
+    })
   }
 
   // If CrazyGames reported a supported player locale, persist it as the
