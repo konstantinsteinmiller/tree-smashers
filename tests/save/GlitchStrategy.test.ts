@@ -293,6 +293,11 @@ describe('GlitchStrategy (isGlitch guard)', () => {
   })
 
   it('degrades to a pure local mirror when list fetch fails', async () => {
+    // Pre-seed local with non-fresh data so SaveManager's boot-time
+    // sanity guard doesn't engage (it only retries when local looks like
+    // fresh defaults — see SaveManager.shouldRunSanityGuard). The point
+    // of THIS test is the local-mirror fallback, not the retry behaviour.
+    window.localStorage.setItem('spinner_campaign_stage', '5')
     const fetchImpl = vi.fn(async () => new Response('boom', { status: 500 }))
     const strategy = makeStrategy({ fetchImpl })
     const manager = new SaveManager(strategy)
@@ -302,6 +307,10 @@ describe('GlitchStrategy (isGlitch guard)', () => {
     // Local writes still succeed even without a working backend.
     window.localStorage.setItem('coins', '3')
     expect(window.localStorage.getItem('coins')).toBe('3')
+
+    // Strategy schedules a background retry on failure — clean it up so
+    // the test runner doesn't hang on the pending timer.
+    strategy.dispose()
   })
 
   it('sorts payload keys alphabetically so the SHA-256 checksum is deterministic', async () => {
@@ -360,8 +369,11 @@ describe('GlitchStrategy (isGlitch guard)', () => {
     expect(a.payload).toBe(b.payload)
 
     // And the sorted order is actually alphabetical (not just stable).
+    // `__save_meta__` sorts first because `_` < `c` lexicographically.
+    // The strategy now writes a meta blob alongside player data so future
+    // hydrates can compare progress (see SaveMergePolicy.ts).
     const decoded = JSON.parse(atob(a.payload))
-    expect(Object.keys(decoded)).toEqual(['coins', 'language', 'team'])
+    expect(Object.keys(decoded)).toEqual(['__save_meta__', 'coins', 'language', 'team'])
   })
 
   it('excludes internal bookkeeping keys from the payload', async () => {
@@ -380,8 +392,12 @@ describe('GlitchStrategy (isGlitch guard)', () => {
     window.localStorage.setItem('coins', '1')
     await manager.flush()
 
+    // `__save_meta__` is written by every flush so the next hydrate can
+    // compare progress for merge decisions — it's part of the payload by
+    // design now, alongside the player's own keys. The internal
+    // bookkeeping keys (`__save_internal__*`) are still excluded.
     const decoded = JSON.parse(atob(captured.payload))
-    expect(Object.keys(decoded)).toEqual(['coins'])
+    expect(Object.keys(decoded)).toEqual(['__save_meta__', 'coins'])
   })
 
   it('flips to guest-blocked mode on 403 and suppresses further uploads', async () => {

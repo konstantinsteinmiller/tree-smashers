@@ -18,6 +18,7 @@ import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { LocalStorageStrategy } from '@/utils/save/LocalStorageStrategy'
 import type { SaveStrategy } from '@/utils/save/types'
+import { installSaveStatus } from '@/use/useSaveStatus'
 
 const bootstrap = async () => {
   // Platform SDK init — must happen before App loads.
@@ -43,6 +44,11 @@ const bootstrap = async () => {
       ? createCrazyGamesSaveStrategy()
       : new LocalStorageStrategy()
   const saveManager = new SaveManager(strategy)
+  // Install the reactive bridge BEFORE init() so the boot-time sanity
+  // guard's hydrate-state transitions are observable from useSaveStatus
+  // even though no Vue components have mounted yet — the strategy may
+  // emit notices via background retries during init.
+  installSaveStatus(saveManager)
   await saveManager.init()
   ;(window as any).__saveManager = saveManager
 

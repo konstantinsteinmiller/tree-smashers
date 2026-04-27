@@ -1,5 +1,21 @@
 import { isInternalKey } from './types'
-import type { LocalStorageAccessor, SaveStrategy } from './types'
+import type {
+  HydrateNotice,
+  HydrateNoticeListener,
+  HydrateState,
+  LocalStorageAccessor,
+  SaveStrategy
+} from './types'
+import {
+  applyBonusCoins,
+  computeMeta,
+  decideMerge,
+  META_KEY,
+  parseMeta,
+  SAVE_KEYS,
+  serializeMeta,
+  type SaveMeta
+} from './SaveMergePolicy'
 
 // ─── Glitch save strategy ──────────────────────────────────────────────────
 //
@@ -55,6 +71,11 @@ const SIZE_WARN_BYTES = Math.floor(MAX_PAYLOAD_BYTES * 0.8)
 const VERSION_KEY = '__save_internal__glitch_version'
 const SAVE_ID_KEY = '__save_internal__glitch_save_id'
 
+// Background-retry ladder (mirrors CrazyGamesStrategy). Kicks in when
+// hydrate fails so a brief outage at boot heals on its own.
+const HYDRATE_RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 120_000, 300_000]
+const HYDRATE_RETRY_LOOP_MS = 900_000  // every 15 min once exhausted
+
 export type ConflictChoice = 'keep_server' | 'use_client'
 export type ConflictResolver = (info: {
   conflictId: string
@@ -101,10 +122,23 @@ export class GlitchStrategy implements SaveStrategy {
   private dirty = false
   private inflight: Promise<void> | null = null
   private guestBlocked = false
+  private _hydrateState: HydrateState = 'pending'
+  private retryAttempt = 0
+  private retryTimer: ReturnType<typeof setTimeout> | null = null
+  private noticeListeners = new Set<HydrateNoticeListener>()
   private readonly fetchImpl: typeof fetch
 
   constructor(private readonly config: GlitchStrategyConfig) {
     this.fetchImpl = config.fetchImpl ?? fetch.bind(globalThis)
+  }
+
+  get hydrateState(): HydrateState {
+    return this._hydrateState
+  }
+
+  onHydrateNotice(listener: HydrateNoticeListener): () => void {
+    this.noticeListeners.add(listener)
+    return () => this.noticeListeners.delete(listener)
   }
 
   /**
@@ -117,21 +151,58 @@ export class GlitchStrategy implements SaveStrategy {
 
   async hydrate(local: LocalStorageAccessor): Promise<void> {
     this.local = local
+    await this.runHydrateAttempt(local)
+    if (this._hydrateState === 'failed-retrying') this.scheduleRetry()
+  }
 
+  async retryHydrate(local: LocalStorageAccessor): Promise<HydrateState> {
+    this.local = local
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer)
+      this.retryTimer = null
+    }
+    await this.runHydrateAttempt(local)
+    if (this._hydrateState === 'failed-retrying') this.scheduleRetry()
+    return this._hydrateState
+  }
+
+  /** Single attempt at hydrating. Sets hydrateState. Never throws. */
+  private async runHydrateAttempt(local: LocalStorageAccessor): Promise<void> {
     // Prime base_version / save_id from a prior session while we wait
     // for the network list call to confirm.
     this.baseVersion = Number(local.get(VERSION_KEY) ?? 0) || 0
     this.saveId = local.get(SAVE_ID_KEY) || null
 
-    const listed = await this.listSaves().catch(e => {
+    let listed: SaveSlot[] | null
+    try {
+      listed = await this.listSaves()
+    } catch (e) {
       console.warn('[save/glitch] list saves failed', e)
-      return null
-    })
-    if (this.guestBlocked || !listed) return
+      this.setState('failed-retrying', `list failed: ${describeError(e)}`)
+      return
+    }
+    if (this.guestBlocked) {
+      // Guest mode is a deterministic answer ("you can't sync"), not a
+      // transient failure — treat as success-empty so flushes are no-ops
+      // (uploadOnce checks guestBlocked again) and the player keeps
+      // playing locally without retry spam.
+      this.setState('success-empty', 'guest mode — local-only')
+      return
+    }
+    if (!listed) {
+      this.setState('failed-retrying', 'list returned non-array')
+      return
+    }
 
     const slot = listed.find(s => s.slot_index === SLOT_INDEX)
     if (!slot) {
-      // Fresh install — nothing to hydrate, base_version stays 0.
+      // Fresh install — server confirmed no save exists for this slot.
+      // base_version stays 0; flushes can proceed and will create the
+      // first server save.
+      this.setState('success-empty', 'no remote save')
+      this.retryAttempt = 0
+      // Push any local writes that arrived before hydrate completed.
+      if (this.dirty) this.scheduleFlush()
       return
     }
 
@@ -140,17 +211,111 @@ export class GlitchStrategy implements SaveStrategy {
     local.set(SAVE_ID_KEY, slot.id)
     local.set(VERSION_KEY, String(slot.version))
 
-    // Decode payload → apply to localStorage.
+    let remotePayload: Record<string, unknown> | null = null
     try {
-      const payload = decodePayload(slot.payload)
-      if (payload) {
-        for (const [key, value] of Object.entries(payload)) {
-          if (typeof value === 'string') local.set(key, value)
-        }
-      }
+      remotePayload = decodePayload(slot.payload)
     } catch (e) {
       console.warn('[save/glitch] decode payload failed', e)
+      // Decode failure: corrupt remote save. Treat as failed so we don't
+      // overwrite the (possibly-recoverable) local state with garbage.
+      this.setState('failed-retrying', 'remote payload decode failed')
+      return
     }
+
+    // Run the merge policy: build remote/local meta, decide winner,
+    // apply. See SaveMergePolicy.ts for the full contract.
+    const remoteRead = (k: string): string | null => {
+      const v = remotePayload?.[k]
+      return typeof v === 'string' ? v : null
+    }
+    const remoteMeta: SaveMeta | null =
+      parseMeta(remoteRead(META_KEY))
+      ?? (remotePayload && Object.keys(remotePayload).length > 0
+        ? computeMeta({ get: remoteRead })
+        : null)
+
+    const localMeta: SaveMeta | null =
+      parseMeta(local.get(META_KEY))
+      ?? (anyPayloadKeyPresent(local) ? computeMeta({ get: (k) => local.get(k) }) : null)
+
+    const resolution = decideMerge(localMeta, remoteMeta)
+    let bonusCoinsAwarded = 0
+
+    switch (resolution.kind) {
+      case 'remote-only':
+      case 'remote-wins': {
+        if (remotePayload) {
+          for (const [key, value] of Object.entries(remotePayload)) {
+            if (key === META_KEY) continue
+            if (typeof value === 'string') local.set(key, value)
+          }
+          if (remoteMeta) local.set(META_KEY, serializeMeta(remoteMeta))
+        }
+        if (resolution.kind === 'remote-wins' && resolution.bonusCoins > 0) {
+          const newCoins = applyBonusCoins({ get: (k) => local.get(k) }, resolution.bonusCoins)
+          local.set(SAVE_KEYS.COINS, newCoins)
+          bonusCoinsAwarded = resolution.bonusCoins
+          // Refresh meta to reflect the augmented coin total.
+          local.set(META_KEY, serializeMeta(computeMeta({ get: (k) => local.get(k) })))
+          // Flush back so remote picks up the bonus.
+          this.dirty = true
+        }
+        break
+      }
+      case 'local-wins':
+        // Local already authoritative — flush it back so remote catches up.
+        this.dirty = true
+        break
+      case 'tie-keep-local':
+      case 'local-only':
+        // Nothing to apply.
+        break
+    }
+
+    this.retryAttempt = 0
+    const hasData = resolution.kind !== 'local-only' || anyPayloadKeyPresent(local)
+    this.setState(
+      hasData ? 'success-with-data' : 'success-empty',
+      resolutionReason(resolution),
+      bonusCoinsAwarded
+    )
+
+    if (this.dirty) this.scheduleFlush()
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer) return
+    const delay = this.retryAttempt < HYDRATE_RETRY_DELAYS_MS.length
+      ? HYDRATE_RETRY_DELAYS_MS[this.retryAttempt]!
+      : HYDRATE_RETRY_LOOP_MS
+    this.retryAttempt++
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null
+      const local = this.local
+      if (!local) return
+      void this.retryHydrate(local)
+    }, delay)
+  }
+
+  private setState(state: HydrateState, reason: string, bonusCoinsAwarded = 0): void {
+    this._hydrateState = state
+    const notice: HydrateNotice = { state, reason }
+    if (bonusCoinsAwarded > 0) notice.bonusCoinsAwarded = bonusCoinsAwarded
+    for (const fn of this.noticeListeners) {
+      try {
+        fn(notice)
+      } catch (e) {
+        console.warn('[save/glitch] notice listener threw', e)
+      }
+    }
+  }
+
+  /** Hard guard: NEVER push to remote unless we successfully observed
+   *  what the remote contained. Otherwise we risk overwriting cloud data
+   *  with fresh-defaults. */
+  private canFlush(): boolean {
+    if (this.guestBlocked) return false
+    return this._hydrateState === 'success-with-data' || this._hydrateState === 'success-empty'
   }
 
   onLocalSet(_key: string, _value: string): void {
@@ -170,7 +335,7 @@ export class GlitchStrategy implements SaveStrategy {
       clearTimeout(this.flushTimer)
       this.flushTimer = null
     }
-    if (this.guestBlocked) return
+    if (!this.canFlush()) return
     await this.doFlush()
   }
 
@@ -179,6 +344,11 @@ export class GlitchStrategy implements SaveStrategy {
       clearTimeout(this.flushTimer)
       this.flushTimer = null
     }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer)
+      this.retryTimer = null
+    }
+    this.noticeListeners.clear()
   }
 
   // ─── public hooks ───────────────────────────────────────────────────────
@@ -196,6 +366,7 @@ export class GlitchStrategy implements SaveStrategy {
 
   private scheduleFlush(): void {
     if (this.flushTimer !== null) return
+    if (!this.canFlush()) return
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null
       void this.doFlush()
@@ -203,7 +374,14 @@ export class GlitchStrategy implements SaveStrategy {
   }
 
   private async doFlush(): Promise<void> {
+    if (!this.canFlush()) return
     if (!this.dirty) return
+    // Refresh meta from current local state before serialising the
+    // payload so the remote always carries a self-describing snapshot
+    // for the next hydrate to merge against.
+    if (this.local) {
+      this.local.set(META_KEY, serializeMeta(computeMeta({ get: (k) => this.local!.get(k) })))
+    }
     // Serialize concurrent flushes — the Glitch API is versioned, and
     // overlapping uploads would fight over base_version.
     if (this.inflight) {
@@ -481,6 +659,41 @@ const base64ToBytes = (b64: string): Uint8Array => {
   const out = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
   return out
+}
+
+const anyPayloadKeyPresent = (local: LocalStorageAccessor): boolean => {
+  for (const key of local.keys()) {
+    if (key === VERSION_KEY || key === SAVE_ID_KEY) continue
+    if (!isInternalKey(key) && key !== META_KEY) return true
+  }
+  return false
+}
+
+const describeError = (e: unknown): string => {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'string') return e
+  try {
+    return JSON.stringify(e)
+  } catch {
+    return String(e)
+  }
+}
+
+const resolutionReason = (r: { kind: string }): string => {
+  switch (r.kind) {
+    case 'remote-only':
+      return 'restored from cloud'
+    case 'remote-wins':
+      return 'cloud was ahead — restored'
+    case 'local-wins':
+      return 'local ahead of cloud — pushing'
+    case 'tie-keep-local':
+      return 'cloud matches local'
+    case 'local-only':
+      return 'cloud has no save'
+    default:
+      return r.kind
+  }
 }
 
 const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
