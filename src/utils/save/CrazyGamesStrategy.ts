@@ -202,6 +202,32 @@ export class CrazyGamesStrategy implements SaveStrategy {
       return
     }
 
+    // Stronger guard: if the manifest claims payload keys exist but the SDK
+    // returned only META_KEY (per-key getItem yielded `null` for every
+    // STAGE/COINS/SKINS/etc. key), refuse the merge. Without this, a
+    // remote-wins decision based on META_KEY's progressScore would fire
+    // the "+N bonus coins" banner but write NOTHING to local — the
+    // player would see a phantom restore that doesn't actually update
+    // their stage / coins / skins. Treat as failed-retrying so the
+    // background retry ladder gets another shot at fetching real values,
+    // and never grant a bonus we can't back up with real data.
+    //
+    // The CrazyGames SDK on the mobile app exhibits this pattern after
+    // a force-close: `data.getItem(KEYS_MANIFEST)` returns the historic
+    // manifest, but `data.getItem(STAGE_KEY)` etc. return null until the
+    // SDK has resynced with cloud. Honoring those nulls would lie to the
+    // player.
+    if (remoteKeys.length > 0) {
+      let payloadKeysReturned = 0
+      for (const k of remoteSnapshot.keys()) {
+        if (k !== META_KEY && isPayloadKey(k)) payloadKeysReturned++
+      }
+      if (payloadKeysReturned === 0) {
+        this.setState('failed-retrying', 'manifest claims payload keys but SDK returned only META')
+        return
+      }
+    }
+
     // Build remote meta either from the manifest's META_KEY value or by
     // computing it from the remote snapshot (legacy saves predating this
     // module won't have a meta blob).
@@ -230,17 +256,33 @@ export class CrazyGamesStrategy implements SaveStrategy {
         if (remoteMeta) local.set(META_KEY, serializeMeta(remoteMeta))
 
         if (resolution.kind === 'remote-wins' && resolution.bonusCoins > 0) {
-          const newCoins = applyBonusCoins({ get: (k) => local.get(k) }, resolution.bonusCoins)
-          local.set(SAVE_KEYS.COINS, newCoins)
-          bonusCoinsAwarded = resolution.bonusCoins
-          // Mark dirty so the bonus syncs back to remote.
-          this.dirty.set(SAVE_KEYS.COINS, newCoins)
-          this.trackKey(SAVE_KEYS.COINS)
-          // Refresh meta to reflect the augmented coin total.
-          const newMeta = computeMeta({ get: (k) => local.get(k) })
-          local.set(META_KEY, serializeMeta(newMeta))
-          this.dirty.set(META_KEY, serializeMeta(newMeta))
-          this.trackKey(META_KEY)
+          // Anti-farm guard: if this client already received the bonus
+          // for THIS exact remote `savedAt`, don't pay it again. Without
+          // the guard, a player could force-close → reopen → trigger
+          // remote-wins repeatedly, harvesting the bonus on every cycle.
+          // The flag is recorded in `local`'s META blob and survives
+          // force-close via the LocalBackupLayer + the cloud round-trip.
+          const alreadyReceived =
+            !!localMeta?.bonusReceivedFor &&
+            !!remoteMeta?.savedAt &&
+            localMeta.bonusReceivedFor === remoteMeta.savedAt
+          if (!alreadyReceived) {
+            const newCoins = applyBonusCoins({ get: (k) => local.get(k) }, resolution.bonusCoins)
+            local.set(SAVE_KEYS.COINS, newCoins)
+            bonusCoinsAwarded = resolution.bonusCoins
+            // Mark dirty so the bonus syncs back to remote.
+            this.dirty.set(SAVE_KEYS.COINS, newCoins)
+            this.trackKey(SAVE_KEYS.COINS)
+            // Refresh meta to reflect the augmented coin total AND
+            // record that this remote `savedAt` has been bonus-paid.
+            const newMeta = computeMeta({ get: (k) => local.get(k) })
+            if (remoteMeta?.savedAt) {
+              newMeta.bonusReceivedFor = remoteMeta.savedAt
+            }
+            local.set(META_KEY, serializeMeta(newMeta))
+            this.dirty.set(META_KEY, serializeMeta(newMeta))
+            this.trackKey(META_KEY)
+          }
         }
         break
       }

@@ -5,6 +5,8 @@ import useUser from '@/use/useUser'
 import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { TopPartId } from '@/types/spinner'
+import { SKINS_KEY } from '@/keys'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 export const modelImgPath = (id: string) => {
   return prependBaseUrl(`images/models/${id}_256x256.webp`)
@@ -62,7 +64,7 @@ export const getRandomSkinForTop = (topPartId: TopPartId): SpinnerModelId => {
 
 // ─── Skin Persistence (singleton) ───────────────────────────────────────────
 
-const SKINS_KEY = 'spinner_owned_skins'
+// SKINS_KEY imported from `@/keys` at the top of this file (single source of truth shared with SaveMergePolicy).
 const SELECTED_SKINS_KEY = 'spinner_selected_skins'
 const PICKER_OPENED_KEY = 'spinner_skin_picker_opened'
 
@@ -96,6 +98,13 @@ const loadPickerOpened = (): Set<string> => {
 const ownedSkins: Ref<Set<string>> = ref(loadOwnedSkins())
 const selectedSkins: Ref<Record<string, string>> = ref(loadSelectedSkins())
 const pickerOpenedParts: Ref<Set<string>> = ref(loadPickerOpened())
+
+// Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
+watch(saveDataVersion, () => {
+  ownedSkins.value = loadOwnedSkins()
+  selectedSkins.value = loadSelectedSkins()
+  pickerOpenedParts.value = loadPickerOpened()
+})
 
 const saveOwnedSkins = () => {
   localStorage.setItem(SKINS_KEY, JSON.stringify([...ownedSkins.value]))

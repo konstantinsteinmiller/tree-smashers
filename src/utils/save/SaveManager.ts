@@ -6,6 +6,7 @@ import type {
 } from './types'
 import { isInternalKey } from './types'
 import { SAVE_KEYS } from './SaveMergePolicy'
+import type { LocalBackupLayer } from './LocalBackupLayer'
 
 // ─── SaveManager ───────────────────────────────────────────────────────────
 //
@@ -40,6 +41,7 @@ export class SaveManager {
 
   constructor(
     private readonly strategy: SaveStrategy,
+    private readonly backupLayer: LocalBackupLayer | null = null,
     storage: Storage = window.localStorage
   ) {
     this.storage = storage
@@ -92,6 +94,48 @@ export class SaveManager {
     if (this.hydrated) return
     this.mirroring = true
     const local = this.localAccessor()
+
+    // ── Phase 0: restore from IDB backup BEFORE strategy.hydrate() ──────────
+    //
+    // This is the force-close survival path. On the CrazyGames mobile app
+    // (and similar webview wrappers), localStorage gets wiped when the OS
+    // reclaims the webview process. Without this, a player relaunching
+    // offline would see fresh defaults despite IDB still having their save.
+    //
+    // After restore, the strategy's hydrate() runs as before — it now sees
+    // the IDB-seeded local state. If cloud has a higher-progress save,
+    // SaveMergePolicy.decideMerge picks it; if cloud is unreachable, the
+    // IDB-restored state is what the player keeps playing with.
+    //
+    // The restore is best-effort: any failure (no IDB, corrupted blob,
+    // checksum mismatch) leaves localStorage untouched and lets the
+    // strategy try to hydrate from cloud.
+    if (this.backupLayer) {
+      try {
+        const snap = await this.backupLayer.readSnapshot()
+        if (snap) {
+          let restored = 0
+          for (const [k, v] of Object.entries(snap.payload)) {
+            // `isInternalKey` is also enforced when WRITING the snapshot,
+            // so we shouldn't see internal keys here — but the defense
+            // costs nothing.
+            if (!isInternalKey(k)) {
+              this.rawSet(k, v)
+              restored++
+            }
+          }
+          // Boot diagnostic — visible in CG mobile DevTools / desktop
+          // console. Tells you whether IDB persisted across the last
+          // close (essential signal when debugging force-close save loss).
+          console.info(`[save] IDB backup restored ${restored} keys (savedAt=${snap.savedAt})`)
+        } else {
+          console.info('[save] IDB backup empty — first launch or IDB was cleared')
+        }
+      } catch (e) {
+        console.warn('[save] backup-layer restore failed (non-fatal)', e)
+      }
+    }
+
     try {
       await this.strategy.hydrate(local)
     } catch (e) {
@@ -119,16 +163,32 @@ export class SaveManager {
     this.mirroring = false
     this.patchLocalStorage()
     this.hydrated = true
+
+    // ── Phase 4: persist post-hydrate state into IDB ────────────────────────
+    //
+    // Whatever the merged outcome was (IDB-restored + cloud merge applied,
+    // or cloud-only, or local-only), write the current state back to the
+    // backup layer so the next force-close has something to restore from.
+    // Fire-and-forget — backup is a safety net, not a critical-path write.
+    if (this.backupLayer) {
+      void this.backupLayer.writeSnapshot(this.localAccessor()).catch((e) => {
+        console.warn('[save] backup-layer write after hydrate failed', e)
+      })
+    }
   }
 
   /** Flush any pending writes. Best-effort — safe to await on unload. */
   async flush(): Promise<void> {
     await this.strategy.flush?.()
+    // Also flush the IDB backup so a tab close mid-write doesn't leave
+    // the backup behind the strategy.
+    await this.backupLayer?.flush()
   }
 
   /** Release timers / listeners held by the strategy. */
   dispose(): void {
     this.strategy.dispose?.()
+    this.backupLayer?.dispose()
   }
 
   // ─── internals ──────────────────────────────────────────────────────────
@@ -161,6 +221,9 @@ export class SaveManager {
       } catch (e) {
         console.warn(`[save] onLocalSet("${key}") threw`, e)
       }
+      // Schedule a debounced IDB backup. The layer coalesces rapid
+      // setItem calls into a single write so the hot path stays fast.
+      this.backupLayer?.scheduleWrite(this.localAccessor())
     }
 
     this.storage.removeItem = (key: string) => {
@@ -171,6 +234,9 @@ export class SaveManager {
       } catch (e) {
         console.warn(`[save] onLocalRemove("${key}") threw`, e)
       }
+      // Removals also bump the backup — otherwise a "buy a power-up that
+      // resets a flag" sequence would have an outdated IDB snapshot.
+      this.backupLayer?.scheduleWrite(this.localAccessor())
     }
 
     // `clear()` is rarely used by the game but keeping the mirror honest

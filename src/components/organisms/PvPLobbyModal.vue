@@ -122,7 +122,7 @@ const extractPeerCode = (input: string): string | null => {
   const trimmed = input.trim()
   if (trimmed.startsWith(PEER_ID_PREFIX)) return trimmed
   const match = trimmed.match(/[?&]pvp=([^&\s]+)/)
-  if (match) return decodeURIComponent(match[1])
+  if (match && match[1] !== undefined) return decodeURIComponent(match[1])
   return null
 }
 

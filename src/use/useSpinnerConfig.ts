@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type {
   TopPartId,
@@ -8,6 +8,8 @@ import type {
   SpinnerConfig,
   SpinnerStats
 } from '@/types/spinner'
+import { COINS_KEY } from '@/keys'
+import { saveDataVersion } from '@/use/useSaveStatus'
 import { TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
 
 // ─── Part Definitions ────────────────────────────────────────────────────────
@@ -128,7 +130,7 @@ export const computeStats = (
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
 const TEAM_KEY = 'spinner_player_team'
-const COINS_KEY = 'spinner_coins'
+// COINS_KEY imported from `@/keys` at the top of this file (single source of truth shared with SaveMergePolicy).
 const FIRST_WIN_KEY = 'spinner_first_win'
 
 const DEFAULT_TEAM: SpinnerConfig[] = [
@@ -162,6 +164,13 @@ const loadStoredCoins = (): number => {
 const playerTeam: Ref<SpinnerConfig[]> = ref(loadStoredTeam())
 const coins: Ref<number> = ref(loadStoredCoins())
 const hasFirstWin: Ref<boolean> = ref(localStorage.getItem(FIRST_WIN_KEY) === '1')
+
+// Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
+watch(saveDataVersion, () => {
+  playerTeam.value = loadStoredTeam()
+  coins.value = loadStoredCoins()
+  hasFirstWin.value = localStorage.getItem(FIRST_WIN_KEY) === '1'
+})
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 

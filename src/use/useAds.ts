@@ -19,20 +19,16 @@
 // GameDistribution because the SDK script is dynamically injected and we
 // don't want to pay that latency on the boot critical path.
 import { computed, ref } from 'vue'
-import { isCrazyWeb, isGameDistribution, isNative, showMediatorAds } from '@/use/useUser'
+import { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isNative, showMediatorAds } from '@/use/useUser'
 import type { AdProvider } from './ads/types'
-import { createCrazyGamesProvider } from './ads/CrazyGamesProvider'
-import { createGameDistributionProvider } from './ads/GameDistributionProvider'
-import { createLevelPlayProvider } from './ads/LevelPlayProvider'
-import { createNoopProvider } from './ads/NoopProvider'
+import { resolveAdProvider } from '@/platforms/resolveAdProvider'
+import { isRewardedThrottled, recordRewardedGranted } from '@/use/useRewardedThrottle'
 
-const provider: AdProvider = isCrazyWeb
-  ? createCrazyGamesProvider()
-  : isGameDistribution
-    ? createGameDistributionProvider()
-    : (showMediatorAds && isNative)
-      ? createLevelPlayProvider()
-      : createNoopProvider()
+const provider: AdProvider = resolveAdProvider({
+  flags: { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution },
+  showMediatorAds,
+  isNative
+})
 
 export const adProviderName = provider.name
 // `isAdsReady` is the coarse "SDK initialised" gate. Most placements
@@ -40,7 +36,15 @@ export const adProviderName = provider.name
 // flag that flips false when no ad is currently loaded, so the UI
 // disappears instead of offering a button that does nothing on tap.
 export const isAdsReady = computed(() => provider.isReady.value)
-export const isRewardedReady = computed(() => provider.isRewardedReady.value)
+// Throttle ride-along: when the player has already watched
+// `MAX_REWARDED` rewarded videos in the trailing 10-min window, we
+// flip `isRewardedReady` false so every reward placement
+// (RouletteWheel respin, AdRewardButton, 2x speed boost) hides — the
+// same UX as a no-fill SDK state. Anti-abuse for kids audience: caps
+// the watch-only reward farming pattern.
+export const isRewardedReady = computed(() =>
+  provider.isRewardedReady.value && !isRewardedThrottled.value
+)
 export const isInterstitialReady = computed(() => provider.isInterstitialReady.value)
 /** True once the active ad provider has detected a browser-extension
  *  ad-blocker (uBlock, AdGuard, Brave Shields, etc.). Drives the
@@ -67,8 +71,16 @@ export const dismissAdsBlockedModal = (): void => {
 export const initAds = (): Promise<void> => provider.init()
 
 export const showRewardedAd = async (): Promise<boolean> => {
+  // Throttle gate: refuse the SDK call once the player has burned
+  // their 10-min budget. Returning `false` here matches the
+  // contract callers already handle (no grant). The reward UI is
+  // already hidden via `isRewardedReady`, so this branch only fires
+  // if a placement somehow bypassed that check.
+  if (isRewardedThrottled.value) return false
   const granted = await provider.showRewardedAd()
-  if (!granted && provider.isAdsBlocked.value) {
+  if (granted) {
+    recordRewardedGranted()
+  } else if (provider.isAdsBlocked.value) {
     isAdsBlockedModalShown.value = true
   }
   return granted

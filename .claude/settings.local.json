@@ -146,7 +146,21 @@
       "Bash(ar x *)",
       "WebFetch(domain:developers.google.com)",
       "Bash(pnpm build:game-distribution)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(timeout 60 pnpm build:itch)",
+      "Bash(timeout 80 pnpm build:crazy-web)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(timeout 90 pnpm build:crazy-web)",
+      "Bash(timeout 120 pnpm build:crazy-web)",
+      "Bash(timeout 100 pnpm build:crazy-web)",
+      "Bash(xargs -I {} ls -la {})",
+      "Bash(echo \"---typecheck-exit:$?---\")",
+      "Bash(timeout 180 pnpm build:crazy-web)",
+      "Bash(sort -k5 -n -r)",
+      "Bash(timeout 150 pnpm build:crazy-web)",
+      "Bash(sort -k2 -h -r)",
+      "Bash(mkdir -p tests/_debug)",
+      "Bash(cp /tmp/debug.test.ts tests/_debug/debug.test.ts)"
     ]
   },
   "defaultMode": "auto"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
-import type { SpinnerModelId } from '@/types/spinner'
+import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resourceCache } from '@/use/useAssets'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'

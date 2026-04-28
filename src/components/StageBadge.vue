@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
+import { registerChordTap } from '@/use/useVConsole'
 
 const { t } = useI18n()
 
@@ -122,9 +123,34 @@ const stageTheme = computed<StageTheme>(() => {
 </script>
 
 <template lang="pug">
-  div.stage-badge.relative
+  //- Cross-WebView reliable chord detection: bind to pointerdown AND
+  //- touchstart AND click, dedupe by timestamp inside `registerChordTap`
+  //- (60ms window) so a single physical tap counts once. iPhone WKWebView
+  //- has been observed to suppress one event family but not the others;
+  //- listening to all three guarantees the chord fires regardless.
+  //- `touch-action: manipulation` strips iOS's 300ms double-tap-zoom delay.
+  //- `pointer-events-auto` is REQUIRED — the parent HUD container in
+  //- SpinnerArena.vue is `pointer-events-none` so gameplay touches
+  //- pass through to the canvas. Without re-enabling here, none of
+  //- our `@pointerdown` / `@touchstart` / `@click` listeners fire
+  //- (this was the actual reason the chord didn't trigger on iPhone).
+  //- Every other interactive HUD element in this project follows the
+  //- same opt-in pattern (FMuteButton, SurrenderIcon, etc.).
+  div.stage-badge.relative.pointer-events-auto(
+    @pointerdown="registerChordTap"
+    @touchstart="registerChordTap"
+    @click="registerChordTap"
+    class="cursor-pointer"
+    style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+  )
     //- 3D drop-shadow base, tinted to the arena palette
-    div.absolute.inset-0.translate-y-1.rounded-xl.opacity-80(:class="stageTheme.shadowBase")
+    //- `pointer-events-none` so the absolute-positioned base never steals
+    //- the pointerdown from the root — taps anywhere inside the badge
+    //- bubble through to the root listener.
+    div.absolute.inset-0.translate-y-1.rounded-xl.opacity-80(
+      :class="stageTheme.shadowBase"
+      class="pointer-events-none"
+    )
     //- Body
     div.relative.flex.items-center.gap-2.rounded-xl.border-2.shadow-lg.overflow-hidden(
       :class="['bg-gradient-to-b', stageTheme.from, stageTheme.to, stageTheme.border, stageTheme.glow]"

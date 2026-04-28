@@ -11,16 +11,45 @@ import {
 } from '@/i18n'
 import { GAME_USER_LANGUAGE } from '@/utils/constants.ts'
 import { LANGUAGES } from '@/utils/enums'
-import { initCrazyGames, createCrazyGamesSaveStrategy, crazyLocale } from '@/use/useCrazyGames'
+import { initCrazyGames, crazyLocale } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
-import useUser, { isCrazyWeb, isWaveDash, isGlitch, isGameDistribution } from '@/use/useUser'
+import useUser, { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
-import { LocalStorageStrategy } from '@/utils/save/LocalStorageStrategy'
-import type { SaveStrategy } from '@/utils/save/types'
+import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
+import { LocalBackupLayer, IndexedDBStore } from '@/utils/save/LocalBackupLayer'
 import { installSaveStatus } from '@/use/useSaveStatus'
+import { bootstrapVConsoleFromUrl, setVConsoleMounter } from '@/use/useVConsole'
 
 const bootstrap = async () => {
+  // vConsole is mounted on demand via either:
+  //   • the StageBadge chord (N taps in 60s) — see `useVConsole.ts`
+  //   • a URL query/hash flag (`?vconsole=1` or `#vconsole`)
+  //
+  // The actual vConsole LIBRARY (~250KB gzipped) is dynamically
+  // imported HERE in main.ts — main.ts is in the obfuscator's exclude
+  // list, so the bare-specifier dynamic import survives. Rollup
+  // splits vConsole into its own lazy chunk that's only fetched when
+  // a trigger fires. The `useVConsole.ts` state machine doesn't
+  // import the library directly; we install the mounter via
+  // `setVConsoleMounter` so vConsole stays out of the main chunk
+  // and off the hot path.
+  //
+  // Why this matters: chaos-arena's main bundle ballooned by ~250KB
+  // gzipped when vConsole was statically imported. CrazyGames flagged
+  // the regression. Putting the dynamic-import here fixes it without
+  // breaking the trigger paths.
+  setVConsoleMounter(
+    async () => {
+      const { default: VConsole } = await import('vconsole')
+      return new VConsole()
+    },
+    (instance) => {
+      ;(instance as { destroy: () => void }).destroy()
+    }
+  )
+  bootstrapVConsoleFromUrl()
+
   // Platform SDK init — must happen before App loads.
   if (isCrazyWeb) {
     await initCrazyGames()
@@ -38,14 +67,21 @@ const bootstrap = async () => {
   // `localStorage.setItem` / `removeItem` to mirror writes back. Must
   // resolve before `@/App.vue` is imported because many composables read
   // `localStorage` at module-evaluation time.
-  const strategy: SaveStrategy = isGlitch
-    ? ((await import('@/utils/glitchPlugin')).createGlitchSaveStrategy() ?? new LocalStorageStrategy())
-    : isCrazyWeb
-      ? createCrazyGamesSaveStrategy()
-      : isGameDistribution
-        ? ((await import('@/utils/gameDistributionPlugin')).createGameDistributionSaveStrategy() ?? new LocalStorageStrategy())
-        : new LocalStorageStrategy()
-  const saveManager = new SaveManager(strategy)
+  //
+  // The branching now lives in `@/platforms/resolveSaveStrategy` so it's
+  // unit-testable in isolation. Adding a platform = add an arm there,
+  // not edit this file.
+  const strategy = await resolveSaveStrategy({
+    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution
+  })
+
+  // IDB-backed second-tier persistence. Survives force-close on mobile
+  // webviews (CG mobile app in particular) where localStorage gets wiped
+  // but the app's IDB partition stays. The layer is platform-agnostic —
+  // every save strategy gets the same safety net. See
+  // src/utils/save/LocalBackupLayer.ts for the failure-mode rationale.
+  const backupLayer = new LocalBackupLayer(new IndexedDBStore())
+  const saveManager = new SaveManager(strategy, backupLayer)
   // Install the reactive bridge BEFORE init() so the boot-time sanity
   // guard's hydrate-state transitions are observable from useSaveStatus
   // even though no Vue components have mounted yet — the strategy may
@@ -53,6 +89,39 @@ const bootstrap = async () => {
   installSaveStatus(saveManager)
   await saveManager.init()
   ;(window as any).__saveManager = saveManager
+
+  // ─── Background / close flush — critical for mobile webviews ───────────
+  //
+  // On the CrazyGames mobile app (and any other wrapper webview), force-close
+  // kills the JS process before the strategy's 500ms debounce or the IDB
+  // backup's 1000ms debounce can fire. Without this hook, the player's
+  // last few minutes of progress sit in the dirty queue and die with the
+  // process — the cloud / IDB never saw them.
+  //
+  // Two events because each catches a different lifecycle path:
+  //   • `visibilitychange` — fires on background/foreground on every modern
+  //     mobile WebView. Most reliable signal we get.
+  //   • `pagehide` — fires on tab close, navigation away, and on iOS Safari
+  //     when the page is being unloaded for memory pressure.
+  //
+  // Both call SaveManager.flush(), which awaits the strategy's flush AND
+  // the backup layer's flush. The OS doesn't wait for our promise, so this
+  // is best-effort — the strategy's setItem may not finish before the
+  // process is suspended. But it dramatically widens the window where
+  // writes complete vs. relying on the natural debounce.
+  const flushOnHide = (): void => {
+    if (document.visibilityState === 'hidden') {
+      void saveManager.flush().catch((e) => {
+        console.warn('[save] visibilitychange flush failed', e)
+      })
+    }
+  }
+  document.addEventListener('visibilitychange', flushOnHide)
+  window.addEventListener('pagehide', () => {
+    void saveManager.flush().catch((e) => {
+      console.warn('[save] pagehide flush failed', e)
+    })
+  })
 
   if (isGlitch) {
     const { glitchPlugin } = await import('@/utils/glitchPlugin')

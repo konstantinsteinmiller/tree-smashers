@@ -107,7 +107,7 @@ const remotePlayerName: Ref<string> = ref('')
 const extractPvpFromHash = (): string | null => {
   const hash = window.location.hash
   const match = hash.match(/[?&]pvp=([^&]+)/)
-  if (match) {
+  if (match && match[1] !== undefined) {
     const cleanHash = hash.replace(/[?&]pvp=[^&]+/, '').replace(/\?$/, '')
     history.replaceState(null, '', window.location.pathname + cleanHash)
     return decodeURIComponent(match[1])
@@ -152,7 +152,7 @@ const generatePeerId = (): string =>
   PEER_ID_PREFIX + Math.random().toString(36).substring(2, 8).toLowerCase()
 
 const buildInviteLink = (hostId: string): string => {
-  const base = window.location.href.split('?')[0].split('#')[0]
+  const base = window.location.href.split('?')[0]!.split('#')[0]!
   return `${base}#/battle?pvp=${encodeURIComponent(hostId)}`
 }
 
@@ -751,7 +751,7 @@ const usePVP = () => {
     // Fallback: re-check the hash in case it was set after module init
     const hash = window.location.hash
     const match = hash.match(/[?&]pvp=([^&]+)/)
-    if (match) {
+    if (match && match[1] !== undefined) {
       const cleanHash = hash.replace(/[?&]pvp=[^&]+/, '').replace(/\?$/, '')
       history.replaceState(null, '', window.location.pathname + cleanHash)
       return decodeURIComponent(match[1])

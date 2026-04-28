@@ -13,9 +13,11 @@ import FPerfMeter from '@/components/atoms/FPerfMeter.vue'
 import LevelPlayDebugOverlay from '@/components/atoms/LevelPlayDebugOverlay.vue'
 import SaveStatusBanner from '@/components/atoms/SaveStatusBanner.vue'
 import AdsBlockedModal from '@/components/atoms/AdsBlockedModal.vue'
+import VConsoleHideButton from '@/components/atoms/VConsoleHideButton.vue'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
 import { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isNative, orientation } from '@/use/useUser'
 import { glitchLicenseStatus } from '@/use/useGlitchLicense'
+import { resolveCapabilities } from '@/platforms/capabilities'
 
 const { t } = useI18n()
 const { initMusic, pauseMusic, continueMusic } = useMusic()
@@ -102,56 +104,47 @@ onUnmounted(() => {
   portraitQuery.removeEventListener('change', onOrientationChange)
 })
 
+// Capability gates for the per-platform render fork in the template
+// below — single source of truth lives in `@/platforms/capabilities`.
+// `parentOrigin` is the iframe parent's origin (only meaningful for Glitch
+// where the game runs on a CDN iframe-embedded into glitch.fun).
 const hostname = window.location.hostname
-
-const isCrazyGamesUrl = () => hostname.includes('crazygames')
-const isWaveDashUrl = () => hostname.includes('wavedash')
-const isItchUrl = () => hostname.includes('itch') || hostname.includes('itch.io') || hostname.includes('itch.zone')
-const isGlitchUrl = () => {
-  if (hostname.includes('glitch.fun')) return true
-  // Glitch hosts the game bundle on a CDN and embeds it in an iframe whose
-  // parent is glitch.fun, so the iframe's own hostname won't match. Accept
-  // the parent frame's origin as proof of embed.
-  const parent = window.location.ancestorOrigins?.[0] ?? document.referrer
-  return /(^|\/\/)([^/]+\.)?glitch\.fun(\/|$)/.test(parent || '')
+const parentOrigin = window.location.ancestorOrigins?.[0] ?? document.referrer ?? ''
+const platformFlags = {
+  isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution
 }
-const isGameDistUrl = () => hostname.includes('gamedistribution.com')
+const capabilities = computed(() => resolveCapabilities({
+  flags: platformFlags,
+  hostname,
+  parentOrigin,
+  glitchLicenseStatus: glitchLicenseStatus.value
+}))
 
-
-const isNotPlatformBuild = (!isCrazyWeb && !isWaveDash && !isItch && !isGlitch && !isGameDistribution)
-const allowedToShowOnCrazyGames = computed(() => (isCrazyWeb && isCrazyGamesUrl()) || isNotPlatformBuild)
-const allowedToShowOnWaveDash = computed(() => (isWaveDash && isWaveDashUrl()) || isNotPlatformBuild)
-const allowedToShowOnItch = computed(() => (isItch && isItchUrl()) || isNotPlatformBuild)
-const allowedToShowOnGlitch = computed(() =>
-  (isGlitch && isGlitchUrl() && glitchLicenseStatus.value === 'ok') || isNotPlatformBuild
+const isGameShowAllowed = computed(() =>
+  capabilities.value.allowedToShowOnCrazyGames ||
+  capabilities.value.allowedToShowOnWaveDash ||
+  capabilities.value.allowedToShowOnItch ||
+  capabilities.value.allowedToShowOnGlitch ||
+  capabilities.value.allowedToShowOnGameDistribution
 )
-const isGlitchDenied = computed(() => isGlitch && glitchLicenseStatus.value === 'denied')
-const allowedToShowOnGameDistribution = computed(() => (isGameDistribution && isGameDistUrl()) || isNotPlatformBuild)
-
-const isGameShowAllowed = allowedToShowOnCrazyGames.value || allowedToShowOnWaveDash.value ||
-  allowedToShowOnItch.value || allowedToShowOnGlitch.value || allowedToShowOnGameDistribution.value
-
-const showOnlyAvailableText = computed(() => (isCrazyWeb || isWaveDash || isItch || isGlitch || isGameDistribution) && glitchLicenseStatus !== 'pending')
-const plattformText = isWaveDash
-  ? 'wavedash.com' : isCrazyWeb
-    ? 'crazygames.com' : isItch
-      ? 'itch.io' : isGlitch
-        ? 'glitch.fun' : isGameDistribution
-          ? 'gamedistribution.com'
-          : ''
+const isGlitchDenied = computed(() => capabilities.value.isGlitchDenied)
+const showOnlyAvailableText = computed(() => capabilities.value.showOnlyAvailableText)
+const plattformText = computed(() => capabilities.value.plattformText)
 </script>
 
 <template lang="pug">
   div(v-if="isGameShowAllowed" id="app-root" class="h-screen h-dvh w-screen app-container root-protection game-ui-immune")
     FLogoProgress
-    FPerfMeter(:offset-y="52")
+    FPerfMeter(v-if="isDebug" :offset-y="52")
     LevelPlayDebugOverlay(v-if="isNative && isDebug")
     SaveStatusBanner
     AdsBlockedModal
+    VConsoleHideButton
     RouterView
 
   div.relative.w-full.h-full(v-else-if="isGlitchDenied")
     h1.absolute.text-red-500(class="left-1/2 -translate-x-[50%] top-1/2 -translate-y-[50%] text-3xl") Access Denied: Please purchase a license.
+
 
   div.relative.w-full.h-full(v-else-if="showOnlyAvailableText")
     h1.absolute(class="left-1/2 -translate-x-[50%] top-1/2 -translate-y-[50%] text-3xl") {{ t('crazyGamesOnly') }}

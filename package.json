@@ -1,6 +1,6 @@
 {
   "name": "chaos-arena",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "type": "module",
   "main": "./electron/out/main/main.js",
@@ -104,6 +104,7 @@
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
+    "vconsole": "^3.15.1",
     "vite": "^7.3.1",
     "vite-bundle-visualizer": "^1.2.1",
     "vite-plugin-javascript-obfuscator": "^3.1.0",

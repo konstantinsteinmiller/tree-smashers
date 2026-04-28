@@ -154,8 +154,9 @@ export interface SpinnerState {
   // ── thunder boss ──────────────────────────────────────────────────────
   /** Deals 1 damage/sec to nearby blades within lightning bolt radius. */
   isThunder?: boolean
-  /** Timestamp of last thunder damage tick per target blade id. */
-  thunderLastHit?: Map<string, number>
+  /** Timestamp of last thunder damage tick per target blade id.
+   *  Key is the target blade's numeric `id` (matches `SpinnerState.id`). */
+  thunderLastHit?: Map<number, number>
 }
 
 // ─── Arena Powerup ───────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@
 //     gets bonus coins = winner.maxStage × 50 to soften the loss
 
 import { isInternalKey } from './types'
+import { STAGE_KEY, COINS_KEY, UPGRADES_KEY, SKINS_KEY } from '@/keys'
 
 /** Where the meta blob is stored in localStorage / on the remote backend.
  *  NOT prefixed with `__save_internal__` — this key needs to round-trip
@@ -34,15 +35,10 @@ export const SCHEMA_VERSION = 1
 
 // ─── Game-specific keys the score formula needs to read ────────────────────
 //
-// Re-declared here as constants so this module stays pure (no Vue imports
-// — the use/* composables that own these keys depend on Vue). Renames in
-// those composables MUST be mirrored here, otherwise scoring silently
-// degrades to "everyone is a brand-new player".
-
-const STAGE_KEY = 'spinner_campaign_stage'
-const COINS_KEY = 'spinner_coins'
-const UPGRADES_KEY = 'spinner_upgrades'
-const SKINS_KEY = 'spinner_owned_skins'
+// Sourced from `src/keys.ts` (single source of truth shared with the
+// composables that own these keys). Importing keeps this module pure (no
+// Vue imports — `keys.ts` is a flat constants file) AND eliminates the
+// drift risk the previous duplicated declaration had.
 
 /** Special skins (1500-coin / unique-VFX). MUST stay in sync with
  *  SPECIAL_SKINS in src/use/useModels.ts — kept inline so this module
@@ -63,6 +59,20 @@ export interface SaveMeta {
   schemaVersion: number
   /** Highest stage the save represents — used to compute conflict bonus. */
   maxStage: number
+  /**
+   * Cloud `savedAt` for which this client already received the conflict
+   * bonus. Prevents repeat farming: if a player force-closes and reopens
+   * (cloud unchanged, local possibly cleared), the strategy still sees
+   * `remote-wins` would award `+N coins` — but if `bonusReceivedFor`
+   * matches the cloud's `savedAt`, the bonus is suppressed because we
+   * already paid it out. The flag is written into the META blob and
+   * round-trips through cloud + IDB backup, so it survives whichever
+   * partition the OS happens to clear.
+   *
+   * Optional for back-compat with legacy save blobs that predate this
+   * field — `parseMeta` accepts records without it.
+   */
+  bonusReceivedFor?: string
 }
 
 /** Narrow read-only view over a localStorage snapshot. */
@@ -175,7 +185,16 @@ export const parseMeta = (raw: string | null | undefined): SaveMeta | null => {
     typeof m.schemaVersion !== 'number' || !Number.isFinite(m.schemaVersion) ||
     typeof m.maxStage !== 'number' || !Number.isFinite(m.maxStage)
   ) return null
-  return { savedAt: m.savedAt, progressScore: m.progressScore, schemaVersion: m.schemaVersion, maxStage: m.maxStage }
+  const out: SaveMeta = {
+    savedAt: m.savedAt,
+    progressScore: m.progressScore,
+    schemaVersion: m.schemaVersion,
+    maxStage: m.maxStage
+  }
+  if (typeof m.bonusReceivedFor === 'string') {
+    out.bonusReceivedFor = m.bonusReceivedFor
+  }
+  return out
 }
 
 export const serializeMeta = (meta: SaveMeta): string => JSON.stringify(meta)

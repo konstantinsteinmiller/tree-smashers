@@ -344,7 +344,7 @@ describe('GlitchStrategy (isGlitch guard)', () => {
         }
       })
       const strategy = makeStrategy({ fetchImpl })
-      const manager = new SaveManager(strategy, storage)
+      const manager = new SaveManager(strategy, null, storage)
       await manager.init()
       for (const [k, v] of writeOrder) storage.setItem(k, v)
       await manager.flush()

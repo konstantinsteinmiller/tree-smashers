@@ -14,6 +14,17 @@ const hydrateState: Ref<HydrateState> = ref('pending')
 const lastNotice: Ref<HydrateNotice | null> = ref(null)
 const bonusCoinsAwarded: Ref<number> = ref(0)
 const retryInFlight: Ref<boolean> = ref(false)
+/**
+ * Increments every time a hydrate transitions to `success-with-data`.
+ * Composables that hold module-level refs initialised from localStorage
+ * (`currentStageId`, `coins`, `ownedSkins`, …) watch this and re-read
+ * their keys when it bumps. Without this, a successful background retry
+ * after a partial-cloud-failure cold launch writes new values into
+ * localStorage that the already-loaded refs never see — the player
+ * stays at stage 1 / 0 coins despite the strategy having restored
+ * the cloud save.
+ */
+const saveDataVersion: Ref<number> = ref(0)
 let manager: SaveManager | null = null
 
 export const installSaveStatus = (m: SaveManager): void => {
@@ -24,6 +35,9 @@ export const installSaveStatus = (m: SaveManager): void => {
     hydrateState.value = notice.state
     if (notice.bonusCoinsAwarded && notice.bonusCoinsAwarded > 0) {
       bonusCoinsAwarded.value = notice.bonusCoinsAwarded
+    }
+    if (notice.state === 'success-with-data') {
+      saveDataVersion.value++
     }
   })
 }
@@ -60,5 +74,6 @@ export {
   hydrateState,
   lastNotice,
   bonusCoinsAwarded,
-  retryInFlight
+  retryInFlight,
+  saveDataVersion
 }

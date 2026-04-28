@@ -1,6 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { TopPartId, BottomPartId, BossAbility } from '@/types/spinner'
+import { STAGE_KEY, UPGRADES_KEY } from '@/keys'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Stage Enemy Config ─────────────────────────────────────────────────────
 
@@ -706,9 +708,7 @@ export const upgradeCost = (toLevel: number): number => {
 }
 
 // ─── Persistence ────────────────────────────────────────────────────────────
-
-const STAGE_KEY = 'spinner_campaign_stage'
-const UPGRADES_KEY = 'spinner_upgrades'
+// STAGE_KEY / UPGRADES_KEY imported from `@/keys` at the top of this file.
 
 export interface PlayerUpgrades {
   tops: Record<TopPartId, number>
@@ -753,6 +753,18 @@ const loadUpgrades = (): PlayerUpgrades => {
 
 const currentStageId: Ref<number> = ref(loadStage())
 const playerUpgrades: Ref<PlayerUpgrades> = ref(loadUpgrades())
+
+// Re-read from localStorage whenever the SaveManager reports a successful
+// (re)hydrate. Required for the case where the strategy's first hydrate
+// failed (e.g., CG SDK returned partial data on the mobile app post-
+// force-close), the composable initialised with stale defaults, and a
+// background retry later succeeded with the real cloud values. Without
+// this watcher the player would see stage=1 forever despite cloud being
+// restored to localStorage.
+watch(saveDataVersion, () => {
+  currentStageId.value = loadStage()
+  playerUpgrades.value = loadUpgrades()
+})
 
 // ─── Cheat Stage Override ───────────────────────────────────────────────────
 // Cheats (see useCheats.ts) may inject a one-shot custom stage — typically

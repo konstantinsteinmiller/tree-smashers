@@ -3,6 +3,13 @@
 // undefined. The save code under test treats `localStorage` as a Web
 // Storage implementation, so we swap in a minimal in-memory polyfill for
 // the duration of the save tests.
+//
+// Also: jsdom does not implement IndexedDB. `useUserDb.ts` opens
+// `window.indexedDB.open(...)` at module init, which would throw any time
+// a test transitively imports `useUser` (now possible via the platforms
+// resolver chain). A no-op stub keeps the open call silent — tests that
+// actually exercise IndexedDB behavior will fail loudly elsewhere, which
+// is the correct outcome.
 
 import { beforeEach } from 'vitest'
 
@@ -47,3 +54,22 @@ const install = (): void => {
 
 install()
 beforeEach(install)
+
+// IndexedDB no-op stub — useUserDb's module-init `indexedDB.open(...)`
+// expects an EventTarget-like request that supports `addEventListener`.
+// The fake request never resolves; tests don't depend on its data path.
+if (!('indexedDB' in window) || (window as any).indexedDB === undefined) {
+  class FakeIdbRequest extends EventTarget {
+    result: unknown = null
+    error: unknown = null
+    onsuccess: ((this: any, ev: Event) => unknown) | null = null
+    onerror: ((this: any, ev: Event) => unknown) | null = null
+    onupgradeneeded: ((this: any, ev: Event) => unknown) | null = null
+  }
+
+  Object.defineProperty(window, 'indexedDB', {
+    value: { open: () => new FakeIdbRequest() },
+    configurable: true,
+    writable: true
+  })
+}

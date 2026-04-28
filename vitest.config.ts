@@ -4,6 +4,14 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  // Vite's production config (`vite.config.ts`) injects `APP_VERSION` at
+  // build time via `define`. Vitest doesn't run that plugin, so any
+  // module that reads `APP_VERSION` at import time (e.g. `useUser.ts`)
+  // throws ReferenceError under tests. Mirror the define here so test
+  // imports of those modules don't trip on a missing global.
+  define: {
+    APP_VERSION: JSON.stringify('test')
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

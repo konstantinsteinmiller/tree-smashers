@@ -1,12 +1,12 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import useModels from '@/use/useModels'
 import useUser, { isDemo } from '@/use/useUser'
-import useCampaign, { demoCampaignNodes, type MobileNode } from '@/use/useCampaign'
 import useSpinnerCampaign, { STAGES, type ArenaType } from '@/use/useSpinnerCampaign'
 import useLeaderboard from '@/use/useLeaderboard'
 import { arenaType, resetGameStartCount } from '@/use/useSpinnerGame'
 import type { BossAbility } from '@/types/spinner'
 import useSpinnerConfig from '@/use/useSpinnerConfig.ts'
+import { STAGE_KEY } from '@/keys'
 
 const storedCheat = localStorage.getItem('cheat') || 'false'
 const isCheat = ref<boolean>(JSON.parse(storedCheat))
@@ -17,11 +17,9 @@ export const cheatRouletteSignal = ref(0)
 
 const useCheats = () => {
   if (!isCheat.value) return {}
-  const { saveCampaign } = useCampaign()
 
   const { allModels } = useModels()
   const { setSettingValue } = useUser()
-  const { campaignNodes } = useCampaign()
 
   /**
    * ACTIONS
@@ -34,7 +32,7 @@ const useCheats = () => {
     }
     const { currentStageId } = useSpinnerCampaign()
     currentStageId.value = stageId
-    localStorage.setItem('spinner_campaign_stage', stageId.toString())
+    localStorage.setItem(STAGE_KEY, stageId.toString())
     console.warn(`[CHEAT] Spinner stage set to ${stageId} (${STAGES[stageId - 1]?.name}).`)
   }
 
