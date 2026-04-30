@@ -121,7 +121,7 @@ const BASE_STAGES: Stage[] = [
 
   // ── Early Game (6-20) ─────────────────────────────────────────────────────
   s(6, 'stage_6', [
-    e('star', 'speedy', 2, 1, 'blades'),
+    e('piercer', 'speedy', 2, 1, 'teleporter'),
     e('round', 'tanky', 1, 2, 'galaxy')
   ], 140, 45, { arenaType: 'shock' }),
   s(7, 'stage_7', [
@@ -195,8 +195,9 @@ const BASE_STAGES: Stage[] = [
     e('cushioned', 'tanky', 6, 7, 'shield')
   ], 300, 90, { arenaType: 'forest' }),
   s(22, 'stage_22', [
-    e('star', 'speedy', 7, 6, 'reddragon'),
+    e('star', 'speedy', 4, 3, 'reddragon'),
     e('triangle', 'speedy', 6, 6, 'eagle'),
+    e('piercer', 'speedy', 3, 2, 'teleporter'),
     e('round', 'tanky', 6, 7, 'galaxy')
   ], 320, 95, { arenaType: 'shock' }),
   s(23, 'stage_23', [

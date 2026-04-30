@@ -321,6 +321,36 @@ const isBattleActive = computed(() =>
   ['deciding_turn', 'player_turn', 'player_launched', 'npc_turn', 'npc_launched'].includes(phase.value)
 )
 
+// Open-state of the surrender confirmation dialog. Bubbles up from
+// SurrenderIcon so the CrazyGames `gameplayStart`/`gameplayStop` watcher
+// below can pause the SDK signal while the player is reading the prompt.
+const surrenderModalOpen = ref(false)
+
+// CrazyGames considers the player "in gameplay" only while the physics loop
+// is actually advancing the match — i.e. one of the live battle phases AND
+// no blocking modal (reward, roulette reward, skin chest, surrender prompt)
+// is on top. The watcher below mirrors this into `startGameplay`/`stopGameplay`.
+const isGameplayActive = computed(() =>
+  [
+    'meteor_intro',
+    'deciding_turn',
+    'player_turn',
+    'player_launched',
+    'npc_turn',
+    'npc_launched'
+  ].includes(phase.value)
+  && !showReward.value
+  && !showRoulette.value
+  && !showRouletteReward.value
+  && !showSkinChestReward.value
+  && !surrenderModalOpen.value
+)
+
+watch(isGameplayActive, (active) => {
+  if (active) startGameplay()
+  else stopGameplay()
+}, { immediate: true })
+
 // Live stats for the blade HUD — always show all blades (even dead ones)
 // so the cards stay pinned to their corners.
 const bladeStats = computed(() =>
@@ -1006,9 +1036,10 @@ onMounted(() => {
   updateSpeedBoost()
   speedBoostIntervalId = window.setInterval(updateSpeedBoost, 1000)
 
-  // Tell CrazyGames the player is now in an interactive match. Paired with
-  // stopGameplay() in onUnmounted below.
-  startGameplay()
+  // CrazyGames `gameplayStart` / `gameplayStop` are driven reactively by
+  // the `isGameplayActive` watcher above (battle phase + no blocking modal).
+  // `stopGameplay()` in onUnmounted below remains as a defensive cleanup
+  // for the case the player navigates away mid-match.
 })
 
 onUnmounted(() => {
@@ -1096,6 +1127,7 @@ onUnmounted(() => {
           SurrenderIcon(
             v-if="isBattleActive"
             @surrender="onSurrender"
+            @open-change="surrenderModalOpen = $event"
           )
           div.flex.flex-col.items-end.gap-2
             CoinBadge(ref="coinBadgeRef")

@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{
   (e: 'surrender'): void
+  (e: 'open-change', open: boolean): void
 }>()
 
 const { t } = useI18n()
 const showConfirm = ref(false)
+
+watch(showConfirm, (open) => emit('open-change', open))
 
 const onIconClick = () => {
   showConfirm.value = true

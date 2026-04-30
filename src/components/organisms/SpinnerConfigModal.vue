@@ -193,8 +193,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           )
             IconCoin(class="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 text-yellow-300")
             span {{ coins }}g
-          h3.text-yellow-300.font-black.uppercase.italic(
-            class="text-xs sm:text-sm tracking-wider"
+          h3.text-yellow-300.font-black.uppercase.italic.label-section(
+            class="tracking-wider"
           ) {{ t('topBlade') }}
         div.grid.top-grid
           div(
@@ -268,8 +268,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
         //- ── Bottom Parts ───────────────────────────────────────────────────
         div
-          h3.text-yellow-300.font-black.uppercase.italic.mb-1(
-            class="text-xs sm:text-sm tracking-wider"
+          h3.text-yellow-300.font-black.uppercase.italic.mb-1.label-section(
+            class="tracking-wider"
           ) {{ t('bottomPart') }}
           div.grid.grid-cols-3.bottom-grid
             div(
@@ -312,8 +312,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
         //- ── Stats Summary ──────────────────────────────────────────────────
         div.stats-bar(class="border-t border-slate-500/50")
-          h3.text-yellow-300.font-black.uppercase.italic(
-            class="text-xs sm:text-xs tracking-wider"
+          h3.text-yellow-300.font-black.uppercase.italic.label-section(
+            class="tracking-wider"
           ) {{ t('statsLabel') }}
           div.flex.flex-wrap.justify-center.stats-items
             div.flex.items-center
@@ -332,6 +332,16 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               IconSpeed.stat-summary-icon.text-cyan-400
               span.text-cyan-400.font-bold {{ stats.speedMultiplier.toFixed(1) }}x
 
+      //- ── Hint Texts ─────────────────────────────────────────────────────
+      //- Short, precise instructions about how the modal works. Sit at the
+      //- bottom of the layout (below stats / bottom column) so they don't
+      //- compete for vertical space with the cards above.
+      div.hint-block.text-slate-300.text-center(class="border-t border-slate-500/40")
+        p.hint-text.m-0
+          | {{ t('hintSelectCards') }}
+        p.hint-text.m-0(class="mt-1")
+          | {{ t('hintPlusIcon') }}
+
   //- ── Skin Picker Modal ───────────────────────────────────────────────────
   FModal(
     :model-value="skinPickerOpen"
@@ -340,15 +350,15 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     :title="t('selectSkin')"
     :key="'skin-' + skinPickerKey"
   )
-    div(class="px-2 sm:px-4 py-2")
-      div.flex.items-center.justify-between.mb-2
+    div.skin-picker-body(class="px-2 sm:px-4 py-2")
+      div.flex.items-center.justify-between.mb-2.skin-picker-header
         div.flex.items-center.gap-1.rounded.font-bold(
           class="px-2 py-0.5 bg-yellow-600/60 text-yellow-300 text-[10px] sm:text-xs"
         )
           IconCoin(class="w-3.5 h-3.5 text-yellow-300")
           span {{ coins }}g
-      div.grid.gap-2(class="grid-cols-3 sm:grid-cols-4")
-        div(
+      div.grid.gap-2.skin-picker-grid(class="grid-cols-3 sm:grid-cols-4")
+        div.skin-card(
           v-for="modelId in SKINS_PER_TOP[skinPickerTopId]"
           :key="modelId"
           class="flex flex-col items-center rounded-xl p-1.5 border-2 transition-all"
@@ -360,22 +370,22 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                 : 'bg-slate-800 border-slate-600'\
           ]"
         )
-          img(
+          img.skin-card-img(
             :src="modelImgPath(modelId)"
             class="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg"
             :alt="modelId"
           )
-          div.text-white.font-bold(class="mt-0.5 text-[9px] sm:text-xs") {{ t('skins.' + modelId) }}
+          div.text-white.font-bold.skin-card-name(class="mt-0.5 text-[9px] sm:text-xs") {{ t('skins.' + modelId) }}
           //- Action button
           template(v-if="getSelectedSkin(skinPickerTopId, Number(activeBladeIndex)) === modelId")
-            div.text-yellow-400.font-bold(class="mt-0.5 text-[8px] sm:text-[10px]") {{ t('equipped') }}
+            div.text-yellow-400.font-bold.skin-card-action(class="mt-0.5 text-[8px] sm:text-[10px]") {{ t('equipped') }}
           template(v-else-if="isSkinOwned(skinPickerTopId, modelId)")
-            button.rounded-lg.font-bold.transition-all(
+            button.rounded-lg.font-bold.transition-all.skin-card-action(
               class="mt-0.5 text-[8px] sm:text-[10px] px-3 py-0.5 bg-green-600 hover:bg-green-500 text-white cursor-pointer"
               @click="handleSelectSkin(skinPickerTopId, modelId)"
             ) {{ t('selectButton') }}
           template(v-else)
-            button.rounded-lg.font-bold.transition-all(
+            button.rounded-lg.font-bold.transition-all.skin-card-action(
               class="mt-0.5 text-[8px] sm:text-[10px] px-2 py-0.5 flex items-center gap-1"
               :class="coins >= skinCost(modelId)\
                 ? 'bg-yellow-500 hover:bg-yellow-400 text-white cursor-pointer'\
@@ -394,6 +404,28 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   border: 1px solid rgba(255, 255, 255, 0.08)
   line-height: 1
   min-height: 1.1rem
+  // Override the inline Tailwind `gap-0.5 px-[2px] py-[1px]` so the pill
+  // hugs the icon+value tightly. Gives the stat text more visual weight
+  // inside the same footprint without enlarging the card.
+  padding: 1px 3px
+  gap: 1px
+
+// TOP BLADE / BOTTOM PART / STATS — base size matches text-xs sm:text-sm.
+// Per-breakpoint scaling below bumps it ~30-40% for readability while
+// keeping the cards inside the modal viewport.
+.label-section
+  font-size: 0.95rem
+  line-height: 1.1
+
+.hint-block
+  margin-top: 0.5rem
+  padding-top: 0.4rem
+  padding-left: 0.25rem
+  padding-right: 0.25rem
+
+.hint-text
+  font-size: 10px
+  line-height: 1.25
 
 // ─── Base Layout (portrait / desktop) ────────────────────────────────────────
 
@@ -412,7 +444,10 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   min-width: 0
 
 .top-grid
-  grid-template-columns: repeat(3, 1fr)
+  // `minmax(0, 1fr)` (instead of plain `1fr`) lets cards shrink below
+  // their min-content size, so a wide upgrade label can't push a column
+  // past 1/3 of the modal width and trigger horizontal scrolling.
+  grid-template-columns: repeat(3, minmax(0, 1fr))
   gap: 0.5rem
   // Leave room for the floating skin row that overflows above each card
   padding-top: 1.1rem
@@ -431,6 +466,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
 .stat-list
   margin-top: 0.125rem
+  // Breathing room between the last stat pill and the yellow upgrade
+  // button — without this the pills sit flush against the button on
+  // cards that fill the available stat slots (e.g. 3 stats in the 2x2
+  // grid, or any card in flex-column where content fills the height).
+  margin-bottom: 0.3rem
   gap: 2px
   font-size: 11px
 
@@ -515,8 +555,20 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   .config-layout
     max-height: 80vh
 
+  .label-section
+    font-size: 1.15rem
+
+  .hint-text
+    font-size: 11px
+
+  // Keep the 3-column wrap from the base layout (so the 6 top parts
+  // render as a 3x2 grid). The previous repeat(6, 1fr) packed all six
+  // parts into a single row, which on the 42rem-wide modal forced
+  // horizontal scrolling and hid the right-most cards. `minmax(0, 1fr)`
+  // also stops cards with wide upgrade-cost labels from blowing out
+  // their column.
   .top-grid
-    grid-template-columns: repeat(6, 1fr)
+    grid-template-columns: repeat(3, minmax(0, 1fr))
     gap: 0.5rem
     padding-top: 1.25rem
     row-gap: 1.5rem
@@ -584,14 +636,77 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     width: 1rem
     height: 1rem
 
+// ─── Mobile + tablet landscape (limited vertical viewport) ──────────────────
+// Stats text in the in-card pills was previously hard to read on landscape
+// devices. Bump the value text ~30%, switch the stat list to a 2x2 grid so
+// the third pill (HP bonus) doesn't add a full extra row, and trim the pill
+// padding/gap to keep the card footprint stable.
+
+@media (orientation: landscape) and (max-height: 900px)
+  .stat-list
+    display: grid
+    grid-template-columns: repeat(2, 1fr)
+    column-gap: 2px
+    row-gap: 2px
+    margin-top: 0.125rem
+    font-size: 16px
+    justify-items: stretch
+
+  .stat-glass
+    min-height: 0
+    padding: 1px 3px
+    gap: 2px
+
+  .stat-icon
+    width: 0.95rem
+    height: 0.95rem
+
+  // Bottom stats summary row also gets the readability bump.
+  .stats-items
+    font-size: 16px
+    gap: 0.5rem
+
+  .stat-summary-icon
+    width: 1.1rem
+    height: 1.1rem
+
 // ─── Landscape mobile (short viewport) ──────────────────────────────────────
 
 @media (orientation: landscape) and (max-height: 500px)
+  // Drop the 65vh cap and let the modal grow to fit content. With the
+  // FModal chrome shrunk (modal-frame pt: 0.5rem, content/footer margins
+  // collapsed) the whole layout fits inside a ~350-450px landscape
+  // viewport with the explanation texts visible. If a particular device
+  // is shorter, the modal extends a few px past the bottom edge — the
+  // .modal-overlay align-items: flex-start (in FModal) keeps the top
+  // (tabs + cards) anchored.
   .config-layout
     flex-direction: row
-    gap: 0.5rem
-    padding: 0.125rem 0.25rem
-    max-height: 65vh
+    flex-wrap: wrap
+    gap: 0.25rem
+    padding: 0
+    max-height: none
+    overflow: visible
+
+  // Landscape mobile is the tightest viewport — keep the section labels
+  // readable but only modestly larger so the cards still fit without
+  // scrolling. (~30% over the original text-xs.)
+  .label-section
+    font-size: 0.7rem
+    line-height: 1
+
+  // Force hints to wrap to their own full-width row beneath the part
+  // columns (otherwise flex-direction: row would render hints as a third
+  // column and squeeze the cards). Bumped ~30% over the previous 8px so
+  // the explanations stay legible on landscape phones.
+  .hint-block
+    flex-basis: 100%
+    margin-top: 0.2rem
+    padding-top: 0.2rem
+
+  .hint-text
+    font-size: 11px
+    line-height: 1.2
 
   .top-col
     flex: 3
@@ -604,31 +719,57 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     flex-direction: column
     gap: 0.25rem
 
+  // Trim the wasted vertical space above the cards. row-gap needs to be
+  // at least 1rem so the floating + skin button on the second row doesn't
+  // crash into the upgrade button of the row above (the bubble extends
+  // ~9px above each card top).
   .top-grid
-    grid-template-columns: repeat(3, 1fr)
+    grid-template-columns: repeat(3, minmax(0, 1fr))
     gap: 0.25rem
-    padding-top: 0.85rem
+    padding-top: 0.55rem
     row-gap: 1rem
 
   .bottom-grid
     gap: 0.25rem
 
+  // Bottom cards stay on a single column for their stats — the 2x2 grid
+  // from the (max-height: 900px) block makes wider values like "3.57x"
+  // overflow into the weight cell on the narrow landscape bottom-col.
+  .bottom-grid .stat-list
+    display: flex
+    flex-direction: column
+    align-items: center
+    row-gap: 1px
+
   .part-card-body
-    padding: 0.125rem 0.125rem 0
+    padding: 0.05rem 0.125rem 0
 
+  // Bring the floating skin row closer to the card top; previously the
+  // -0.7rem offset combined with .top-part-card padding-top: 0.3rem left
+  // a visible empty band above the part name (e.g. above "Round Guard").
   .top-part-card
-    padding-top: 0.3rem
-
-  .stat-list
-    font-size: 8px
-    gap: 2px
-
-  .stat-icon
-    width: 0.5rem
-    height: 0.5rem
+    padding-top: 0.05rem
 
   .skin-row
-    top: -0.7rem
+    top: -0.55rem
+
+  // Override the (max-height: 900px) defaults — we want the pills as
+  // tight as possible on mobile landscape. Padding shrunk to 0px 2px,
+  // gap kept at 1px, and the value text bumped slightly to 12px so the
+  // upgraded multipliers (e.g. "5.10x") stay legible at a glance.
+  .stat-list
+    font-size: 12px
+    column-gap: 1px
+    row-gap: 1px
+
+  .stat-glass
+    padding: 0 2px
+    gap: 1px
+    min-height: 0
+
+  .stat-icon
+    width: 0.7rem
+    height: 0.7rem
 
   .skin-row-full
     display: flex
@@ -662,27 +803,173 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     font-size: 7px
     padding: 1px 2px
 
+  // Bump the upgrade cost text so it stays readable alongside the now-
+  // larger stat pills above it.
   .upgrade-btn
-    font-size: 7px
-    padding: 1px 0
+    font-size: 10px
+    padding: 0 0
 
   .upgrade-coin-icon
-    width: 0.5rem
-    height: 0.5rem
+    width: 0.7rem
+    height: 0.7rem
 
   .stats-bar
-    padding-top: 0.2rem
-    margin-top: 0.125rem
+    padding-top: 0.15rem
+    margin-top: 0.1rem
     gap: 0.25rem
 
   .stats-items
-    gap: 0.375rem
-    font-size: 8px
+    gap: 0.3rem
+    font-size: 12px
 
   .stat-summary-icon
-    width: 0.625rem
-    height: 0.625rem
+    width: 0.85rem
+    height: 0.85rem
     margin-right: 1px
+
+  // ─── Skin picker (sibling FModal) ────────────────────────────────────────
+  // Same constraint as the config layout: must fit on a ~350-450px tall
+  // landscape viewport without scrolling. Shrink the wrapper padding,
+  // image thumbnails, gap, and per-card padding so 3 rows fit.
+  .skin-picker-body
+    padding-top: 0.1rem
+    padding-bottom: 0.1rem
+
+  .skin-picker-header
+    margin-bottom: 0.25rem
+
+  .skin-picker-grid
+    gap: 0.3rem
+
+  .skin-card
+    padding: 0.15rem
+
+  .skin-card-img
+    width: 2.4rem
+    height: 2.4rem
+
+  .skin-card-name
+    margin-top: 0.1rem
+    font-size: 9px
+    line-height: 1.1
+
+  .skin-card-action
+    margin-top: 0.1rem
+    font-size: 9px
+    padding-top: 0
+    padding-bottom: 0
+    line-height: 1.2
+
+// ─── Roomier landscape (taller phones / mini-tablets, ~371-500px) ───────────
+// Reference viewport: 896×414 (iPhone 11/XR-class). At ~414px tall there is
+// enough vertical headroom to give the cards, pill paddings, fonts, and
+// gaps a modest bump (~25-30%) over the tightest mobile-landscape rules
+// above, without breaking the no-scroll fit on smaller (e.g. 320×360)
+// devices that still match `(max-height: 370px)`.
+
+@media (orientation: landscape) and (min-height: 371px) and (max-height: 500px)
+  .config-layout
+    gap: 0.45rem
+
+  .label-section
+    font-size: 0.85rem
+    line-height: 1.1
+
+  .top-grid
+    gap: 0.4rem
+    padding-top: 0.75rem
+    row-gap: 1.25rem
+
+  .bottom-grid
+    gap: 0.4rem
+
+  .top-part-card
+    padding-top: 0.15rem
+
+  .part-card-body
+    padding: 0.15rem 0.15rem 0
+
+  .skin-row
+    top: -0.7rem
+
+  .skin-row-thumb
+    width: 1rem
+    height: 1rem
+
+  .skin-plus-btn
+    width: 1.05rem
+    height: 1.05rem
+    font-size: 0.85rem
+
+  .stat-list
+    font-size: 14px
+    column-gap: 2px
+    row-gap: 2px
+
+  .stat-glass
+    padding: 1px 3px
+    gap: 2px
+
+  .stat-icon
+    width: 0.85rem
+    height: 0.85rem
+
+  .upgrade-btn
+    font-size: 12px
+    padding: 1px 0
+
+  .upgrade-coin-icon
+    width: 0.8rem
+    height: 0.8rem
+
+  .level-badge
+    font-size: 9px
+    padding: 1px 3px
+
+  .stats-bar
+    padding-top: 0.3rem
+    margin-top: 0.2rem
+    gap: 0.4rem
+
+  .stats-items
+    gap: 0.45rem
+    font-size: 14px
+
+  .stat-summary-icon
+    width: 1rem
+    height: 1rem
+
+  .hint-block
+    margin-top: 0.4rem
+    padding-top: 0.35rem
+
+  .hint-text
+    font-size: 13px
+    line-height: 1.25
+
+  // Skin picker — give thumbnails a touch more room so they don't look
+  // postage-stamp-sized on a 414px-tall viewport.
+  .skin-picker-body
+    padding-top: 0.25rem
+    padding-bottom: 0.25rem
+
+  .skin-picker-grid
+    gap: 0.45rem
+
+  .skin-card
+    padding: 0.3rem
+
+  .skin-card-img
+    width: 3rem
+    height: 3rem
+
+  .skin-card-name
+    margin-top: 0.15rem
+    font-size: 11px
+
+  .skin-card-action
+    margin-top: 0.15rem
+    font-size: 11px
 </style>
 
 <i18n>
@@ -695,6 +982,8 @@ en:
   purchaseMoreSkins: "Purchase more skins"
   equipped: "EQUIPPED"
   selectButton: "SELECT"
+  hintSelectCards: "Tap a card to select your spinner blade configuration. Tap the upgrade button to upgrade it."
+  hintPlusIcon: "The + icon at the top of each top-blade card opens that part's skin shop (e.g. Tank Piercer skin shop) where you can acquire new skins."
   parts:
     star: "Star Blade"
     triangle: "Spiky"
@@ -714,6 +1003,8 @@ de:
   purchaseMoreSkins: "Weitere Skins kaufen"
   equipped: "AUSGERÜSTET"
   selectButton: "WÄHLEN"
+  hintSelectCards: "Tippe eine Karte an, um deine Spinner-Klingen-Konfiguration zu wählen. Tippe auf den Upgrade-Knopf, um sie zu verbessern."
+  hintPlusIcon: "Das + oben auf jeder oberen Klinge öffnet den Skin-Shop dieses Teils (z. B. Panzerbrecher-Shop), wo du neue Skins kaufen kannst."
   parts:
     star: "Sternklinge"
     triangle: "Stachel"
@@ -733,6 +1024,8 @@ fr:
   purchaseMoreSkins: "Acheter plus de skins"
   equipped: "ÉQUIPÉ"
   selectButton: "CHOISIR"
+  hintSelectCards: "Touche une carte pour choisir la configuration de ta toupie. Touche le bouton d'amélioration pour l'améliorer."
+  hintPlusIcon: "Le + en haut de chaque carte de partie haute ouvre la boutique de skins correspondante (ex. Perce-blindage), où tu peux acquérir de nouveaux skins."
   parts:
     star: "Lame étoile"
     triangle: "Épineux"
@@ -752,6 +1045,8 @@ es:
   purchaseMoreSkins: "Comprar más skins"
   equipped: "EQUIPADO"
   selectButton: "ELEGIR"
+  hintSelectCards: "Toca una tarjeta para elegir la configuración de tu peonza. Toca el botón de mejora para mejorarla."
+  hintPlusIcon: "El + en la parte superior de cada tarjeta abre la tienda de skins de esa parte superior (p. ej. Perforador) donde puedes adquirir nuevas skins."
   parts:
     star: "Cuchilla estelar"
     triangle: "Espinoso"
@@ -771,6 +1066,8 @@ jp:
   purchaseMoreSkins: "スキンを追加購入"
   equipped: "装備中"
   selectButton: "選択"
+  hintSelectCards: "カードをタップしてブレード構成を選び、アップグレードボタンで強化しよう。"
+  hintPlusIcon: "アッパー カード上部の「+」をタップすると、そのパーツのスキンショップ（例：アーマーブレイク用）が開き、新スキンを入手できます。"
   parts:
     star: "スターブレード"
     triangle: "スパイキー"
@@ -790,6 +1087,8 @@ kr:
   purchaseMoreSkins: "스킨 추가 구매"
   equipped: "장착됨"
   selectButton: "선택"
+  hintSelectCards: "카드를 탭하여 블레이드 구성을 선택하고, 업그레이드 버튼으로 강화하세요."
+  hintPlusIcon: "상단 파츠 카드 위쪽의 '+' 아이콘을 누르면 해당 파츠의 스킨 상점(예: 관통자 상점)이 열려 새 스킨을 구매할 수 있습니다."
   parts:
     star: "스타 블레이드"
     triangle: "가시"
@@ -809,6 +1108,8 @@ zh:
   purchaseMoreSkins: "购买更多皮肤"
   equipped: "已装备"
   selectButton: "选择"
+  hintSelectCards: "点击卡片选择你的陀螺配置，点击升级按钮进行升级。"
+  hintPlusIcon: "上部卡片顶部的「+」图标会打开对应部件的皮肤商店（例如穿甲者皮肤商店），可在此购买新皮肤。"
   parts:
     star: "星刃"
     triangle: "尖刺"
@@ -828,6 +1129,8 @@ ru:
   purchaseMoreSkins: "Купить ещё скины"
   equipped: "ЭКИПИРОВАНО"
   selectButton: "ВЫБРАТЬ"
+  hintSelectCards: "Нажми на карточку, чтобы выбрать конфигурацию волчка. Нажми кнопку улучшения, чтобы прокачать её."
+  hintPlusIcon: "Значок «+» сверху каждой карточки верхней части открывает магазин скинов этой детали (например, для Бронебоя), где можно купить новые скины."
   parts:
     star: "Звёздный клинок"
     triangle: "Шипастый"

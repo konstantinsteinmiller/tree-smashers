@@ -63,29 +63,35 @@ const handleTabChange = (val: string | number) => {
         div(class="model-container relative w-full max-w-2xl")
 
           //- Header Area (Tabs or Ribbon)
+          //- Tabs case uses `bottom: 100%` so the tab bottoms always sit
+          //- exactly above the modal frame top — they never overlay the
+          //- modal content. The ribbon case keeps its decorative overlap.
           div(
-            class="modal-header absolute -top-10 left-0 translate-y-2 right-0 z-10"
+            v-if="tabs && tabs.length > 0"
+            class="modal-header modal-header-tabs absolute bottom-full left-0 right-0 z-10 pb-0"
+            :class="{ 'scale-80 origin-bottom': isMobileLandscape }"
+            @click="close"
+          )
+            FTabs(
+              :model-value="activeTab"
+              @update:model-value="handleTabChange"
+              @click.stop
+              :options="tabs"
+              class="mx-auto w-max !px-0"
+            )
+
+          div(
+            v-else-if="title"
+            class="modal-header modal-header-title absolute -top-10 left-0 translate-y-2 right-0 z-10"
             :class="{ 'scale-80': isMobileLandscape }"
             @click="close"
           )
-            //- CASE 1: Tabs provided
-            template(v-if="tabs && tabs.length > 0")
-              FTabs(
-                :model-value="activeTab"
-                @update:model-value="handleTabChange"
-                @click.stop
-                :options="tabs"
-                class="mx-auto w-max !px-0"
-              )
-
-            //- CASE 2: Single Title Ribbon
-            template(v-else-if="title")
-              div(class="flex justify-center scale-70 sm:scale-100")
-                div(class="ribbon-header relative" @click.stop)
-                  div(class="absolute inset-0 translate-y-1 rounded-lg bg-[#1a2b4b]")
-                  div(class="relative flex items-center justify-center bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-4 border-[#0f1a30] px-10 py-2 rounded-xl")
-                    span(class="brawl-text text-2xl md:text-3xl text-white uppercase tracking-wider whitespace-nowrap")
-                      | {{ title }}
+            div(class="flex justify-center scale-70 sm:scale-100")
+              div(class="ribbon-header relative" @click.stop)
+                div(class="absolute inset-0 translate-y-1 rounded-lg bg-[#1a2b4b]")
+                div(class="relative flex items-center justify-center bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-4 border-[#0f1a30] px-10 py-2 rounded-xl")
+                  span(class="brawl-text text-2xl md:text-3xl text-white uppercase tracking-wider whitespace-nowrap")
+                    | {{ title }}
 
           //- The Main Frame
           div(class="relative")
@@ -112,11 +118,11 @@ const handleTabChange = (val: string | number) => {
                         path(stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M6 18L18 6M6 6l12 12")
 
               //- Content Slot
-              div.mt-1(class="text-white text-center")
+              div.mt-1.modal-content-slot(class="text-white text-center")
                 slot
 
               //- Footer Area for Actions
-              div(class="mt-2 flex justify-center gap-4 mb-2")
+              div.modal-footer-slot(class="mt-2 flex justify-center gap-4 mb-2")
                 slot(name="footer")
 </template>
 
@@ -140,18 +146,42 @@ const handleTabChange = (val: string | number) => {
 
 // ─── Landscape mobile: tighter chrome ────────────────────────────────────────
 @media (orientation: landscape) and (max-height: 500px)
+  // Anchor near the top so the modal can extend a bit past the bottom
+  // edge of the viewport without losing its header (tabs / title) at the
+  // top. The X close button is positioned with negative top, so it stays
+  // visible regardless.
   .modal-overlay
-    padding: 0.375rem
+    padding: 0.25rem
+    align-items: flex-start
+  // Reserve enough room above the modal frame for the tab heads (which
+  // sit at `bottom: 100%` of the container, scaled to 80%). Without this
+  // margin the tabs get clipped at the very top of the viewport.
   .model-container
     max-width: 42rem
-  .modal-header
+    margin-top: 1.5rem
+  .modal-header-title
     transform: translateY(0.25rem)
     top: -1.75rem
+  // Strip the modal chrome to the minimum so the content gets as much
+  // vertical real-estate as possible. Top padding only accommodates the
+  // (negatively-positioned) X button — bumped down so labels don't sit
+  // directly under the rounded corner.
   .modal-frame
-    padding-top: 1.25rem
+    padding-top: 0.5rem
     padding-bottom: 0
     padding-left: 0.375rem
     padding-right: 0.375rem
     border-width: 3px
     border-radius: 1rem
+  // The wrapper divs around <slot/> have default Tailwind margins; in
+  // landscape every pixel matters so we collapse them.
+  .modal-content-slot
+    margin-top: 0
+  .modal-footer-slot
+    margin-top: 0
+    margin-bottom: 0
+    gap: 0.25rem
+  // Hide the empty footer wrapper entirely so it doesn't reserve a row.
+  .modal-footer-slot:empty
+    display: none
 </style>
