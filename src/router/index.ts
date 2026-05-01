@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
-import useUser, { isWeb } from '@/use/useUser'
+import { isWeb } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 
 const routes: RouteRecordRaw[] = [
@@ -25,7 +25,10 @@ const router = createRouter({
 const remoteURL = import.meta.env.VITE_APP_REMOTE_URL
 // --- THE ROUTER HOOK ---
 router.beforeEach((to, from) => {
-  const { userUnlocked, setSettingValue } = useUser()
+  // The previous version destructured `userUnlocked` + `setSettingValue`
+  // here but neither was used — the real unlock check runs against
+  // `localStorage.getItem('full_unlocked')` further down. Removed
+  // alongside the useUserDb cleanup.
 
   const url = window.location.href
   const storedUnlock: string = (localStorage.getItem('full_unlocked') as string)

@@ -161,7 +161,24 @@
       "Bash(sort -k2 -h -r)",
       "Bash(mkdir -p tests/_debug)",
       "Bash(cp /tmp/debug.test.ts tests/_debug/debug.test.ts)",
-      "Bash(pnpm build-only *)"
+      "Bash(pnpm build-only *)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(pnpm build:crazy-web)",
+      "Bash(VITE_ENABLE_OBFUSCATION=false pnpm build:crazy-web)",
+      "Bash(pnpm test:e2e)",
+      "Bash(sort -hr -k5)",
+      "Bash(cat src/use/ads/index.ts)",
+      "Bash(ls src/use/ads/)",
+      "Bash(pnpm ls *)",
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('bin:', p.get\\('bin'\\)\\); print\\('exports:', list\\(p.get\\('exports', {}\\).keys\\(\\)\\) if isinstance\\(p.get\\('exports'\\), dict\\) else p.get\\('exports'\\)\\)\")",
+      "Bash(node_modules/.bin/analyze --help)",
+      "Bash(node_modules/.bin/analyze -m json -f bundle-stats -o false -c vite.config.ts)",
+      "Bash(VITE_APP_CRAZY_WEB=true VITE_APP_CRAZY_GAMES_FULL_RELEASE=true VITE_NODE_ENV=production VITE_ENABLE_OBFUSCATION=true node_modules/.bin/analyze -m json -f bundle-stats-cg -o false)",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\('top-level keys:', list\\(data.keys\\(\\)\\) if isinstance\\(data, dict\\) else 'array len='+str\\(len\\(data\\)\\)\\)\")",
+      "Bash(python)",
+      "Bash(PYTHONIOENCODING=utf-8 python)",
+      "PowerShell(pnpm build:crazy-web *)",
+      "Bash(pnpm typecheck *)"
     ]
   },
   "defaultMode": "auto"

@@ -1,10 +1,10 @@
 import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
-import useUserDb from '@/use/useUserDb'
 import { type Difficulties, DIFFICULTY } from '@/utils/enums'
 import { GAME_USER_LANGUAGE } from '@/utils/constants'
 import { mobileCheck } from '@/utils/function'
-import useModels from '@/use/useModels.ts'
+import { isDbInitialized, isSplashScreenVisible } from '@/use/useMatch'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 export const windowWidth = ref(window.innerWidth)
 export const windowHeight = ref(window.innerHeight)
@@ -30,113 +30,131 @@ export const isWeb = import.meta.env.VITE_APP_NATIVE !== 'true'
 export const isDemo = import.meta.env.VITE_APP_DEMO === 'true'
 export const version: string = APP_VERSION
 
-export const userDifficulty: Ref<Difficulties> = ref(DIFFICULTY.MEDIUM)
-const userSoundVolume: Ref<number> = ref(0.7)
-const userMusicVolume: Ref<number> = ref(0.6)
-const userLanguage: Ref<string> = ref(/*navigator?.language?.split('-')[0] || */'en')
+// ─── Persisted settings (localStorage-backed) ──────────────────────────────
+//
+// Replaces the old `useUserDb` IndexedDB layer. CG QA flagged the
+// `user_db` / `user_os` store as "data saved locally" — and it was
+// holding a pile of CardQuest relics (userHand, userCollection,
+// userCampaign, userQuestCards, etc.) that chaos-arena never reads.
+//
+// chaos-arena only persists FOUR user settings:
+//   • difficulty / sound volume / music volume / locale
+//
+// They live in localStorage under the keys below. On a CrazyGames build
+// these go through the patched `SaveManager.setItem` and are mirrored
+// to `sdk.data` automatically — no separate persistence layer needed.
+// Hydrate at boot is a synchronous read; the strategy populates
+// localStorage from sdk.data BEFORE the App graph imports.
 
-const userTutorialsDoneMap: Ref<any> = ref('{}')
-const tutorialPhase: Ref<string> = ref('')
-const allowTutorial: Ref<boolean> = ref(true)
-const isOptionsModalOpen: Ref<boolean> = ref(false)
-const userHand: Ref<any> = ref('[]')
-const userCollection: Ref</*StoredCollectionCard[] | */string> = ref('[]')
-const userCampaign: Ref<any> = ref('[]')
-const userSkipRulesModal: Ref<boolean> = ref(false)
-const userUnlocked: Ref<boolean> = ref(false)
-const userQuestCampaign: Ref<boolean> = ref(false)
-const userQuestCards: Ref<boolean> = ref(false)
+const SOUND_KEY = 'spinner_user_sound_volume'
+const MUSIC_KEY = 'spinner_user_music_volume'
+const LANGUAGE_KEY = 'spinner_user_language'
+const DIFFICULTY_KEY = 'spinner_user_difficulty'
 
-/* just for after the indexDB has loaded */
-watch(
-  userTutorialsDoneMap,
-  (newValue: any) => {
-    if (newValue) {
-      allowTutorial.value = !Object.keys(userTutorialsDoneMap.value)?.some(key => key !== 'none')
-    }
-  },
-  { deep: true, once: true }
-)
+const readNumber = (key: string, fallback: number): number => {
+  const raw = localStorage.getItem(key)
+  if (raw === null) return fallback
+  const n = parseFloat(raw)
+  return Number.isFinite(n) ? n : fallback
+}
+const readString = <T extends string>(key: string, fallback: T): T => {
+  const raw = localStorage.getItem(key)
+  return (raw ?? fallback) as T
+}
 
-const { storeUser } = useUserDb({
-  userDifficulty,
-  userSoundVolume,
-  userMusicVolume,
-  userLanguage,
-  userTutorialsDoneMap,
-  userHand,
-  userCollection,
-  userCampaign,
-  userSkipRulesModal,
-  userUnlocked,
-  userQuestCampaign,
-  userQuestCards
+export const userDifficulty: Ref<Difficulties> = ref(readString(DIFFICULTY_KEY, DIFFICULTY.MEDIUM as Difficulties))
+const userSoundVolume: Ref<number> = ref(readNumber(SOUND_KEY, 0.7))
+const userMusicVolume: Ref<number> = ref(readNumber(MUSIC_KEY, 0.6))
+const userLanguage: Ref<string> = ref(readString(LANGUAGE_KEY, 'en'))
+
+// Re-read on hydrate-success bump. Module init reads these synchronously
+// from localStorage, but on cloud-only builds (CrazyGames) the blob is
+// in-memory only — `useUser.ts` is one of the few composables imported at
+// the top of `main.ts`, so its module evaluation runs BEFORE
+// `await saveManager.init()` populates the blob from `sdk.data`. Without
+// this watcher the user's saved difficulty / volume / language would
+// silently revert to defaults on every refresh.
+//
+// Settings-stranding fix: after refreshing refs from localStorage, write
+// the current ref value back for any setting still null in localStorage.
+// Triggers the patched setItem path → strategy.onLocalSet → sdk.data, so
+// even a player who never opens OptionsModal ends up with their settings
+// round-tripping through the cloud. Idempotent for returning players
+// because hydrate has already populated localStorage from sdk.data.
+//
+// LANGUAGE is intentionally NOT seeded here: main.ts handles it
+// separately so the CrazyGames portal locale (`cgLocale`) can seed
+// first-time players. If we wrote the default 'en' here, main.ts's
+// "is there a stored choice?" probe would always see a value and
+// never apply the portal locale to a fresh player.
+watch(saveDataVersion, () => {
+  userDifficulty.value = readString(DIFFICULTY_KEY, userDifficulty.value)
+  userSoundVolume.value = readNumber(SOUND_KEY, userSoundVolume.value)
+  userMusicVolume.value = readNumber(MUSIC_KEY, userMusicVolume.value)
+  userLanguage.value = readString(LANGUAGE_KEY, userLanguage.value)
+
+  if (localStorage.getItem(DIFFICULTY_KEY) === null) {
+    localStorage.setItem(DIFFICULTY_KEY, userDifficulty.value)
+  }
+  if (localStorage.getItem(SOUND_KEY) === null) {
+    localStorage.setItem(SOUND_KEY, String(userSoundVolume.value))
+  }
+  if (localStorage.getItem(MUSIC_KEY) === null) {
+    localStorage.setItem(MUSIC_KEY, String(userMusicVolume.value))
+  }
 })
 
+// Boot signal that several composables (`main.ts`, `useCrazyMuteSync`,
+// the i18n loader) wait on. Previously the IDB hydrate flipped this; with
+// localStorage we have synchronous reads, so flip immediately. The
+// SaveManager has already populated localStorage from the cloud strategy
+// before this module evaluates (see `main.ts`: `await saveManager.init()`
+// runs BEFORE `import('@/App.vue')`).
+isDbInitialized.value = true
+isSplashScreenVisible.value = false
+
+// One-time legacy IDB cleanup. CG QA observed the `user_db` IndexedDB
+// store sitting on disk in their profiles even though the game no longer
+// reads or writes to it. Schedule a delete request once at module load
+// — fire-and-forget, errors are swallowed because there is nothing to
+// recover (the data is CardQuest relics nobody references).
+try {
+  if (typeof window !== 'undefined' && window.indexedDB?.deleteDatabase) {
+    const req = window.indexedDB.deleteDatabase('user_db')
+    req.onerror = () => { /* no-op: harmless if locked / already gone */
+    }
+  }
+} catch { /* harmless */
+}
+
+// ─── Composable surface ───────────────────────────────────────────────────
+
 const useUser = () => {
-  const setSettingValue = (name: string, value: any) => {
+  const setSettingValue = (name: string, value: unknown) => {
     switch (name) {
       case 'sound':
-        userSoundVolume.value = value
+        userSoundVolume.value = +(value as number)
+        localStorage.setItem(SOUND_KEY, String(userSoundVolume.value))
         break
       case 'music':
-        userMusicVolume.value = value
+        userMusicVolume.value = +(value as number)
+        localStorage.setItem(MUSIC_KEY, String(userMusicVolume.value))
         break
       case 'language':
-        userLanguage.value = value
-        sessionStorage.setItem(GAME_USER_LANGUAGE, value)
+        userLanguage.value = value as string
+        localStorage.setItem(LANGUAGE_KEY, userLanguage.value)
+        sessionStorage.setItem(GAME_USER_LANGUAGE, userLanguage.value)
         break
       case 'difficulty':
-        userDifficulty.value = value
+        userDifficulty.value = value as Difficulties
+        localStorage.setItem(DIFFICULTY_KEY, userDifficulty.value)
         break
-      case 'skipRulesModal':
-        userSkipRulesModal.value = value
-        break
-      case 'unlocked':
-        userUnlocked.value = value
-        break
-      case 'quest-campaign':
-        userQuestCampaign.value = value
-        break
-      case 'quest-cards':
-        userQuestCards.value = value
-        break
-      case 'tutorialsDoneMap':
-        userTutorialsDoneMap.value = JSON.stringify(value)
-        break
-      case 'hand':
-        userHand.value = JSON.stringify(value)
-        break
-      case 'collection':
-        userCollection.value = JSON.stringify(value)
-        break
-      case 'campaign':
-        userCampaign.value = JSON.stringify(value)
-        break
+      // Other setting keys (skipRulesModal / hand / collection / campaign /
+      // quest-* / unlocked / tutorialsDoneMap) used to be CardQuest relics
+      // wired through the deleted `useUserDb`. They are intentionally
+      // unhandled — `setSettingValue` is a no-op for them and any straggling
+      // caller will silently do nothing rather than throw.
     }
-
-    storeUser({
-      userDifficulty: userDifficulty.value,
-      userSoundVolume: +userSoundVolume.value,
-      userMusicVolume: +userMusicVolume.value,
-      userLanguage: userLanguage.value,
-      userSkipRulesModal: userSkipRulesModal.value,
-      userUnlocked: userUnlocked.value,
-      userTutorialsDoneMap: userTutorialsDoneMap.value,
-      userHand: userHand.value,
-      userCollection: userCollection.value,
-      userCampaign: userCampaign.value,
-      userQuestCampaign: userQuestCampaign.value,
-      userQuestCards: userQuestCards.value
-    })
-  }
-
-  const resetGameProgress: () => void = () => {
-    setSettingValue('campaign', [])
-    setSettingValue('hand', [])
-    setSettingValue('quest-campaign', false)
-    setSettingValue('quest-cards', false)
-    setSettingValue('skipRulesModal', false)
   }
 
   return {
@@ -144,19 +162,7 @@ const useUser = () => {
     userSoundVolume,
     userMusicVolume,
     userLanguage,
-    userTutorialsDoneMap,
-    userHand,
-    userCollection,
-    userCampaign,
-    userSkipRulesModal,
-    userUnlocked,
-    userQuestCampaign,
-    userQuestCards,
-    tutorialPhase,
-    allowTutorial,
-    setSettingValue,
-    resetGameProgress,
-    isOptionsModalOpen
+    setSettingValue
   }
 }
 

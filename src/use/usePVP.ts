@@ -6,7 +6,12 @@
 // Feature-gated: only active when VITE_APP_PVP_ENABLED=true.
 
 import { ref, computed, watch, type Ref } from 'vue'
-import Peer, { type DataConnection } from 'peerjs'
+// PeerJS itself is loaded lazily — see `loadPeerCtor` below. The static
+// import was bundling the entire ~50KB library into every build (including
+// CrazyGames, which doesn't ship PvP) before this change. Type-only imports
+// have zero runtime cost so the rest of the file compiles unchanged.
+import type Peer from 'peerjs'
+import type { DataConnection } from 'peerjs'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import type { SpinnerConfig } from '@/types/spinner'
 import { isSdkActive } from '@/use/useCrazyGames'
@@ -16,6 +21,31 @@ import { seedMatchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
 // ─── Feature Gate ──────────────────────────────────────────────────────────
 
 export const isPvpEnabled = import.meta.env.VITE_APP_PVP_ENABLED === 'true'
+
+// Lazy PeerJS loader. The `import.meta.env.VITE_APP_PVP_ENABLED` ternary
+// resolves to a literal at build time, so on PvP-disabled builds the
+// branch containing `import('peerjs')` becomes dead code and Rollup
+// eliminates BOTH the call AND the peerjs chunk emission — the ~150KB
+// (obfuscated) bundle never ships. The previous `if (...)` guard inside
+// the function body wasn't enough: Rollup still emitted the chunk
+// because the syntactic dynamic import survived.
+let PeerCtor: typeof Peer | null = null
+let peerCtorPromise: Promise<typeof Peer> | null = null
+
+const loadPeerCtor: () => Promise<typeof Peer> =
+  import.meta.env.VITE_APP_PVP_ENABLED === 'true'
+    ? async () => {
+      if (PeerCtor) return PeerCtor
+      if (peerCtorPromise) return peerCtorPromise
+      peerCtorPromise = import('peerjs').then((m) => {
+        PeerCtor = m.default
+        return PeerCtor
+      })
+      return peerCtorPromise
+    }
+    : async () => {
+      throw new Error('[PvP] feature disabled in this build (VITE_APP_PVP_ENABLED!=true)')
+    }
 
 const pvpLog = (msg: string) => {
   if (!isDebug.value || !isPvpEnabled) return
@@ -512,7 +542,7 @@ const usePVP = () => {
   const bothReady = computed(() => hostReady.value && guestReady.value)
 
   /** Host: create a lobby and wait for a guest */
-  const createLobby = (config: PvPGameConfig) => {
+  const createLobby = async (config: PvPGameConfig) => {
     try {
       pvpLog(`createLobby: arena=${config.arenaType} team=${config.teamSize} lvl1=${config.levelOne}`)
       resetState()
@@ -522,7 +552,8 @@ const usePVP = () => {
 
       const id = generatePeerId()
       pvpLog(`createLobby: peerId=${id}`)
-      peer = new Peer(id, { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 } })
+      const PeerC = await loadPeerCtor()
+      peer = new PeerC(id, { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 } })
 
       peer.on('open', (openId: string) => {
         pvpLog(`host peer.open: id=${openId}`)
@@ -543,7 +574,7 @@ const usePVP = () => {
         // If ID is taken, retry with a new one
         if (err.type === 'unavailable-id') {
           cleanup()
-          createLobby(config)
+          void createLobby(config)
           return
         }
         status.value = 'error'
@@ -577,7 +608,7 @@ const usePVP = () => {
   }
 
   /** Guest: join a host's lobby by their peer ID */
-  const joinLobby = (hostPeerId: string) => {
+  const joinLobby = async (hostPeerId: string) => {
     try {
       pvpLog(`joinLobby: hostPeerId=${hostPeerId}`)
       resetState()
@@ -587,7 +618,8 @@ const usePVP = () => {
 
       const myId = generatePeerId()
       pvpLog(`joinLobby: myPeerId=${myId}`)
-      peer = new Peer(myId, { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 } })
+      const PeerC = await loadPeerCtor()
+      peer = new PeerC(myId, { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 } })
 
       peer.on('open', (openId: string) => {
         pvpLog(`guest peer.open: id=${openId}, connecting to host=${hostPeerId}`)

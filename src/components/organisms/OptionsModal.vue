@@ -10,10 +10,19 @@ import FSlider from '@/components/atoms/FSlider.vue'
 import FSelect from '@/components/atoms/FSelect.vue'
 import { DIFFICULTY, LANGUAGES } from '@/utils/enums' // Import LANGUAGES
 import { prependBaseUrl } from '@/utils/function'
+import { stopGameplay } from '@/use/useCrazyGames'
 
-defineProps<{
+const props = defineProps<{
   isOpen: boolean
 }>()
+
+// Explicit CrazyGames `gameplayStop` on every Settings open. Mirrors the
+// arena's reactive watcher but makes the call-site visible per the CG QA
+// request. `stopGameplay()` is idempotent (no-op when SDK inactive or
+// already stopped).
+watch(() => props.isOpen, (open) => {
+  if (open) stopGameplay()
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -31,10 +40,8 @@ const {
   setSettingValue,
   userLanguage,
   userDifficulty,
-  userSkipRulesModal,
   userSoundVolume,
-  userMusicVolume,
-  resetGameProgress
+  userMusicVolume
 } = useUser()
 
 const currentTab = ref('general')
@@ -86,13 +93,12 @@ const languagesList = computed(() => {
   }))
 })
 
-const showAskResetModal = ref<boolean>(false)
-const askReset = () => {
-  showAskResetModal.value = true
-}
-const doResetProgress = () => {
-  resetGameProgress()
-}
+// Removed: showAskResetModal / askReset / doResetProgress. They drove a
+// "Reset" button that called the old `resetGameProgress` helper, which
+// only touched CardQuest-relic fields (campaign / hand / quest-* /
+// skipRulesModal). For chaos-arena it was a no-op — the visible button
+// did nothing useful, so the whole flow has been removed alongside the
+// useUserDb cleanup.
 </script>
 
 <template lang="pug">
@@ -118,26 +124,6 @@ const doResetProgress = () => {
           )
 
         hr(class="border-slate-600 my-1 md:my-2 pt-0")
-
-        div(class="flex items-center justify-between !text-[10px]")
-          div.flex-grow-1(class="!text-[10px] md:text-[12px] font-black text-white uppercase italic") {{ t('resetCampaign') }}
-          div.flex.justify-end.scale-60.flex-shrink-1
-            FButton.flex-shrink-1(type="secondary" @click="askReset") {{ t('reset') }}
-        //div(class="flex items-center justify-between !text-[10px]")
-        //  span(class="!text-[10px] md:text-[12px] font-black text-white uppercase italic") {{ t('showRulesModal') }}
-        //  FSwitch(
-        //    :model-value="!userSkipRulesModal"
-        //    @update:model-value="setSettingValue('skipRulesModal', !$event)"
-        //  )
-        hr(class="border-slate-600 my-1 md:my-2 pt-0")
-        FModal(v-model:model-value="showAskResetModal"
-          :title="`${t('reset')}?`"
-          :is-closable="true"
-          @update:model-value="showAskResetModal = false"
-        ) {{ t('sureResetCampaign') }}
-          template(#footer)
-            FButton(type="secondary" @click="showAskResetModal = false") {{ t('cancel') }}
-            FButton(type="primary" @click="doResetProgress(); showAskResetModal = false") {{ t('reset') }}
 
 
     //- Difficulty Tab

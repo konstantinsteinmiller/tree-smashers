@@ -1,8 +1,9 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { TopPartId, BottomPartId, SpinnerConfig } from '@/types/spinner'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { crazyPlayerName } from '@/use/useCrazyGames'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -209,7 +210,20 @@ const saveLastUpdate = (ts: number) => {
 }
 
 const savePlayerMaxStage = (stage: number) => {
-  localStorage.setItem(PLAYER_MAX_STAGE_KEY, stage.toString())
+  // CG QA flagged this key in localStorage. Bypass the local mirror by
+  // pushing straight into the SaveManager's outbound queue — the value
+  // still ships to `sdk.data` (or the active strategy's backend) but
+  // never appears in the browser's storage panel. The in-session model
+  // lives in the `playerMaxStage` ref above.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sm: any = (typeof window !== 'undefined' ? (window as any).__saveManager : null)
+  if (sm?.setRemoteOnly) {
+    sm.setRemoteOnly(PLAYER_MAX_STAGE_KEY, stage.toString())
+  } else {
+    // Fallback for the brief boot window before main.ts publishes the
+    // SaveManager (or in tests / non-Vue environments).
+    localStorage.setItem(PLAYER_MAX_STAGE_KEY, stage.toString())
+  }
 }
 
 // ─── Singleton State ────────────────────────────────────────────────────────
@@ -218,6 +232,16 @@ const npcEntries: Ref<LeaderboardEntry[]> = ref(loadEntries())
 const lastUpdatedAt: Ref<number> = ref(loadLastUpdate())
 const playerMaxStage: Ref<number> = ref(loadPlayerMaxStage())
 const newcomerWindow: Ref<NewcomerWindow> = ref(loadNewcomerWindow())
+
+// Re-read on hydrate-success bump. Mirrors the watcher in
+// `useSpinnerCampaign` — without it a returning player's leaderboard
+// rank shows stage 0 until they advance one stage.
+watch(saveDataVersion, () => {
+  npcEntries.value = loadEntries()
+  lastUpdatedAt.value = loadLastUpdate()
+  playerMaxStage.value = loadPlayerMaxStage()
+  newcomerWindow.value = loadNewcomerWindow()
+})
 
 // ─── Ghost Fight Daily Tracking ────────────────────────────────────────────
 // Each NPC can be challenged at most once per rolling 24h window.

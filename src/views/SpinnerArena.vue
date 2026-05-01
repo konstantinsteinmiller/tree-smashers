@@ -1131,12 +1131,10 @@ onUnmounted(() => {
           )
           div.flex.flex-col.items-end.gap-2
             CoinBadge(ref="coinBadgeRef")
-            //- Treasure chests — hidden during PvP
-            div.flex.flex-row.items-end.gap-1(v-if="!pvpMode")
-              TreasureChest(:target-el="coinBadgeEl" :cooldown-ms="3 * 60 * 1000" storage-key="spinner_mini_chest_ready_at" :reward="25" :scale="0.5" aura-color="rgba(192,210,225,0.8)")
-              TreasureChest(:target-el="coinBadgeEl")
-            //- 20h skin chest — compact timer row, hidden once every skin is owned
-            SkinChestTimer(v-if="!pvpMode" @collected="onSkinChestCollected")
+            //- Single chest with a dual reward window (25c after 3 min,
+            //- 100c after 10 min). Replaces the previous mini+big chest
+            //- pair. Hidden during PvP.
+            TreasureChest(v-if="!pvpMode" :target-el="coinBadgeEl")
 
       //- Center overlay messages
       div.absolute.flex.items-center.justify-center(class="inset-0 z-[10]")
@@ -1268,9 +1266,27 @@ onUnmounted(() => {
           transformOrigin: 'bottom right'\
         }"
       )
+        //- Skin chest timer (20h cycle) sits ABOVE the speed switch so
+        //- the timer doesn't compete for attention with the top-bar
+        //- treasure chest. Skin preview on the LEFT, countdown on the
+        //- RIGHT, timer text in a soft warm-orange so it reads as
+        //- "passive cooldown" rather than urgent.
+        //- Gated to stage ≥ 3 — same onboarding-pace rationale as the
+        //- 1x/2x switch above. Brand-new players (stage 1-2) shouldn't
+        //- see a passive 20-hour skin-chest timer before they've even
+        //- internalised the basic loop and the daily-rewards cycle.
+        SkinChestTimer(
+          v-if="!pvpMode && !showConfigSpotlight && currentStageId >= 3"
+          @collected="onSkinChestCollected"
+        )
+
         //- Row 1: speed switch (hidden during spotlight)
+        //- Hidden until stage ≥ 2 — the speed-up is a stretch reward,
+        //- not part of the brand-new-player onboarding (it would crowd
+        //- the bottom-right HUD before the player has even completed
+        //- their first match).
         FButtonSwitch.speedup-switch.scale-90(
-          v-if="(isRewardedReady || is2xAvailable) && !showConfigSpotlight"
+          v-if="currentStageId >= 2 && (isRewardedReady || is2xAvailable) && !showConfigSpotlight"
           class="sm:scale-100"
           :model-value="simSpeed"
           :options="[{ value: 1 }, { value: 2 }]"

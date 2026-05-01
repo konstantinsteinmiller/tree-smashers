@@ -23,6 +23,7 @@ import { prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
 import { matchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
@@ -181,6 +182,14 @@ export const gameStartCount: Ref<number> = ref(
 )
 export const countdownText: Ref<string | null> = ref(null)
 
+// Re-read on hydrate-success bump. The counter is persisted via
+// `setRemoteOnly` (bypasses localStorage) so the initial module-load
+// `getItem` returns null in cloud-only mode; this watcher catches the
+// value when the strategy hydrates the blob.
+watch(saveDataVersion, () => {
+  gameStartCount.value = parseInt(localStorage.getItem(GAME_START_COUNT_KEY) || '0', 10)
+})
+
 const countdownTimers: number[] = []
 const clearCountdown = () => {
   while (countdownTimers.length) {
@@ -202,13 +211,24 @@ const triggerCountdown = () => {
   }, COUNTDOWN_SEQUENCE.length * COUNTDOWN_STEP_MS))
 }
 
+/** Persist the game-start counter via the SaveManager's outbound-only
+ *  channel so it never appears in localStorage (CG QA flagged this key).
+ *  Falls back to localStorage during the brief boot window before
+ *  main.ts publishes the SaveManager singleton. */
+const persistGameStartCount = (n: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sm: any = (typeof window !== 'undefined' ? (window as any).__saveManager : null)
+  if (sm?.setRemoteOnly) sm.setRemoteOnly(GAME_START_COUNT_KEY, String(n))
+  else localStorage.setItem(GAME_START_COUNT_KEY, String(n))
+}
+
 /** Cheat helper: arm the next match start to fire the countdown. We set the
  *  counter so the next `startMatch()` increment lands on a multiple of
  *  COUNTDOWN_EVERY_N_GAMES and triggers the countdown immediately. */
 export const resetGameStartCount = () => {
   const armed = COUNTDOWN_EVERY_N_GAMES - 1
   gameStartCount.value = armed
-  localStorage.setItem(GAME_START_COUNT_KEY, String(armed))
+  persistGameStartCount(armed)
 }
 
 // ─── Persistent Cross-Match State ────────────────────────────────────────────
@@ -1789,9 +1809,11 @@ export const useSpinnerGame = () => {
     } catch (e: any) {
     }
 
-    // Track game starts; every Nth launches the countdown overlay
+    // Track game starts; every Nth launches the countdown overlay.
+    // Persisted via setRemoteOnly so the counter syncs to sdk.data
+    // without leaving a `spinner_game_start_count` entry in localStorage.
     gameStartCount.value++
-    localStorage.setItem(GAME_START_COUNT_KEY, String(gameStartCount.value))
+    persistGameStartCount(gameStartCount.value)
     if (gameStartCount.value % COUNTDOWN_EVERY_N_GAMES === 0) {
       triggerCountdown()
     }
@@ -4548,6 +4570,15 @@ export const useSpinnerGame = () => {
   }
 
   const _hpFontCache = new Map<string, number>()
+  // Cached optical-center y-offset per (text, fontSize) pair. Canvas's
+  // `textBaseline = 'middle'` centers on the font's em-middle, which for
+  // Arial Bold sits a few pixels above the visual center of digit-only
+  // strings (digits have no descender so the perceived center is lower).
+  // We measure once with `actualBoundingBoxAscent / Descent` and cache
+  // the nudge — keyed identically to the font cache so a single lookup
+  // serves both. Caching matters because measureText is called every
+  // frame for every blade.
+  const _hpYOffsetCache = new Map<string, number>()
 
   // Inline the ring every frame. An earlier attempt cached the whole
   // ring (bg stroke + HP arc + strokeText + fillText) into a per-blade
@@ -4605,13 +4636,33 @@ export const useSpinnerGame = () => {
     }
     ctx.font = `bold ${fontSize}px Arial`
 
+    // Compute the optical-center offset once per (text, fontSize) and
+    // cache it. With `textBaseline = 'alphabetic'`, drawing at
+    // `y + (ascent - descent) / 2` puts the visual middle of the glyph
+    // exactly on `y` — the previous `'middle'` baseline was off by a
+    // few pixels (digits have no descender so font-middle sits above
+    // visual-middle), which is what made the HP number feel slightly
+    // high inside the ring.
+    let yOffset = _hpYOffsetCache.get(cacheKey)
+    if (yOffset === undefined) {
+      const m = ctx.measureText(hpText)
+      // actualBoundingBox{Ascent,Descent} is supported on every browser
+      // we ship to (Chrome 77+, Safari 11.1+, Firefox 74+). Fall back
+      // to a sensible empirical fudge if the metrics are missing.
+      const a = typeof m.actualBoundingBoxAscent === 'number' ? m.actualBoundingBoxAscent : fontSize * 0.7
+      const d = typeof m.actualBoundingBoxDescent === 'number' ? m.actualBoundingBoxDescent : fontSize * 0.05
+      yOffset = (a - d) / 2
+      _hpYOffsetCache.set(cacheKey, yOffset)
+    }
+    const drawY = y + yOffset
+
     ctx.fillStyle = isPlayer ? '#66aaff' : '#ff6666'
     ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+    ctx.textBaseline = 'alphabetic'
     ctx.strokeStyle = '#000000'
     ctx.lineWidth = 2
-    ctx.strokeText(hpText, x, y)
-    ctx.fillText(hpText, x, y)
+    ctx.strokeText(hpText, x, drawY)
+    ctx.fillText(hpText, x, drawY)
   }
 
   const renderSelectionGlow = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {

@@ -29,6 +29,7 @@ import { ref } from 'vue'
 import { isCrazyWeb } from '@/use/useUser'
 import { CrazyGamesStrategy } from '@/utils/save/CrazyGamesStrategy'
 import type { SaveStrategy } from '@/utils/save/types'
+import { cgDebug, cgDebugWarn } from '@/utils/save/crazyDebugLog'
 
 // The CrazyGames SDK is loaded globally via a script tag in index.html.
 // We interact with it entirely through `window.CrazyGames.SDK`, so the
@@ -109,26 +110,32 @@ export const initCrazyGames = async (): Promise<void> => {
   if (initialized) return
   initialized = true
 
+  cgDebug(`initCrazyGames: starting (isCrazyWeb=${isCrazyWeb})`)
   const candidate = getSdk()
   if (!candidate) {
     // Script tag didn't load (blocked, offline, or plain non-CG build).
+    cgDebugWarn('initCrazyGames: window.CrazyGames.SDK not present — script tag missing or blocked')
     return
   }
 
   try {
     await candidate.init?.()
+    cgDebug(`initCrazyGames: SDK.init() resolved; environment="${candidate.environment}"`)
   } catch (e) {
     console.warn('[crazygames] SDK init failed', e)
+    cgDebugWarn('initCrazyGames: SDK.init() threw', e)
     return
   }
 
   if (!isActiveEnv(candidate)) {
     // Non-crazy-web build, or running in a 'disabled' environment.
+    cgDebugWarn(`initCrazyGames: environment="${candidate.environment}" + isCrazyWeb=${isCrazyWeb} — strategy will NOT be activated`)
     return
   }
 
   sdk = candidate
   isSdkActive.value = true
+  cgDebug(`initCrazyGames: SDK active; sdk.data is ${typeof sdk.data?.setItem === 'function' ? 'present' : 'MISSING'}`)
 
   await captureSdkProfile()
   registerMuteListener()
@@ -223,6 +230,39 @@ export const triggerHappytime = (): void => {
     sdk.game?.happytime?.()
   } catch (e) {
     console.warn('[crazygames] happytime failed', e)
+  }
+}
+
+/**
+ * Notify CrazyGames that the game is in a loading phase — the SDK uses
+ * this to drive its own loading indicator AND to mark the start of the
+ * "loaded bytes" measurement that QA tooling reads. The SDK auto-enters
+ * `loading` on `init()`, so the explicit call is only needed for
+ * mid-game loading events (e.g. fetching a new arena chunk). Idempotent.
+ */
+export const startLoading = (): void => {
+  if (!sdk || !isSdkActive.value) return
+  try {
+    sdk.game?.loadingStart?.()
+  } catch (e) {
+    console.warn('[crazygames] loadingStart failed', e)
+  }
+}
+
+/**
+ * Notify CrazyGames that the game has finished loading and the player
+ * can interact. This is the canonical signal CG QA's tooling listens
+ * for to record the cold-launch download size — every byte transferred
+ * before this event counts toward the "load size" metric, every byte
+ * after counts as on-demand. Call once when the splash screen resolves.
+ * Idempotent.
+ */
+export const stopLoading = (): void => {
+  if (!sdk || !isSdkActive.value) return
+  try {
+    sdk.game?.loadingStop?.()
+  } catch (e) {
+    console.warn('[crazygames] loadingStop failed', e)
   }
 }
 
@@ -492,6 +532,8 @@ const useCrazyGames = () => ({
   createCrazyGamesSaveStrategy,
   startGameplay,
   stopGameplay,
+  startLoading,
+  stopLoading,
   showRewardedAd,
   showMidgameAd,
   addCrazyMuteListener,

@@ -39,18 +39,61 @@ export default defineConfig(({ mode, command }) => {
           // splitting — the obfuscator's stringArray rewrites those
           // dynamic paths so rollup can no longer produce separate
           // chunks (every locale ends up inlined in index.js).
-          /i18n[\\/]index\.ts$/
+          /i18n[\\/]index\.ts$/,
+          // resolveSaveStrategy uses `await import('@/...')` inside
+          // `import.meta.env.VITE_APP_*`-gated branches so Rollup can
+          // tree-shake unused platform plugins. Obfuscation would
+          // mangle the dynamic-import literals and break runtime
+          // module resolution. (resolveAdProvider stays static-import
+          // sync, so it doesn't need an exclude.)
+          /platforms[\\/]resolveSaveStrategy\.ts$/,
+          // GameDistributionProvider lazy-loads the heavy
+          // `@/utils/gameDistributionPlugin` (~500 LOC) via dynamic
+          // import so non-GD builds don't ship the GD SDK code.
+          // Same obfuscator-vs-dynamic-import constraint as above.
+          /use[\\/]ads[\\/]GameDistributionProvider\.ts$/
         ],
+        // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
+        // The previous profile enabled every aggressive transform the
+        // plugin offers — `controlFlowFlattening`, `numbersToExpressions`,
+        // `splitStrings`, `unicodeEscapeSequence`. Combined they were
+        // inflating the bundle by ~3.4× over the unobfuscated baseline
+        // (e.g. 217KB → 768KB on the entry chunk for the CrazyGames
+        // build flagged by CG QA on 2026-04-30).
+        //
+        // The transforms removed below all have the same trade-off:
+        // huge bundle / runtime cost for protection that any
+        // off-the-shelf deobfuscator strips in seconds. Keeping them on
+        // costs real users real download time without preventing a
+        // motivated reverse-engineer for more than a coffee break.
+        //
+        // What stays (cheap, useful):
+        //   • compact            — single-line output
+        //   • simplify           — CFG simplification
+        //   • stringArray        — string indirection table
+        //   • stringArrayThreshold 0.6 — moderate coverage
+        //
+        // What was removed (expensive, low-value):
+        //   • unicodeEscapeSequence — every `"foo"` → `"foo"`
+        //     ~doubles strings on the wire. Trivially reversed.
+        //   • splitStrings          — splits every string into 2-char
+        //     pieces concatenated at runtime. Triples string size,
+        //     interpretable by any human in <1 minute.
+        //   • controlFlowFlattening — wraps every block in a switch
+        //     dispatcher. ~30% bundle inflation, ~10% runtime perf hit.
+        //   • numbersToExpressions  — every literal `5` becomes
+        //     `0x4 + 0x1` etc. Bloats math-heavy modules (the canvas
+        //     game loop is full of these).
+        //
+        // If a tighter profile is needed later, prefer enabling
+        // `controlFlowFlattening` selectively on a small allowlist of
+        // sensitive files (anti-cheat hot paths, license checks) rather
+        // than blanket-enabling everywhere.
         options: {
           compact: true,
-          controlFlowFlattening: true,
-          controlFlowFlatteningThreshold: 0.75,
-          numbersToExpressions: true,
           simplify: true,
           stringArray: true,
-          stringArrayThreshold: 0.75,
-          splitStrings: true,
-          unicodeEscapeSequence: true
+          stringArrayThreshold: 0.6
         }
       } as any)
     )

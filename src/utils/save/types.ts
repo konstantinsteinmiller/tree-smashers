@@ -134,7 +134,40 @@ export interface SaveStrategy {
  */
 export const INTERNAL_KEY_PREFIX = '__save_internal__'
 
+/**
+ * Our own bookkeeping keys (manifests, version counters). Owned by the
+ * SaveManager / strategies; never forwarded to `onLocalSet` /
+ * `onLocalRemove` because doing so would cause a strategy that writes
+ * its own bookkeeping through the wrapped `localStorage.setItem` to
+ * recurse on itself.
+ */
+export const isOwnInternalKey = (key: string): boolean =>
+  key.startsWith(INTERNAL_KEY_PREFIX)
+
+/**
+ * Keys owned by the CrazyGames SDK's data module — its localStorage
+ * availability probes (`__SafeLocalStorage__<timestamp>`) and its cloud
+ * cache rows (`SDK_DATA_<id>`). We must never store these in our blob
+ * or shadow, never enumerate them via `local.keys()`, and never include
+ * them in any payload built for cloud / IDB. The SDK manages them
+ * directly through raw localStorage and it is solely responsible for
+ * their lifecycle. Touching them caused two regressions:
+ *   1. boot-time scan in cloud-only mode was deleting `SDK_DATA_*`
+ *      cache rows, defeating the SDK's offline fallback;
+ *   2. our patched `setItem` was sinking probe writes into
+ *      `internalShadow`, where they accumulated unboundedly until
+ *      tab close.
+ */
+export const isSdkScratchKey = (key: string): boolean =>
+  key.startsWith('__SafeLocalStorage__') ||
+  key.startsWith('SDK_DATA_')
+
+/**
+ * True for keys the SaveManager treats as internal — either our own
+ * bookkeeping or SDK scratch. Both are excluded from `onLocalSet` /
+ * `onLocalRemove` forwarding to the strategy. Kept as one predicate so
+ * the strategy filter (which doesn't care about the distinction) stays
+ * a single check.
+ */
 export const isInternalKey = (key: string): boolean =>
-  key.startsWith(INTERNAL_KEY_PREFIX) ||
-  key.startsWith('__SafeLocalStorage__') || // CrazyGames SDK scratch space
-  key.startsWith('SDK_DATA_')                // CrazyGames SDK scratch space
+  isOwnInternalKey(key) || isSdkScratchKey(key)

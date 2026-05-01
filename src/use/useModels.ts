@@ -214,28 +214,11 @@ const useModels = () => {
     { id: 'gorilla-middle', name: 'Gondix' }
   ]
 
-  const { setSettingValue, userCollection } = useUser()
-
-  // const saveCollection = (collection: Array<InventoryCard | StoredCollectionCard>) => {
-  //   const storedCollection: StoredCollectionCard[] = collection.map(card => ({ id: card.id, count: card.count }))
-  //   setSettingValue('collection', storedCollection)
-  // }
-
-  const storedCollection = computed(() => {
-    return typeof userCollection.value === 'string'
-      ? JSON.parse(userCollection.value)
-      : userCollection.value
-  })
-
-  // watch(isDbInitialized, () => {
-  //   if (storedCollection.value.length >= 1 && storedCollection.value.every((card: StoredCollectionCard) => card.count === 0)) {
-  //     saveCollection([])
-  //   }
-  // }, { immediate: true, once: true })
-
+  // CardQuest-era `userCollection` + `storedCollection` were dead code
+  // (the computed was never returned, the saveCollection helper was
+  // already commented out). Removed alongside the useUserDb deletion.
   return {
     allModels,
-    // saveCollection,
     modelImgPath
   }
 }

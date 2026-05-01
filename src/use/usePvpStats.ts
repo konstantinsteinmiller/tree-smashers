@@ -7,10 +7,11 @@
 // Persisted in localStorage (automatically mirrored to CrazyGames SDK data
 // module when the SDK is active).
 
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import { crazyPlayerName } from '@/use/useCrazyGames'
 import type { SpinnerModelId } from '@/use/useModels'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -94,6 +95,11 @@ const loadState = (): PvpStatsState => {
 }
 
 const state: Ref<PvpStatsState> = ref(loadState())
+
+// Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
+watch(saveDataVersion, () => {
+  state.value = loadState()
+})
 
 const saveState = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.value))

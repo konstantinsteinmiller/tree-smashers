@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   SKINS_PER_TOP,
   SPECIAL_SKINS,
@@ -7,6 +7,7 @@ import {
   type SpinnerModelId
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 const SKIN_CHEST_COOLDOWN_MS = 20 * 60 * 60 * 1000 // 20h
 const READY_AT_KEY = 'spinner_skin_chest_ready_at'
@@ -27,6 +28,12 @@ const readyAt = ref<number>(parseInt(localStorage.getItem(READY_AT_KEY) || '0', 
 const remaining = ref<number>(0)
 const wasEverCollected = ref<boolean>(localStorage.getItem(FIRST_COLLECTED_KEY) === '1')
 const iconSkin = ref<SpinnerModelId>('ice')
+
+// Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
+watch(saveDataVersion, () => {
+  readyAt.value = parseInt(localStorage.getItem(READY_AT_KEY) || '0', 10)
+  wasEverCollected.value = localStorage.getItem(FIRST_COLLECTED_KEY) === '1'
+})
 
 const updateTimer = () => {
   readyAt.value = parseInt(localStorage.getItem(READY_AT_KEY) || '0', 10)

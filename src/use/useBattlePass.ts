@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
@@ -9,6 +9,7 @@ import {
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resetHonorTrack } from '@/use/usePvpStats'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 /**
  * Battle Pass progression. 50 stages, 100 xp per stage. Win/loss events
@@ -126,6 +127,11 @@ const loadState = (): BattlePassState => {
 let seasonResetPending = false
 
 const state: Ref<BattlePassState> = ref(loadState())
+
+// Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
+watch(saveDataVersion, () => {
+  state.value = loadState()
+})
 
 const saveState = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.value))

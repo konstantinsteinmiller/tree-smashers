@@ -378,8 +378,10 @@ onMounted(() => {
         v-if="isSpinning"
         class="text-sm"
       ) Spinning...
-      //- Post-first-spin: ad respin + skip
-      template(v-if="showAdButton")
+      //- Post-first-spin: ad respin + skip — laid out side-by-side so the
+      //- "Skip" link sits inline with the "Spin Again" CTA instead of
+      //- stacking under it.
+      div.flex.items-center.gap-3(v-if="showAdButton")
         button.cursor-pointer.rounded-lg.border-2.font-bold.flex.items-center.gap-2.transition-transform(
           class="px-3 py-1.5 text-sm bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30] text-white hover:scale-105 active:scale-95"
           @click="onAdRespin"

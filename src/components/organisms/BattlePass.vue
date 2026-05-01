@@ -19,6 +19,7 @@ import type { TopPartId } from '@/types/spinner'
 import useSounds from '@/use/useSound.ts'
 import usePvpStats, { HONOR_PER_STAGE, HONOR_TOTAL_STAGES } from '@/use/usePvpStats'
 import usePVP from '@/use/usePVP'
+import { stopGameplay } from '@/use/useCrazyGames'
 
 const {
   currentXp,
@@ -61,6 +62,14 @@ const { t } = useI18n()
 
 const isModalOpen = ref(false)
 const bpBtnRef = ref<HTMLElement | null>(null)
+
+// Explicit CrazyGames `gameplayStop` on every Battle Pass open. Mirrors
+// the arena's reactive watcher but makes the call-site visible per the
+// CG QA request. `stopGameplay()` is idempotent (no-op when SDK inactive
+// or already stopped).
+watch(isModalOpen, (open) => {
+  if (open) stopGameplay()
+})
 
 // ─── Derived UI state ───────────────────────────────────────────────────────
 

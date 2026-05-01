@@ -52,13 +52,19 @@ const install = (): void => {
   })
 }
 
-install()
-beforeEach(install)
+// Skip the localStorage / IndexedDB shims in tests that run under the
+// `node` environment (e.g. `tests/platforms/bundlePurity.test.ts`) — they
+// don't touch save code and `window` doesn't exist there.
+const hasWindow = typeof window !== 'undefined'
+if (hasWindow) {
+  install()
+  beforeEach(install)
+}
 
 // IndexedDB no-op stub — useUserDb's module-init `indexedDB.open(...)`
 // expects an EventTarget-like request that supports `addEventListener`.
 // The fake request never resolves; tests don't depend on its data path.
-if (!('indexedDB' in window) || (window as any).indexedDB === undefined) {
+if (hasWindow && (!('indexedDB' in window) || (window as any).indexedDB === undefined)) {
   class FakeIdbRequest extends EventTarget {
     result: unknown = null
     error: unknown = null

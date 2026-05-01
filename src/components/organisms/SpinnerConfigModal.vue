@@ -25,6 +25,7 @@ import IconDefense from '@/components/icons/IconDefense.vue'
 import IconHp from '@/components/icons/IconHp.vue'
 import IconSpeed from '@/components/icons/IconSpeed.vue'
 import IconWeight from '@/components/icons/IconWeight.vue'
+import { stopGameplay } from '@/use/useCrazyGames'
 
 interface Props {
   modelValue: boolean
@@ -65,6 +66,14 @@ watch(() => props.modelValue, (open) => {
   if (open) {
     localTeam.value = props.initialTeam.map(c => ({ ...c }))
     activeBladeIndex.value = 0
+    // Belt-and-suspenders for the CrazyGames `gameplayStop` signal — the
+    // reactive watcher in SpinnerArena already pauses the SDK when this
+    // modal opens (`isGameplayActive` reads `configModalOpen`), but per
+    // the CG QA request we fire it here too so the call site is explicit
+    // and impossible to miss in a future refactor of the arena watcher.
+    // `stopGameplay()` is idempotent (early-returns when SDK is inactive
+    // or already stopped) so the redundant call is free.
+    stopGameplay()
   }
 }, { immediate: true })
 
@@ -192,7 +201,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
             class="top-1/2 -translate-y-[50%] px-1.5 py-0.5 bg-yellow-600/60 text-yellow-300 text-[11px] sm:text-xs"
           )
             IconCoin(class="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 text-yellow-300")
-            span {{ coins }}g
+            span {{ coins }}
           h3.text-yellow-300.font-black.uppercase.italic.label-section(
             class="tracking-wider"
           ) {{ t('topBlade') }}
@@ -434,7 +443,18 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   flex-direction: column
   gap: 0.5rem
   padding: 0.25rem 0.25rem
-  max-height: 75vh
+  // Subtract a fixed chrome budget from the viewport instead of using
+  // a plain `vh` cap. The FModal renders the tab heads (`BLADE 1` /
+  // `BLADE 2`) above the modal-container via `bottom: 100%`, plus the
+  // modal frame's own padding + close-button overhang. With a flat
+  // `75vh` cap the content could grow tall enough that the modal's
+  // top edge reached the viewport top — and the tabs (which sit
+  // ABOVE that edge) ended up clipped by the browser chrome.
+  // The 9rem (~144px) budget covers tabs + frame top padding +
+  // safe-area + a small breathing margin so the tabs are always
+  // fully visible. `dvh` reacts correctly to mobile-browser address-
+  // bar collapse — `vh` would over-budget when the bar is showing.
+  max-height: calc(100dvh - 9rem)
   overflow-y: auto
   // Reserve scrollbar gutter so hover-scale doesn't pop a scrollbar in/out
   // (which squeezes content horizontally and produces a visible jitter).
@@ -553,7 +573,13 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
 @media (min-width: 640px)
   .config-layout
-    max-height: 80vh
+    // Slightly larger chrome budget for sm+ — the modal frame's
+    // top padding grows from `pt-7` to `sm:pt-6` / `md:pt-10`, the
+    // tabs scale up to text-base, and the desktop browser chrome /
+    // scrollbar takes a bit more vertical space. 10rem (~160px)
+    // keeps the tabs fully visible from the smallest desktop
+    // viewport (~600px tall) up to 4K monitors.
+    max-height: calc(100dvh - 10rem)
 
   .label-section
     font-size: 1.15rem

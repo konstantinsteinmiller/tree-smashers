@@ -16,6 +16,8 @@ electron/dist
 electron/dist-demo
 out
 
+dist-purity-cg
+
 node_modules
 .DS_Store
 dist

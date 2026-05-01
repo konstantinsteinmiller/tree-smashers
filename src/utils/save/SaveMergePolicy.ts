@@ -22,7 +22,6 @@
 //   - if remote wins and local had ANY progress (score > 0), the player
 //     gets bonus coins = winner.maxStage × 50 to soften the loss
 
-import { isInternalKey } from './types'
 import { STAGE_KEY, COINS_KEY, UPGRADES_KEY, SKINS_KEY } from '@/keys'
 
 /** Where the meta blob is stored in localStorage / on the remote backend.
@@ -245,11 +244,31 @@ export const applyBonusCoins = (read: SnapshotReader, bonus: number): string => 
 }
 
 /**
- * True for keys that participate in the persisted payload. Mirrors what
- * GlitchStrategy.collectPayload already filters; centralised here so the
- * CrazyGames strategy uses the same rule.
+ * Allowlist of keys that participate in the persisted payload.
+ *
+ * Replacing the old "anything not internal" rule because that let
+ * unrelated localStorage entries — vConsole layout, ad-tech experiment
+ * flags (`prebid11_*`, `dummy_*_exp`, `li-module-enabled`, `bid_pf_*`),
+ * dev toggles, and whatever the next library decides to scribble — get
+ * mirrored to the cloud. The CrazyGames Data Module then included all
+ * of that in its upload, ballooning the POST body and giving QA a
+ * misleading picture of what the game stores.
+ *
+ * Composables ALL store under one of two prefixes (`src/keys.ts` plus
+ * the one-off `ca_battles_since_ad` in `SpinnerArena.vue`), and the
+ * save-meta blob has its own well-known literal. That's the entire
+ * surface the cloud should ever see — anything else is by definition
+ * not our state.
  */
-export const isPayloadKey = (key: string): boolean => !isInternalKey(key)
+const PAYLOAD_PREFIXES = ['spinner_', 'ca_'] as const
+
+export const isPayloadKey = (key: string): boolean => {
+  if (key === META_KEY) return true
+  for (const prefix of PAYLOAD_PREFIXES) {
+    if (key.startsWith(prefix)) return true
+  }
+  return false
+}
 
 // Re-exported so tests / other modules don't have to re-declare them.
 export const SAVE_KEYS = {

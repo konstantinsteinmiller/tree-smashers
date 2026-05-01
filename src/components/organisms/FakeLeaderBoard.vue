@@ -5,6 +5,7 @@ import FModal from '@/components/molecules/FModal.vue'
 import useLeaderboard, { type LeaderboardEntry } from '@/use/useLeaderboard'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { isMobileLandscape } from '@/use/useUser.ts'
+import { stopGameplay } from '@/use/useCrazyGames'
 
 const emit = defineEmits<{
   (e: 'fight', entry: LeaderboardEntry): void
@@ -52,6 +53,11 @@ watch(isOpen, (open) => {
   if (open) {
     refresh()
     currentPage.value = playerPage.value
+    // Explicit CrazyGames `gameplayStop` on every Leaderboard open.
+    // Mirrors the arena's reactive watcher but makes the call-site
+    // visible per the CG QA request. `stopGameplay()` is idempotent
+    // (no-op when SDK inactive or already stopped).
+    stopGameplay()
   }
 })
 

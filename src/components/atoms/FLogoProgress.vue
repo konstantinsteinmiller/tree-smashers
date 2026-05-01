@@ -1,9 +1,9 @@
 <template lang="pug">
   //- Splash backdrop — blurred overlay behind the logo during loading
   Transition(name="splash-fade")
-    div.splash-backdrop(v-if="!backdropHidden")
+    div.splash-backdrop.no-os-ui(v-if="!backdropHidden")
 
-  div(
+  div.no-os-ui(
     ref="logoRef"
     class="fixed transition-all ease-in-out"
     :class="[settled ? 'duration-700' : 'duration-0', done ? 'z-[1]' : 'z-[200]']"
@@ -16,9 +16,14 @@
         class="relative transition-all duration-700 ease-in-out"
         :style="sizeStyle"
       )
-        //- Background (Grayscale)
+        //- Background (Grayscale).
+        //- `draggable=false` blocks the browser-native drag-to-save image
+        //- behavior; the `.no-os-ui` class on the root suppresses the
+        //- text caret + selection highlight + iOS long-press menu that
+        //- would otherwise pop up next to the logo on touch devices.
         img(
           src="/images/logo/logo_256x256.webp" alt="logo loader"
+          draggable="false"
           class="absolute inset-0 w-full h-full object-contain grayscale opacity-30"
         )
 
@@ -29,6 +34,7 @@
         )
           img(
             src="/images/logo/logo_256x256.webp" alt="logo loader"
+            draggable="false"
             class="w-full h-full object-contain"
           )
 
@@ -45,6 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import useAssets from '@/use/useAssets'
+import { startGameplay, stopGameplay, stopLoading } from '@/use/useCrazyGames'
 
 const { loadingProgress, preloadAssets } = useAssets()
 const progress = computed(() => loadingProgress.value)
@@ -133,12 +140,51 @@ watch(progress, (val) => {
   }
 })
 
+// Once-per-session "game ready to play" signal for the CrazyGames SDK.
+// CG QA's tooling measures cold-launch download size and needs BOTH
+// signals to mark the boundary correctly:
+//
+//   1. `stopLoading()` — pairs with the SDK's auto-fired `loadingStart`
+//      and tells the SDK the loading phase ended.
+//   2. `startGameplay()` immediately followed by `stopGameplay()` —
+//      empirically this is what makes QA's tooling actually STOP the
+//      load-size counter. `loadingStop` alone wasn't enough on the QA
+//      stage; the counter kept ticking through subsequent lazy-chunk
+//      fetches (vConsole on chord, language switches, ad SDK warm-up).
+//      Firing the gameplay pair gives the tooling an unambiguous "the
+//      game is now in a playable state" event.
+//
+// All three calls are idempotent and gated internally on `isSdkActive`,
+// so this is a no-op on non-CrazyGames builds. The actual per-battle
+// `gameplayStart` / `gameplayStop` transitions are still driven by the
+// reactive `isGameplayActive` watcher in `SpinnerArena.vue` — that
+// works fine because the gameplay flag is back to false after the
+// stop call below.
+let cgLoadSignaled = false
+const signalGameReadyToCG = () => {
+  if (cgLoadSignaled) return
+  cgLoadSignaled = true
+  try {
+    stopLoading()
+    // Back-to-back start+stop — see comment above for why both pieces
+    // are needed alongside `stopLoading`.
+    startGameplay()
+    stopGameplay()
+  } catch (e) {
+    console.warn('[FLogoProgress] CG ready-to-play signal failed', e)
+  }
+}
+
 // Hide backdrop shortly after logo starts moving to corner
 watch(done, (isDone) => {
   if (isDone) {
     // Fade out backdrop after a brief delay (let the logo start moving first)
     setTimeout(() => {
       backdropHidden.value = true
+      // Fire the CG "ready" signal alongside the backdrop fade — at
+      // this point the menu is interactable and the load chain is
+      // complete from the player's perspective.
+      signalGameReadyToCG()
     }, 150)
   }
 })
@@ -155,6 +201,30 @@ const maskStyle = computed(() => {
 </script>
 
 <style scoped lang="sass">
+// Splash is a presentation surface, not a form. Suppress every
+// browser-native UI affordance that would normally surface on this
+// kind of element:
+//   • text caret (the blinking pipe seen near the percentage label
+//     when the user accidentally taps the splash)
+//   • text selection highlight
+//   • iOS / Android long-press image menu ("Save image", "Copy")
+//   • drag-to-save image behavior on desktop browsers
+// `caret-color: transparent` covers the caret on contenteditable
+// fallthroughs; `user-select: none` covers the highlight; the touch
+// callout + tap-highlight kill the mobile context menus; and
+// `-webkit-user-drag: none` on descendant images blocks the desktop
+// drag (the inline `draggable="false"` attribute does the same job
+// for older browsers). Scoped to a class so the rule never leaks.
+.no-os-ui
+  caret-color: transparent
+  user-select: none
+  -webkit-user-select: none
+  -webkit-touch-callout: none
+  -webkit-tap-highlight-color: transparent
+
+  &, & *
+    -webkit-user-drag: none
+
 .percentage-text
   font-size: 1.2rem
   font-weight: bold

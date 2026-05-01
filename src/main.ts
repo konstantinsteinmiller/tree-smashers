@@ -11,15 +11,38 @@ import {
 } from '@/i18n'
 import { GAME_USER_LANGUAGE } from '@/utils/constants.ts'
 import { LANGUAGES } from '@/utils/enums'
-import { initCrazyGames, crazyLocale } from '@/use/useCrazyGames'
+import { initCrazyGames, crazyLocale, startLoading } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
 import useUser, { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
-import { LocalBackupLayer, IndexedDBStore } from '@/utils/save/LocalBackupLayer'
 import { installSaveStatus } from '@/use/useSaveStatus'
 import { bootstrapVConsoleFromUrl, setVConsoleMounter } from '@/use/useVConsole'
+
+// ─── Build-config self-check ──────────────────────────────────────────────
+//
+// CG QA reported "saves only land locally". Root cause was a build that
+// shipped without `VITE_APP_CRAZY_WEB=true`, so `resolveSaveStrategy`
+// silently picked `LocalStorageStrategy` (a no-op `onLocalSet`) instead of
+// `CrazyGamesStrategy`. Detect the mismatch at boot and surface it loudly
+// in DevTools so it can be spotted before QA has to chase it again.
+//
+// The heuristic is intentionally conservative — referrer-based and
+// portal-domain-suffix-only — to avoid false positives on dev / preview.
+const looksLikeCrazyGamesPortal = (): boolean => {
+  try {
+    const ref = document.referrer
+    if (!ref) return false
+    const host = new URL(ref).hostname
+    return host === 'crazygames.com'
+      || host.endsWith('.crazygames.com')
+      || host === '1001juegos.com'
+      || host.endsWith('.1001juegos.com')
+  } catch {
+    return false
+  }
+}
 
 const bootstrap = async () => {
   // vConsole is mounted on demand via either:
@@ -39,20 +62,54 @@ const bootstrap = async () => {
   // gzipped when vConsole was statically imported. CrazyGames flagged
   // the regression. Putting the dynamic-import here fixes it without
   // breaking the trigger paths.
-  setVConsoleMounter(
-    async () => {
-      const { default: VConsole } = await import('vconsole')
-      return new VConsole()
-    },
-    (instance) => {
-      ;(instance as { destroy: () => void }).destroy()
-    }
-  )
-  bootstrapVConsoleFromUrl()
+  //
+  // Build-time gate: vConsole is only useful for on-device debugging on
+  // native (Tauri) builds — `VITE_APP_NATIVE=true`. On CrazyGames /
+  // GameDistribution / Glitch / Itch builds it adds a ~300KB chunk to
+  // dist/ that nobody downloads (and CG QA flagged as build dead weight
+  // on 2026-04-30). The `import.meta.env`-gated ternary makes the
+  // dynamic import unreachable on web builds — Rollup eliminates the
+  // import call AND the vconsole chunk entirely.
+  //
+  // If we ever need vConsole on a web build (e.g. for CG mobile-app QA),
+  // set `VITE_APP_INCLUDE_VCONSOLE=true` in the relevant `.env.<mode>`
+  // and the `|| ===` arm below pulls it back in.
+  if (
+    import.meta.env.VITE_APP_NATIVE === 'true'
+    || import.meta.env.VITE_APP_INCLUDE_VCONSOLE === 'true'
+  ) {
+    setVConsoleMounter(
+      async () => {
+        const { default: VConsole } = await import('vconsole')
+        return new VConsole()
+      },
+      (instance) => {
+        ;(instance as { destroy: () => void }).destroy()
+      }
+    )
+    bootstrapVConsoleFromUrl()
+  }
+
+  // Build-config self-check (see `looksLikeCrazyGamesPortal` comment above).
+  if (looksLikeCrazyGamesPortal() && !isCrazyWeb) {
+    console.error(
+      '[save] BUILD MISCONFIGURED: page is hosted under a CrazyGames portal ' +
+      '(referrer=' + document.referrer + ') but VITE_APP_CRAZY_WEB is not "true". ' +
+      'CrazyGamesStrategy will NOT run and saves will only land in localStorage. ' +
+      'Rebuild with `pnpm build:crazy-web` and ensure .env.crazy-web(.local) sets the flag.'
+    )
+  }
 
   // Platform SDK init — must happen before App loads.
   if (isCrazyWeb) {
     await initCrazyGames()
+    // Explicit `loadingStart` immediately after SDK init. The SDK
+    // technically auto-enters the "loading" state on init, but CG QA's
+    // tooling does NOT register the load window unless we fire the
+    // event ourselves. Without this, the download-size measurement on
+    // QA's dashboard ends up empty. The matching `loadingStop` fires
+    // from `FLogoProgress.vue` once the splash screen resolves.
+    startLoading()
   } else if (isWaveDash) {
     try {
       const sdk = await (window as any).WavedashJS
@@ -75,13 +132,7 @@ const bootstrap = async () => {
     isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution
   })
 
-  // IDB-backed second-tier persistence. Survives force-close on mobile
-  // webviews (CG mobile app in particular) where localStorage gets wiped
-  // but the app's IDB partition stays. The layer is platform-agnostic —
-  // every save strategy gets the same safety net. See
-  // src/utils/save/LocalBackupLayer.ts for the failure-mode rationale.
-  const backupLayer = new LocalBackupLayer(new IndexedDBStore())
-  const saveManager = new SaveManager(strategy, backupLayer)
+  const saveManager = new SaveManager(strategy)
   // Install the reactive bridge BEFORE init() so the boot-time sanity
   // guard's hydrate-state transitions are observable from useSaveStatus
   // even though no Vue components have mounted yet — the strategy may
@@ -123,7 +174,15 @@ const bootstrap = async () => {
     })
   })
 
-  if (isGlitch) {
+  // NOTE: gates below use `import.meta.env.VITE_APP_*` literals (not the
+  // `isGlitch` / `isGameDistribution` constants imported from useUser).
+  // Rollup's cross-module constant propagation isn't always reliable, so
+  // imported constants don't always tree-shake the dynamic-import branch.
+  // Inline literals always do — Vite substitutes them with `'true'` /
+  // `'false'` strings at build time, the dead branch is eliminated, and
+  // the `await import('@/...')` call (and its target chunk) disappears
+  // entirely from non-matching builds.
+  if (import.meta.env.VITE_APP_GLITCH === 'true') {
     const { glitchPlugin } = await import('@/utils/glitchPlugin')
     glitchPlugin()
   }
@@ -134,7 +193,7 @@ const bootstrap = async () => {
   // time the player can see "watch ad" buttons the SDK is ready. Saves
   // ~1-2 seconds of perceived loading vs awaiting here on the critical
   // path.
-  if (isGameDistribution) {
+  if (import.meta.env.VITE_APP_GAME_DISTRIBUTION === 'true') {
     void import('@/utils/gameDistributionPlugin').then(({ gameDistributionPlugin }) => {
       gameDistributionPlugin()
     })
@@ -172,36 +231,16 @@ const bootstrap = async () => {
     fallbackWarn: false
   })
 
-  // If the SDK gave us a supported locale, push it through the user store
-  // so userLanguage (and anything reactive to it) lines up with i18n. We
-  // wait for IndexedDB hydration so we don't race with the saved-
-  // preference loader and end up writing then immediately overwriting.
-  if (cgLocale && LANGUAGES.includes(cgLocale)) {
-    const { userLanguage: storedLanguage, setSettingValue } = useUser()
-    const { isDbInitialized } = await import('@/use/useMatch')
-    let stop: (() => void) | null = null
-    stop = watch(
-      isDbInitialized,
-      (ready) => {
-        if (!ready) return
-        stop?.()
-        if (storedLanguage.value !== cgLocale) {
-          setSettingValue('language', cgLocale)
-        }
-        // cgLocale is the one we already loaded above, so this is a
-        // cheap no-op on the loader side.
-        setI18nLocale(i18n, cgLocale)
-      },
-      { immediate: true }
-    )
-  }
-
-  // Sync i18n locale when IndexedDB hydrates the saved language on reload
-  // (skip when CrazyGames already controls locale). If the hydrated
-  // locale differs from what we booted with, `setI18nLocale` will fetch
-  // the new chunk on-the-fly before swapping.
-  if (!(cgLocale && LANGUAGES.includes(cgLocale))) {
-    const { userLanguage: storedLang } = useUser()
+  // Apply the player's saved language once hydrate finishes. The CG
+  // portal locale (`cgLocale`) is used ONLY to seed first-time players —
+  // it never overrides an explicit OptionsModal choice. After hydrate
+  // has populated localStorage from sdk.data, a null value at
+  // `spinner_user_language` means "this player has never picked a
+  // language on any device" and we can safely seed the portal locale.
+  // useUser.ts deliberately does NOT seed a language default, so the
+  // null/non-null probe here is a reliable signal.
+  {
+    const { userLanguage: storedLang, setSettingValue } = useUser()
     const { isDbInitialized: dbReady } = await import('@/use/useMatch')
     let stopLangSync: (() => void) | null = null
     stopLangSync = watch(
@@ -209,6 +248,14 @@ const bootstrap = async () => {
       (ready) => {
         if (!ready) return
         stopLangSync?.()
+        const hasStoredLanguage = localStorage.getItem('spinner_user_language') != null
+        if (!hasStoredLanguage && cgLocale && LANGUAGES.includes(cgLocale)) {
+          setSettingValue('language', cgLocale)
+        }
+        // Apply whichever language is now authoritative — the stored
+        // value (cloud-hydrated or just-seeded). Never `cgLocale`
+        // unconditionally, because that's what was overwriting an
+        // explicit Spanish choice on every English-portal refresh.
         if (isSupportedLocale(storedLang.value)) {
           setI18nLocale(i18n, storedLang.value)
         }

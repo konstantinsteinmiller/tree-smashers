@@ -26,9 +26,45 @@
 // App keys & ad unit IDs are platform-specific and ship in the bundle
 // from Vite env vars (they are public identifiers, not secrets).
 import { ref } from 'vue'
-import { invoke, addPluginListener } from '@tauri-apps/api/core'
+// `@tauri-apps/api/core` is only meaningful inside a Tauri / native shell.
+// On a CrazyGames (or any web) build the provider is never instantiated
+// at runtime — it's behind an `import.meta.env.VITE_APP_NATIVE === 'true'`
+// gate in `resolveAdProvider`. The previous STATIC import of this package
+// nevertheless dragged ~10KB of Tauri runtime globals into the entry
+// chunk for every web build. The build-time-gated ternary below makes the
+// dynamic import reachable only on native builds, so Rollup eliminates
+// both the call AND the tauri chunk on CrazyGames / GD / itch / Glitch.
+import type { invoke as TauriInvoke, addPluginListener as TauriAddPluginListener } from '@tauri-apps/api/core'
 import { isDebug } from '@/use/useMatch'
 import type { AdProvider } from './types'
+
+type TauriCore = { invoke: typeof TauriInvoke; addPluginListener: typeof TauriAddPluginListener }
+let _tauriPromise: Promise<TauriCore> | null = null
+
+const loadTauri: () => Promise<TauriCore> =
+  import.meta.env.VITE_APP_NATIVE === 'true'
+    ? () => {
+      if (!_tauriPromise) {
+        _tauriPromise = import('@tauri-apps/api/core').then((m) => ({
+          invoke: m.invoke,
+          addPluginListener: m.addPluginListener
+        }))
+      }
+      return _tauriPromise
+    }
+    : () => Promise.reject(new Error('[ads/levelplay] @tauri-apps/api is only available on native builds'))
+
+const invoke: typeof TauriInvoke = (async (...args: unknown[]) => {
+  const t = await loadTauri()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (t.invoke as any)(...args)
+}) as unknown as typeof TauriInvoke
+
+const addPluginListener: typeof TauriAddPluginListener = (async (...args: unknown[]) => {
+  const t = await loadTauri()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (t.addPluginListener as any)(...args)
+}) as unknown as typeof TauriAddPluginListener
 
 // Force the LevelPlay Test Suite overlay on launch. Driven from
 // .env.tauri's VITE_APP_ADS_TEST_SUITE flag so you can toggle it

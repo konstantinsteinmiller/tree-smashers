@@ -1,16 +1,14 @@
-// Characterization tests for the save-strategy resolver. Mirrors the exact
-// branching that lives in main.ts:41-47 today. Confirms:
-//   - Glitch flag → GlitchStrategy via lazy import (or LocalStorageStrategy fallback)
-//   - CrazyGames flag → CrazyGamesStrategy via static import
-//   - GameDistribution flag → GameDistributionStrategy via lazy import
-//   - No flag → LocalStorageStrategy
+// Characterization tests for the save-strategy resolver.
 //
-// Each strategy class has a stable `name` property — we compare on that to
-// avoid coupling the test to instance details. Tests construct strategies
-// directly (no mocking), so they exercise the real classes.
+// Branches now key off `import.meta.env.VITE_APP_*` literals (so Rollup
+// can tree-shake unused platform plugins from the bundle) instead of the
+// historical `flags` parameter — see the file header on
+// `src/platforms/resolveSaveStrategy.ts` for why.
+//
+// Tests stub the env via `vi.stubEnv` per case, then re-import the
+// resolver so it sees the freshly stubbed env.
 
-import { describe, expect, it, vi } from 'vitest'
-import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PlatformFlags } from '@/platforms/capabilities'
 
 const allOff: PlatformFlags = {
@@ -21,46 +19,75 @@ const allOff: PlatformFlags = {
   isGameDistribution: false
 }
 
+const ALL_PLATFORM_ENVS = [
+  'VITE_APP_CRAZY_WEB',
+  'VITE_APP_GAME_DISTRIBUTION',
+  'VITE_APP_GLITCH'
+] as const
+
+const clearEnv = () => {
+  for (const k of ALL_PLATFORM_ENVS) vi.stubEnv(k, '')
+}
+
+const loadResolver = async () => {
+  // Re-import so the freshly-stubbed env is picked up by the resolver's
+  // `import.meta.env` reads.
+  vi.resetModules()
+  const mod = await import('@/platforms/resolveSaveStrategy')
+  return mod.resolveSaveStrategy
+}
+
 describe('resolveSaveStrategy', () => {
+  beforeEach(clearEnv)
+  afterEach(() => vi.unstubAllEnvs())
+
   it('returns LocalStorageStrategy when no flag is set', async () => {
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy(allOff)
     expect(strategy.name).toBe('localStorage')
   })
 
   it('returns LocalStorageStrategy when only itch is set', async () => {
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isItch: true })
     expect(strategy.name).toBe('localStorage')
   })
 
   it('returns LocalStorageStrategy when only wavedash is set', async () => {
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isWaveDash: true })
     expect(strategy.name).toBe('localStorage')
   })
 
-  it('returns CrazyGamesStrategy when isCrazyWeb is set', async () => {
+  it('returns CrazyGamesStrategy when isCrazyWeb env is set', async () => {
+    vi.stubEnv('VITE_APP_CRAZY_WEB', 'true')
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isCrazyWeb: true })
     expect(strategy.name).toBe('crazyGames')
   })
 
-  it('returns GameDistributionStrategy when isGameDistribution is set', async () => {
+  it('returns GameDistributionStrategy when isGameDistribution env is set', async () => {
+    vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isGameDistribution: true })
     expect(strategy.name).toBe('gameDistribution')
   })
 
-  it('returns GlitchStrategy or LocalStorageStrategy fallback when isGlitch is set (depends on env config)', async () => {
+  it('returns GlitchStrategy or LocalStorageStrategy fallback when isGlitch env is set', async () => {
     // The Glitch plugin's `createGlitchSaveStrategy()` returns null when
-    // VITE_APP_GLITCH_INSTALL_ID / TOKEN env vars are missing; the resolver
-    // falls back to LocalStorageStrategy in that case. In test env these
-    // are unset, so the fallback path runs.
+    // VITE_APP_GLITCH_INSTALL_ID / TOKEN env vars are missing; the
+    // resolver falls back to LocalStorageStrategy in that case.
+    vi.stubEnv('VITE_APP_GLITCH', 'true')
+    const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isGlitch: true })
-    // Either the Glitch strategy (when env is fully configured) or
-    // LocalStorageStrategy fallback (when not) — both are correct for
-    // their respective configurations.
     expect(['glitch', 'localStorage']).toContain(strategy.name)
   })
 
   describe('priority ordering matches main.ts', () => {
-    it('isGlitch wins over isCrazyWeb when both are set (Glitch is the first arm)', async () => {
+    it('isGlitch wins over isCrazyWeb when both env flags are set', async () => {
+      vi.stubEnv('VITE_APP_GLITCH', 'true')
+      vi.stubEnv('VITE_APP_CRAZY_WEB', 'true')
+      const resolveSaveStrategy = await loadResolver()
       const strategy = await resolveSaveStrategy({
         ...allOff,
         isGlitch: true,
@@ -69,7 +96,10 @@ describe('resolveSaveStrategy', () => {
       expect(['glitch', 'localStorage']).toContain(strategy.name)
     })
 
-    it('isCrazyWeb wins over isGameDistribution when both are set (CG is the second arm)', async () => {
+    it('isCrazyWeb wins over isGameDistribution when both env flags are set', async () => {
+      vi.stubEnv('VITE_APP_CRAZY_WEB', 'true')
+      vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
+      const resolveSaveStrategy = await loadResolver()
       const strategy = await resolveSaveStrategy({
         ...allOff,
         isCrazyWeb: true,

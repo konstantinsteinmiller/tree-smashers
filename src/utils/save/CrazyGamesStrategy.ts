@@ -1,11 +1,9 @@
 import {
-  applyBonusCoins,
   computeMeta,
   decideMerge,
   isPayloadKey,
   META_KEY,
   parseMeta,
-  SAVE_KEYS,
   serializeMeta,
   type SaveMeta
 } from './SaveMergePolicy'
@@ -16,40 +14,44 @@ import type {
   LocalStorageAccessor,
   SaveStrategy
 } from './types'
+import { cgDebug, cgDebugWarn } from './crazyDebugLog'
 
-// ─── CrazyGames data-module strategy ───────────────────────────────────────
+// ─── CrazyGames data-module strategy (per-key) ─────────────────────────────
 //
-// Mirrors the game's localStorage into the CrazyGames SDK's `data` module so
-// progress follows the player between devices on the CrazyGames portal.
+// Matches the working d797bc9b approach: every allowlisted gameplay key
+// gets its own entry on `sdk.data`. A small manifest tracks which keys
+// the SDK currently has so hydrate can iterate them on the next session.
+// Sorts keys alphabetically before flushing so the wire ordering is
+// deterministic across sessions (not strictly required by CG, but the
+// same property Glitch needs and a cheap consistency win).
 //
-// The SDK does not expose a "list keys" API, so we keep our own manifest of
-// keys we've written. On boot we read the manifest, pull each key back from
-// the SDK into localStorage, then patch-through every subsequent local
-// write.
-//
-// Bulletproofing rules (added 2026-04 after a player-reported progress-loss
-// bug — see SaveMergePolicy.ts header):
-//   1. Track `hydrateState` explicitly. The previous implementation
-//      collapsed "SDK returned an error" and "SDK returned no manifest"
-//      into the same code path, which let a transient network blip during
-//      boot wipe the player's cloud save (the game would default to a
-//      fresh state and the next 500ms autosave would push those defaults
-//      to remote, overwriting the actual save).
-//   2. NEVER push to remote while `hydrateState` isn't a `success-*` state.
-//      Local writes accumulate in `dirty` and flush on the next successful
-//      hydrate. The local mirror is still always-on so the game keeps
-//      working offline.
-//   3. On a successful hydrate that finds remote data, run the merge
-//      policy: higher progress score wins; if remote wins and local had
-//      progress, award `winner.maxStage * 50` bonus coins.
-//   4. When hydrate fails, schedule a background retry ladder
+// Bulletproofing rules carried over:
+//   1. `hydrateState` is set explicitly on every code path. The strategy
+//      MUST NOT push to remote unless we observed a `success-*` state —
+//      otherwise a transient blip at boot would let fresh-defaults
+//      overwrite a real cloud save.
+//   2. On a successful hydrate that finds remote data, run the merge
+//      resolver: higher progress score wins. The "+N bonus coins" mechanic
+//      is intentionally suppressed for CG (no localStorage-vs-cloud
+//      divergence to compensate for in cloud-only mode; the resolver
+//      would otherwise farm bonus coins on every cold launch).
+//   3. When hydrate fails, schedule a background retry ladder
 //      (5s → 15s → 45s → 2m → 5m → 15m loop) so a brief outage at boot
 //      heals on its own without requiring the player to relaunch.
 
 const KEYS_MANIFEST = '__save_internal__crazy_keys'
-const FLUSH_DELAY_MS = 500
+const FLUSH_DELAY_MS = 250
 const HYDRATE_RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 120_000, 300_000]
-const HYDRATE_RETRY_LOOP_MS = 900_000  // every 15 min once the ladder is exhausted
+const HYDRATE_RETRY_LOOP_MS = 900_000
+
+// Inline retry inside a single hydrate attempt. The CG SDK occasionally
+// returns null for the manifest right after `SDK.init()` resolves — the
+// SDK is "ready" but its data module hasn't finished syncing with cloud
+// yet. Without this retry, returning players land on stage 1 with their
+// cloud save invisible until a background retry (5s+) reads it.
+const INLINE_MANIFEST_RETRIES = 2
+const INLINE_RETRY_DELAY_MS = 250
+const sleepMs = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
 
 interface SdkDataModule {
   getItem: (key: string) => Promise<string | null> | string | null
@@ -74,6 +76,13 @@ export class CrazyGamesStrategy implements SaveStrategy {
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private noticeListeners = new Set<HydrateNoticeListener>()
 
+  // Last value successfully sent to `sdk.data.*` per key. Used by
+  // `doFlush` to skip a setItem/removeItem when the value is unchanged
+  // from the previous round-trip — cuts redundant SDK writes per CG QA's
+  // guidance ("call set only when there are changes"). Value `undefined`
+  // means "we removed this key"; `string` means "last set value".
+  private lastSentByKey = new Map<string, string | undefined>()
+
   constructor(private readonly getData: CrazySdkDataGetter) {
   }
 
@@ -84,9 +93,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
   async hydrate(local: LocalStorageAccessor): Promise<void> {
     this.local = local
     await this.runHydrateAttempt(local, 'hydrate')
-    if (this._hydrateState === 'failed-retrying') {
-      this.scheduleRetry()
-    }
+    if (this._hydrateState === 'failed-retrying') this.scheduleRetry()
   }
 
   async retryHydrate(local: LocalStorageAccessor): Promise<HydrateState> {
@@ -96,9 +103,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
       this.retryTimer = null
     }
     await this.runHydrateAttempt(local, 'retry')
-    if (this._hydrateState === 'failed-retrying') {
-      this.scheduleRetry()
-    }
+    if (this._hydrateState === 'failed-retrying') this.scheduleRetry()
     return this._hydrateState
   }
 
@@ -108,14 +113,14 @@ export class CrazyGamesStrategy implements SaveStrategy {
   }
 
   onLocalSet(key: string, value: string): void {
-    if (!isPayloadKey(key) && key !== META_KEY) return
+    if (!isPayloadKey(key)) return
     this.dirty.set(key, value)
     this.trackKey(key)
     this.scheduleFlush()
   }
 
   onLocalRemove(key: string): void {
-    if (!isPayloadKey(key) && key !== META_KEY) return
+    if (!isPayloadKey(key)) return
     this.dirty.set(key, null)
     this.untrackKey(key)
     this.scheduleFlush()
@@ -147,35 +152,55 @@ export class CrazyGamesStrategy implements SaveStrategy {
   /** Single attempt at hydrating from the SDK. Sets hydrateState and
    *  emits a notice on completion. Never throws. */
   private async runHydrateAttempt(local: LocalStorageAccessor, source: 'hydrate' | 'retry'): Promise<void> {
+    cgDebug(`hydrate attempt (source=${source})`)
     const data = this.getData()
     if (!data) {
-      // SDK isn't available at all — strategy degrades to local-only.
-      // This is a deterministic answer ("no remote exists for this build"),
-      // not a transient failure, so flag as success-empty rather than
-      // failed-* to unblock flushes (which become no-ops since `data` is
-      // null inside doFlush anyway).
+      cgDebugWarn('hydrate: sdk.data unavailable — strategy degrades to local-only')
       this.setState('success-empty', source === 'retry' ? 'sdk unavailable' : 'sdk unavailable, local-only')
       return
     }
 
-    let manifestRaw: string | null
-    try {
-      manifestRaw = await data.getItem(KEYS_MANIFEST) ?? null
-    } catch (e) {
-      console.warn('[save/crazy] hydrate manifest failed', e)
-      this.setState('failed-retrying', `manifest fetch failed: ${describeError(e)}`)
-      return
+    let manifestRaw: string | null = null
+    let manifestThrew = false
+    let manifestError: unknown = null
+    for (let attempt = 0; attempt <= INLINE_MANIFEST_RETRIES; attempt++) {
+      try {
+        const v = await data.getItem(KEYS_MANIFEST)
+        manifestRaw = v ?? null
+        manifestThrew = false
+        manifestError = null
+      } catch (e) {
+        manifestRaw = null
+        manifestThrew = true
+        manifestError = e
+      }
+      if (manifestRaw !== null) {
+        cgDebug(`hydrate: manifest ${manifestRaw.length} chars (attempt ${attempt + 1})`)
+        break
+      }
+      if (attempt < INLINE_MANIFEST_RETRIES) {
+        cgDebug(`hydrate: manifest ${manifestThrew ? 'threw' : 'null'} on attempt ${attempt + 1} — retry in ${INLINE_RETRY_DELAY_MS}ms`)
+        await sleepMs(INLINE_RETRY_DELAY_MS)
+      } else if (manifestThrew) {
+        console.warn('[save/crazy] hydrate manifest failed', manifestError)
+        cgDebugWarn(`hydrate: manifest threw on all ${INLINE_MANIFEST_RETRIES + 1} attempts — will background-retry`, manifestError)
+        this.setState('failed-retrying', `manifest fetch failed: ${describeError(manifestError)}`)
+        return
+      }
     }
 
     const remoteKeys = parseManifest(manifestRaw)
 
     // Genuine "fresh remote": SDK responded successfully but had no manifest.
-    // Don't treat this as failure — flush local writes through normally.
     if (manifestRaw === null && remoteKeys.length === 0) {
       this.setState('success-empty', 'remote has no save')
-      // Local writes already queued (e.g. from the boot module-load reads
-      // that wrote defaults) should flush as the seed save.
-      this.scheduleFlush()
+      // Seed cloud with whatever local already has — gameplay state from
+      // the current/prior session AND user settings (`spinner_user_*`)
+      // present from useUser.ts's module-init writes. `lastSentByKey` is
+      // empty here so every local payload key is genuinely new to remote
+      // and gets queued.
+      this.queueLocalOnlyPayloadKeys(local)
+      if (this.dirty.size > 0) this.scheduleFlush()
       return
     }
 
@@ -183,40 +208,60 @@ export class CrazyGamesStrategy implements SaveStrategy {
     // the whole attempt — partial data is better than wiping local.
     const remoteSnapshot = new Map<string, string>()
     let perKeyErrors = 0
+    const stillNullKeys: string[] = []
     for (const key of remoteKeys) {
       try {
         const value = await data.getItem(key)
         if (value !== null && value !== undefined) {
-          remoteSnapshot.set(key, String(value))
+          const stringified = String(value)
+          remoteSnapshot.set(key, stringified)
+          // Seed dedupe cache: SDK already has this value, so the next
+          // flush should NOT re-send it.
+          this.lastSentByKey.set(key, stringified)
+        } else {
+          stillNullKeys.push(key)
         }
       } catch (e) {
         perKeyErrors++
         console.warn(`[save/crazy] hydrate getItem("${key}") failed`, e)
       }
     }
+    // Same SDK-settle defense as the manifest: any key that comes back
+    // null on the first call gets one more chance after a short delay.
+    if (stillNullKeys.length > 0) {
+      cgDebug(`hydrate: ${stillNullKeys.length} key(s) null on first pass — retry in ${INLINE_RETRY_DELAY_MS}ms`)
+      await sleepMs(INLINE_RETRY_DELAY_MS)
+      for (const key of stillNullKeys) {
+        try {
+          const value = await data.getItem(key)
+          if (value !== null && value !== undefined) {
+            const stringified = String(value)
+            remoteSnapshot.set(key, stringified)
+            this.lastSentByKey.set(key, stringified)
+            cgDebug(`hydrate: retry recovered key "${key}"`)
+          }
+        } catch (e) {
+          perKeyErrors++
+          console.warn(`[save/crazy] hydrate retry getItem("${key}") failed`, e)
+        }
+      }
+    }
+    if (manifestRaw !== null) {
+      this.lastSentByKey.set(KEYS_MANIFEST, manifestRaw)
+    }
 
-    // If every per-key fetch failed we don't actually have remote data —
-    // treat as failure to retry, never overwrite local with empty.
+    // If every per-key fetch failed we don't actually have remote data.
     if (remoteKeys.length > 0 && remoteSnapshot.size === 0 && perKeyErrors > 0) {
       this.setState('failed-retrying', 'all per-key fetches failed')
       return
     }
 
-    // Stronger guard: if the manifest claims payload keys exist but the SDK
-    // returned only META_KEY (per-key getItem yielded `null` for every
-    // STAGE/COINS/SKINS/etc. key), refuse the merge. Without this, a
-    // remote-wins decision based on META_KEY's progressScore would fire
-    // the "+N bonus coins" banner but write NOTHING to local — the
-    // player would see a phantom restore that doesn't actually update
-    // their stage / coins / skins. Treat as failed-retrying so the
-    // background retry ladder gets another shot at fetching real values,
-    // and never grant a bonus we can't back up with real data.
-    //
-    // The CrazyGames SDK on the mobile app exhibits this pattern after
-    // a force-close: `data.getItem(KEYS_MANIFEST)` returns the historic
-    // manifest, but `data.getItem(STAGE_KEY)` etc. return null until the
-    // SDK has resynced with cloud. Honoring those nulls would lie to the
-    // player.
+    // Stronger guard: if the manifest claims payload keys exist but the
+    // SDK returned only META_KEY (per-key getItem yielded `null` for
+    // every gameplay key), refuse the merge. Without this, a remote-wins
+    // decision based on META_KEY's progressScore would write NOTHING to
+    // local — the player would see a phantom restore that didn't update
+    // their stage / coins / skins.
     if (remoteKeys.length > 0) {
       let payloadKeysReturned = 0
       for (const k of remoteSnapshot.keys()) {
@@ -228,9 +273,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
       }
     }
 
-    // Build remote meta either from the manifest's META_KEY value or by
-    // computing it from the remote snapshot (legacy saves predating this
-    // module won't have a meta blob).
+    // Build remote / local meta and run the merge resolver.
     const remoteMeta: SaveMeta | null =
       parseMeta(remoteSnapshot.get(META_KEY) ?? null)
       ?? (remoteSnapshot.size > 0
@@ -242,54 +285,22 @@ export class CrazyGamesStrategy implements SaveStrategy {
       ?? (anyPayloadKeyPresent(local) ? computeMeta({ get: (k) => local.get(k) }) : null)
 
     const resolution = decideMerge(localMeta, remoteMeta)
-    let bonusCoinsAwarded = 0
 
     switch (resolution.kind) {
       case 'remote-only':
       case 'remote-wins': {
-        // Apply remote payload over local.
         for (const [key, value] of remoteSnapshot) {
           if (key === META_KEY) continue
           local.set(key, value)
         }
-        // Always re-add META_KEY (either remote's or freshly computed).
         if (remoteMeta) local.set(META_KEY, serializeMeta(remoteMeta))
-
-        if (resolution.kind === 'remote-wins' && resolution.bonusCoins > 0) {
-          // Anti-farm guard: if this client already received the bonus
-          // for THIS exact remote `savedAt`, don't pay it again. Without
-          // the guard, a player could force-close → reopen → trigger
-          // remote-wins repeatedly, harvesting the bonus on every cycle.
-          // The flag is recorded in `local`'s META blob and survives
-          // force-close via the LocalBackupLayer + the cloud round-trip.
-          const alreadyReceived =
-            !!localMeta?.bonusReceivedFor &&
-            !!remoteMeta?.savedAt &&
-            localMeta.bonusReceivedFor === remoteMeta.savedAt
-          if (!alreadyReceived) {
-            const newCoins = applyBonusCoins({ get: (k) => local.get(k) }, resolution.bonusCoins)
-            local.set(SAVE_KEYS.COINS, newCoins)
-            bonusCoinsAwarded = resolution.bonusCoins
-            // Mark dirty so the bonus syncs back to remote.
-            this.dirty.set(SAVE_KEYS.COINS, newCoins)
-            this.trackKey(SAVE_KEYS.COINS)
-            // Refresh meta to reflect the augmented coin total AND
-            // record that this remote `savedAt` has been bonus-paid.
-            const newMeta = computeMeta({ get: (k) => local.get(k) })
-            if (remoteMeta?.savedAt) {
-              newMeta.bonusReceivedFor = remoteMeta.savedAt
-            }
-            local.set(META_KEY, serializeMeta(newMeta))
-            this.dirty.set(META_KEY, serializeMeta(newMeta))
-            this.trackKey(META_KEY)
-          }
-        }
+        // Bonus mechanic disabled wholesale on CG — see strategy header.
         break
       }
       case 'local-wins': {
-        // Local already authoritative — flush it back so remote catches up.
+        // Local already authoritative — flush back so remote catches up.
         for (const key of local.keys()) {
-          if (!isPayloadKey(key) && key !== META_KEY) continue
+          if (!isPayloadKey(key)) continue
           const v = local.get(key)
           if (v != null) {
             this.dirty.set(key, v)
@@ -300,17 +311,32 @@ export class CrazyGamesStrategy implements SaveStrategy {
       }
       case 'tie-keep-local':
       case 'local-only':
-        // Nothing to do.
         break
     }
 
-    // Successful hydrate — clear retry counter and unblock flushes.
-    this.retryAttempt = 0
-    const hasData = resolution.kind !== 'local-only'
-      || anyPayloadKeyPresent(local)
-    this.setState(hasData ? 'success-with-data' : 'success-empty', resolutionReason(resolution), bonusCoinsAwarded)
+    // Settings stranding fix: any local payload key whose value differs
+    // from the (post-merge) snapshot held in `lastSentByKey` needs to be
+    // queued for upload. Catches the case where useUser.ts seeded its
+    // ref defaults into localStorage but the player never explicitly
+    // re-saved them — without this, settings (`spinner_user_*`) and any
+    // other passively-written gameplay keys would live forever in local
+    // and never round-trip through `sdk.data`. Per-key dedupe in
+    // `doFlush` skips writes already authoritative remotely.
+    this.queueLocalOnlyPayloadKeys(local)
 
-    // If the merge produced dirty entries, schedule a flush to push them.
+    this.retryAttempt = 0
+    const hasData = resolution.kind !== 'local-only' || anyPayloadKeyPresent(local)
+
+    if (hasData) {
+      const sample: Record<string, string | null> = {}
+      for (const k of ['spinner_campaign_stage', 'spinner_player_team', 'spinner_player_coins', 'spinner_player_skins']) {
+        sample[k] = local.get(k)
+      }
+      cgDebug(`hydrate: applied to local — resolution=${resolution.kind}, snapshot=${JSON.stringify(sample)}`)
+    }
+
+    this.setState(hasData ? 'success-with-data' : 'success-empty', resolutionReason(resolution))
+
     if (this.dirty.size > 0) this.scheduleFlush()
   }
 
@@ -361,44 +387,81 @@ export class CrazyGamesStrategy implements SaveStrategy {
   }
 
   private async doFlush(): Promise<void> {
-    if (!this.canFlush()) return
+    if (!this.canFlush()) {
+      cgDebug(`flush skipped: hydrateState=${this._hydrateState}`)
+      return
+    }
     const data = this.getData()
-    if (!data) return
+    if (!data) {
+      cgDebugWarn(`flush skipped: sdk.data unavailable (${this.dirty.size} keys queued)`)
+      return
+    }
     if (this.dirty.size === 0) return
 
-    // Compute a fresh meta from the current local state and include it
-    // in the batch so remote always sees a self-describing save.
+    // Refresh META from current local state and queue it alongside the
+    // gameplay-key writes so remote always carries a self-describing
+    // snapshot for the next hydrate's merge resolver.
     const local = this.local
     if (local) {
       const meta = computeMeta({ get: (k) => local.get(k) })
       const serialized = serializeMeta(meta)
-      // Write meta to local without re-entering onLocalSet — accessor.set
-      // bypasses the SaveManager's patch.
       local.set(META_KEY, serialized)
       this.dirty.set(META_KEY, serialized)
       this.trackKey(META_KEY)
     }
 
-    const batch = this.dirty
+    // Sort the batch alphabetically — deterministic wire ordering across
+    // sessions (matches the Glitch strategy's contract; cheap on CG too).
+    const batch = [...this.dirty.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     this.dirty = new Map()
+
+    cgDebug(`flush starting: ${batch.length} key(s) — [${batch.map(([k]) => k).join(', ')}]`)
+    let okCount = 0
+    let failCount = 0
+    let skipCount = 0
     for (const [key, value] of batch) {
+      // Dedupe identical writes (saves an SDK round-trip).
+      const last = this.lastSentByKey.get(key)
+      const wantsRemove = value === null
+      const isUnchanged = wantsRemove
+        ? last === undefined && this.lastSentByKey.has(key)
+        : last === value
+      if (isUnchanged) {
+        skipCount++
+        continue
+      }
       try {
         if (value !== null) {
           await data.setItem(key, value)
+          this.lastSentByKey.set(key, value)
         } else {
           await data.removeItem(key)
+          this.lastSentByKey.set(key, undefined)
         }
+        okCount++
       } catch (e) {
+        failCount++
         console.warn(`[save/crazy] sdk.data sync ("${key}") failed`, e)
-        // Re-queue the failed write so the next flush retries it.
+        cgDebugWarn(`flush: data.setItem("${key}") FAILED — re-queueing`, e)
         this.dirty.set(key, value)
       }
     }
+
+    // Manifest write (also dedupe'd — every flush would otherwise re-send
+    // the same JSON-stringified key list even when only META changed).
     try {
       const manifest = this.readManifest()
-      await data.setItem(KEYS_MANIFEST, JSON.stringify(manifest))
+      const manifestSerialized = JSON.stringify(manifest)
+      if (this.lastSentByKey.get(KEYS_MANIFEST) === manifestSerialized) {
+        cgDebug(`flush done: ${okCount} ok, ${failCount} failed, ${skipCount} skipped; manifest unchanged`)
+      } else {
+        await data.setItem(KEYS_MANIFEST, manifestSerialized)
+        this.lastSentByKey.set(KEYS_MANIFEST, manifestSerialized)
+        cgDebug(`flush done: ${okCount} ok, ${failCount} failed, ${skipCount} skipped; manifest synced (${manifest.length} keys)`)
+      }
     } catch (e) {
       console.warn('[save/crazy] manifest sync failed', e)
+      cgDebugWarn('flush: manifest sync FAILED', e)
     }
   }
 
@@ -411,7 +474,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
   }
 
   private writeManifest(keys: string[]): void {
-    this.local?.set(KEYS_MANIFEST, JSON.stringify(keys))
+    this.local?.set(KEYS_MANIFEST, JSON.stringify(keys.slice().sort()))
   }
 
   private trackKey(key: string): void {
@@ -426,6 +489,24 @@ export class CrazyGamesStrategy implements SaveStrategy {
     const keys = this.readManifest()
     const next = keys.filter(k => k !== key)
     if (next.length !== keys.length) this.writeManifest(next)
+  }
+
+  /** Queue every local payload key whose current value differs from the
+   *  last value the SDK was observed to hold (or whose key the SDK has
+   *  never had at all). Idempotent — `lastSentByKey` is populated by
+   *  the per-key fetch loop earlier in hydrate, so a remote-only
+   *  resolution sees `lastSent === local` for every cloud-sourced key
+   *  and only the genuinely-local-only keys end up queued. */
+  private queueLocalOnlyPayloadKeys(local: LocalStorageAccessor): void {
+    for (const key of local.keys()) {
+      if (!isPayloadKey(key)) continue
+      if (key === META_KEY) continue
+      const value = local.get(key)
+      if (value == null) continue
+      if (this.lastSentByKey.get(key) === value) continue
+      this.dirty.set(key, value)
+      this.trackKey(key)
+    }
   }
 }
 

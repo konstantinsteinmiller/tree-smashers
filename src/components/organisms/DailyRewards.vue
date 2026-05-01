@@ -15,6 +15,7 @@ import {
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import useSounds from '@/use/useSound.ts'
+import { stopGameplay } from '@/use/useCrazyGames'
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -104,6 +105,14 @@ const yesterdayStr = () => {
 
 const state = ref<DailyState>(loadState())
 const isModalOpen = ref(false)
+
+// Explicit CrazyGames `gameplayStop` on every Daily Rewards open.
+// Mirrors the arena's reactive watcher but makes the call-site visible
+// per the CG QA request. `stopGameplay()` is idempotent (no-op when
+// SDK inactive or already stopped).
+watch(isModalOpen, (open) => {
+  if (open) stopGameplay()
+})
 
 // Per-day skin previews. Each skin day (3/5/7) is assigned a *distinct*
 // model id drawn without replacement from the unowned pool, so no two cards

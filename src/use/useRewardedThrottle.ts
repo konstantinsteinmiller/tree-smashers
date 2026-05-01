@@ -7,8 +7,9 @@
 //
 // Why per-device (localStorage), not per-account (cloud sync): this is
 // an anti-abuse gate, not progress. Stored under the
-// `__save_internal__` prefix so SaveManager / LocalBackupLayer skip it
-// — we don't want a player's watch budget travelling across devices.
+// `__save_internal__` prefix so SaveManager skips forwarding it to the
+// strategy — we don't want a player's watch budget travelling across
+// devices.
 //
 // Why the periodic prune timer: `isRewardedThrottled` is a `computed`
 // over a `ref` array, so it only re-evaluates when the array mutates.

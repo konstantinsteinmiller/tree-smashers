@@ -161,14 +161,14 @@ const onCreateLobby = () => {
     teamSize: selectedTeamSize.value,
     levelOne: levelOne.value
   }
-  createLobby(config)
+  void createLobby(config)
   joiningPeerId.value = ''
 }
 
 const onJoinLobby = () => {
   const code = (extractPeerCode(joiningPeerId.value) || joiningPeerId.value.trim()).toLowerCase()
   if (code) {
-    joinLobby(code)
+    void joinLobby(code)
     joiningPeerId.value = ''
   }
 }
