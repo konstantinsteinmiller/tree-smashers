@@ -29,7 +29,6 @@ import { ref } from 'vue'
 import { isCrazyWeb } from '@/use/useUser'
 import { CrazyGamesStrategy } from '@/utils/save/CrazyGamesStrategy'
 import type { SaveStrategy } from '@/utils/save/types'
-import { cgDebug, cgDebugWarn } from '@/utils/save/crazyDebugLog'
 
 // The CrazyGames SDK is loaded globally via a script tag in index.html.
 // We interact with it entirely through `window.CrazyGames.SDK`, so the
@@ -110,32 +109,26 @@ export const initCrazyGames = async (): Promise<void> => {
   if (initialized) return
   initialized = true
 
-  cgDebug(`initCrazyGames: starting (isCrazyWeb=${isCrazyWeb})`)
   const candidate = getSdk()
   if (!candidate) {
     // Script tag didn't load (blocked, offline, or plain non-CG build).
-    cgDebugWarn('initCrazyGames: window.CrazyGames.SDK not present — script tag missing or blocked')
     return
   }
 
   try {
     await candidate.init?.()
-    cgDebug(`initCrazyGames: SDK.init() resolved; environment="${candidate.environment}"`)
   } catch (e) {
     console.warn('[crazygames] SDK init failed', e)
-    cgDebugWarn('initCrazyGames: SDK.init() threw', e)
     return
   }
 
   if (!isActiveEnv(candidate)) {
     // Non-crazy-web build, or running in a 'disabled' environment.
-    cgDebugWarn(`initCrazyGames: environment="${candidate.environment}" + isCrazyWeb=${isCrazyWeb} — strategy will NOT be activated`)
     return
   }
 
   sdk = candidate
   isSdkActive.value = true
-  cgDebug(`initCrazyGames: SDK active; sdk.data is ${typeof sdk.data?.setItem === 'function' ? 'present' : 'MISSING'}`)
 
   await captureSdkProfile()
   registerMuteListener()

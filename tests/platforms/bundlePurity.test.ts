@@ -172,7 +172,7 @@ describe('CrazyGames build — bundle purity', () => {
   it('does include the CrazyGames Strategy + provider markers (positive control)', () => {
     // Sanity check that we DIDN'T accidentally tree-shake the platform
     // we DO want — catches a future "fixed everything to Noop" regression.
-    const cgStrategy = findInHotPath(/CrazyGamesStrategy|crazyGames|crazyDebugLog|sdk\.crazygames\.com/)
+    const cgStrategy = findInHotPath(/CrazyGamesStrategy|crazyGames|sdk\.crazygames\.com/)
     expect(cgStrategy.length, 'CrazyGames provider/strategy missing from hot-path bundle!').toBeGreaterThan(0)
   })
 })

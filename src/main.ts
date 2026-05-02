@@ -132,7 +132,17 @@ const bootstrap = async () => {
     isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution
   })
 
-  const saveManager = new SaveManager(strategy)
+  // CrazyGames cloud-only mode: gameplay state and our save bookkeeping
+  // (`__save_*`) live in memory only; `sdk.data` is the sole persistence
+  // backend. CG QA explicitly requires that no `spinner_*` / `ca_*` /
+  // `__save_*` keys appear in raw localStorage — only dev toggles
+  // (`fps`, `debug`, `cheat`, `campaign-test`, `full_unlocked`) are
+  // exempt. Inline env-literal so Vite tree-shakes the dead branch on
+  // non-CG builds and the persistToRaw=false path is gone entirely.
+  const persistToRaw = import.meta.env.VITE_APP_CRAZY_WEB !== 'true'
+  const saveManager = new SaveManager(strategy, window.localStorage, {
+    blob: { persistToRaw }
+  })
   // Install the reactive bridge BEFORE init() so the boot-time sanity
   // guard's hydrate-state transitions are observable from useSaveStatus
   // even though no Vue components have mounted yet — the strategy may

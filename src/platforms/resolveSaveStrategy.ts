@@ -35,7 +35,6 @@
 
 import type { SaveStrategy } from '@/utils/save/types'
 import type { PlatformFlags } from './capabilities'
-import { cgDebug, cgDebugWarn } from '@/utils/save/crazyDebugLog'
 
 export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveStrategy> => {
   if (import.meta.env.VITE_APP_GLITCH === 'true') {
@@ -44,7 +43,6 @@ export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveSt
     return createGlitchSaveStrategy() ?? new LocalStorageStrategy()
   }
   if (import.meta.env.VITE_APP_CRAZY_WEB === 'true') {
-    cgDebug('resolveSaveStrategy: selecting CrazyGamesStrategy (isCrazyWeb=true)')
     const { createCrazyGamesSaveStrategy } = await import('@/use/useCrazyGames')
     return createCrazyGamesSaveStrategy()
   }
@@ -53,9 +51,6 @@ export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveSt
     const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
     return createGameDistributionSaveStrategy() ?? new LocalStorageStrategy()
   }
-  // No platform flag matched — game falls back to plain localStorage with
-  // no remote sync. If we're on a CG portal this is the bug QA flagged.
-  cgDebugWarn('resolveSaveStrategy: NO platform flag matched — falling back to LocalStorageStrategy (no SDK calls)')
   const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
   return new LocalStorageStrategy()
 }

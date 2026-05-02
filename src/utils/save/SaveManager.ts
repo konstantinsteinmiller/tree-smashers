@@ -6,8 +6,7 @@ import type {
 } from './types'
 import { isInternalKey } from './types'
 import { SAVE_KEYS } from './SaveMergePolicy'
-import { BlobStorage } from './BlobStorage'
-import { cgDebug } from './crazyDebugLog'
+import { BlobStorage, type BlobStorageOptions } from './BlobStorage'
 
 // ─── SaveManager ───────────────────────────────────────────────────────────
 //
@@ -30,11 +29,19 @@ import { cgDebug } from './crazyDebugLog'
 const BOOT_SANITY_RETRIES = 3
 const BOOT_SANITY_DELAY_MS = 1_000
 
+/** Options controlling SaveManager behavior. The `blob` field is
+ *  forwarded to the underlying `BlobStorage` — pass
+ *  `{ persistToRaw: false }` for cloud-only builds (CrazyGames) where
+ *  gameplay state must never appear in raw localStorage. */
+export interface SaveManagerOptions {
+  blob?: BlobStorageOptions
+}
+
 export class SaveManager {
   private readonly storage: Storage
-  // Holds gameplay state in memory and mirrors per-key into raw
-  // localStorage so the existing synchronous module-load reads still
-  // see persisted values across page reloads.
+  // Holds gameplay state in memory. Whether that state also mirrors to
+  // raw localStorage is controlled by `BlobStorageOptions.persistToRaw`
+  // — true for LocalStorage / Glitch / itch / GD; false for CG.
   private readonly blob: BlobStorage
   // Raw bindings captured before we replace the public ones, so the
   // clear() handler can still reach the original `Storage.clear` and
@@ -46,16 +53,18 @@ export class SaveManager {
   private patched = false
   private hydrated = false
   private mirroring = false
+  private bootCompleteCallbacks: Array<() => void> = []
 
   constructor(
     private readonly strategy: SaveStrategy,
-    storage: Storage = window.localStorage
+    storage: Storage = window.localStorage,
+    opts: SaveManagerOptions = {}
   ) {
     this.storage = storage
     this.rawClear = storage.clear.bind(storage)
     this.rawKey = storage.key.bind(storage)
     this.rawLength = () => storage.length
-    this.blob = new BlobStorage(storage)
+    this.blob = new BlobStorage(storage, opts.blob)
   }
 
   /** Strategy name — useful for logs/tests. */
@@ -114,6 +123,48 @@ export class SaveManager {
   }
 
   /**
+   * Subscribe to the one-shot "boot complete" event fired AFTER `init()`
+   * patches localStorage. Composables that need to refresh refs from
+   * cloud-hydrated state (via `useSaveStatus`'s `saveDataVersion` bump)
+   * MUST listen here rather than to `onHydrateNotice` — strategy
+   * notices fire from inside `hydrate()`, before patches are installed,
+   * which means any `localStorage.getItem` from a watcher callback
+   * would hit the un-patched raw storage and miss the cloud values
+   * BlobStorage just loaded into its in-memory state.
+   *
+   * If `init()` already completed before the listener is registered,
+   * the callback fires synchronously on registration so late
+   * subscribers don't miss the boot signal.
+   */
+  onBootComplete(callback: () => void): () => void {
+    if (this.hydrated) {
+      try {
+        callback()
+      } catch (e) {
+        console.warn('[save] onBootComplete callback threw', e)
+      }
+      return () => {
+      }
+    }
+    this.bootCompleteCallbacks.push(callback)
+    return () => {
+      this.bootCompleteCallbacks = this.bootCompleteCallbacks.filter(c => c !== callback)
+    }
+  }
+
+  private fireBootComplete(): void {
+    const callbacks = this.bootCompleteCallbacks
+    this.bootCompleteCallbacks = []
+    for (const cb of callbacks) {
+      try {
+        cb()
+      } catch (e) {
+        console.warn('[save] onBootComplete callback threw', e)
+      }
+    }
+  }
+
+  /**
    * Hydrate the in-memory state from the backend, then patch
    * `localStorage.setItem` / `removeItem` so all future writes flow
    * through the strategy. Idempotent.
@@ -149,10 +200,13 @@ export class SaveManager {
 
     this.mirroring = false
 
-    cgDebug(`init: hydrate phase complete (state=${this.strategy.hydrateState}); pre-patch snapshot stage=${local.get('spinner_campaign_stage')} coins=${local.get('spinner_player_coins')} team=${local.get('spinner_player_team')}`)
-
     this.patchLocalStorage()
     this.hydrated = true
+    // Fire ONLY after patches are in place. Composables relying on
+    // `saveDataVersion` (via `useSaveStatus.installSaveStatus`) bump
+    // here so their `localStorage.getItem` reads route through the
+    // BlobStorage proxy and pick up the cloud-hydrated state.
+    this.fireBootComplete()
   }
 
   /** Flush any pending writes. Best-effort — safe to await on unload. */

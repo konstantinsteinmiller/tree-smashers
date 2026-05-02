@@ -14,7 +14,6 @@ import type {
   LocalStorageAccessor,
   SaveStrategy
 } from './types'
-import { cgDebug, cgDebugWarn } from './crazyDebugLog'
 
 // ─── CrazyGames data-module strategy (per-key) ─────────────────────────────
 //
@@ -152,10 +151,8 @@ export class CrazyGamesStrategy implements SaveStrategy {
   /** Single attempt at hydrating from the SDK. Sets hydrateState and
    *  emits a notice on completion. Never throws. */
   private async runHydrateAttempt(local: LocalStorageAccessor, source: 'hydrate' | 'retry'): Promise<void> {
-    cgDebug(`hydrate attempt (source=${source})`)
     const data = this.getData()
     if (!data) {
-      cgDebugWarn('hydrate: sdk.data unavailable — strategy degrades to local-only')
       this.setState('success-empty', source === 'retry' ? 'sdk unavailable' : 'sdk unavailable, local-only')
       return
     }
@@ -174,16 +171,11 @@ export class CrazyGamesStrategy implements SaveStrategy {
         manifestThrew = true
         manifestError = e
       }
-      if (manifestRaw !== null) {
-        cgDebug(`hydrate: manifest ${manifestRaw.length} chars (attempt ${attempt + 1})`)
-        break
-      }
+      if (manifestRaw !== null) break
       if (attempt < INLINE_MANIFEST_RETRIES) {
-        cgDebug(`hydrate: manifest ${manifestThrew ? 'threw' : 'null'} on attempt ${attempt + 1} — retry in ${INLINE_RETRY_DELAY_MS}ms`)
         await sleepMs(INLINE_RETRY_DELAY_MS)
       } else if (manifestThrew) {
         console.warn('[save/crazy] hydrate manifest failed', manifestError)
-        cgDebugWarn(`hydrate: manifest threw on all ${INLINE_MANIFEST_RETRIES + 1} attempts — will background-retry`, manifestError)
         this.setState('failed-retrying', `manifest fetch failed: ${describeError(manifestError)}`)
         return
       }
@@ -229,7 +221,6 @@ export class CrazyGamesStrategy implements SaveStrategy {
     // Same SDK-settle defense as the manifest: any key that comes back
     // null on the first call gets one more chance after a short delay.
     if (stillNullKeys.length > 0) {
-      cgDebug(`hydrate: ${stillNullKeys.length} key(s) null on first pass — retry in ${INLINE_RETRY_DELAY_MS}ms`)
       await sleepMs(INLINE_RETRY_DELAY_MS)
       for (const key of stillNullKeys) {
         try {
@@ -238,7 +229,6 @@ export class CrazyGamesStrategy implements SaveStrategy {
             const stringified = String(value)
             remoteSnapshot.set(key, stringified)
             this.lastSentByKey.set(key, stringified)
-            cgDebug(`hydrate: retry recovered key "${key}"`)
           }
         } catch (e) {
           perKeyErrors++
@@ -248,6 +238,15 @@ export class CrazyGamesStrategy implements SaveStrategy {
     }
     if (manifestRaw !== null) {
       this.lastSentByKey.set(KEYS_MANIFEST, manifestRaw)
+      // Critical for cloud-only mode: sync the cloud manifest into the
+      // local accessor (which routes to BlobStorage's internalShadow
+      // when `persistToRaw=false`). Without this, `trackKey` reads an
+      // empty manifest on the first post-hydrate write, then `doFlush`
+      // uploads that single-key list and ORPHANS every other key on
+      // sdk.data — the player's whole save appears to vanish on the
+      // next refresh. Harmless in per-key-raw mode: the value is
+      // already in raw, so `local.set` is a no-op write.
+      local.set(KEYS_MANIFEST, manifestRaw)
     }
 
     // If every per-key fetch failed we don't actually have remote data.
@@ -327,14 +326,6 @@ export class CrazyGamesStrategy implements SaveStrategy {
     this.retryAttempt = 0
     const hasData = resolution.kind !== 'local-only' || anyPayloadKeyPresent(local)
 
-    if (hasData) {
-      const sample: Record<string, string | null> = {}
-      for (const k of ['spinner_campaign_stage', 'spinner_player_team', 'spinner_player_coins', 'spinner_player_skins']) {
-        sample[k] = local.get(k)
-      }
-      cgDebug(`hydrate: applied to local — resolution=${resolution.kind}, snapshot=${JSON.stringify(sample)}`)
-    }
-
     this.setState(hasData ? 'success-with-data' : 'success-empty', resolutionReason(resolution))
 
     if (this.dirty.size > 0) this.scheduleFlush()
@@ -387,15 +378,9 @@ export class CrazyGamesStrategy implements SaveStrategy {
   }
 
   private async doFlush(): Promise<void> {
-    if (!this.canFlush()) {
-      cgDebug(`flush skipped: hydrateState=${this._hydrateState}`)
-      return
-    }
+    if (!this.canFlush()) return
     const data = this.getData()
-    if (!data) {
-      cgDebugWarn(`flush skipped: sdk.data unavailable (${this.dirty.size} keys queued)`)
-      return
-    }
+    if (!data) return
     if (this.dirty.size === 0) return
 
     // Refresh META from current local state and queue it alongside the
@@ -415,10 +400,6 @@ export class CrazyGamesStrategy implements SaveStrategy {
     const batch = [...this.dirty.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     this.dirty = new Map()
 
-    cgDebug(`flush starting: ${batch.length} key(s) — [${batch.map(([k]) => k).join(', ')}]`)
-    let okCount = 0
-    let failCount = 0
-    let skipCount = 0
     for (const [key, value] of batch) {
       // Dedupe identical writes (saves an SDK round-trip).
       const last = this.lastSentByKey.get(key)
@@ -426,10 +407,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
       const isUnchanged = wantsRemove
         ? last === undefined && this.lastSentByKey.has(key)
         : last === value
-      if (isUnchanged) {
-        skipCount++
-        continue
-      }
+      if (isUnchanged) continue
       try {
         if (value !== null) {
           await data.setItem(key, value)
@@ -438,11 +416,8 @@ export class CrazyGamesStrategy implements SaveStrategy {
           await data.removeItem(key)
           this.lastSentByKey.set(key, undefined)
         }
-        okCount++
       } catch (e) {
-        failCount++
         console.warn(`[save/crazy] sdk.data sync ("${key}") failed`, e)
-        cgDebugWarn(`flush: data.setItem("${key}") FAILED — re-queueing`, e)
         this.dirty.set(key, value)
       }
     }
@@ -452,16 +427,12 @@ export class CrazyGamesStrategy implements SaveStrategy {
     try {
       const manifest = this.readManifest()
       const manifestSerialized = JSON.stringify(manifest)
-      if (this.lastSentByKey.get(KEYS_MANIFEST) === manifestSerialized) {
-        cgDebug(`flush done: ${okCount} ok, ${failCount} failed, ${skipCount} skipped; manifest unchanged`)
-      } else {
+      if (this.lastSentByKey.get(KEYS_MANIFEST) !== manifestSerialized) {
         await data.setItem(KEYS_MANIFEST, manifestSerialized)
         this.lastSentByKey.set(KEYS_MANIFEST, manifestSerialized)
-        cgDebug(`flush done: ${okCount} ok, ${failCount} failed, ${skipCount} skipped; manifest synced (${manifest.length} keys)`)
       }
     } catch (e) {
       console.warn('[save/crazy] manifest sync failed', e)
-      cgDebugWarn('flush: manifest sync FAILED', e)
     }
   }
 

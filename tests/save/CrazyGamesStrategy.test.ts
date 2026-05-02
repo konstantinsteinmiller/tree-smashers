@@ -229,4 +229,204 @@ describe('CrazyGamesStrategy (per-key)', () => {
     expect(data.setItem).toHaveBeenCalledWith(SAVE_KEYS.COINS, '300')
     expect(data.setItem).toHaveBeenCalledWith('spinner_user_language', 'fr')
   })
+
+  // ─── Cloud-only mode (CG QA requirement) ────────────────────────────────
+  // Requirement: on CrazyGames builds, gameplay state ("spinner_*", "ca_*")
+  // and our save bookkeeping ("__save_internal__*", "__save_meta__") MUST
+  // NOT live in raw localStorage. Only "fps", "debug", "cheat",
+  // "campaign-test", "full_unlocked" (developer toggles touched from
+  // DevTools) are exempt. Persistence is sdk.data only; localStorage is
+  // a runtime cache served from BlobStorage's in-memory map.
+
+  it('cloud-only mode: payload writes never land in raw localStorage', async () => {
+    // Capture un-patched accessor BEFORE SaveManager replaces it on the
+    // window.localStorage instance — test setup uses an in-memory
+    // polyfill, so we read via the prototype to bypass the patched proxy.
+    const proto = Object.getPrototypeOf(window.localStorage)
+    const rawGet = proto.getItem.bind(window.localStorage)
+
+    const data = makeFakeData()
+    const manager = new SaveManager(
+      new CrazyGamesStrategy(() => data),
+      window.localStorage,
+      { blob: { persistToRaw: false } }
+    )
+    await initWithFakeTimers(manager)
+
+    window.localStorage.setItem(SAVE_KEYS.STAGE, '7')
+    window.localStorage.setItem(SAVE_KEYS.COINS, '500')
+    window.localStorage.setItem('spinner_user_sound_volume', '0.4')
+    await vi.runAllTimersAsync()
+
+    // sdk.data has the values.
+    expect(data.store.get(SAVE_KEYS.STAGE)).toBe('7')
+    expect(data.store.get(SAVE_KEYS.COINS)).toBe('500')
+    expect(data.store.get('spinner_user_sound_volume')).toBe('0.4')
+
+    // Raw localStorage is empty of every gameplay + bookkeeping key.
+    expect(rawGet(SAVE_KEYS.STAGE)).toBeNull()
+    expect(rawGet(SAVE_KEYS.COINS)).toBeNull()
+    expect(rawGet('spinner_user_sound_volume')).toBeNull()
+    expect(rawGet(MANIFEST_KEY)).toBeNull()
+    expect(rawGet(META_KEY)).toBeNull()
+  })
+
+  it('cloud-only mode: dev toggles ARE preserved in raw localStorage', async () => {
+    const proto = Object.getPrototypeOf(window.localStorage)
+    const rawGet = proto.getItem.bind(window.localStorage)
+
+    // Dev toggles set before SaveManager constructs.
+    window.localStorage.setItem('fps', 'true')
+    window.localStorage.setItem('debug', 'true')
+    window.localStorage.setItem('cheat', 'true')
+    window.localStorage.setItem('campaign-test', '1')
+    window.localStorage.setItem('full_unlocked', 'true')
+
+    const data = makeFakeData()
+    const manager = new SaveManager(
+      new CrazyGamesStrategy(() => data),
+      window.localStorage,
+      { blob: { persistToRaw: false } }
+    )
+    await initWithFakeTimers(manager)
+
+    expect(rawGet('fps')).toBe('true')
+    expect(rawGet('debug')).toBe('true')
+    expect(rawGet('cheat')).toBe('true')
+    expect(rawGet('campaign-test')).toBe('1')
+    expect(rawGet('full_unlocked')).toBe('true')
+
+    // And subsequent writes to dev toggles still land in raw.
+    window.localStorage.setItem('debug', 'false')
+    expect(rawGet('debug')).toBe('false')
+  })
+
+  it('cloud-only mode: scrubs pre-existing payload + bookkeeping at boot, preserves dev toggles', async () => {
+    // Simulates upgrading a returning player from per-key-raw-mirror
+    // mode to cloud-only mode: their localStorage already has spinner_*
+    // entries, the META blob, and the manifest. After construction
+    // every gameplay/bookkeeping key must be gone from raw, but the
+    // values must survive in BlobStorage's in-memory state so the
+    // hydrate's local meta still computes from real values.
+    window.localStorage.setItem(SAVE_KEYS.STAGE, '6')
+    window.localStorage.setItem(SAVE_KEYS.COINS, '8818')
+    window.localStorage.setItem('spinner_user_sound_volume', '0.7')
+    window.localStorage.setItem(META_KEY, JSON.stringify({
+      savedAt: '2025-01-01T00:00:00.000Z',
+      progressScore: 3000,
+      schemaVersion: 1,
+      maxStage: 6
+    }))
+    window.localStorage.setItem(MANIFEST_KEY, JSON.stringify([SAVE_KEYS.STAGE, SAVE_KEYS.COINS, 'spinner_user_sound_volume']))
+    window.localStorage.setItem('fps', 'true')
+
+    const proto = Object.getPrototypeOf(window.localStorage)
+    const rawGet = proto.getItem.bind(window.localStorage)
+
+    const data = makeFakeData()
+    const manager = new SaveManager(
+      new CrazyGamesStrategy(() => data),
+      window.localStorage,
+      { blob: { persistToRaw: false } }
+    )
+    await initWithFakeTimers(manager)
+
+    // Raw is scrubbed of all payload + bookkeeping keys.
+    expect(rawGet(SAVE_KEYS.STAGE)).toBeNull()
+    expect(rawGet(SAVE_KEYS.COINS)).toBeNull()
+    expect(rawGet('spinner_user_sound_volume')).toBeNull()
+    expect(rawGet(META_KEY)).toBeNull()
+    expect(rawGet(MANIFEST_KEY)).toBeNull()
+    // Dev toggle preserved.
+    expect(rawGet('fps')).toBe('true')
+
+    // Values readable via the patched accessor (in-memory state),
+    // and forwarded to sdk.data on the next flush.
+    expect(window.localStorage.getItem(SAVE_KEYS.STAGE)).toBe('6')
+    expect(window.localStorage.getItem(SAVE_KEYS.COINS)).toBe('8818')
+    expect(window.localStorage.getItem('spinner_user_sound_volume')).toBe('0.7')
+    expect(data.store.get(SAVE_KEYS.STAGE)).toBe('6')
+    expect(data.store.get('spinner_user_sound_volume')).toBe('0.7')
+  })
+
+  it('cloud-only mode: saveDataVersion bumps AFTER patchLocalStorage, not during hydrate', async () => {
+    // Regression for the timing bug: composables (useUser, useSpinnerCampaign,
+    // etc.) watch `saveDataVersion` and re-read localStorage when it bumps.
+    // If the bump fires DURING hydrate, the watcher runs before
+    // `patchLocalStorage()` installs the BlobStorage proxy — every read
+    // hits raw localStorage (empty in cloud-only mode after the boot
+    // scrub) and every write lands in raw too. The fix bumps
+    // `saveDataVersion` from `SaveManager.init()` AFTER patches.
+    //
+    // We assert via a synthetic listener that captures the value of
+    // `manager.isHydrated()` at the moment the version bump arrives.
+    // It must be `true` — i.e. patching has finished.
+    const data = makeFakeData({
+      [MANIFEST_KEY]: JSON.stringify([SAVE_KEYS.STAGE]),
+      [SAVE_KEYS.STAGE]: '6'
+    })
+    const manager = new SaveManager(
+      new CrazyGamesStrategy(() => data),
+      window.localStorage,
+      { blob: { persistToRaw: false } }
+    )
+
+    let observedHydratedAtBump: boolean | null = null
+    manager.onBootComplete(() => {
+      observedHydratedAtBump = manager.isHydrated()
+    })
+
+    await initWithFakeTimers(manager)
+
+    expect(observedHydratedAtBump).toBe(true)
+  })
+
+  it('cloud-only mode: a write after refresh does NOT shrink the cloud manifest', async () => {
+    // Regression for the manifest-overwrite bug: in cloud-only mode the
+    // manifest lives in BlobStorage's internalShadow. On a fresh page
+    // load the shadow is empty until hydrate syncs the cloud manifest
+    // into it. Without that sync, `trackKey` reads `[]`, the first
+    // write produces a single-key manifest, and `doFlush` uploads it,
+    // orphaning every other key on sdk.data.
+    const cloudKeys = [
+      SAVE_KEYS.STAGE,
+      SAVE_KEYS.COINS,
+      'spinner_user_language',
+      META_KEY
+    ]
+    const data = makeFakeData({
+      [MANIFEST_KEY]: JSON.stringify(cloudKeys),
+      [SAVE_KEYS.STAGE]: '6',
+      [SAVE_KEYS.COINS]: '8818',
+      'spinner_user_language': 'es',
+      [META_KEY]: JSON.stringify({
+        savedAt: '2025-01-01T00:00:00.000Z',
+        progressScore: 3000,
+        schemaVersion: 1,
+        maxStage: 6
+      })
+    })
+    const manager = new SaveManager(
+      new CrazyGamesStrategy(() => data),
+      window.localStorage,
+      { blob: { persistToRaw: false } }
+    )
+    await initWithFakeTimers(manager)
+
+    // Player switches language to French.
+    window.localStorage.setItem('spinner_user_language', 'fr')
+    await vi.runAllTimersAsync()
+
+    // Cloud still has every key — none orphaned.
+    expect(data.store.get(SAVE_KEYS.STAGE)).toBe('6')
+    expect(data.store.get(SAVE_KEYS.COINS)).toBe('8818')
+    expect(data.store.get('spinner_user_language')).toBe('fr')
+
+    // Manifest still lists every cloud key plus META.
+    const manifest = JSON.parse(data.store.get(MANIFEST_KEY)!)
+    expect(manifest).toContain(SAVE_KEYS.STAGE)
+    expect(manifest).toContain(SAVE_KEYS.COINS)
+    expect(manifest).toContain('spinner_user_language')
+    expect(manifest).toContain(META_KEY)
+  })
 })

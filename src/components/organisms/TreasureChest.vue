@@ -208,7 +208,7 @@ const collectChest = () => {
         //- as the same visual currency across the HUD.
         span.font-black.text-yellow-300.flex.items-center(class="text-[11px] sm:text-sm gap-0.5")
           span.game-text +25
-          IconCoin(class="w-4 h-4 text-yellow-300")
+          IconCoin(class="w-4 h-4")
         span.game-text.text-white.font-bold(class="text-[8px] sm:text-[10px] opacity-80") {{ timeDisplay }}
       template(v-else)
         //- Big-reward state — chest aura + amber `+100` is signal
@@ -216,7 +216,7 @@ const collectChest = () => {
         //- the pulsing icon and made the label feel cluttered.
         span.font-black.text-amber-400.flex.items-center(class="text-[11px] sm:text-sm gap-0.5")
           span.game-text +100
-          IconCoin(class="w-4 h-4 text-yellow-300")
+          IconCoin(class="w-4 h-4")
 </template>
 
 <style scoped lang="sass">

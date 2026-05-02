@@ -36,9 +36,23 @@ export const installSaveStatus = (m: SaveManager): void => {
     if (notice.bonusCoinsAwarded && notice.bonusCoinsAwarded > 0) {
       bonusCoinsAwarded.value = notice.bonusCoinsAwarded
     }
-    if (notice.state === 'success-with-data') {
+    // Bump only AFTER initial boot completes. Notices arriving during
+    // `init()` fire from inside the strategy's `hydrate()` — patches
+    // aren't installed yet, so any composable watcher that re-reads
+    // localStorage in response would hit raw storage instead of the
+    // BlobStorage proxy and miss the cloud-hydrated values. Background
+    // retries (offline → online recovery) are post-boot and bump
+    // normally so refs refresh after a recovered cloud read.
+    if (notice.state === 'success-with-data' && m.isHydrated()) {
       saveDataVersion.value++
     }
+  })
+  // Initial boot bump: fires once when SaveManager finishes patching
+  // localStorage at the end of init(). After this, every composable's
+  // saveDataVersion watcher sees the patched accessor and reads
+  // hydrated cloud state.
+  m.onBootComplete(() => {
+    saveDataVersion.value++
   })
 }
 
