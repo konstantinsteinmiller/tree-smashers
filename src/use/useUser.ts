@@ -1,7 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { type Difficulties, DIFFICULTY } from '@/utils/enums'
-import { GAME_USER_LANGUAGE } from '@/utils/constants'
 import { mobileCheck } from '@/utils/function'
 import { isDbInitialized, isSplashScreenVisible } from '@/use/useMatch'
 import { saveDataVersion } from '@/use/useSaveStatus'
@@ -113,11 +112,21 @@ watch(saveDataVersion, () => {
 isDbInitialized.value = true
 isSplashScreenVisible.value = false
 
-// One-time legacy IDB cleanup. CG QA observed the `user_db` IndexedDB
-// store sitting on disk in their profiles even though the game no longer
-// reads or writes to it. Schedule a delete request once at module load
-// — fire-and-forget, errors are swallowed because there is nothing to
-// recover (the data is CardQuest relics nobody references).
+// One-time legacy cleanup. CG QA's standing rule is "NO locally-saved
+// data" — both localStorage AND sessionStorage count. We sweep relics
+// from prior builds at module load:
+//   • `user_db` IndexedDB store — held CardQuest userHand / userCollection
+//     / quest-* relics nothing here references.
+//   • `card*` keys (case-insensitive) — the CardQuest-era prefix that
+//     produced `cardQuestUserLanguage`, `cardQuestSoundVolume`, etc.
+//   • `chaosArena*` keys — the interim prefix from the
+//     2026-05-04 build. We no longer mirror the locale hint to
+//     sessionStorage at all (the value lives in `spinner_user_language`,
+//     which flows through `sdk.data` on CG), so any existing
+//     `chaosArena*` entry is also dead data.
+// Fire-and-forget — errors are swallowed because there is nothing to
+// recover. Runs at module load (useUser.ts is imported at the top of
+// main.ts) so the data is gone before the rest of the app boots.
 try {
   if (typeof window !== 'undefined' && window.indexedDB?.deleteDatabase) {
     const req = window.indexedDB.deleteDatabase('user_db')
@@ -126,6 +135,20 @@ try {
   }
 } catch { /* harmless */
 }
+const LEGACY_KEY_RE = /^(card|chaosArena)/i
+const sweepLegacyKeys = (storage: Storage) => {
+  try {
+    const toRemove: string[] = []
+    for (let i = 0; i < storage.length; i++) {
+      const k = storage.key(i)
+      if (k && LEGACY_KEY_RE.test(k)) toRemove.push(k)
+    }
+    for (const k of toRemove) storage.removeItem(k)
+  } catch { /* harmless */
+  }
+}
+sweepLegacyKeys(localStorage)
+sweepLegacyKeys(sessionStorage)
 
 // ─── Composable surface ───────────────────────────────────────────────────
 
@@ -142,8 +165,10 @@ const useUser = () => {
         break
       case 'language':
         userLanguage.value = value as string
+        // localStorage write goes through the patched SaveManager →
+        // sdk.data on CG builds. CG QA: no sessionStorage mirror — it
+        // counts as locally-saved data.
         localStorage.setItem(LANGUAGE_KEY, userLanguage.value)
-        sessionStorage.setItem(GAME_USER_LANGUAGE, userLanguage.value)
         break
       case 'difficulty':
         userDifficulty.value = value as Difficulties

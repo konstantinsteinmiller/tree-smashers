@@ -885,7 +885,7 @@ const renderLoop = (now = 0) => {
     return
   }
 
-  render(ctx, canvasWidth.value, canvasHeight.value, showHint.value)
+  render(ctx, canvasWidth.value, canvasHeight.value, showHint.value, currentStageId.value)
 
   // Joystick draws to a separate overlay canvas that sits above the HUD,
   // so the bottom-left stat card no longer covers it.

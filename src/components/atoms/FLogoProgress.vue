@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import useAssets from '@/use/useAssets'
-import { startGameplay, stopGameplay, stopLoading } from '@/use/useCrazyGames'
+import { stopLoading } from '@/use/useCrazyGames'
 
 const { loadingProgress, preloadAssets } = useAssets()
 const progress = computed(() => loadingProgress.value)
@@ -140,36 +140,20 @@ watch(progress, (val) => {
   }
 })
 
-// Once-per-session "game ready to play" signal for the CrazyGames SDK.
-// CG QA's tooling measures cold-launch download size and needs BOTH
-// signals to mark the boundary correctly:
-//
-//   1. `stopLoading()` — pairs with the SDK's auto-fired `loadingStart`
-//      and tells the SDK the loading phase ended.
-//   2. `startGameplay()` immediately followed by `stopGameplay()` —
-//      empirically this is what makes QA's tooling actually STOP the
-//      load-size counter. `loadingStop` alone wasn't enough on the QA
-//      stage; the counter kept ticking through subsequent lazy-chunk
-//      fetches (vConsole on chord, language switches, ad SDK warm-up).
-//      Firing the gameplay pair gives the tooling an unambiguous "the
-//      game is now in a playable state" event.
-//
-// All three calls are idempotent and gated internally on `isSdkActive`,
-// so this is a no-op on non-CrazyGames builds. The actual per-battle
-// `gameplayStart` / `gameplayStop` transitions are still driven by the
-// reactive `isGameplayActive` watcher in `SpinnerArena.vue` — that
-// works fine because the gameplay flag is back to false after the
-// stop call below.
+// Once-per-session "loading finished" signal for the CrazyGames SDK.
+// Pairs with the SDK's auto-fired `loadingStart` and tells the SDK the
+// loading phase ended so QA's cold-launch download-size counter stops
+// here. Per-battle `gameplayStart` / `gameplayStop` transitions are
+// driven by the reactive `isGameplayActive` watcher in
+// `SpinnerArena.vue`; the splash deliberately does NOT fire a
+// start+stop pair here — CG QA asked us to drop it so the first
+// gameplay event the SDK sees is a real match entering the arena.
 let cgLoadSignaled = false
 const signalGameReadyToCG = () => {
   if (cgLoadSignaled) return
   cgLoadSignaled = true
   try {
     stopLoading()
-    // Back-to-back start+stop — see comment above for why both pieces
-    // are needed alongside `stopLoading`.
-    startGameplay()
-    stopGameplay()
   } catch (e) {
     console.warn('[FLogoProgress] CG ready-to-play signal failed', e)
   }

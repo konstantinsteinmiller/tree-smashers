@@ -9,7 +9,6 @@ import {
   setI18nLocale,
   isSupportedLocale
 } from '@/i18n'
-import { GAME_USER_LANGUAGE } from '@/utils/constants.ts'
 import { LANGUAGES } from '@/utils/enums'
 import { initCrazyGames, crazyLocale, startLoading } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
@@ -143,13 +142,44 @@ const bootstrap = async () => {
   const saveManager = new SaveManager(strategy, window.localStorage, {
     blob: { persistToRaw }
   })
+    // Expose immediately, BEFORE the awaited `init()`. CG QA reported that
+    // `window.__saveManager` was undefined when probed in the live console;
+    // setting it here makes the handle available the moment construction
+    // finishes, even if init() hits an unexpected throw before the patches
+    // are installed. Lets QA confirm `strategyName === 'crazyGames'` no
+    // matter the hydrate timing.
+  ;(window as any).__saveManager = saveManager
+
+  // Defense-in-depth `spinner_*` / `ca_*` / `__save_*` safety remove on
+  // CG builds. BlobStorage's `scrubRawForCloudOnly()` already wiped these
+  // at construction (it seeded into `state` first, so progress is
+  // preserved); this second pass catches anything BlobStorage missed.
+  // MUST run BEFORE `saveManager.init()` because init patches
+  // `localStorage.setItem` / `removeItem` to forward to the strategy —
+  // calling the patched removeItem on a `spinner_*` key would issue a
+  // cloud delete via `sdk.data.removeItem`, wiping the player's save.
+  // Pre-init, `localStorage.removeItem` is still native and these
+  // removes are local-only.
+  if (import.meta.env.VITE_APP_CRAZY_WEB === 'true') {
+    try {
+      const stragglers: string[] = []
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i)
+        if (k && (k.startsWith('spinner_') || k.startsWith('ca_') || k.startsWith('__save_'))) {
+          stragglers.push(k)
+        }
+      }
+      for (const k of stragglers) window.localStorage.removeItem(k)
+    } catch { /* harmless */
+    }
+  }
+
   // Install the reactive bridge BEFORE init() so the boot-time sanity
   // guard's hydrate-state transitions are observable from useSaveStatus
   // even though no Vue components have mounted yet — the strategy may
   // emit notices via background retries during init.
   installSaveStatus(saveManager)
   await saveManager.init()
-  ;(window as any).__saveManager = saveManager
 
   // ─── Background / close flush — critical for mobile webviews ───────────
   //
@@ -209,14 +239,12 @@ const bootstrap = async () => {
     })
   }
 
-  // If CrazyGames reported a supported player locale, persist it as the
-  // session hint so resolveInitialLocale picks it up below and every
-  // subsequent boot in this tab stays consistent with the portal's
-  // preference rather than a stale browser default.
+  // CG QA: NO locally-saved data on CG builds — we no longer mirror the
+  // CrazyGames-reported locale into sessionStorage. The portal locale is
+  // passed straight into resolveInitialLocale below so it influences the
+  // first-paint i18n bundle without touching any storage surface.
   const cgLocale = crazyLocale.value
-  if (cgLocale && LANGUAGES.includes(cgLocale)) {
-    sessionStorage.setItem(GAME_USER_LANGUAGE, cgLocale)
-  }
+  const portalLocale = cgLocale && LANGUAGES.includes(cgLocale) ? cgLocale : null
 
   const { default: App } = await import('@/App.vue')
 
@@ -224,7 +252,7 @@ const bootstrap = async () => {
   // i18n instance. The English fallback is loaded in parallel so missing
   // keys are never undefined while the active locale's chunk is still
   // in flight. If the initial locale IS English we only fetch once.
-  const initial = resolveInitialLocale(GAME_USER_LANGUAGE)
+  const initial = resolveInitialLocale(portalLocale)
   const needsFallback = initial !== 'en'
   const [initialMsgs, fallbackMsgs] = await Promise.all([
     loadLocaleMessages(initial).catch(() => ({})),

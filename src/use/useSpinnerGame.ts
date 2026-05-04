@@ -420,6 +420,16 @@ export const useSpinnerGame = () => {
   const phase: Ref<GamePhase> = ref('idle')
   const gameResult: Ref<GameResult> = ref(null)
   const turnAnnouncement: Ref<string> = ref('')
+
+  // Wall-clock timestamp when the current `player_turn` began. Drives the
+  // early-game tutorial arrows that orbit the player's spinners (CG QA
+  // requested a clearer "this is yours" cue for new players). Cleared
+  // whenever the phase is anything other than `player_turn`, so the
+  // 1-second grace + 5s/2s on/off cycle restart cleanly on each turn.
+  let playerTurnStartedAt: number | null = null
+  watch(phase, (p) => {
+    playerTurnStartedAt = p === 'player_turn' ? Date.now() : null
+  })
   const isBossStage: Ref<boolean> = ref(false)
 
   // ── Blade Arrays (2 per side) ────────────────────────────────────────────
@@ -3211,7 +3221,13 @@ export const useSpinnerGame = () => {
 
   // ─── Canvas Rendering ────────────────────────────────────────────────────
 
-  const render = (ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, showHintAnim = false) => {
+  const render = (
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    canvasHeight: number,
+    showHintAnim = false,
+    currentStageId = 1
+  ) => {
     const centerX = canvasWidth / 2
     const centerY = canvasHeight / 2
     const fitSize = Math.min(canvasWidth, canvasHeight)
@@ -3344,6 +3360,10 @@ export const useSpinnerGame = () => {
 
     // Hint animation
     renderHintAnimation(ctx, showHintAnim)
+
+    // Early-game tutorial arrows orbiting the player's spinners — gated
+    // on `currentStageId <= 11` and a 1s grace from the start of player_turn.
+    renderTutorialArrows(ctx, currentStageId)
 
     // Joystick position is updated here so drag hit-testing stays in sync
     // with the visible knob, but the actual drawing happens on a separate
@@ -4881,8 +4901,8 @@ export const useSpinnerGame = () => {
   const renderHintAnimation = (ctx: CanvasRenderingContext2D, showHint: boolean) => {
     if (!showHint || phase.value !== 'player_turn' || isDragging.value) return
 
-    const blade = livingBlades(playerBlades.value)[0]
-    if (!blade) return
+    const blades = livingBlades(playerBlades.value)
+    if (blades.length === 0) return
 
     // Looping animation: 0→1 pull back, then hold, then release flash
     const cycleDuration = 2000 // ms
@@ -4911,59 +4931,144 @@ export const useSpinnerGame = () => {
 
     if (!showArrow) return
 
-    const pullX = blade.x + Math.cos(pullDir) * pullDist
-    const pullY = blade.y + Math.sin(pullDir) * pullDist
-
-    // Launch direction (opposite of pull)
     const launchNx = -Math.cos(pullDir)
     const launchNy = -Math.sin(pullDir)
     const ratio = pullDist / 60
     const arrowLen = 30 + 50 * ratio
+    const r = Math.floor(255 * ratio)
+    const g = Math.floor(255 * (1 - ratio * 0.6))
+    const arrowColor = `rgb(${r}, ${g}, 0)`
+    const headSize = 8
+    const angle = Math.atan2(launchNy, launchNx)
 
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Pull line (dashed)
-    ctx.strokeStyle = 'rgba(255,170,0,0.7)'
-    ctx.lineWidth = 2
-    ctx.setLineDash([6, 4])
-    ctx.beginPath()
-    ctx.moveTo(blade.x, blade.y)
-    ctx.lineTo(pullX, pullY)
-    ctx.stroke()
-    ctx.setLineDash([])
+    // Mirror the launch hint onto every living player blade (CG QA: "show
+    // the arrowLaunchIndicator on the other Spinner too" — was previously
+    // only drawn on `livingBlades(...)[0]`).
+    for (const blade of blades) {
+      const pullX = blade.x + Math.cos(pullDir) * pullDist
+      const pullY = blade.y + Math.sin(pullDir) * pullDist
+      const endX = blade.x + launchNx * arrowLen
+      const endY = blade.y + launchNy * arrowLen
 
-    // Phantom finger circle at pull point
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'
-    ctx.beginPath()
-    ctx.arc(pullX, pullY, 8, 0, Math.PI * 2)
-    ctx.fill()
+      // Pull line (dashed)
+      ctx.strokeStyle = 'rgba(255,170,0,0.7)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
+      ctx.beginPath()
+      ctx.moveTo(blade.x, blade.y)
+      ctx.lineTo(pullX, pullY)
+      ctx.stroke()
+      ctx.setLineDash([])
 
-    // Launch arrow
-    const endX = blade.x + launchNx * arrowLen
-    const endY = blade.y + launchNy * arrowLen
+      // Phantom finger circle at pull point
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'
+      ctx.beginPath()
+      ctx.arc(pullX, pullY, 8, 0, Math.PI * 2)
+      ctx.fill()
 
-    const r = Math.floor(255 * ratio)
-    const g = Math.floor(255 * (1 - ratio * 0.6))
-    ctx.strokeStyle = `rgb(${r}, ${g}, 0)`
-    ctx.fillStyle = `rgb(${r}, ${g}, 0)`
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.moveTo(blade.x, blade.y)
-    ctx.lineTo(endX, endY)
-    ctx.stroke()
+      // Launch arrow
+      ctx.strokeStyle = arrowColor
+      ctx.fillStyle = arrowColor
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.moveTo(blade.x, blade.y)
+      ctx.lineTo(endX, endY)
+      ctx.stroke()
 
-    // Arrowhead (tip extends past line end)
-    const headSize = 8
-    const angle = Math.atan2(launchNy, launchNx)
-    const tipX = endX + launchNx * headSize
-    const tipY = endY + launchNy * headSize
-    ctx.beginPath()
-    ctx.moveTo(tipX, tipY)
-    ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
-    ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
-    ctx.closePath()
-    ctx.fill()
+      // Arrowhead (tip extends past line end)
+      const tipX = endX + launchNx * headSize
+      const tipY = endY + launchNy * headSize
+      ctx.beginPath()
+      ctx.moveTo(tipX, tipY)
+      ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
+      ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    ctx.restore()
+  }
+
+  // ── Tutorial: orbiting yellow arrows around player spinners ──────────────
+  //
+  // CG QA requested a clearer "this spinner is yours" cue during early
+  // levels. Three small yellow arrowheads orbit each living player blade,
+  // pointing inward, on a 1s grace + 5s show / 2s hide cycle. Fades AND
+  // grows in (scale 0.5 → 1, alpha 0 → 1 over `FADE_MS`); fades out on
+  // disappear (alpha only). Disabled past stage 11 — by then the player
+  // has unambiguously learned which side is theirs.
+  const renderTutorialArrows = (ctx: CanvasRenderingContext2D, stageId: number) => {
+    if (stageId > 11) return
+    if (phase.value !== 'player_turn') return
+    if (isDragging.value || isJoystickDragging.value) return
+    if (playerTurnStartedAt === null) return
+
+    const GRACE_MS = 1000
+    const SHOW_MS = 5000
+    const HIDE_MS = 2000
+    const FADE_MS = 300
+
+    const elapsed = Date.now() - playerTurnStartedAt
+    if (elapsed < GRACE_MS) return
+
+    const cyclePos = (elapsed - GRACE_MS) % (SHOW_MS + HIDE_MS)
+    if (cyclePos >= SHOW_MS) return // hidden segment of the cycle
+
+    let alpha: number
+    let scale: number
+    if (cyclePos < FADE_MS) {
+      const k = cyclePos / FADE_MS
+      alpha = k
+      scale = 0.5 + 0.5 * k
+    } else if (cyclePos > SHOW_MS - FADE_MS) {
+      alpha = (SHOW_MS - cyclePos) / FADE_MS
+      scale = 1
+    } else {
+      alpha = 1
+      scale = 1
+    }
+
+    const blades = livingBlades(playerBlades.value)
+    if (blades.length === 0) return
+
+    // ~12 deg/sec — slow enough to read "selection ring", fast enough to
+    // catch peripheral attention.
+    const baseAngle = Date.now() * 0.0008
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+    ctx.fillStyle = '#facc15' // tailwind yellow-400
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 1
+
+    for (const blade of blades) {
+      const orbitR = (blade.radius + 14) * scale
+      const arrowSize = 7 * scale
+      for (let i = 0; i < 3; i++) {
+        const angle = baseAngle + (i * Math.PI * 2) / 3
+        const ax = blade.x + Math.cos(angle) * orbitR
+        const ay = blade.y + Math.sin(angle) * orbitR
+        const inward = angle + Math.PI
+        const tipX = ax + Math.cos(inward) * arrowSize
+        const tipY = ay + Math.sin(inward) * arrowSize
+        const lAng = inward + (Math.PI * 2) / 3
+        const rAng = inward - (Math.PI * 2) / 3
+        const lx = ax + Math.cos(lAng) * arrowSize
+        const ly = ay + Math.sin(lAng) * arrowSize
+        const rx = ax + Math.cos(rAng) * arrowSize
+        const ry = ay + Math.sin(rAng) * arrowSize
+        ctx.beginPath()
+        ctx.moveTo(tipX, tipY)
+        ctx.lineTo(lx, ly)
+        ctx.lineTo(rx, ry)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+      }
+    }
 
     ctx.restore()
   }

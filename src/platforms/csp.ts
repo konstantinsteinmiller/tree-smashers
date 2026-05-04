@@ -63,6 +63,49 @@ const GD_PARTNER_HOSTS: ReadonlyArray<string> = [
   'https://*.rubiconproject.com'
 ]
 
+/** CrazyGames ad-stack hosts. The portal's `rafvertizing.js` (loaded from
+ *  `*.crazygames.com`, already in BASE_HOSTS) injects Google Publisher Tag
+ *  + a header-bidding waterfall into our iframe. Without these hosts the
+ *  CG QA dev console fills with `Refused to connect / load script`
+ *  violations. The list is grown empirically — when CG QA reports a new
+ *  blocked URL, add the host (or a wildcard) here.
+ *
+ *  History:
+ *    • 2026-05-04: initial — Google ad stack + common header bidders.
+ *    • 2026-05-04 (later): added `*.creativecdn.com` (RTB House),
+ *      `*.crwdcntrl.net` (Lotame DMP), `*.openxcdn.net` (OpenX CDN —
+ *      separate from `*.openx.net`). All three surfaced after GPT
+ *      itself was unblocked and started loading downstream partner
+ *      tags. */
+const CG_PARTNER_HOSTS: ReadonlyArray<string> = [
+  'https://securepubads.g.doubleclick.net',
+  'https://*.doubleclick.net',
+  'https://*.googletagservices.com',
+  'https://*.googletagmanager.com',
+  'https://*.googlesyndication.com',
+  'https://*.googleadservices.com',
+  'https://*.google-analytics.com',
+  'https://*.2mdn.net',
+  'https://imasdk.googleapis.com',
+  'https://www.google.com',
+  'https://www.gstatic.com',
+  'https://*.adsrvr.org',
+  'https://*.amazon-adsystem.com',
+  'https://api.rlcdn.com',
+  'https://*.adnxs.com',
+  'https://*.adsafeprotected.com',
+  'https://*.adform.net',
+  'https://*.casalemedia.com',
+  'https://*.creativecdn.com',
+  'https://*.criteo.com',
+  'https://*.criteo.net',
+  'https://*.crwdcntrl.net',
+  'https://*.openx.net',
+  'https://*.openxcdn.net',
+  'https://*.pubmatic.com',
+  'https://*.rubiconproject.com'
+]
+
 const CONNECT_BASE_EXTRA: ReadonlyArray<string> = [
   'https://*.sentry.io',
   'wss://*.wavedash.com',
@@ -85,8 +128,13 @@ const CSP_DIRECTIVES = [
 export const buildCsp = (env: Record<string, string>): string => {
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
   const isGlitch = env.VITE_APP_GLITCH === 'true'
+  const isCrazyWeb = env.VITE_APP_CRAZY_WEB === 'true'
 
-  const hosts: string[] = [...BASE_HOSTS, ...(isGameDistribution ? GD_PARTNER_HOSTS : [])]
+  const hosts: string[] = [
+    ...BASE_HOSTS,
+    ...(isGameDistribution ? GD_PARTNER_HOSTS : []),
+    ...(isCrazyWeb ? CG_PARTNER_HOSTS : [])
+  ]
 
   // Per-directive extras — mode-driven openings beyond `'self'` + hosts.
   const scriptSrcExtra: string[] = []
@@ -99,16 +147,20 @@ export const buildCsp = (env: Record<string, string>): string => {
     // open style-src to https: for GD only.
     'style-src': isGameDistribution ? ['https:', '\'unsafe-inline\''] : ['\'unsafe-inline\''],
     // GD ad creatives come from arbitrary CDNs — open img-src to https:
-    // for that build type only.
+    // for that build type only. CG ad pixels arrive from the partner host
+    // list above plus `data:` for inline beacons.
     'img-src': isGameDistribution ? ['data:', 'https:', 'blob:'] : ['data:'],
     'connect-src': [
       ...CONNECT_BASE_EXTRA,
       // GD partner analytics / ad telemetry beacons.
       ...(isGameDistribution ? ['https:', 'wss:'] : [])
     ],
-    // GD ads frequently render in nested iframes from partner domains.
-    'frame-src': isGameDistribution ? ['https:'] : [],
-    'media-src': isGameDistribution ? ['https:', 'blob:'] : [],
+    // GD ads + CG rich-media creatives render in nested iframes from
+    // partner domains; CG specifically pulls TheTradeDesk/2mdn creatives
+    // into nested frames.
+    'frame-src': isGameDistribution || isCrazyWeb ? ['https:'] : [],
+    // CG video ads (IMA / partner stitchers) render via blob URLs.
+    'media-src': isGameDistribution || isCrazyWeb ? ['https:', 'blob:'] : [],
     // The consent wall + many partner CDNs serve webfonts.
     'font-src': isGameDistribution ? ['https:', 'data:'] : ['data:']
   }

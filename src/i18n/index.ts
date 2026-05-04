@@ -87,23 +87,22 @@ export const setI18nLocale = async (
  * the i18n instance so the first dynamic import targets only the right
  * locale file. Resolution order:
  *
- *   1. sessionStorage hint — written by main.ts when the CrazyGames SDK
- *      reports a supported locale, AND re-written by useUser on every
- *      language change (see `setSettingValue('language', ...)`). This is
- *      the hot path on repeat loads in the same tab.
- *   2. navigator.language short code — best guess for first-ever load
- *      before any user interaction.
- *   3. 'en' fallback.
- *
- * The IndexedDB-persisted preference (from useUser / OptionsModal) can't
- * be read synchronously. main.ts watches `isDbInitialized` and calls
- * `setI18nLocale` again once hydration completes, which swaps the locale
- * on-the-fly without blocking first paint.
+ *   1. Caller-supplied `preferred` hint — typically the CrazyGames-reported
+ *      portal locale or the player's stored choice from `useUser`. Caller
+ *      is responsible for picking the right source; this function does
+ *      not touch sessionStorage (CG QA: NO locally-saved data).
+ *   2. localStorage `spinner_user_language` — the cloud-hydrated player
+ *      choice. On CG builds this has already been populated from
+ *      `sdk.data` by `SaveManager.init()` before `main.ts` calls us.
+ *   3. navigator.language short code — first-ever load with no portal
+ *      or stored hint.
+ *   4. 'en' fallback.
  */
-export const resolveInitialLocale = (sessionHintKey: string): string => {
+export const resolveInitialLocale = (preferred?: string | null): string => {
+  if (isSupportedLocale(preferred)) return preferred
   try {
-    const sess = sessionStorage.getItem(sessionHintKey)
-    if (isSupportedLocale(sess)) return sess
+    const stored = localStorage.getItem('spinner_user_language')
+    if (isSupportedLocale(stored)) return stored
   } catch { /* ignore */
   }
   const nav = typeof navigator !== 'undefined'

@@ -420,6 +420,17 @@ const isAdBlockerError = (err: any): boolean => {
   return msg.includes('adblock') || msg.includes('blocked by client')
 }
 
+/** True when the SDK's adError represents an expected, non-actionable
+ *  outcome rather than a real failure. CG QA flagged
+ *  `[crazygames] midgame ad error d` (where `d` was an `adCooldown`
+ *  error) as console noise — the SDK rate-limits midgame ads and tells
+ *  us politely; we should not surface that as a warning. Add other
+ *  benign codes here as the SDK surfaces them. */
+const isBenignAdError = (err: any): boolean => {
+  const code = String(err?.code ?? '').toLowerCase()
+  return code === 'adcooldown' || code === 'adnotfound'
+}
+
 // ─── Rewarded video ads ───────────────────────────────────────────────────
 
 /**
@@ -453,7 +464,7 @@ export const showRewardedAd = (): Promise<boolean> => {
           resolve(true)
         },
         adError: (err: unknown) => {
-          console.warn('[crazygames] rewarded ad error', err)
+          if (!isBenignAdError(err)) console.warn('[crazygames] rewarded ad error', err)
           if (isAdBlockerError(err)) isCrazyAdsBlocked.value = true
           resumeAfterAd()
           resolve(false)
@@ -499,7 +510,7 @@ export const showMidgameAd = (): Promise<void> => {
           resolve()
         },
         adError: (err: unknown) => {
-          console.warn('[crazygames] midgame ad error', err)
+          if (!isBenignAdError(err)) console.warn('[crazygames] midgame ad error', err)
           if (isAdBlockerError(err)) isCrazyAdsBlocked.value = true
           resumeAfterAd()
           resolve()

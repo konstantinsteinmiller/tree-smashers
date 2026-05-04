@@ -103,6 +103,56 @@ describe('buildCsp', () => {
     })
   })
 
+  describe('CrazyGames build (VITE_APP_CRAZY_WEB=true)', () => {
+    const env = (): Record<string, string> => ({ VITE_APP_CRAZY_WEB: 'true' })
+
+    it('includes Google ad-stack hosts so rafvertizing.js can load GPT', () => {
+      const csp = buildCsp(env())
+      expect(csp).toContain('https://securepubads.g.doubleclick.net')
+      expect(csp).toContain('https://*.doubleclick.net')
+      expect(csp).toContain('https://*.googletagservices.com')
+      expect(csp).toContain('https://*.googlesyndication.com')
+      expect(csp).toContain('https://*.2mdn.net')
+    })
+
+    it('includes header-bidding partner hosts the portal pulls in', () => {
+      const csp = buildCsp(env())
+      expect(csp).toContain('https://*.amazon-adsystem.com')
+      expect(csp).toContain('https://*.adsrvr.org')
+      expect(csp).toContain('https://api.rlcdn.com')
+    })
+
+    it('includes downstream GPT-loaded partner tags (RTB House, Lotame, OpenX CDN)', () => {
+      const csp = buildCsp(env())
+      // These three were observed being blocked AFTER GPT itself loaded.
+      // Keep them present so the regression doesn't silently come back.
+      expect(csp).toContain('https://*.creativecdn.com')
+      expect(csp).toContain('https://*.crwdcntrl.net')
+      expect(csp).toContain('https://*.openxcdn.net')
+    })
+
+    it('opens frame-src and media-src to https: for nested ad creatives', () => {
+      const csp = buildCsp(env())
+      const frameSrc = csp.match(/frame-src ([^;]+)/)![1]!
+      expect(frameSrc.split(/\s+/)).toContain('https:')
+      const mediaSrc = csp.match(/media-src ([^;]+)/)![1]!
+      expect(mediaSrc.split(/\s+/)).toContain('https:')
+    })
+
+    it('does NOT open script-src to https: blanket (host list is enough)', () => {
+      const csp = buildCsp(env())
+      const scriptSrc = csp.match(/script-src ([^;]+)/)![1]!
+      expect(scriptSrc.split(/\s+/)).not.toContain('https:')
+    })
+
+    it('does NOT open img-src to https: blanket (data: + host list only)', () => {
+      const csp = buildCsp(env())
+      const imgSrc = csp.match(/img-src ([^;]+)/)![1]!
+      expect(imgSrc.split(/\s+/)).not.toContain('https:')
+      expect(imgSrc).toContain('data:')
+    })
+  })
+
   describe('Glitch build (VITE_APP_GLITCH=true)', () => {
     it('adds unsafe-inline to script-src for the iframe bootstrap', () => {
       const csp = buildCsp({ VITE_APP_GLITCH: 'true' })
