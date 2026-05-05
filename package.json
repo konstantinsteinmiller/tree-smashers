@@ -13,6 +13,8 @@
     "build:itch": "vite build --mode itch --base=./ && cd dist && tar -a -cf ../chaos-arena-itch.zip * && cd .. && move chaos-arena-itch.zip dist\\",
     "build:glitch": "vite build --mode glitch --base=./ && cd dist && tar -a -cf ../chaos-arena-glitch.zip * && cd .. && move chaos-arena-glitch.zip dist\\",
     "build:game-distribution": "vite build --mode game-distribution --base=./ && cd dist && tar -a -cf ../chaos-arena-gd.zip * && cd .. && move chaos-arena-gd.zip dist\\",
+    "build:y8": "vite build --mode y8 --base=./ && cd dist && tar -a -cf ../chaos-arena-y8.zip * && cd .. && move chaos-arena-y8.zip dist\\",
+    "build:gamepix": "vite build --mode gamepix --base=./ && cd dist && tar -a -cf ../chaos-arena-gamepix.zip * && cd .. && move chaos-arena-gamepix.zip dist\\",
     "build-github-main": "VITE_APP_PVP_ENABLED=true vite build --base=/chaos-arena/ --outDir=dist",
     "build-github-develop": "vite build --base=/chaos-arena/develop/ --outDir=dist/develop",
     "build-github-demo": "vite build --mode demo --base=/chaos-arena/demo/ --outDir=dist/demo",

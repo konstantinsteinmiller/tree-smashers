@@ -1,15 +1,15 @@
 // Smoke tests for the platform registry. Confirms:
 //   - Every platform module exports a `platform` descriptor with id+envFlag+capabilities.
-//   - The registry enumerates all 5 platforms.
+//   - The registry enumerates all 7 platforms.
 //   - `activePlatform()` returns null when no env flag is set (the test default).
 
 import { describe, expect, it } from 'vitest'
 import { ALL_PLATFORMS, activePlatform, activeCapabilities } from '@/platforms'
 
 describe('platform registry', () => {
-  it('contains all 5 platforms', () => {
+  it('contains all 7 platforms', () => {
     const ids = ALL_PLATFORMS.map(p => p.id).sort()
-    expect(ids).toEqual(['crazygames', 'gamedistribution', 'glitch', 'itch', 'wavedash'])
+    expect(ids).toEqual(['crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'wavedash', 'y8'])
   })
 
   it('every platform has the required descriptor shape', () => {
@@ -55,11 +55,23 @@ describe('platform registry', () => {
     expect(cg.capabilities.portalEnforcesAgeGate).toBe(true)
   })
 
-  it('itch + wavedash have neither cloud save nor ads', () => {
-    for (const id of ['itch', 'wavedash']) {
+  it('itch + wavedash + y8 + gamepix have neither cloud save nor ads (minimal integrations)', () => {
+    for (const id of ['itch', 'wavedash', 'y8', 'gamepix']) {
       const p = ALL_PLATFORMS.find(x => x.id === id)!
       expect(p.capabilities.hasCloudSave, id).toBe(false)
       expect(p.capabilities.hasAds, id).toBe(false)
     }
+  })
+
+  it('Y8 declares the y8.com hostname matcher', () => {
+    const y8 = ALL_PLATFORMS.find(p => p.id === 'y8')!
+    expect(y8.envFlag).toBe('Y8')
+    expect(y8.capabilities.hostnameMatcher).toBe('y8')
+  })
+
+  it('GamePix declares the gamepix hostname matcher', () => {
+    const gp = ALL_PLATFORMS.find(p => p.id === 'gamepix')!
+    expect(gp.envFlag).toBe('GAMEPIX')
+    expect(gp.capabilities.hostnameMatcher).toBe('gamepix')
   })
 })

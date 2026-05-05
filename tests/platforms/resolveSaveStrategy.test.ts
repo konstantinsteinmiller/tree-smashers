@@ -16,7 +16,9 @@ const allOff: PlatformFlags = {
   isWaveDash: false,
   isItch: false,
   isGlitch: false,
-  isGameDistribution: false
+  isGameDistribution: false,
+  isY8: false,
+  isGamePix: false
 }
 
 const ALL_PLATFORM_ENVS = [

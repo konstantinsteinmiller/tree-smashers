@@ -13,7 +13,9 @@ const allOff: PlatformFlags = {
   isWaveDash: false,
   isItch: false,
   isGlitch: false,
-  isGameDistribution: false
+  isGameDistribution: false,
+  isY8: false,
+  isGamePix: false
 }
 
 const ALL_ENVS = ['VITE_APP_CRAZY_WEB', 'VITE_APP_GAME_DISTRIBUTION', 'VITE_APP_NATIVE'] as const

@@ -17,6 +17,8 @@ export interface PlatformFlags {
   isItch: boolean
   isGlitch: boolean
   isGameDistribution: boolean
+  isY8: boolean
+  isGamePix: boolean
 }
 
 export type GlitchLicenseStatus = 'pending' | 'ok' | 'denied'
@@ -46,6 +48,8 @@ export interface ResolvedCapabilities {
   allowedToShowOnItch: boolean
   allowedToShowOnGlitch: boolean
   allowedToShowOnGameDistribution: boolean
+  allowedToShowOnY8: boolean
+  allowedToShowOnGamePix: boolean
   /** True when Glitch was selected but their license API rejected the player. */
   isGlitchDenied: boolean
   /** True when the build targets a platform AND the license check has settled.
@@ -80,6 +84,21 @@ const isGlitchUrl = (hostname: string, parentOrigin: string): boolean => {
 const isGameDistUrl = (hostname: string): boolean =>
   hostname.includes('gamedistribution.com')
 
+// Y8 hosts the iframe under `*.y8.com` (and occasional CDN subdomains
+// like `cdn.y8.com`). Match the bare token to cover all of them while
+// staying tight enough that unrelated domains containing "y8" as part
+// of a longer word don't slip through (none observed in practice; the
+// portal-side hostname is always `y8.com`-suffixed).
+const isY8Url = (hostname: string): boolean =>
+  hostname.includes('y8.com')
+
+// GamePix serves both the portal and the in-frame game from
+// `*.gamepix.com` (e.g. `www.gamepix.com`, `cdn.gamepix.com`,
+// `play.gamepix.com`). Match by `gamepix.com` so partner subdomains
+// pass without false-positiving unrelated hosts.
+const isGamePixUrl = (hostname: string): boolean =>
+  hostname.includes('gamepix.com')
+
 // ─── Resolver ───────────────────────────────────────────────────────────────
 
 export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilities => {
@@ -87,7 +106,8 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   const parentOrigin = input.parentOrigin ?? ''
 
   const isNotPlatformBuild =
-    !flags.isCrazyWeb && !flags.isWaveDash && !flags.isItch && !flags.isGlitch && !flags.isGameDistribution
+    !flags.isCrazyWeb && !flags.isWaveDash && !flags.isItch && !flags.isGlitch
+    && !flags.isGameDistribution && !flags.isY8 && !flags.isGamePix
 
   const allowedToShowOnCrazyGames =
     (flags.isCrazyWeb && isCrazyGamesUrl(hostname)) || isNotPlatformBuild
@@ -106,8 +126,15 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   const allowedToShowOnGameDistribution =
     (flags.isGameDistribution && isGameDistUrl(hostname)) || isNotPlatformBuild
 
+  const allowedToShowOnY8 =
+    (flags.isY8 && isY8Url(hostname)) || isNotPlatformBuild
+
+  const allowedToShowOnGamePix =
+    (flags.isGamePix && isGamePixUrl(hostname)) || isNotPlatformBuild
+
   const anyPlatform =
-    flags.isCrazyWeb || flags.isWaveDash || flags.isItch || flags.isGlitch || flags.isGameDistribution
+    flags.isCrazyWeb || flags.isWaveDash || flags.isItch || flags.isGlitch
+    || flags.isGameDistribution || flags.isY8 || flags.isGamePix
   const showOnlyAvailableText = anyPlatform && glitchLicenseStatus !== 'pending'
 
   const plattformText = flags.isWaveDash
@@ -120,7 +147,11 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
           ? 'glitch.fun'
           : flags.isGameDistribution
             ? 'gamedistribution.com'
-            : ''
+            : flags.isY8
+              ? 'y8.com'
+              : flags.isGamePix
+                ? 'gamepix.com'
+                : ''
 
   return {
     isNotPlatformBuild,
@@ -129,6 +160,8 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
     allowedToShowOnItch,
     allowedToShowOnGlitch,
     allowedToShowOnGameDistribution,
+    allowedToShowOnY8,
+    allowedToShowOnGamePix,
     isGlitchDenied,
     showOnlyAvailableText,
     plattformText

@@ -12,7 +12,7 @@ import {
 import { LANGUAGES } from '@/utils/enums'
 import { initCrazyGames, crazyLocale, startLoading } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
-import useUser, { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution } from '@/use/useUser'
+import useUser, { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
@@ -128,7 +128,7 @@ const bootstrap = async () => {
   // unit-testable in isolation. Adding a platform = add an arm there,
   // not edit this file.
   const strategy = await resolveSaveStrategy({
-    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution
+    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix
   })
 
   // CrazyGames cloud-only mode: gameplay state and our save bookkeeping

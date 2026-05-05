@@ -16,7 +16,9 @@ const allFlagsOff = {
   isWaveDash: false,
   isItch: false,
   isGlitch: false,
-  isGameDistribution: false
+  isGameDistribution: false,
+  isY8: false,
+  isGamePix: false
 }
 
 describe('resolveCapabilities', () => {
@@ -162,7 +164,9 @@ describe('resolveCapabilities', () => {
         ['isWaveDash', 'wavedash.com'],
         ['isItch', 'itch.io'],
         ['isGlitch', 'glitch.fun'],
-        ['isGameDistribution', 'gamedistribution.com']
+        ['isGameDistribution', 'gamedistribution.com'],
+        ['isY8', 'y8.com'],
+        ['isGamePix', 'gamepix.com']
       ]
       for (const [flag, expected] of cases) {
         const c = resolveCapabilities({
@@ -213,6 +217,90 @@ describe('resolveCapabilities', () => {
         glitchLicenseStatus: 'ok'
       })
       expect(c.allowedToShowOnGameDistribution).toBe(true)
+    })
+
+    it('isY8Url matches anything ending in y8.com', () => {
+      const cases = ['y8.com', 'www.y8.com', 'cdn.y8.com', 'games.y8.com']
+      for (const hostname of cases) {
+        const c = resolveCapabilities({
+          flags: { ...allFlagsOff, isY8: true },
+          hostname,
+          glitchLicenseStatus: 'ok'
+        })
+        expect(c.allowedToShowOnY8, hostname).toBe(true)
+      }
+    })
+
+    it('isY8 + non-Y8 hostname does NOT pass the gate', () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isY8: true },
+        hostname: 'example.com',
+        glitchLicenseStatus: 'ok'
+      })
+      expect(c.allowedToShowOnY8).toBe(false)
+    })
+
+    it('isGamePixUrl matches anything ending in gamepix.com', () => {
+      const cases = ['gamepix.com', 'www.gamepix.com', 'cdn.gamepix.com', 'play.gamepix.com']
+      for (const hostname of cases) {
+        const c = resolveCapabilities({
+          flags: { ...allFlagsOff, isGamePix: true },
+          hostname,
+          glitchLicenseStatus: 'ok'
+        })
+        expect(c.allowedToShowOnGamePix, hostname).toBe(true)
+      }
+    })
+
+    it('isGamePix + non-GamePix hostname does NOT pass the gate', () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isGamePix: true },
+        hostname: 'example.com',
+        glitchLicenseStatus: 'ok'
+      })
+      expect(c.allowedToShowOnGamePix).toBe(false)
+    })
+  })
+
+  describe('Y8 — minimal integration (no SDK / no ads / no cloud)', () => {
+    it('isY8 sets isNotPlatformBuild = false', () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isY8: true },
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      expect(c.isNotPlatformBuild).toBe(false)
+    })
+
+    it('plain web (no flag) still passes the Y8 gate via the dev escape hatch', () => {
+      const c = resolveCapabilities({
+        flags: allFlagsOff,
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      // Same dev-fallthrough rule as every other platform: when nothing
+      // is set, every `allowedToShowOn*` is true so `pnpm dev` works.
+      expect(c.allowedToShowOnY8).toBe(true)
+    })
+  })
+
+  describe('GamePix — minimal integration (no SDK / no ads / no cloud)', () => {
+    it('isGamePix sets isNotPlatformBuild = false', () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isGamePix: true },
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      expect(c.isNotPlatformBuild).toBe(false)
+    })
+
+    it('plain web (no flag) still passes the GamePix gate via the dev escape hatch', () => {
+      const c = resolveCapabilities({
+        flags: allFlagsOff,
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      expect(c.allowedToShowOnGamePix).toBe(true)
     })
   })
 
