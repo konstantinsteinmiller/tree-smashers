@@ -2,9 +2,9 @@ import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
-  SKINS_PER_TOP, SPECIAL_SKINS,
-  isModelFullyOwned,
+  SKINS_PER_TOP,
   buySkin,
+  getOfferableSkinPool,
   type SpinnerModelId
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -155,21 +155,7 @@ export const bpCoinReward = (stage: number): number => {
 
 export const bpIsSkinStage = (stage: number): boolean => BP_SKIN_STAGES.has(stage)
 
-// ─── Skin helpers (mirrors DailyRewards) ───────────────────────────────────
-
-const unownedSkinModelIds = (): SpinnerModelId[] => {
-  const result: SpinnerModelId[] = []
-  const seen = new Set<string>()
-  for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
-    for (const modelId of SKINS_PER_TOP[topPartId]) {
-      if (seen.has(modelId)) continue
-      seen.add(modelId)
-      if (SPECIAL_SKINS.has(modelId)) continue
-      if (!isModelFullyOwned(modelId)) result.push(modelId)
-    }
-  }
-  return result
-}
+// ─── Skin helpers ──────────────────────────────────────────────────────────
 
 const unlockSkinEverywhere = (modelId: SpinnerModelId) => {
   for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
@@ -229,7 +215,7 @@ const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimRe
   let skin: SpinnerModelId | null = null
 
   if (bpIsSkinStage(stage)) {
-    const pool = unownedSkinModelIds()
+    const pool = getOfferableSkinPool()
     // Prefer the skin that was previewed to the player, fall back to random
     if (offeredSkin && pool.includes(offeredSkin)) {
       skin = offeredSkin

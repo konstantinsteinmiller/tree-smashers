@@ -11,18 +11,36 @@ const { userSoundVolume, userMusicVolume, setSettingValue } = useUser()
 
 const isMuted = computed(() => userMusicVolume.value === 0 && userSoundVolume.value === 0)
 
-let prevMusicVol = 0.5
-let prevSoundVol = 0.7
+// Snapshot of the volumes at the moment WE muted in response to a
+// platform-mute event. `null` means "no platform-mute in this session"
+// — `applyMute(false)` must NOT restore from snapshot in that case.
+//
+// Previous version started with literal defaults (0.5 / 0.7). On a
+// cold load where the SDK reported `muted=false` but the cloud-hydrated
+// in-game volumes were 0/0 (user deliberately muted on a different
+// device), the `else if` branch fired and overwrote the cloud's
+// intentional 0/0 with the stale defaults. CG QA caught it 2026-05-05.
+let muteSnapshot: { music: number; sound: number } | null = null
 
 export const applyMute = (muted: boolean) => {
   if (muted && !isMuted.value) {
-    prevMusicVol = userMusicVolume.value || 0.5
-    prevSoundVol = userSoundVolume.value || 0.7
+    // Platform muted, in-game wasn't — snapshot current volumes so we
+    // can restore them when the platform unmutes.
+    muteSnapshot = {
+      music: userMusicVolume.value,
+      sound: userSoundVolume.value
+    }
     setSettingValue('music', 0)
     setSettingValue('sound', 0)
-  } else if (!muted && isMuted.value) {
-    setSettingValue('music', prevMusicVol || 0.5)
-    setSettingValue('sound', prevSoundVol || 0.7)
+  } else if (!muted && isMuted.value && muteSnapshot) {
+    // Platform unmuted AND we have a snapshot from an earlier platform
+    // mute → restore. Without the snapshot guard this branch would also
+    // fire on cold load when the user's cloud value happens to be 0/0
+    // (deliberate manual mute) and the SDK reports "not muted" — we'd
+    // overwrite the cloud with the snapshot's stale defaults.
+    setSettingValue('music', muteSnapshot.music)
+    setSettingValue('sound', muteSnapshot.sound)
+    muteSnapshot = null
   }
 }
 

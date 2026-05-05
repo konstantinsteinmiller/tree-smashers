@@ -7,54 +7,34 @@ import type { Ref } from 'vue'
 import type { TopPartId } from '@/types/spinner'
 import { SKINS_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import {
+  SKINS_PER_TOP,
+  SPECIAL_SKINS,
+  SKIN_COST,
+  SPECIAL_SKIN_COST,
+  SPINNER_MODEL_IDS,
+  skinCost,
+  getOfferableSkinPool as buildOfferableSkinPool,
+  type SpinnerModelId
+} from '@/data/skinCatalog'
 
 export const modelImgPath = (id: string) => {
   return prependBaseUrl(`images/models/${id}_256x256.webp`)
 }
 
-// ─── Spinner Model Image Mapping ───────────────────────────────────────────
-
-export const SPINNER_MODEL_IDS = [
-  'fire', 'phoenix', 'thunder', 'bluedragon', 'turtle',
-  'ice', 'chip', 'mysticaleye', 'nature', 'wulf',
-  'castle', 'eagle', 'prisma', 'scorpion', 'shell',
-  'snake', 'axe', 'demon', 'angelic', 'mountain',
-  'tornado', 'reddragon', 'bear', 'hawk', 'blades',
-  'gear', 'ape', 'shield', 'salamaner', 'galaxy',
-  'piranha', 'thunderstorm',
-  'rainbow', 'dark', 'boulder', 'teleporter', 'life-leech',
-  'wasp', 'spiky-eagle', 'forest-dragon', 'chain', 'wolf-demon',
-  'rhino', 'golden-eagle', 'diamond', 'tsunami', 'sandstorm'
-] as const
-
-export type SpinnerModelId = (typeof SPINNER_MODEL_IDS)[number]
-
-/** Available skins per top part (default skin is always first and free) */
-export const SKINS_PER_TOP: Record<TopPartId, SpinnerModelId[]> = {
-  // "star" top keeps its bold elemental roster. Swapped thunderstorm out
-  // to give the new spiky ("triangle") top a jagged-themed lineup.
-  star: ['blades', 'ice', 'wasp', 'reddragon', 'chain', 'axe', 'tornado'],
-  // Spiky top — jagged / barbed aesthetic (thunder bolts, thunderstorm,
-  // razor-winged eagle).
-  triangle: ['thunder', 'snake', 'phoenix', 'eagle', 'spiky-eagle', 'salamaner', 'thunderstorm'],
-  round: ['nature', 'turtle', 'piranha', 'bear', 'galaxy', 'golden-eagle', 'wolf-demon', 'dark'],
-  quadratic: ['chip', 'mysticaleye', 'bluedragon', 'angelic', 'tsunami', 'prisma', 'forest-dragon', 'rainbow'],
-  cushioned: ['shell', 'shield', 'castle', 'mountain', 'gear', 'sandstorm', 'diamond', 'boulder'],
-  piercer: ['scorpion', 'wulf', 'demon', 'hawk', 'rhino', 'ape', 'teleporter']
+// Re-export the pure data + types from the catalog so existing imports
+// (`@/use/useModels`) keep compiling. The catalog has zero composable
+// dependencies, which makes it unit-testable in isolation — see
+// `tests/useBattlePassSkinClaim.test.ts`.
+export {
+  SKINS_PER_TOP,
+  SPECIAL_SKINS,
+  SKIN_COST,
+  SPECIAL_SKIN_COST,
+  SPINNER_MODEL_IDS,
+  skinCost
 }
-
-export const SKIN_COST = 300
-export const SPECIAL_SKIN_COST = 1500
-
-/** Special skins with unique VFX — cost 1500 coins and are excluded from
- *  daily rewards and battle pass skin draws. */
-export const SPECIAL_SKINS: ReadonlySet<SpinnerModelId> = new Set([
-  'rainbow', 'dark', 'tornado', 'diamond', 'thunderstorm', 'boulder', 'teleporter', 'sandstorm', 'forest-dragon'
-])
-
-/** Returns the coin cost for a given skin. */
-export const skinCost = (modelId: SpinnerModelId): number =>
-  SPECIAL_SKINS.has(modelId) ? SPECIAL_SKIN_COST : SKIN_COST
+export type { SpinnerModelId }
 
 /** Pick a random skin from the available pool for a given top part */
 export const getRandomSkinForTop = (topPartId: TopPartId): SpinnerModelId => {
@@ -166,6 +146,17 @@ export const buySkin = (topPartId: TopPartId, modelId: SpinnerModelId): boolean 
   saveOwnedSkins()
   return true
 }
+
+/** Skins eligible to be OFFERED as a free reward (Daily Rewards, Battle
+ *  Pass, Honor Track, Skin Chest). Wraps the pure helper from
+ *  `@/data/skinCatalog` with the production `isModelFullyOwned`
+ *  predicate. CG QA flagged the BP modal offering "rainbow" (a special
+ *  skin) on 2026-05-05 — the modal had its own component-local pool
+ *  that forgot to filter `SPECIAL_SKINS`. Both the BP modal,
+ *  DailyRewards modal, and `useBattlePass.ts` route through THIS helper
+ *  so the filter rule lives in one place. */
+export const getOfferableSkinPool = (): SpinnerModelId[] =>
+  buildOfferableSkinPool(isModelFullyOwned)
 
 export const selectSkin = (topPartId: TopPartId, modelId: SpinnerModelId, slotIndex = 0) => {
   const key = `${topPartId}:${slotIndex}`

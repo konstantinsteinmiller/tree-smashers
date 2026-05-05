@@ -1361,9 +1361,14 @@ onUnmounted(() => {
     )
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
-      div.flex.flex-col.items-center.gap-4
-        div.font-black.uppercase.tracking-wider.game-text.text-green-400(
-          class="text-3xl sm:text-5xl"
+      //- Tighter `gap-2` on short viewports so the wheel + spin-again
+      //- buttons fit alongside the result text and the ribbon. The
+      //- result text caps at text-4xl now (was text-5xl) — prior version
+      //- pushed the buttons below the fold on the CG iframe in
+      //- landscape. CG QA caught it 2026-05-05.
+      div.flex.flex-col.items-center.roulette-overlay-content(class="gap-2 sm:gap-3")
+        div.font-black.uppercase.tracking-wider.game-text.text-green-400.roulette-result-text(
+          class="text-2xl sm:text-4xl"
         ) {{ resultText }}
         RouletteWheel(@result="onRouletteResult")
 
@@ -1596,5 +1601,20 @@ onUnmounted(() => {
   .blade-stat-icon
     width: 0.75rem
     height: 0.75rem
+
+// ─── Roulette overlay — viewport-fit ────────────────────────────────────────
+// Shrink the result text and the slot's vertical gap on short-but-not-mobile
+// landscape viewports (CG iframe in landscape with the portal chrome bar
+// visible — ~700–860 px tall). At the default sm:text-4xl + sm:gap-3, the
+// wheel + spin-again/skip row was pushed below the fold. CG QA caught it
+// 2026-05-05. Pairs with the matching ribbon-shrink rule in FReward.vue
+// and the responsive canvas size in RouletteWheel.vue.
+@media (orientation: landscape) and (min-height: 501px) and (max-height: 860px)
+  .roulette-overlay-content
+    gap: 0.5rem
+
+  .roulette-result-text
+    font-size: 1.875rem
+    line-height: 2.25rem
 
 </style>

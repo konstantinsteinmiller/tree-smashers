@@ -11,8 +11,8 @@ import useBattlePass, {
 import {
   modelImgPath,
   SKINS_PER_TOP,
-  isModelFullyOwned,
   buySkin,
+  getOfferableSkinPool,
   type SpinnerModelId
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -104,19 +104,6 @@ const stageCards = computed(() =>
 
 const offeredSkins = ref<Record<number, SpinnerModelId | null>>({})
 
-const unownedSkinModelIds = (): SpinnerModelId[] => {
-  const out: SpinnerModelId[] = []
-  const seen = new Set<string>()
-  for (const top of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
-    for (const m of SKINS_PER_TOP[top]) {
-      if (seen.has(m)) continue
-      seen.add(m)
-      if (!isModelFullyOwned(m)) out.push(m)
-    }
-  }
-  return out
-}
-
 const shuffled = <T, >(arr: T[]): T[] => {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -132,17 +119,27 @@ const refreshOfferedSkins = () => {
   const result: Record<number, SpinnerModelId | null> = {}
   const taken = new Set<SpinnerModelId>()
 
-  // Keep existing offers that are still unowned
+  // CG QA 2026-05-05: source the pool from the shared helper, NOT from
+  // a component-local definition that forgot to filter SPECIAL_SKINS.
+  // Cache the offerable set so the persisted-keep clause and the
+  // pool-fill clause agree on what counts as offerable.
+  const offerable = new Set(getOfferableSkinPool())
+
+  // Keep existing offers that are still offerable. The `offerable.has`
+  // check covers BOTH "still unowned" (was already handled by the prior
+  // `!isModelFullyOwned` predicate) AND "not a special skin" (the new
+  // gate — needed to scrub legacy persisted offers like rainbow that
+  // shipped before the BP filter was correct).
   for (const stage of skinStages) {
     const prev = persisted[stage]
-    if (prev && !isModelFullyOwned(prev)) {
+    if (prev && offerable.has(prev)) {
       result[stage] = prev
       taken.add(prev)
     }
   }
 
   // Fill stages that need a new skin
-  const pool = shuffled(unownedSkinModelIds().filter(m => !taken.has(m)))
+  const pool = shuffled([...offerable].filter(m => !taken.has(m)))
   let poolIdx = 0
   for (const stage of skinStages) {
     if (result[stage]) continue
@@ -215,17 +212,22 @@ const refreshHonorOfferedSkins = () => {
   const result: Record<number, SpinnerModelId | null> = {}
   const taken = new Set<SpinnerModelId>()
 
-  // Keep existing offers that are still unowned
+  // Same fix as `refreshOfferedSkins` above — single source of truth
+  // for the offerable pool.
+  const offerable = new Set(getOfferableSkinPool())
+
+  // Keep existing offers that are still offerable (covers
+  // "still unowned" AND "not a special skin").
   for (const stage of stages) {
     const prev = persisted[stage]
-    if (prev && !isModelFullyOwned(prev)) {
+    if (prev && offerable.has(prev)) {
       result[stage] = prev
       taken.add(prev)
     }
   }
 
   // Fill stages that need a new skin
-  const pool = shuffled(unownedSkinModelIds().filter(m => !taken.has(m)))
+  const pool = shuffled([...offerable].filter(m => !taken.has(m)))
   let poolIdx = 0
   for (const stage of stages) {
     if (result[stage]) continue

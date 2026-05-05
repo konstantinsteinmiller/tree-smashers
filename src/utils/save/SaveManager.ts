@@ -241,25 +241,59 @@ export class SaveManager {
     if (this.patched) return
     this.patched = true
 
-    this.storage.getItem = (key: string) => this.blob.get(key)
+    // ── Why this isn't a simple `localStorage.getItem = fn` assignment:
+    //
+    // Web Storage objects are `[LegacyOverrideBuiltIns]` platform objects.
+    // Their methods live on `Storage.prototype`, not on the instance.
+    //
+    //   Direct assignment   `localStorage.getItem = fn`
+    //   In Firefox + some Chromium variants (Opera, certain incognito
+    //   modes) this routes through the named-property setter and turns
+    //   into `localStorage.setItem('getItem', fn.toString())` — the
+    //   override never lands.
+    //
+    //   Instance defineProperty   `Object.defineProperty(localStorage,
+    //   'getItem', {value: fn})`
+    //   Better, but CG QA reported on 2026-05-05 that even with this
+    //   technique Opera + Firefox still hit the data-loss bug
+    //   (`spinner_player_max_stage` overwritten with `1` on every load).
+    //   The own data property either doesn't shadow the prototype method,
+    //   or some browser-internal lookup path bypasses it.
+    //
+    //   Proxy on `window.localStorage`   ← THIS IS THE FIX
+    //   Replace `window.localStorage` with a Proxy wrapping the original
+    //   storage. Every `localStorage.X` access in user code goes through
+    //   the Proxy's `get` trap, so we control the dispatch unambiguously
+    //   regardless of named-property-setter semantics. BlobStorage's
+    //   `rawGet` / `rawSet` were captured in its constructor BEFORE
+    //   patching, so they keep accessing the original storage and do NOT
+    //   recurse through the proxy.
+    const blob = this.blob
+    const strategy = this.strategy
+    const isMirroring = (): boolean => this.mirroring
+    const rawClear = this.rawClear
+    const rawKey = this.rawKey
+    const rawLength = this.rawLength
 
-    this.storage.setItem = (key: string, value: string) => {
-      const changed = this.blob.set(key, value)
-      if (this.mirroring || isInternalKey(key)) return
+    const patchedGetItem = (key: string): string | null => blob.get(key)
+
+    const patchedSetItem = (key: string, value: string): void => {
+      const changed = blob.set(key, value)
+      if (isMirroring() || isInternalKey(key)) return
       if (!changed) return
       try {
-        this.strategy.onLocalSet(key, value)
+        strategy.onLocalSet(key, value)
       } catch (e) {
         console.warn(`[save] onLocalSet("${key}") threw`, e)
       }
     }
 
-    this.storage.removeItem = (key: string) => {
-      const changed = this.blob.remove(key)
-      if (this.mirroring || isInternalKey(key)) return
+    const patchedRemoveItem = (key: string): void => {
+      const changed = blob.remove(key)
+      if (isMirroring() || isInternalKey(key)) return
       if (!changed) return
       try {
-        this.strategy.onLocalRemove(key)
+        strategy.onLocalRemove(key)
       } catch (e) {
         console.warn(`[save] onLocalRemove("${key}") threw`, e)
       }
@@ -268,22 +302,88 @@ export class SaveManager {
     // `clear()` wipes raw localStorage AND the in-memory state, then
     // emits a removeItem for every non-internal key so the strategy
     // stays in sync.
-    this.storage.clear = () => {
+    const patchedClear = (): void => {
       const all: string[] = []
-      for (let i = 0; i < this.rawLength(); i++) {
-        const k = this.rawKey(i)
+      for (let i = 0; i < rawLength(); i++) {
+        const k = rawKey(i)
         if (k !== null) all.push(k)
       }
-      this.blob.clear()
-      this.rawClear()
+      blob.clear()
+      rawClear()
       for (const k of all) {
         if (isInternalKey(k)) continue
         try {
-          this.strategy.onLocalRemove(k)
+          strategy.onLocalRemove(k)
         } catch (e) {
           console.warn(`[save] onLocalRemove (clear) threw`, e)
         }
       }
+    }
+
+    const proxy = new Proxy(this.storage, {
+      get(target, prop) {
+        if (prop === 'getItem') return patchedGetItem
+        if (prop === 'setItem') return patchedSetItem
+        if (prop === 'removeItem') return patchedRemoveItem
+        if (prop === 'clear') return patchedClear
+        // Pass-through for `length`, `key(i)`, and any named-property
+        // reads. Functions need to be bound so `this` resolves to the
+        // underlying Storage and not the proxy (re-entering the proxy
+        // would just resolve back through the same getters).
+        const value = Reflect.get(target, prop, target)
+        return typeof value === 'function' ? (value as Function).bind(target) : value
+      }
+    })
+
+    if (typeof window !== 'undefined' && this.storage === window.localStorage) {
+      // Production path: replace `window.localStorage` with the proxy.
+      // `defineProperty` (not direct assignment) so it survives even
+      // browsers where Window's localStorage descriptor is non-writable.
+      try {
+        Object.defineProperty(window, 'localStorage', {
+          value: proxy,
+          configurable: true,
+          writable: true
+        })
+      } catch (e) {
+        console.warn('[save] failed to install localStorage proxy', e)
+      }
+    } else {
+      // Test / non-browser path: proxy isn't reachable through
+      // `window.localStorage` (the test passed in a custom Storage).
+      // Fall back to instance-level `defineProperty` so direct
+      // references to `this.storage` still resolve to the patched
+      // methods.
+      const define = (name: string, value: unknown) => {
+        Object.defineProperty(this.storage, name, { value, configurable: true, writable: true })
+      }
+      define('getItem', patchedGetItem)
+      define('setItem', patchedSetItem)
+      define('removeItem', patchedRemoveItem)
+      define('clear', patchedClear)
+    }
+
+    // Self-check: write+read a sentinel through the patched accessors.
+    // If the proxy isn't reachable (e.g. the browser blocked the
+    // window-property override) the round-trip will return the wrong
+    // value and we log loudly so future regressions surface in the
+    // QA console instead of silently corrupting cloud saves.
+    try {
+      const sentinel = '__save_internal__patch_sentinel'
+      const probeValue = String(Date.now())
+      const ls = typeof window !== 'undefined' ? window.localStorage : this.storage
+      ls.setItem(sentinel, probeValue)
+      const echoed = ls.getItem(sentinel)
+      ls.removeItem(sentinel)
+      if (echoed !== probeValue) {
+        console.error(
+          '[save] patchLocalStorage self-check FAILED — patched setItem/getItem ' +
+          'are not routing through SaveManager. Cloud progress will not be loaded ' +
+          'on this browser.', { expected: probeValue, got: echoed }
+        )
+      }
+    } catch (e) {
+      console.warn('[save] patchLocalStorage self-check threw', e)
     }
   }
 }

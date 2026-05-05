@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
 import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -124,12 +124,41 @@ const currentRotation = ref(0)
 const showAdButton = ref(false)
 const lastResult = ref<RouletteResult | null>(null)
 
-const WHEEL_SIZE = 240
-const ARROW_HEIGHT = 24
-const CANVAS_HEIGHT = WHEEL_SIZE + ARROW_HEIGHT
-const CENTER_X = WHEEL_SIZE / 2
-const CENTER_Y = WHEEL_SIZE / 2 + ARROW_HEIGHT
-const RADIUS = WHEEL_SIZE / 2 - 8
+// Wheel sizing — responsive. The previous version used a fixed 240px
+// wheel + 24px arrow + result text + ribbon + spin-again/skip buttons,
+// which exceeded short viewports (CG iframe in landscape with the
+// portal chrome bar visible) and pushed the buttons below the fold.
+// CG QA reported it 2026-05-05.
+//
+// Budget breakdown of the chrome AROUND the wheel inside the FReward
+// overlay, used to pick a wheel size that always leaves room for the
+// post-spin buttons:
+//   • Ribbon (REWARDS parchment) ............ ~120 px
+//   • Result text ("YOU WIN!") ............... ~60 px
+//   • Spin-again / skip buttons row .......... ~60 px
+//   • Gaps + overlay padding ................. ~80 px
+//   ────────────────────────────────────────────────
+//   Total chrome ............................ ~320 px
+const MAX_WHEEL_SIZE = 240
+const MIN_WHEEL_SIZE = 160
+const CHROME_HEIGHT_BUDGET = 320
+
+const computeWheelSize = (): number => {
+  if (typeof window === 'undefined') return MAX_WHEEL_SIZE
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  // Leave room for the chrome above + below the wheel, AND the
+  // overlay's horizontal padding. Floor at MIN_WHEEL_SIZE so the
+  // segment labels stay legible even on very short viewports.
+  const verticalRoom = vh - CHROME_HEIGHT_BUDGET
+  const widthRoom = vw - 32
+  return Math.round(Math.max(MIN_WHEEL_SIZE, Math.min(MAX_WHEEL_SIZE, verticalRoom, widthRoom)))
+}
+
+const wheelSize = ref(computeWheelSize())
+// Arrow is 10% of wheel — keeps visual weight balanced as the wheel scales.
+const arrowHeight = computed(() => Math.round(wheelSize.value * 0.1))
+const canvasHeight = computed(() => wheelSize.value + arrowHeight.value)
 
 // ─── Image cache ────────────────────────────────────────────────────────────
 
@@ -173,27 +202,38 @@ const drawWheel = (rotation: number) => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  // All canvas-internal sizes scale with `wheelSize.value` so the wheel
+  // stays visually consistent at any responsive size.
+  const size = wheelSize.value
+  const arrowH = arrowHeight.value
+  const canvasH = size + arrowH
+  const cx = size / 2
+  const cy = size / 2 + arrowH
+  const radius = size / 2 - 8
+  // Proportional scale-factor relative to the design size (240px).
+  const k = size / MAX_WHEEL_SIZE
+
   const dpr = window.devicePixelRatio || 1
-  canvas.width = WHEEL_SIZE * dpr
-  canvas.height = CANVAS_HEIGHT * dpr
+  canvas.width = size * dpr
+  canvas.height = canvasH * dpr
   ctx.scale(dpr, dpr)
-  ctx.clearRect(0, 0, WHEEL_SIZE, CANVAS_HEIGHT)
+  ctx.clearRect(0, 0, size, canvasH)
 
   // Arrow
-  const arrowW = 16
+  const arrowW = 16 * k
   ctx.fillStyle = '#facc15'
   ctx.strokeStyle = '#78350f'
   ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.moveTo(CENTER_X, ARROW_HEIGHT + 4)
-  ctx.lineTo(CENTER_X - arrowW, 0)
-  ctx.lineTo(CENTER_X + arrowW, 0)
+  ctx.moveTo(cx, arrowH + 4 * k)
+  ctx.lineTo(cx - arrowW, 0)
+  ctx.lineTo(cx + arrowW, 0)
   ctx.closePath()
   ctx.fill()
   ctx.stroke()
   ctx.save()
   ctx.shadowColor = '#fbbf24'
-  ctx.shadowBlur = 12
+  ctx.shadowBlur = 12 * k
   ctx.fill()
   ctx.restore()
 
@@ -201,7 +241,7 @@ const drawWheel = (rotation: number) => {
   const arcSize = (Math.PI * 2) / segCount
 
   ctx.save()
-  ctx.translate(CENTER_X, CENTER_Y)
+  ctx.translate(cx, cy)
   ctx.rotate(rotation)
 
   for (let i = 0; i < segCount; i++) {
@@ -211,12 +251,12 @@ const drawWheel = (rotation: number) => {
 
     ctx.beginPath()
     ctx.moveTo(0, 0)
-    ctx.arc(0, 0, RADIUS, startAngle, endAngle)
+    ctx.arc(0, 0, radius, startAngle, endAngle)
     ctx.closePath()
     ctx.fillStyle = seg.color
     ctx.fill()
 
-    const grad = ctx.createRadialGradient(0, 0, RADIUS * 0.2, 0, 0, RADIUS)
+    const grad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius)
     grad.addColorStop(0, 'rgba(255,255,255,0.15)')
     grad.addColorStop(1, 'rgba(0,0,0,0.1)')
     ctx.fillStyle = grad
@@ -232,31 +272,31 @@ const drawWheel = (rotation: number) => {
     if (seg.kind === 'skin' && seg.imgSrc) {
       const img = skinImages.get(seg.imgSrc)
       if (img?.complete) {
-        const imgSize = 28
-        ctx.drawImage(img, RADIUS * 0.5 - imgSize / 2, -imgSize / 2, imgSize, imgSize)
+        const imgSize = 28 * k
+        ctx.drawImage(img, radius * 0.5 - imgSize / 2, -imgSize / 2, imgSize, imgSize)
       }
     } else {
-      drawCoinIcon(ctx, RADIUS * 0.72, 0, 8)
+      drawCoinIcon(ctx, radius * 0.72, 0, 8 * k)
       ctx.fillStyle = '#fff'
-      ctx.font = 'bold 13px sans-serif'
+      ctx.font = `bold ${Math.max(10, Math.round(13 * k))}px sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.shadowColor = 'rgba(0,0,0,0.6)'
       ctx.shadowBlur = 4
-      ctx.fillText(seg.label, RADIUS * 0.45, 0)
+      ctx.fillText(seg.label, radius * 0.45, 0)
       ctx.shadowBlur = 0
     }
     ctx.restore()
   }
 
   ctx.beginPath()
-  ctx.arc(0, 0, RADIUS, 0, Math.PI * 2)
+  ctx.arc(0, 0, radius, 0, Math.PI * 2)
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'
   ctx.lineWidth = 4
   ctx.stroke()
 
   ctx.beginPath()
-  ctx.arc(0, 0, 18, 0, Math.PI * 2)
+  ctx.arc(0, 0, 18 * k, 0, Math.PI * 2)
   ctx.fillStyle = '#1e293b'
   ctx.fill()
   ctx.strokeStyle = '#e2e8f0'
@@ -264,7 +304,7 @@ const drawWheel = (rotation: number) => {
   ctx.stroke()
 
   ctx.fillStyle = '#facc15'
-  ctx.font = 'bold 16px sans-serif'
+  ctx.font = `bold ${Math.max(12, Math.round(16 * k))}px sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('\u2605', 0, 1)
@@ -356,12 +396,33 @@ const onAdRespin = async () => {
   }
 }
 
+// Recompute responsive size on viewport changes — the canvas redraws
+// reactively via the `wheelSize` watcher below.
+const onViewportResize = (): void => {
+  const next = computeWheelSize()
+  if (next !== wheelSize.value) wheelSize.value = next
+}
+
+watch(wheelSize, () => {
+  // Don't fight the spin animation — it'll redraw on its next rAF tick.
+  if (!isSpinning.value) drawWheel(currentRotation.value)
+})
+
 onMounted(() => {
+  window.addEventListener('resize', onViewportResize)
+  // visualViewport covers iframe / mobile keyboard / address-bar resizes
+  // that don't fire `resize` on `window`.
+  window.visualViewport?.addEventListener('resize', onViewportResize)
   preloadImages()
   requestAnimationFrame(() => {
     drawWheel(currentRotation.value)
     setTimeout(spin, 500)
   })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onViewportResize)
+  window.visualViewport?.removeEventListener('resize', onViewportResize)
 })
 </script>
 
@@ -370,7 +431,7 @@ onMounted(() => {
     div.relative
       canvas(
         ref="canvasRef"
-        :style="{ width: WHEEL_SIZE + 'px', height: CANVAS_HEIGHT + 'px' }"
+        :style="{ width: wheelSize + 'px', height: canvasHeight + 'px' }"
       )
     //- Fixed-height slot — no layout shift
     div.flex.flex-col.items-center.gap-2(class="min-h-[3rem]")

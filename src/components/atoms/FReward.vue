@@ -112,4 +112,15 @@ const handleOverlayClick = () => {
     width: 50vw
     max-width: 400px
 
+// Short but not landscape-mobile (e.g. CG iframe in landscape with the
+// portal chrome bar visible — ~700–860 px viewport). The default desktop
+// ribbon (max 400 px wide → ~136 px tall) eats too much vertical room
+// here, leaving no space for the result text + wheel + spin-again
+// buttons. Cap it tighter so the roulette overlay's chrome fits the
+// viewport. CG QA caught the overflow 2026-05-05.
+@media (orientation: landscape) and (min-height: 501px) and (max-height: 860px)
+  .ribbon-wrap.is-desktop
+    width: 50vw
+    max-width: 320px
+
 </style>

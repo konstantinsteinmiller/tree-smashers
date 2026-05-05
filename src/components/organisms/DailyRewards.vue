@@ -6,10 +6,10 @@ import FIconButton from '@/components/atoms/FIconButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
-  SKINS_PER_TOP, SPECIAL_SKINS,
+  SKINS_PER_TOP,
   isSkinOwned,
-  isModelFullyOwned,
   buySkin,
+  getOfferableSkinPool,
   modelImgPath,
   type SpinnerModelId
 } from '@/use/useModels'
@@ -48,20 +48,12 @@ interface DailyState {
 
 // ─── Skin Pool Helpers ──────────────────────────────────────────────────────
 
-/** Distinct model ids that are not yet fully owned (can still be rewarded). */
-const unownedSkinModelIds = (): SpinnerModelId[] => {
-  const result: SpinnerModelId[] = []
-  const seen = new Set<string>()
-  for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
-    for (const modelId of SKINS_PER_TOP[topPartId]) {
-      if (seen.has(modelId)) continue
-      seen.add(modelId)
-      if (SPECIAL_SKINS.has(modelId)) continue
-      if (!isModelFullyOwned(modelId)) result.push(modelId)
-    }
-  }
-  return result
-}
+// `unownedSkinModelIds` was lifted to the shared `getOfferableSkinPool`
+// in `@/use/useModels` (backed by the pure helper in
+// `@/data/skinCatalog`). The Battle Pass modal had its own divergent
+// copy of this function that forgot to filter SPECIAL_SKINS — single
+// source of truth prevents the two from drifting again.
+const unownedSkinModelIds = (): SpinnerModelId[] => getOfferableSkinPool()
 
 const pickRandom = <T, >(arr: T[]): T | null =>
   arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)]! : null
@@ -138,21 +130,30 @@ const refreshOfferedSkins = () => {
   const persisted = state.value.offeredSkins ?? {}
   const result: Record<number, SpinnerModelId> = {}
 
+  // Single source of truth for what counts as offerable. The previous
+  // version called `isModelFullyOwned(...)` directly, which was dropped
+  // from the imports during the BP-claim refactor on 2026-05-05 — the
+  // resulting ReferenceError silently aborted refreshOfferedSkins, so
+  // every skin day rendered just the coin fallback. CG QA caught it
+  // 2026-05-05.
+  const offerable = new Set(getOfferableSkinPool())
+
   // Collect skin ids already locked in (claimed or still-valid offers)
   const taken = new Set<SpinnerModelId>()
   for (const d of days) {
     // Claimed days never change
     if (state.value.claimedSkins[d]) continue
-    // Keep existing offer if the skin is still unowned
+    // Keep existing offer if the skin is still offerable (unowned AND
+    // non-special — same gate as fresh fills below).
     const prev = persisted[d]
-    if (prev && !isModelFullyOwned(prev)) {
+    if (prev && offerable.has(prev)) {
       result[d] = prev
       taken.add(prev)
     }
   }
 
   // Fill remaining unclaimed days that need a new skin
-  const pool = shuffled(unownedSkinModelIds().filter(m => !taken.has(m)))
+  const pool = shuffled([...offerable].filter(m => !taken.has(m)))
   let poolIdx = 0
   for (const d of days) {
     if (state.value.claimedSkins[d]) continue
@@ -266,7 +267,14 @@ const collect = (dayIndex: number) => {
     :is-closable="true"
     :title="t('dailyRewards')"
   )
-    div(class="space-y-3 px-1 sm:px-3 py-2")
+    //- The title ribbon is absolutely positioned over the modal frame
+    //- and extends below the frame top edge by ~half its height. The
+    //- modal-frame's own pt only clears the X button and is too small
+    //- on sm/md when the modal's CONTENT is short — the single 7-column
+    //- card row would otherwise sit directly under the title. Add top
+    //- padding here so the cards always render below the ribbon
+    //- regardless of viewport. (CG QA 2026-05-05.)
+    div(class="space-y-3 px-1 sm:px-3 pt-6 sm:pt-8 pb-2")
       div.grid.grid-cols-7.gap-1(class="sm:gap-2")
         div(
           v-for="(reward, i) in DAILY_REWARDS"
