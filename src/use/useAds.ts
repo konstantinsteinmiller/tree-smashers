@@ -90,7 +90,9 @@ export const showRewardedAd = async (): Promise<boolean> => {
   const granted = await provider.showRewardedAd()
   if (granted) {
     recordRewardedGranted()
-  } else if (provider.isAdsBlocked.value) {
+  } else if (provider.isAdsBlocked.value && !isCrazyWeb) {
+    // CrazyGames SDK shows its own ad-blocker dialog; suppress ours to
+    // avoid stacking two explainers on top of each other.
     isAdsBlockedModalShown.value = true
   }
   return granted
