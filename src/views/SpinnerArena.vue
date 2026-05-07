@@ -129,7 +129,28 @@ const { startBattleMusic, stopBattleMusic } = useMusic()
 
 // Wraps startMatch so the battle music kicks in exactly when a fight begins,
 // regardless of whether the player tapped the canvas or the start button.
-const beginBattle = () => {
+// Also gates the midgame interstitial: when the cadence threshold is met
+// the phase parks at 'ad_break' until the ad provider resolves (either the
+// ad finished or no fill was returned). Only after that do we kick off
+// `startMatch()` and the meteor-shower intro. When no ad is due the
+// 'ad_break' phase is skipped entirely.
+const beginBattle = async () => {
+  // Guard against double-tap: a second tap during the ad_break window
+  // should NOT spawn another beginBattle pass. The phase check covers
+  // both 'ad_break' (ad in progress) and any later phase (already in
+  // gameplay).
+  if (phase.value !== 'tap_to_start') return
+
+  if (shouldShowMidgameAdNow()) {
+    phase.value = 'ad_break'
+    await runMidgameAdBeforeBattle()
+    // Restore the phase that startMatch's guard expects, then proceed.
+    // The window between this assignment and startMatch's own phase
+    // change is synchronous, so the player can't tap into a duplicate
+    // beginBattle here.
+    phase.value = 'tap_to_start'
+  }
+
   startBattleMusic()
   startMatch()
 }
@@ -714,14 +735,10 @@ const onRouletteRewardContinue = async () => {
   if (!rouletteRewardReady.value) return
   showRouletteReward.value = false
 
-  // Same reset flow as onRewardContinue — ad cadence, teardown, reinit.
-  // Boss-win path is campaign-only (never PvP/ghost), so threshold is 4.
-  // No surrender check needed: you can't surrender after winning the boss.
+  // Boss-win path is campaign-only (never PvP/ghost) and never surrendered,
+  // so the counter always ticks. The actual ad fires before the next
+  // battle's meteor-shower intro (see `beginBattle`).
   incrementAdCounter()
-  if (isInterstitialReady.value && battlesSinceAd.value >= 4) {
-    resetAdCounter()
-    await showMidgameAd()
-  }
   coinsAwarded.value = false
   initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
 }
@@ -742,22 +759,39 @@ watch(showReward, async (show) => {
 })
 
 // ─── Interstitial cadence ─────────────────────────────────────────────────
-// A single counter tracks battles since the last ad across all modes:
-//   - ghost / PvP battles trigger an ad after 3 battles without one
-//   - campaign battles trigger an ad after 4 battles without one
-// Surrendered battles do NOT increment the counter (see surrenderedThisBattle).
-// This avoids edge cases where mixing modes causes back-to-back ads.
+// Midgame interstitials fire BEFORE the next battle's meteor-shower intro
+// (see `beginBattle` / `maybeShowMidgameAdBeforeBattle`), not after the
+// previous battle's reward modal. `battlesSinceAd` tracks completed
+// (non-surrendered) battles since the last ad and is incremented in the
+// reward-continue handlers below.
+//
+// First-ad fast-path: a fresh user has counter = 1, so after their first
+// battle the counter hits 2 and the first interstitial fires before
+// battle 2. After that the threshold reverts to 3 (every 3 battles,
+// ghost or campaign).
+//
+// PvP rematches don't route through `beginBattle` (they handshake straight
+// into `initGame` from `pvpRegisterCallbacks`), so PvP players don't see
+// pre-match ads — pre-match delays would desync the two clients. The
+// counter still increments after a PvP battle, so any backlog is consumed
+// on the player's next non-PvP battle.
 const AD_BATTLES_KEY = 'ca_battles_since_ad'
+const AD_FIRST_KEY = 'ca_first_midgame_ad_shown'
 
-const loadCount = (key: string): number => {
+const loadCount = (key: string, defaultVal: number): number => {
   try {
-    return parseInt(localStorage.getItem(key) || '0', 10) || 0
+    const raw = localStorage.getItem(key)
+    if (raw === null) return defaultVal
+    return parseInt(raw, 10) || 0
   } catch {
-    return 0
+    return defaultVal
   }
 }
 
-const battlesSinceAd: Ref<number> = ref(loadCount(AD_BATTLES_KEY))
+const battlesSinceAd: Ref<number> = ref(loadCount(AD_BATTLES_KEY, 1))
+const firstMidgameAdShown: Ref<boolean> = ref(
+  localStorage.getItem(AD_FIRST_KEY) === '1'
+)
 
 const resetAdCounter = () => {
   battlesSinceAd.value = 0
@@ -769,6 +803,41 @@ const incrementAdCounter = () => {
   localStorage.setItem(AD_BATTLES_KEY, String(battlesSinceAd.value))
 }
 
+const markFirstMidgameAdShown = () => {
+  firstMidgameAdShown.value = true
+  localStorage.setItem(AD_FIRST_KEY, '1')
+}
+
+/**
+ * Pure predicate — does the current cadence + provider state warrant a
+ * midgame ad before the next battle? Split out from `runMidgameAdBeforeBattle`
+ * so `beginBattle` can decide whether to enter the 'ad_break' phase at all
+ * (no point parking in ad_break if no ad will ever fire).
+ *
+ * Threshold:
+ *   • first ad ever  → 2  (fresh user with counter starting at 1 fires
+ *                          before battle 2)
+ *   • subsequent ads → 3  (every 3 battles, ghost or campaign)
+ */
+const shouldShowMidgameAdNow = (): boolean => {
+  if (!isInterstitialReady.value) return false
+  const threshold = firstMidgameAdShown.value ? 3 : 2
+  return battlesSinceAd.value >= threshold
+}
+
+/**
+ * Resets the cadence counter (so a no-fill ad doesn't get retried on
+ * the very next battle), marks the first-ad fast-path as consumed, then
+ * delegates to the active ad provider's `showMidgameAd`. The provider's
+ * promise resolves once the ad closed OR errored — either way we proceed
+ * to the meteor-shower intro afterwards.
+ */
+const runMidgameAdBeforeBattle = async (): Promise<void> => {
+  resetAdCounter()
+  if (!firstMidgameAdShown.value) markFirstMidgameAdShown()
+  await showMidgameAd()
+}
+
 const onRewardContinue = async () => {
   showReward.value = false
 
@@ -778,18 +847,11 @@ const onRewardContinue = async () => {
   const wasSurrender = surrenderedThisBattle
   surrenderedThisBattle = false
 
-  // ghost/pvp → ad threshold 3, campaign → ad threshold 4
-  const adThreshold = (wasPvp || wasGhost) ? 3 : 4
   // Surrendered battles don't count toward the cadence — the player chose
   // to bail, not to "finish" the match, so we don't penalise them with an
-  // ad on top of the abandoned reward.
+  // ad on top of the abandoned reward. The actual ad fires before the
+  // next battle's meteor-shower intro (see `beginBattle`).
   if (!wasSurrender) incrementAdCounter()
-
-  // Show interstitial when the counter reaches the threshold
-  if (isInterstitialReady.value && battlesSinceAd.value >= adThreshold) {
-    resetAdCounter()
-    await showMidgameAd()
-  }
 
   // Tear down mode state
   if (wasPvp) {

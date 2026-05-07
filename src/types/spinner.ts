@@ -217,6 +217,7 @@ export interface SpritesheetAnimation {
 export type GamePhase =
   | 'idle'
   | 'tap_to_start'
+  | 'ad_break'
   | 'meteor_intro'
   | 'deciding_turn'
   | 'player_turn'
