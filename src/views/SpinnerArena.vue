@@ -10,7 +10,7 @@ import OptionsModal from '@/components/organisms/OptionsModal.vue'
 import useSounds, { useMusic } from '@/use/useSound'
 import useSpinnerGame, { ARENA_RADIUS, BLADE_RADIUS, simSpeed, countdownText } from '@/use/useSpinnerGame'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
-import useSpinnerCampaign from '@/use/useSpinnerCampaign'
+import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin } from '@/use/useSpinnerCampaign'
 import { useHint } from '@/use/useHint'
 import { useScreenshake } from '@/use/useScreenshake'
 import type { SpinnerConfig } from '@/types/spinner'
@@ -581,8 +581,15 @@ const onPointerDown = (e: PointerEvent) => {
   }
   const coords = getGameCoords(e)
   // Joystick takes priority when visible — check it first
-  if (isJoystickVisible.value && beginJoystickDrag(coords.x, coords.y)) return
+  if (isJoystickVisible.value && beginJoystickDrag(coords.x, coords.y)) {
+    canvasRef.value?.setPointerCapture?.(e.pointerId)
+    return
+  }
   beginDrag(coords.x, coords.y)
+  // Capture the pointer so move/up keep firing on the canvas even when
+  // the cursor leaves the game frame — lets players keep aiming smoothly
+  // off-canvas and release naturally instead of auto-launching at max.
+  if (isDragging.value) canvasRef.value?.setPointerCapture?.(e.pointerId)
 }
 
 const isHoveringBlade = (gameX: number, gameY: number): boolean => {
@@ -620,7 +627,12 @@ const onPointerUp = () => {
   if (canvasRef.value) canvasRef.value.style.cursor = ''
 }
 
-const onPointerLeave = () => {
+// Fires on genuine browser-side cancellation (system gesture takeover, OS
+// alert, touch interrupted by another finger, etc.). NOT fired when the
+// cursor merely leaves the canvas — that case is handled by pointer
+// capture set in `onPointerDown`, which keeps `pointermove` / `pointerup`
+// streaming to the canvas so players can keep aiming off-frame.
+const onPointerCancel = () => {
   if (isJoystickDragging.value) {
     releaseJoystickDrag()
     return
@@ -661,6 +673,16 @@ watch(isGameOver, (over) => {
       showReward.value = true
       stopBattleMusic()
       return
+    }
+
+    // Boss rubber-banding: count consecutive campaign-boss losses so the
+    // next attempt spawns the boss with reduced HP (see
+    // bossHpRubberBandMul in useSpinnerCampaign). Win resets the streak.
+    // Excludes PvP (already returned above), ghost replays, and cheat
+    // stages — only the player's real campaign attempts move the dial.
+    if (!ghostMode.value && !cheatStage.value && currentStage.value.isBoss) {
+      if (gameResult.value === 'win') noteCampaignBossWin()
+      else if (gameResult.value === 'lose') noteCampaignBossLoss()
     }
 
     // Boss win (campaign only) — show roulette before awarding coins
@@ -1144,8 +1166,7 @@ onUnmounted(() => {
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
-      @pointercancel="onPointerLeave"
-      @pointerleave="onPointerLeave"
+      @pointercancel="onPointerCancel"
       class="block touch-none"
       :style="shakeStyle"
     )

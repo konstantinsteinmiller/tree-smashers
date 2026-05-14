@@ -693,6 +693,82 @@ export const BOTTOM_UPGRADE_BONUS: Record<BottomPartId, { speed: number; decay: 
   balanced: { speed: 0.04, decay: 0.00018, hp: 2 }   // balanced
 }
 
+// ─── Boss Rubber-Banding ────────────────────────────────────────────────────
+//
+// Frustrated-player nudge: each consecutive *campaign* boss loss shaves a
+// chunk off the next boss's max HP, capped so the fight is never trivially
+// won. Resets to 0 on a campaign boss win. Does NOT apply to PvP, ghost,
+// or cheat stages — gating happens at the call sites in SpinnerArena's
+// game-over watcher (increment) and useSpinnerGame.createBladeState
+// (consume).
+//
+// Formula:
+//   reduction = min(0.5, floor(streak / 2) * 0.10)
+//     streak  0-1 → 0%  full HP
+//     streak  2-3 → 10%
+//     streak  4-5 → 20%
+//     ...
+//     streak ≥10  → 50% cap
+//
+// Persisted under `spinner_boss_loss_streak`. The `spinner_` prefix means
+// the SaveManager mirrors it to the cloud strategy, so the nudge follows
+// the player across devices — a frustrating boss on mobile carries its
+// rubber-band into the desktop session.
+
+const BOSS_LOSS_STREAK_KEY = 'spinner_boss_loss_streak'
+const BOSS_HP_REDUCTION_PER_STEP = 0.10  // 10% off per `STEP` losses
+const BOSS_HP_REDUCTION_STEP = 2         // losses required per +1 reduction tier
+const BOSS_HP_REDUCTION_CAP = 0.5        // never drop the boss below 50% HP
+
+const loadBossLossStreak = (): number => {
+  try {
+    const raw = localStorage.getItem(BOSS_LOSS_STREAK_KEY)
+    if (!raw) return 0
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+const bossLossStreak: Ref<number> = ref(loadBossLossStreak())
+
+// Re-read on hydrate-success bump (same pattern as currentStageId / upgrades).
+// Needed because module init reads localStorage synchronously, but on
+// cloud-only builds the SaveManager hydrate may complete after this
+// module evaluates.
+watch(saveDataVersion, () => {
+  bossLossStreak.value = loadBossLossStreak()
+})
+
+const persistBossLossStreak = () => {
+  if (bossLossStreak.value > 0) {
+    localStorage.setItem(BOSS_LOSS_STREAK_KEY, String(bossLossStreak.value))
+  } else {
+    // Keep the key absent rather than writing "0" — fewer cloud bytes,
+    // and a brand-new player's hydrate stays a no-op for this key.
+    localStorage.removeItem(BOSS_LOSS_STREAK_KEY)
+  }
+}
+
+export const noteCampaignBossLoss = () => {
+  bossLossStreak.value++
+  persistBossLossStreak()
+}
+
+export const noteCampaignBossWin = () => {
+  if (bossLossStreak.value === 0) return
+  bossLossStreak.value = 0
+  persistBossLossStreak()
+}
+
+/** Multiplier (0..1] applied to a campaign boss's max HP. 1 = full HP. */
+export const bossHpRubberBandMul = (): number => {
+  const tiers = Math.floor(bossLossStreak.value / BOSS_HP_REDUCTION_STEP)
+  const reduction = Math.min(BOSS_HP_REDUCTION_CAP, tiers * BOSS_HP_REDUCTION_PER_STEP)
+  return 1 - reduction
+}
+
 /** Cost for upgrading to a given level. Linear base of 100 + (level-1)*20
  *  plus a quadratic "mid/late game" term that kicks in past level 10 so
  *  the upgrade economy tightens as enemies reach high levels — keeping
@@ -934,6 +1010,7 @@ const useSpinnerCampaign = () => ({
   playerUpgrades,
   stageReinitSignal,
   cheatStage,
+  bossLossStreak,
   advanceStage,
   upgradeTop,
   upgradeBottom,

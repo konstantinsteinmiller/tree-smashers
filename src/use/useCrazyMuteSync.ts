@@ -22,6 +22,14 @@ const isMuted = computed(() => userMusicVolume.value === 0 && userSoundVolume.va
 // intentional 0/0 with the stale defaults. CG QA caught it 2026-05-05.
 let muteSnapshot: { music: number; sound: number } | null = null
 
+// Fallback volumes for the *user-initiated* unmute path when no
+// in-session snapshot exists. Match the useUser.ts defaults so a fresh
+// player and a "tap to unmute from a cold-loaded 0/0" both land on the
+// same baseline. Intentionally NOT used by the SDK-driven applyMute —
+// see the toggleMute / applyMute split below.
+const DEFAULT_MUSIC_VOL = 0.6
+const DEFAULT_SOUND_VOL = 0.7
+
 export const applyMute = (muted: boolean) => {
   if (muted && !isMuted.value) {
     // Platform muted, in-game wasn't — snapshot current volumes so we
@@ -44,9 +52,41 @@ export const applyMute = (muted: boolean) => {
   }
 }
 
+// User-initiated toggle from the FMuteButton. Distinct from applyMute,
+// which is reserved for the SDK-driven platform-mute path (and has a
+// cold-load-safe "do nothing if no snapshot" guard so an iOS player who
+// previously muted on a different device doesn't get clobbered with
+// stale defaults the moment the CG chrome reports "not muted").
+//
+// That guard turned a deliberate UX feature into a stuck-button bug:
+// an iOS QA player whose session started with cloud-saved 0/0 volumes
+// could see the 🔇 icon but never restore audio, because applyMute(false)
+// silently no-op'd (no in-session snapshot existed). The button press is
+// an explicit user intent — always honour it: snapshot on mute, restore
+// from snapshot on unmute OR fall back to DEFAULT_* if none exists.
 export const toggleMute = () => {
   const next = !isMuted.value
-  applyMute(next)
+  if (next) {
+    // Mute: snapshot whatever the player had so a later unmute restores
+    // them. Skip the snapshot if both volumes are already 0 (would just
+    // store 0/0 and stomp the next genuine snapshot opportunity).
+    if (userMusicVolume.value > 0 || userSoundVolume.value > 0) {
+      muteSnapshot = {
+        music: userMusicVolume.value,
+        sound: userSoundVolume.value
+      }
+    }
+    setSettingValue('music', 0)
+    setSettingValue('sound', 0)
+  } else {
+    // Unmute: prefer the in-session snapshot; fall back to defaults so
+    // the toggle is never a no-op. This is the path an iOS player needs
+    // when their cold-loaded state was 0/0.
+    const restore = muteSnapshot ?? { music: DEFAULT_MUSIC_VOL, sound: DEFAULT_SOUND_VOL }
+    setSettingValue('music', restore.music)
+    setSettingValue('sound', restore.sound)
+    muteSnapshot = null
+  }
   setCrazyMuted(next)
 }
 

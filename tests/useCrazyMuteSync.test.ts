@@ -38,10 +38,11 @@ vi.mock('@/use/useUser', () => ({
     setSettingValue: setSettingValueMock
   })
 }))
+const setCrazyMutedMock = vi.fn()
 vi.mock('@/use/useCrazyGames', () => ({
   isSdkActive: { value: false },
   onCrazyMuteChange: vi.fn(),
-  setCrazyMuted: vi.fn()
+  setCrazyMuted: setCrazyMutedMock
 }))
 vi.mock('@/use/useMatch', () => ({
   isDbInitialized: { value: false }
@@ -125,5 +126,71 @@ describe('useCrazyMuteSync — applyMute', () => {
     expect(setSettingValueMock).not.toHaveBeenCalled()
     expect(userMusicVolume.value).toBe(0)
     expect(userSoundVolume.value).toBe(0)
+  })
+})
+
+// User-initiated toggle path (FMuteButton tap). Distinct from the SDK
+// applyMute contract above: a button press is an explicit user intent
+// and must always flip the state — including when the session cold-loaded
+// with cloud-stored 0/0 and there's no in-session snapshot to restore
+// from. Regression for the iOS QA "🔇 button is stuck muted" report.
+describe('useCrazyMuteSync — toggleMute (user-initiated)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    setSettingValueMock.mockClear()
+    setCrazyMutedMock.mockClear()
+    userMusicVolume.value = 0
+    userSoundVolume.value = 0
+  })
+
+  it('cold-loaded with 0/0 + user taps unmute → restores DEFAULT volumes', async () => {
+    // Reproduces the iOS QA case: session boots with cloud-stored 0/0
+    // and no platform-mute event ever fired, so muteSnapshot is null.
+    // Tapping the FMuteButton MUST unmute regardless.
+    userMusicVolume.value = 0
+    userSoundVolume.value = 0
+
+    const { toggleMute } = await import('@/use/useCrazyMuteSync')
+    toggleMute()
+
+    expect(userMusicVolume.value).toBeGreaterThan(0)
+    expect(userSoundVolume.value).toBeGreaterThan(0)
+    expect(setCrazyMutedMock).toHaveBeenCalledWith(false)
+  })
+
+  it('unmuted → tap mute → tap unmute → restores the player\'s prior volumes', async () => {
+    userMusicVolume.value = 0.42
+    userSoundVolume.value = 0.55
+
+    const { toggleMute } = await import('@/use/useCrazyMuteSync')
+    toggleMute() // mute — snapshot taken
+    expect(userMusicVolume.value).toBe(0)
+    expect(userSoundVolume.value).toBe(0)
+    expect(setCrazyMutedMock).toHaveBeenLastCalledWith(true)
+
+    toggleMute() // unmute — restores snapshot, not defaults
+    expect(userMusicVolume.value).toBe(0.42)
+    expect(userSoundVolume.value).toBe(0.55)
+    expect(setCrazyMutedMock).toHaveBeenLastCalledWith(false)
+  })
+
+  it('round-trips: unmute → mute → unmute lands back on the same volumes', async () => {
+    // Cold-loaded muted state. First unmute hydrates from defaults, mute
+    // snapshots those defaults, unmute restores them. No drift.
+    userMusicVolume.value = 0
+    userSoundVolume.value = 0
+
+    const { toggleMute } = await import('@/use/useCrazyMuteSync')
+    toggleMute() // unmute → defaults
+    const m1 = userMusicVolume.value
+    const s1 = userSoundVolume.value
+
+    toggleMute() // mute → 0/0, snapshot { m1, s1 }
+    expect(userMusicVolume.value).toBe(0)
+    expect(userSoundVolume.value).toBe(0)
+
+    toggleMute() // unmute → restore snapshot
+    expect(userMusicVolume.value).toBe(m1)
+    expect(userSoundVolume.value).toBe(s1)
   })
 })

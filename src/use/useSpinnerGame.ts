@@ -11,6 +11,7 @@ import type {
   PowerupStat
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
+import { bossHpRubberBandMul } from '@/use/useSpinnerCampaign'
 import { computeStats } from '@/use/useSpinnerConfig'
 import { spinnerModelImgPath } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -1329,6 +1330,14 @@ export const useSpinnerGame = () => {
       owner === 'npc' && !pvpMode.value && !ghostMode.value
         ? getDifficultyHpMult()
         : 1
+    // Boss rubber-banding: chips up to 50% off an NPC boss's HP after
+    // back-to-back campaign losses. Only campaign play qualifies — PvP
+    // and ghost matches are out of scope (see useSpinnerCampaign.ts for
+    // the formula and SpinnerArena.vue for where the streak is updated).
+    const rubberBandHpMultiplier =
+      isBoss && owner === 'npc' && !pvpMode.value && !ghostMode.value
+        ? bossHpRubberBandMul()
+        : 1
     // Keep the live-rescale watcher's baseline in sync with what we
     // actually baked into this spawn so a later difficulty change scales
     // from the correct starting point.
@@ -1341,7 +1350,7 @@ export const useSpinnerGame = () => {
       radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : 1.6
     }
     const bossRadius = BLADE_RADIUS * radiusMult
-    const finalHp = stats.maxHp * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier
+    const finalHp = stats.maxHp * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier
     return {
       id: nextBladeId++,
       x, y,

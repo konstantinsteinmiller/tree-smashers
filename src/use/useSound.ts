@@ -1,8 +1,9 @@
 import { prependBaseUrl } from '@/utils/function'
-import useUser from '@/use/useUser'
+import useUser, { isMobilePortrait, isMobileLandscape } from '@/use/useUser'
 import { getAudioContext, loadAudioBuffer, resourceCache } from '@/use/useAssets'
 
-import { ref, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import type { Ref } from 'vue'
 
 // We keep the audio instance outside the hook so it's a true Singleton
 const bgMusic = ref<HTMLAudioElement | null>(null)
@@ -13,12 +14,99 @@ const isPlaying = ref(false)
 // actually a battle running.
 const shouldPlay = ref(false)
 
+// Lazy-resolved volume refs. `useUser()` returns the same singleton refs
+// every call, but we must NOT invoke it at module-eval time: useMatch
+// imports `useSound`, and useUser imports useMatch — so when tests (or any
+// caller that pulls in useMatch first) trigger this file's evaluation,
+// useUser's default export hasn't been assigned yet and a top-level call
+// throws `default is not a function`. Resolving on first use sidesteps the
+// circular-import deadlock without changing the volume-ref identity.
+let _vols: { userMusicVolume: Ref<number>; userSoundVolume: Ref<number> } | null = null
+const userVols = () => (_vols ??= useUser())
+
+// On mobile, HTMLMediaElement.volume is bound to the OS device volume
+// (iOS especially won't honour `audio.volume = 0`). The FMuteButton flow
+// drops both user volumes to 0 via useCrazyMuteSync.applyMute(true), which
+// on desktop is silent but on mobile leaves audio audible at device
+// volume — so we treat "mobile + 0/0" as the mute signal and additionally
+// pause bg-music + skip new SFX. Desktop is unaffected (both refs false).
+//
+// Plain getter rather than a module-level `computed`: a top-level
+// `computed` would re-introduce the circular-import deadlock because
+// Vue's watcher hookup evaluates the source eagerly during effect
+// registration. Reactivity is preserved by reading `.value` inside the
+// caller's own reactive scope (watch / computed inside `useMusic`).
+const isMobileMutedNow = (): boolean => {
+  const { userMusicVolume, userSoundVolume } = userVols()
+  return (isMobilePortrait.value || isMobileLandscape.value) &&
+    userMusicVolume.value === 0 &&
+    userSoundVolume.value === 0
+}
+
+const fadeIn = () => {
+  if (!bgMusic.value) return
+  let vol = 0
+  const target = Math.max(0, Math.min(1, (userVols().userMusicVolume.value ?? 0.6) * 0.025))
+  const interval = setInterval(() => {
+    if (!bgMusic.value || !shouldPlay.value) {
+      clearInterval(interval)
+      return
+    }
+    if (vol < target) {
+      vol += 0.005
+      bgMusic.value.volume = Math.min(vol, target)
+    } else {
+      clearInterval(interval)
+    }
+  }, 50)
+}
+
+const playWithFade = () => {
+  if (!bgMusic.value) return
+  // Mobile mute: don't kick off playback. The useMusic-scoped watcher
+  // will re-invoke us once the user toggles unmute.
+  if (isMobileMutedNow()) return
+
+  // Browsers block autoplay until user interaction
+  bgMusic.value.play().then(() => {
+    isPlaying.value = true
+    fadeIn()
+  }).catch(() => {
+    // Attach a one-time listener to the window to play on first click
+    window.addEventListener('click', () => {
+      if (!isPlaying.value && shouldPlay.value) playWithFade()
+    }, { once: true })
+  })
+}
+
 export const useMusic = () => {
-  const { userMusicVolume } = useUser()
+  const { userMusicVolume, userSoundVolume } = userVols()
 
   watch(userMusicVolume, () => {
     if (!bgMusic.value) return
     bgMusic.value.volume = Math.max(0, Math.min(1, (userMusicVolume.value ?? 0.6) * 0.025))
+  })
+
+  // Mobile-mute pause/resume watcher. Lives inside useMusic — not at
+  // module scope — to avoid evaluating useUser() before its module is
+  // fully loaded (see userVols comment above). useMusic is called from
+  // App / TrailerScene / SpinnerArena setup(), all post-import, so
+  // resolution is safe by the time we get here. Multiple instances
+  // register multiple watchers — pause/resume are idempotent so the
+  // duplication is harmless.
+  const isMobileMuted = computed(() =>
+    (isMobilePortrait.value || isMobileLandscape.value) &&
+    userMusicVolume.value === 0 &&
+    userSoundVolume.value === 0
+  )
+  watch(isMobileMuted, (muted) => {
+    if (!bgMusic.value) return
+    if (muted) {
+      bgMusic.value.pause()
+      isPlaying.value = false
+    } else if (shouldPlay.value) {
+      playWithFade()
+    }
   })
 
   const pauseMusic = () => {
@@ -89,39 +177,6 @@ export const useMusic = () => {
       bgMusic.value?.pause()
       isPlaying.value = false
     })
-  }
-
-  const playWithFade = () => {
-    if (!bgMusic.value) return
-
-    // Browsers block autoplay until user interaction
-    bgMusic.value.play().then(() => {
-      isPlaying.value = true
-      fadeIn()
-    }).catch(() => {
-      // Attach a one-time listener to the window to play on first click
-      window.addEventListener('click', () => {
-        if (!isPlaying.value && shouldPlay.value) playWithFade()
-      }, { once: true })
-    })
-  }
-
-  const fadeIn = () => {
-    if (!bgMusic.value) return
-    let vol = 0
-    const target = Math.max(0, Math.min(1, (userMusicVolume.value ?? 0.6) * 0.025))
-    const interval = setInterval(() => {
-      if (!bgMusic.value || !shouldPlay.value) {
-        clearInterval(interval)
-        return
-      }
-      if (vol < target) {
-        vol += 0.005
-        bgMusic.value.volume = Math.min(vol, target)
-      } else {
-        clearInterval(interval)
-      }
-    }, 50)
   }
 
   const fadeOut = (onDone?: () => void) => {
@@ -197,7 +252,7 @@ const makeWebAudioHandle = (source: AudioBufferSourceNode): SoundHandle => {
 }
 
 const useSounds = () => {
-  const { userSoundVolume } = useUser()
+  const { userSoundVolume } = userVols()
 
   const clampVolume = (ratio: number): number =>
     Math.max(0, Math.min(1, (userSoundVolume.value ?? 0.7) * ratio))
@@ -240,6 +295,11 @@ const useSounds = () => {
   }
 
   const playSound = (effect: string, ratio = 0.025): SoundHandle | null => {
+    // Mobile mute: don't spawn a source at all. Setting volume to 0 on
+    // HTMLAudioElement is a no-op on iOS (and Web Audio gain at 0 would
+    // still wake the audio graph), so we just skip playback entirely.
+    if (isMobileMutedNow()) return null
+
     const src = prependBaseUrl(`audio/sfx/${effect}.ogg`)
 
     // Fast path: preloaded AudioBuffer + Web Audio.

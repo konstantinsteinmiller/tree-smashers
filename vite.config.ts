@@ -132,6 +132,9 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     base: '/',
+    server: {
+      port: 5170
+    },
     define: {
       APP_VERSION: JSON.stringify(process.env.npm_package_version)
     },
