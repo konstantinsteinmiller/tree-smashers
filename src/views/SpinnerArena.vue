@@ -1484,7 +1484,13 @@ onUnmounted(() => {
     )
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl" :class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : t('spinner.rewards') }}
-      div.flex.flex-col.items-center.gap-4
+      //- `mb-20 sm:mb-24` reserves a click-to-continue safety strip at the
+      //- bottom of the slot area. Because FReward's slot wrapper uses
+      //- `justify-center`, the margin participates in flex centering — it
+      //- pushes the entire reward column UP, guaranteeing the tip badge
+      //- (last child of the column) can't dip into the click-to-continue
+      //- band even when the player is on a short landscape viewport.
+      div.flex.flex-col.items-center.gap-4(class="mb-20 sm:mb-24")
         div.font-black.uppercase.tracking-wider.game-text(
           class="text-3xl sm:text-5xl"
           :class="gameResult === 'win' ? 'text-green-400' : 'text-red-400'"
@@ -1502,20 +1508,17 @@ onUnmounted(() => {
           div.flex.items-center.gap-3(ref="rewardCoinRef")
             IconCoin(class="w-8 h-8 text-yellow-300")
             span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
-
-      //- Player tip — absolutely anchored to the bottom of the FReward
-      //- overlay (sibling of the centered reward column) so the badge
-      //- always docks above the tap-to-continue prompt and can't be
-      //- clipped by the viewport when the reward column grows. Includes
-      //- env(safe-area-inset-bottom) so it stays clear of the iOS home
-      //- bar / notch on mobile.
-      Transition(name="fade")
-        div.absolute.left-0.right-0.flex.justify-center.px-4.pointer-events-none(
+        //- Player tip — kept in the flex column so it always renders
+        //- BELOW the reward (no chance of covering it) and ABOVE the
+        //- tap-to-continue prompt (which is absolutely docked to the
+        //- overlay's bottom edge). On very short viewports the badge
+        //- shrinks via its own responsive padding/text classes; the
+        //- centered column never sits flush against the bottom because
+        //- the click-to-continue strip reserves its own band.
+        TipBadge(
           v-if="currentTip"
-          class="bottom-24 sm:bottom-28"
-          :style="{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }"
+          :text-key="`tips.${currentTip}`"
         )
-          TipBadge(:text-key="`tips.${currentTip}`")
 
     //- Boss Roulette Overlay (wheel spinning)
     FReward(
