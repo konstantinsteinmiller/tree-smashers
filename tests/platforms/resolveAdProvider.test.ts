@@ -15,10 +15,11 @@ const allOff: PlatformFlags = {
   isGlitch: false,
   isGameDistribution: false,
   isY8: false,
-  isGamePix: false
+  isGamePix: false,
+  isPlaygama: false
 }
 
-const ALL_ENVS = ['VITE_APP_CRAZY_WEB', 'VITE_APP_GAME_DISTRIBUTION', 'VITE_APP_NATIVE'] as const
+const ALL_ENVS = ['VITE_APP_CRAZY_WEB', 'VITE_APP_GAME_DISTRIBUTION', 'VITE_APP_PLAYGAMA', 'VITE_APP_NATIVE'] as const
 
 const clearEnv = () => {
   for (const k of ALL_ENVS) vi.stubEnv(k, '')
@@ -64,6 +65,17 @@ describe('resolveAdProvider', () => {
       isNative: false
     })
     expect(provider.name).toBe('gameDistribution')
+  })
+
+  it('returns Playgama when VITE_APP_PLAYGAMA env is set', async () => {
+    vi.stubEnv('VITE_APP_PLAYGAMA', 'true')
+    const resolveAdProvider = await loadResolver()
+    const provider = resolveAdProvider({
+      flags: { ...allOff, isPlaygama: true },
+      showMediatorAds: false,
+      isNative: false
+    })
+    expect(provider.name).toBe('playgama')
   })
 
   it('returns LevelPlay when VITE_APP_NATIVE env is set AND showMediatorAds AND isNative are both true', async () => {
@@ -130,6 +142,18 @@ describe('resolveAdProvider', () => {
         flags: { ...allOff, isGameDistribution: true },
         showMediatorAds: true,
         isNative: true
+      })
+      expect(provider.name).toBe('gameDistribution')
+    })
+
+    it('isGameDistribution wins over isPlaygama when both env flags are set', async () => {
+      vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
+      vi.stubEnv('VITE_APP_PLAYGAMA', 'true')
+      const resolveAdProvider = await loadResolver()
+      const provider = resolveAdProvider({
+        flags: { ...allOff, isGameDistribution: true, isPlaygama: true },
+        showMediatorAds: false,
+        isNative: false
       })
       expect(provider.name).toBe('gameDistribution')
     })

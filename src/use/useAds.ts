@@ -27,6 +27,7 @@ import {
   isGameDistribution,
   isY8,
   isGamePix,
+  isPlaygama,
   isNative,
   showMediatorAds
 } from '@/use/useUser'
@@ -35,7 +36,7 @@ import { resolveAdProvider } from '@/platforms/resolveAdProvider'
 import { isRewardedThrottled, recordRewardedGranted } from '@/use/useRewardedThrottle'
 
 const provider: AdProvider = resolveAdProvider({
-  flags: { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix },
+  flags: { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama },
   showMediatorAds,
   isNative
 })

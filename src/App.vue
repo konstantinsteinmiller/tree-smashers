@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { mobileCheck } from '@/utils/function'
 import { useMusic } from '@/use/useSound'
@@ -23,6 +23,7 @@ import {
   isGameDistribution,
   isY8,
   isGamePix,
+  isPlaygama,
   isNative,
   orientation
 } from '@/use/useUser'
@@ -32,8 +33,43 @@ import { resolveCapabilities } from '@/platforms/capabilities'
 const { t } = useI18n()
 const { initMusic, pauseMusic, continueMusic } = useMusic()
 useExtensionGuard()
-const { resourceCache } = useAssets()
+const { resourceCache, areAllAssetsLoaded } = useAssets()
 useCrazyMuteSync()
+
+// Playgama wiring. The two registration points need synchronous
+// access to plugin symbols, so we import them statically. On every
+// non-Playgama build, `isPlaygama` is the env-literal `false` and
+// Rollup DCE's the entire `if` block; the bundle-purity test
+// confirms the plugin chain doesn't leak into the CG bundle.
+//
+// Why STATIC imports (not dynamic): the obfuscator's `stringArray`
+// transform mangles `'@/...'` literals inside dynamic imports inside
+// obfuscated files (App.vue is not on the exclude list and adding it
+// would weaken the protection over the entire shell). Static imports
+// of named exports route through Vite's resolver at build time and
+// are not touched by the obfuscator's string array.
+import {
+  registerPlaygamaMusicControls,
+  playgamaGameLoadingStop
+} from '@/utils/playgamaPlugin'
+
+if (isPlaygama) {
+  // Hand the live music controls to the plugin so its
+  // PAUSE_STATE_CHANGED / AUDIO_STATE_CHANGED subscribers can pause
+  // and resume music without re-importing useSound (which would
+  // re-introduce the useSound ↔ useUser ↔ useMatch circular-import
+  // deadlock).
+  registerPlaygamaMusicControls({ pauseMusic, continueMusic })
+
+  // `game_ready` + `in_game_loading_stopped` are certification-
+  // mandatory. Fire them the moment all assets are loaded so the
+  // Playgama portal can dismiss its own loading splash. The plugin
+  // guards both messages so repeat firings are no-ops.
+  watch(areAllAssetsLoaded, (ready) => {
+    if (!ready) return
+    playgamaGameLoadingStop()
+  }, { immediate: true })
+}
 
 initMusic()
 
@@ -121,7 +157,7 @@ onUnmounted(() => {
 const hostname = window.location.hostname
 const parentOrigin = window.location.ancestorOrigins?.[0] ?? document.referrer ?? ''
 const platformFlags = {
-  isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix
+  isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama
 }
 const capabilities = computed(() => resolveCapabilities({
   flags: platformFlags,
@@ -137,7 +173,8 @@ const isGameShowAllowed = computed(() =>
   capabilities.value.allowedToShowOnGlitch ||
   capabilities.value.allowedToShowOnGameDistribution ||
   capabilities.value.allowedToShowOnY8 ||
-  capabilities.value.allowedToShowOnGamePix
+  capabilities.value.allowedToShowOnGamePix ||
+  capabilities.value.allowedToShowOnPlaygama
 )
 const isGlitchDenied = computed(() => capabilities.value.isGlitchDenied)
 const showOnlyAvailableText = computed(() => capabilities.value.showOnlyAvailableText)

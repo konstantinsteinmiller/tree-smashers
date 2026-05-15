@@ -160,6 +160,19 @@ describe('CrazyGames build — bundle purity', () => {
     ).toEqual([])
   })
 
+  it('does NOT bundle Playgama Bridge code in any hot-path chunk', () => {
+    // PlaygamaProvider / PlaygamaStrategy / playgamaPlugin should
+    // tree-shake on non-Playgama builds because the resolver arms gate
+    // on the `VITE_APP_PLAYGAMA` literal. We grep for the strategy
+    // class name + the bridge CDN URL + the play-time lifecycle event
+    // strings — none of those appear anywhere in the project except
+    // inside the Playgama plugin / strategy. (Plain `"playgama"` and
+    // `"playgama.com"` ARE expected in the hot path — capabilities /
+    // CSP code legitimately reference them as hostname/text literals.)
+    const leaks = findInHotPath(/PlaygamaStrategy\b|bridge\.playgama\.com|playgama-bridge|PLAYGAMA_BRIDGE|in_game_loading_started\b/)
+    expect(leaks, `Playgama plugin code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
+  })
+
   it('does NOT bundle Wavedash SDK code in any hot-path chunk', () => {
     // `@wvdsh/sdk-js` is the Wavedash NPM package; the runtime relies on
     // `window.WavedashJS` injected by Wavedash's iframe wrapper, so

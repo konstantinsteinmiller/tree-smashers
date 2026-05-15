@@ -18,7 +18,8 @@ const allFlagsOff = {
   isGlitch: false,
   isGameDistribution: false,
   isY8: false,
-  isGamePix: false
+  isGamePix: false,
+  isPlaygama: false
 }
 
 describe('resolveCapabilities', () => {
@@ -166,7 +167,8 @@ describe('resolveCapabilities', () => {
         ['isGlitch', 'glitch.fun'],
         ['isGameDistribution', 'gamedistribution.com'],
         ['isY8', 'y8.com'],
-        ['isGamePix', 'gamepix.com']
+        ['isGamePix', 'gamepix.com'],
+        ['isPlaygama', 'playgama.com']
       ]
       for (const [flag, expected] of cases) {
         const c = resolveCapabilities({
@@ -301,6 +303,43 @@ describe('resolveCapabilities', () => {
         glitchLicenseStatus: 'pending'
       })
       expect(c.allowedToShowOnGamePix).toBe(true)
+    })
+  })
+
+  describe('Playgama — flag-only gate (no URL check)', () => {
+    it('isPlaygama sets isNotPlatformBuild = false', () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isPlaygama: true },
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      expect(c.isNotPlatformBuild).toBe(false)
+    })
+
+    it('passes the Playgama gate on any hostname (Technical Requirements forbid URL gating)', () => {
+      const cases = [
+        'cdn.someweirdhost.io',
+        'playgama.com',
+        'random.example.com',
+        'iframe.partner-portal.net'
+      ]
+      for (const hostname of cases) {
+        const c = resolveCapabilities({
+          flags: { ...allFlagsOff, isPlaygama: true },
+          hostname,
+          glitchLicenseStatus: 'ok'
+        })
+        expect(c.allowedToShowOnPlaygama, hostname).toBe(true)
+      }
+    })
+
+    it('plain web (no flag) still passes the Playgama gate via the dev escape hatch', () => {
+      const c = resolveCapabilities({
+        flags: allFlagsOff,
+        hostname: 'localhost',
+        glitchLicenseStatus: 'pending'
+      })
+      expect(c.allowedToShowOnPlaygama).toBe(true)
     })
   })
 

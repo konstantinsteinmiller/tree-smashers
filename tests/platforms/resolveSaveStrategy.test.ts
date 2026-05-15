@@ -18,13 +18,15 @@ const allOff: PlatformFlags = {
   isGlitch: false,
   isGameDistribution: false,
   isY8: false,
-  isGamePix: false
+  isGamePix: false,
+  isPlaygama: false
 }
 
 const ALL_PLATFORM_ENVS = [
   'VITE_APP_CRAZY_WEB',
   'VITE_APP_GAME_DISTRIBUTION',
-  'VITE_APP_GLITCH'
+  'VITE_APP_GLITCH',
+  'VITE_APP_PLAYGAMA'
 ] as const
 
 const clearEnv = () => {
@@ -73,6 +75,17 @@ describe('resolveSaveStrategy', () => {
     const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isGameDistribution: true })
     expect(strategy.name).toBe('gameDistribution')
+  })
+
+  it('returns PlaygamaStrategy or LocalStorageStrategy fallback when isPlaygama env is set', async () => {
+    // `createPlaygamaSaveStrategy` resolves a PlaygamaStrategy under
+    // normal conditions; in a non-browser test env where the bridge
+    // can never initialize, both names are acceptable as the resolver
+    // falls back to LocalStorageStrategy if construction fails.
+    vi.stubEnv('VITE_APP_PLAYGAMA', 'true')
+    const resolveSaveStrategy = await loadResolver()
+    const strategy = await resolveSaveStrategy({ ...allOff, isPlaygama: true })
+    expect(['playgama', 'localStorage']).toContain(strategy.name)
   })
 
   it('returns GlitchStrategy or LocalStorageStrategy fallback when isGlitch env is set', async () => {

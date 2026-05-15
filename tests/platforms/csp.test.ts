@@ -21,6 +21,8 @@ describe('buildCsp', () => {
       expect(csp).toContain('https://wavedash.com')
       expect(csp).toContain('https://itch.io')
       expect(csp).toContain('https://glitch.fun')
+      expect(csp).toContain('https://bridge.playgama.com')
+      expect(csp).toContain('https://*.playgama.com')
     })
 
     it('does NOT include GameDistribution partner hosts', () => {
@@ -150,6 +152,40 @@ describe('buildCsp', () => {
       const imgSrc = csp.match(/img-src ([^;]+)/)![1]!
       expect(imgSrc.split(/\s+/)).not.toContain('https:')
       expect(imgSrc).toContain('data:')
+    })
+  })
+
+  describe('Playgama build (VITE_APP_PLAYGAMA=true) — ad-waterfall opens', () => {
+    const env = (): Record<string, string> => ({ VITE_APP_PLAYGAMA: 'true' })
+
+    it('includes Playgama Bridge hosts in the whitelist', () => {
+      const csp = buildCsp(env())
+      expect(csp).toContain('https://playgama.com')
+      expect(csp).toContain('https://*.playgama.com')
+      expect(csp).toContain('https://bridge.playgama.com')
+    })
+
+    it('opens script-src to https: + unsafe-inline + unsafe-eval (Bridge waterfall)', () => {
+      const csp = buildCsp(env())
+      const scriptSrc = csp.match(/script-src ([^;]+)/)![1]!
+      expect(scriptSrc.split(/\s+/)).toContain('https:')
+      expect(scriptSrc).toContain('\'unsafe-inline\'')
+      expect(scriptSrc).toContain('\'unsafe-eval\'')
+    })
+
+    it('opens img-src + frame-src + media-src + font-src to https:', () => {
+      const csp = buildCsp(env())
+      for (const dir of ['img-src', 'frame-src', 'media-src', 'font-src']) {
+        const m = csp.match(new RegExp(`${dir} ([^;]+)`))![1]!
+        expect(m.split(/\s+/), dir).toContain('https:')
+      }
+    })
+
+    it('opens connect-src to https: and wss:', () => {
+      const csp = buildCsp(env())
+      const connectSrc = csp.match(/connect-src ([^;]+)/)![1]!
+      expect(connectSrc.split(/\s+/)).toContain('https:')
+      expect(connectSrc.split(/\s+/)).toContain('wss:')
     })
   })
 

@@ -51,7 +51,12 @@ export default defineConfig(({ mode, command }) => {
           // `@/utils/gameDistributionPlugin` (~500 LOC) via dynamic
           // import so non-GD builds don't ship the GD SDK code.
           // Same obfuscator-vs-dynamic-import constraint as above.
-          /use[\\/]ads[\\/]GameDistributionProvider\.ts$/
+          /use[\\/]ads[\\/]GameDistributionProvider\.ts$/,
+          // PlaygamaProvider mirrors the GD pattern — lazy-loads
+          // `@/utils/playgamaPlugin` so non-Playgama builds (CG, GD,
+          // …) tree-shake the Bridge SDK code out completely. The
+          // `bundlePurity.test.ts` Playgama check enforces this.
+          /use[\\/]ads[\\/]PlaygamaProvider\.ts$/
         ],
         // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
         // The previous profile enabled every aggressive transform the
@@ -126,6 +131,51 @@ export default defineConfig(({ mode, command }) => {
           /<!-- Load the SDK before your game code -->\s*<script[^>]*sdk\.crazygames\.com[^>]*><\/script>\s*/,
           ''
         )
+      }
+    })
+  }
+
+  // ─── Playgama Bridge wiring ─────────────────────────────────────────
+  // Mirrors the strip-crazygames-sdk pattern: the Bridge `<script>` tag
+  // is in index.html as a sibling of the CG tag and we strip it for
+  // every non-Playgama build so other portals don't pay the SDK fetch.
+  const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
+  if (!isPlaygama) {
+    plugins.push({
+      name: 'strip-playgama-sdk',
+      transformIndexHtml(html: string) {
+        return html.replace(
+          /<!--\s*Load Playgama Bridge before game code\s*-->\s*<script[^>]*bridge\.playgama\.com[^>]*><\/script>\s*/,
+          ''
+        )
+      }
+    })
+  }
+
+  // Emit `dist/playgama-bridge-config.json` ONLY for `pnpm build:playgama`.
+  // Never serves it in dev (the Bridge would 404 it on localhost and
+  // fall back to MOCK, which is what we want there). Never in other
+  // builds either — the file MUST NOT be in `public/` because Vite would
+  // serve it across every build mode and force the production-portal
+  // protocol on the QA Tool / dev sandbox, hanging `initialize()`.
+  //
+  // Crucially, the config does NOT contain `forciblySetPlatformId` —
+  // Bridge auto-detects the right protocol per parent-frame handshake
+  // for the production portal, the developer QA Tool, and every other
+  // Playgama-ecosystem context. Forcing a platform id breaks every
+  // context except the one chosen at build time.
+  if (isPlaygama) {
+    plugins.push({
+      name: 'emit-playgama-bridge-config',
+      apply: 'build' as const,
+      generateBundle(this: any) {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'playgama-bridge-config.json',
+          source: JSON.stringify({
+            advertisement: { minimumDelayBetweenInterstitial: 120 }
+          }, null, 2)
+        })
       }
     })
   }

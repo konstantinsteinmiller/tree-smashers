@@ -26,13 +26,15 @@
 // ## Priority order MUST match `useAds.ts`'s historical ternary:
 //   1. isCrazyWeb              → CrazyGames provider
 //   2. isGameDistribution      → GameDistribution provider
-//   3. showMediatorAds + isNative → LevelPlay (mobile mediation)
-//   4. else                    → Noop (UI hidden, calls inert)
+//   3. isPlaygama              → Playgama Bridge provider
+//   4. showMediatorAds + isNative → LevelPlay (mobile mediation)
+//   5. else                    → Noop (UI hidden, calls inert)
 
 import { createCrazyGamesProvider } from '@/use/ads/CrazyGamesProvider'
 import { createGameDistributionProvider } from '@/use/ads/GameDistributionProvider'
 import { createLevelPlayProvider } from '@/use/ads/LevelPlayProvider'
 import { createNoopProvider } from '@/use/ads/NoopProvider'
+import { createPlaygamaProvider } from '@/use/ads/PlaygamaProvider'
 import type { AdProvider } from '@/use/ads/types'
 import type { PlatformFlags } from './capabilities'
 
@@ -47,6 +49,7 @@ export interface AdResolverInput {
 export const resolveAdProvider = (input: AdResolverInput): AdProvider => {
   if (import.meta.env.VITE_APP_CRAZY_WEB === 'true') return createCrazyGamesProvider()
   if (import.meta.env.VITE_APP_GAME_DISTRIBUTION === 'true') return createGameDistributionProvider()
+  if (import.meta.env.VITE_APP_PLAYGAMA === 'true') return createPlaygamaProvider()
   if (import.meta.env.VITE_APP_NATIVE === 'true' && input.showMediatorAds && input.isNative) {
     return createLevelPlayProvider()
   }

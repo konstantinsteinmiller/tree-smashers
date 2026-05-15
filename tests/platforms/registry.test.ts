@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest'
 import { ALL_PLATFORMS, activePlatform, activeCapabilities } from '@/platforms'
 
 describe('platform registry', () => {
-  it('contains all 7 platforms', () => {
+  it('contains all 8 platforms', () => {
     const ids = ALL_PLATFORMS.map(p => p.id).sort()
-    expect(ids).toEqual(['crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'wavedash', 'y8'])
+    expect(ids).toEqual(['crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'playgama', 'wavedash', 'y8'])
   })
 
   it('every platform has the required descriptor shape', () => {
@@ -73,5 +73,15 @@ describe('platform registry', () => {
     const gp = ALL_PLATFORMS.find(p => p.id === 'gamepix')!
     expect(gp.envFlag).toBe('GAMEPIX')
     expect(gp.capabilities.hostnameMatcher).toBe('gamepix')
+  })
+
+  it('Playgama declares cloud-save + ads and empty hostnameMatcher (no URL gate)', () => {
+    const pg = ALL_PLATFORMS.find(p => p.id === 'playgama')!
+    expect(pg.envFlag).toBe('PLAYGAMA')
+    expect(pg.capabilities.hasCloudSave).toBe(true)
+    expect(pg.capabilities.hasAds).toBe(true)
+    // Playgama Technical Requirements forbid runtime URL gating, so the
+    // hostnameMatcher is intentionally empty.
+    expect(pg.capabilities.hostnameMatcher).toBe('')
   })
 })

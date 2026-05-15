@@ -19,6 +19,7 @@ export interface PlatformFlags {
   isGameDistribution: boolean
   isY8: boolean
   isGamePix: boolean
+  isPlaygama: boolean
 }
 
 export type GlitchLicenseStatus = 'pending' | 'ok' | 'denied'
@@ -50,6 +51,10 @@ export interface ResolvedCapabilities {
   allowedToShowOnGameDistribution: boolean
   allowedToShowOnY8: boolean
   allowedToShowOnGamePix: boolean
+  /** Playgama is flag-only — the platform's Technical Requirements forbid
+   *  runtime URL gating ("the game does not include any technical means of
+   *  limiting its operation due to the URL it is opened from"). */
+  allowedToShowOnPlaygama: boolean
   /** True when Glitch was selected but their license API rejected the player. */
   isGlitchDenied: boolean
   /** True when the build targets a platform AND the license check has settled.
@@ -108,6 +113,7 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   const isNotPlatformBuild =
     !flags.isCrazyWeb && !flags.isWaveDash && !flags.isItch && !flags.isGlitch
     && !flags.isGameDistribution && !flags.isY8 && !flags.isGamePix
+    && !flags.isPlaygama
 
   const allowedToShowOnCrazyGames =
     (flags.isCrazyWeb && isCrazyGamesUrl(hostname)) || isNotPlatformBuild
@@ -132,9 +138,15 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   const allowedToShowOnGamePix =
     (flags.isGamePix && isGamePixUrl(hostname)) || isNotPlatformBuild
 
+  // Playgama is flag-only. Their Technical Requirements explicitly forbid
+  // runtime URL gating, so there is no `isPlaygamaUrl(hostname)` check —
+  // the build runs wherever the iframe ends up embedded.
+  const allowedToShowOnPlaygama = flags.isPlaygama || isNotPlatformBuild
+
   const anyPlatform =
     flags.isCrazyWeb || flags.isWaveDash || flags.isItch || flags.isGlitch
     || flags.isGameDistribution || flags.isY8 || flags.isGamePix
+    || flags.isPlaygama
   const showOnlyAvailableText = anyPlatform && glitchLicenseStatus !== 'pending'
 
   const plattformText = flags.isWaveDash
@@ -151,7 +163,9 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
               ? 'y8.com'
               : flags.isGamePix
                 ? 'gamepix.com'
-                : ''
+                : flags.isPlaygama
+                  ? 'playgama.com'
+                  : ''
 
   return {
     isNotPlatformBuild,
@@ -162,6 +176,7 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
     allowedToShowOnGameDistribution,
     allowedToShowOnY8,
     allowedToShowOnGamePix,
+    allowedToShowOnPlaygama,
     isGlitchDenied,
     showOnlyAvailableText,
     plattformText

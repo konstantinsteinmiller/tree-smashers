@@ -28,10 +28,11 @@
 // `router/index.ts`, `i18n/index.ts`).
 //
 // ## Priority order MUST match `main.ts`'s historical ternary:
-//   1. isGlitch         → GlitchStrategy (fallback to LocalStorageStrategy)
-//   2. isCrazyWeb       → CrazyGamesStrategy
+//   1. isGlitch          → GlitchStrategy (fallback to LocalStorageStrategy)
+//   2. isCrazyWeb        → CrazyGamesStrategy
 //   3. isGameDistribution → GameDistributionStrategy (fallback to LocalStorageStrategy)
-//   4. else              → LocalStorageStrategy
+//   4. isPlaygama        → PlaygamaStrategy (fallback to LocalStorageStrategy)
+//   5. else              → LocalStorageStrategy
 
 import type { SaveStrategy } from '@/utils/save/types'
 import type { PlatformFlags } from './capabilities'
@@ -50,6 +51,22 @@ export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveSt
     const { createGameDistributionSaveStrategy } = await import('@/utils/gameDistributionPlugin')
     const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
     return createGameDistributionSaveStrategy() ?? new LocalStorageStrategy()
+  }
+  if (import.meta.env.VITE_APP_PLAYGAMA === 'true') {
+    // Construct the strategy here (rather than via a factory in
+    // playgamaPlugin.ts) so the dynamic-import literal stays inside
+    // this file — `resolveSaveStrategy.ts` is on the obfuscator's
+    // exclude list. The plugin module is not, so any `await import`
+    // call placed there would be mangled by the `stringArray`
+    // transform and fail at runtime.
+    try {
+      const { PlaygamaStrategy } = await import('@/utils/save/PlaygamaStrategy')
+      return new PlaygamaStrategy()
+    } catch (e) {
+      console.warn('[playgama] save strategy load failed', e)
+      const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
+      return new LocalStorageStrategy()
+    }
   }
   const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
   return new LocalStorageStrategy()

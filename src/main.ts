@@ -12,7 +12,16 @@ import {
 import { LANGUAGES } from '@/utils/enums'
 import { initCrazyGames, crazyLocale, startLoading } from '@/use/useCrazyGames'
 import { initAds } from '@/use/useAds'
-import useUser, { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix } from '@/use/useUser'
+import useUser, {
+  isCrazyWeb,
+  isWaveDash,
+  isItch,
+  isGlitch,
+  isGameDistribution,
+  isY8,
+  isGamePix,
+  isPlaygama
+} from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
@@ -128,7 +137,7 @@ const bootstrap = async () => {
   // unit-testable in isolation. Adding a platform = add an arm there,
   // not edit this file.
   const strategy = await resolveSaveStrategy({
-    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix
+    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama
   })
 
   // CrazyGames cloud-only mode: gameplay state and our save bookkeeping
@@ -236,6 +245,20 @@ const bootstrap = async () => {
   if (import.meta.env.VITE_APP_GAME_DISTRIBUTION === 'true') {
     void import('@/utils/gameDistributionPlugin').then(({ gameDistributionPlugin }) => {
       gameDistributionPlugin()
+    })
+  }
+
+  // Playgama Bridge: parallel init mirrors the GD pattern. The plugin is
+  // idempotent — both the AdProvider's `init()` and the SaveStrategy's
+  // `hydrate()` re-await this same promise so there is exactly one
+  // `bridge.initialize()` per page load. `playgamaLoadingStart` fires
+  // `in_game_loading_started` once the SDK is alive — paired with
+  // `playgamaGameLoadingStop` (in App.vue, on `areAllAssetsLoaded`)
+  // which fires both `in_game_loading_stopped` AND the certification-
+  // mandatory `game_ready` edge.
+  if (import.meta.env.VITE_APP_PLAYGAMA === 'true') {
+    void import('@/utils/playgamaPlugin').then(({ playgamaPlugin, playgamaLoadingStart }) => {
+      playgamaPlugin().then(() => playgamaLoadingStart())
     })
   }
 

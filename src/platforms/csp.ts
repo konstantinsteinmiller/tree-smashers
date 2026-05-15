@@ -28,6 +28,9 @@ const BASE_HOSTS: ReadonlyArray<string> = [
   'https://*.glitch.fun',
   'https://gamedistribution.com',
   'https://*.gamedistribution.com',
+  'https://playgama.com',
+  'https://*.playgama.com',
+  'https://bridge.playgama.com',
   'https://www.clarity.ms',
   'https://api.jsonbin.io'
 ]
@@ -129,6 +132,13 @@ export const buildCsp = (env: Record<string, string>): string => {
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
   const isGlitch = env.VITE_APP_GLITCH === 'true'
   const isCrazyWeb = env.VITE_APP_CRAZY_WEB === 'true'
+  const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
+
+  // Playgama's Bridge waterfall pulls in partner ad CDNs at runtime
+  // (similar to GD). The Bridge wiki doesn't publish a fixed allowlist —
+  // mirroring the GD ad-waterfall openings (open script/style/img/connect/
+  // frame/media/font to https:) is what passes their QA Tool in practice.
+  const isAdWaterfall = isGameDistribution || isPlaygama
 
   const hosts: string[] = [
     ...BASE_HOSTS,
@@ -139,30 +149,32 @@ export const buildCsp = (env: Record<string, string>): string => {
   // Per-directive extras — mode-driven openings beyond `'self'` + hosts.
   const scriptSrcExtra: string[] = []
   if (isGlitch) scriptSrcExtra.push('\'unsafe-inline\'')
-  if (isGameDistribution) scriptSrcExtra.push('https:', '\'unsafe-inline\'', '\'unsafe-eval\'')
+  if (isAdWaterfall) scriptSrcExtra.push('https:', '\'unsafe-inline\'', '\'unsafe-eval\'')
 
   const extras: Record<string, string[]> = {
     'script-src': scriptSrcExtra,
-    // GD's IAB TCF v2 consent wall pulls Google Fonts CSS at runtime —
-    // open style-src to https: for GD only.
-    'style-src': isGameDistribution ? ['https:', '\'unsafe-inline\''] : ['\'unsafe-inline\''],
-    // GD ad creatives come from arbitrary CDNs — open img-src to https:
-    // for that build type only. CG ad pixels arrive from the partner host
-    // list above plus `data:` for inline beacons.
-    'img-src': isGameDistribution ? ['data:', 'https:', 'blob:'] : ['data:'],
+    // GD's IAB TCF v2 consent wall pulls Google Fonts CSS at runtime;
+    // Playgama portals serve webfonts via partner CDNs too — open
+    // style-src to https: for ad-waterfall builds.
+    'style-src': isAdWaterfall ? ['https:', '\'unsafe-inline\''] : ['\'unsafe-inline\''],
+    // GD / Playgama ad creatives come from arbitrary CDNs — open img-src
+    // to https: for that build type only. CG ad pixels arrive from the
+    // partner host list above plus `data:` for inline beacons.
+    'img-src': isAdWaterfall ? ['data:', 'https:', 'blob:'] : ['data:'],
     'connect-src': [
       ...CONNECT_BASE_EXTRA,
-      // GD partner analytics / ad telemetry beacons.
-      ...(isGameDistribution ? ['https:', 'wss:'] : [])
+      // Ad-waterfall partner analytics / ad telemetry beacons (GD, Playgama).
+      ...(isAdWaterfall ? ['https:', 'wss:'] : [])
     ],
-    // GD ads + CG rich-media creatives render in nested iframes from
-    // partner domains; CG specifically pulls TheTradeDesk/2mdn creatives
-    // into nested frames.
-    'frame-src': isGameDistribution || isCrazyWeb ? ['https:'] : [],
-    // CG video ads (IMA / partner stitchers) render via blob URLs.
-    'media-src': isGameDistribution || isCrazyWeb ? ['https:', 'blob:'] : [],
+    // GD / Playgama ads + CG rich-media creatives render in nested iframes
+    // from partner domains; CG specifically pulls TheTradeDesk/2mdn
+    // creatives into nested frames.
+    'frame-src': isAdWaterfall || isCrazyWeb ? ['https:'] : [],
+    // CG video ads (IMA / partner stitchers) render via blob URLs;
+    // Playgama portals do the same.
+    'media-src': isAdWaterfall || isCrazyWeb ? ['https:', 'blob:'] : [],
     // The consent wall + many partner CDNs serve webfonts.
-    'font-src': isGameDistribution ? ['https:', 'data:'] : ['data:']
+    'font-src': isAdWaterfall ? ['https:', 'data:'] : ['data:']
   }
 
   return CSP_DIRECTIVES.map(dir => {
