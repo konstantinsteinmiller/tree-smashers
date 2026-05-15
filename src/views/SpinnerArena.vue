@@ -11,6 +11,9 @@ import useSounds, { useMusic } from '@/use/useSound'
 import useSpinnerGame, { ARENA_RADIUS, BLADE_RADIUS, simSpeed, countdownText } from '@/use/useSpinnerGame'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin } from '@/use/useSpinnerCampaign'
+import useTips from '@/use/useTips'
+import type { TipId } from '@/use/useTips'
+import TipBadge from '@/components/atoms/TipBadge.vue'
 import { useHint } from '@/use/useHint'
 import { useScreenshake } from '@/use/useScreenshake'
 import type { SpinnerConfig } from '@/types/spinner'
@@ -120,6 +123,27 @@ const {
 
 const pvpModalOpen: Ref<boolean> = ref(false)
 const pvpMode: Ref<boolean> = ref(false)
+
+const { noteCampaignResult, pickLoseScreenTip, pickWinScreenTip, markTipShown } = useTips()
+// Tip shown on the current reward overlay. Picked when the overlay opens
+// and (for lose screens with multiple qualifying tips) cycled by
+// `tipCycleTimer` so a player lingering on the lose screen sees more than
+// one nudge. Cleared in the `showReward` watcher when the overlay closes.
+const currentTip: Ref<TipId | null> = ref(null)
+// Active pool of qualifying tips for the current overlay (lose-screen
+// only). Empty on win screens or when no tip qualifies. Used by the
+// cycling timer to step through alternatives at a steady cadence.
+let currentTipPool: TipId[] = []
+let tipCycleTimer: number | null = null
+const TIP_CYCLE_INTERVAL_MS = 6000
+
+const clearTipCycle = () => {
+  if (tipCycleTimer !== null) {
+    clearInterval(tipCycleTimer)
+    tipCycleTimer = null
+  }
+  currentTipPool = []
+}
 
 const { showHint, startHintTimer, clearHint } = useHint(2500)
 const { shakeStyle } = useScreenshake()
@@ -685,6 +709,13 @@ watch(isGameOver, (over) => {
       else if (gameResult.value === 'lose') noteCampaignBossLoss()
     }
 
+    // Player tip counters: same-stage loss streak + tanky-setup loss streak.
+    // Scoped to real campaign battles (matches the boss rubber-band gating
+    // above) so PvP / ghost / cheat runs don't pollute the tip triggers.
+    if (!ghostMode.value && !cheatStage.value && gameResult.value) {
+      noteCampaignResult(currentStage.value, gameResult.value)
+    }
+
     // Boss win (campaign only) — show roulette before awarding coins
     const isBossWin = gameResult.value === 'win' && !ghostMode.value && currentStage.value.isBoss
     if (isBossWin) {
@@ -775,7 +806,41 @@ watch(cheatRouletteSignal, () => {
 
 // Coin explosion VFX when the reward overlay appears
 watch(showReward, async (show) => {
-  if (!show) return
+  // Always tear down any prior cycle when the overlay state changes — both
+  // closing the overlay and opening a new battle's overlay need to start
+  // fresh.
+  clearTipCycle()
+  if (!show) {
+    currentTip.value = null
+    return
+  }
+  // Pick a tip for the campaign result. PvP/ghost/cheat runs don't qualify
+  // since their loss counters never advance — keep the overlay clean.
+  if (!pvpMode.value && !ghostMode.value && !cheatStage.value) {
+    if (gameResult.value === 'lose') {
+      const { tip, pool } = pickLoseScreenTip(currentStage.value)
+      currentTip.value = tip
+      if (tip) markTipShown(tip)
+      // If multiple tips qualify, cycle through them every few seconds so
+      // a player who lingers on the lose screen sees rotating advice rather
+      // than the same nudge frozen on-screen. Single-tip pools stay static.
+      if (pool.length > 1 && tip) {
+        currentTipPool = pool
+        let idx = pool.indexOf(tip)
+        tipCycleTimer = window.setInterval(() => {
+          idx = (idx + 1) % currentTipPool.length
+          const next = currentTipPool[idx]
+          if (!next) return
+          currentTip.value = next
+          markTipShown(next)
+        }, TIP_CYCLE_INTERVAL_MS)
+      }
+    } else {
+      currentTip.value = pickWinScreenTip()
+    }
+  } else {
+    currentTip.value = null
+  }
   await nextTick()
   fireCoinExplosion(rewardCoinRef.value)
 })
@@ -1138,6 +1203,7 @@ onUnmounted(() => {
     canvasObserver = null
   }
   if (speedBoostIntervalId !== null) clearInterval(speedBoostIntervalId)
+  clearTipCycle()
   // Always leave the arena at normal speed so other views aren't affected
   simSpeed.value = 1
 
@@ -1436,6 +1502,20 @@ onUnmounted(() => {
           div.flex.items-center.gap-3(ref="rewardCoinRef")
             IconCoin(class="w-8 h-8 text-yellow-300")
             span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
+
+      //- Player tip — absolutely anchored to the bottom of the FReward
+      //- overlay (sibling of the centered reward column) so the badge
+      //- always docks above the tap-to-continue prompt and can't be
+      //- clipped by the viewport when the reward column grows. Includes
+      //- env(safe-area-inset-bottom) so it stays clear of the iOS home
+      //- bar / notch on mobile.
+      Transition(name="fade")
+        div.absolute.left-0.right-0.flex.justify-center.px-4.pointer-events-none(
+          v-if="currentTip"
+          class="bottom-24 sm:bottom-28"
+          :style="{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }"
+        )
+          TipBadge(:text-key="`tips.${currentTip}`")
 
     //- Boss Roulette Overlay (wheel spinning)
     FReward(

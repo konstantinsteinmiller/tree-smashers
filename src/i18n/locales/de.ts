@@ -275,5 +275,12 @@ export default {
   },
   'skinChest': {
     'acquired': '{name} erhalten!'
+  },
+  'tips': {
+    'tankyBottom': 'Tipp: Hast du schon ein Tank-Unterteil probiert? Es gibt dir viele HP, um mehr Runden zu überstehen!',
+    'tankPiercer': 'Tipp: Hast du Schwierigkeiten, Panzer zu durchbrechen? Probier das Piercer-Oberteil — es ignoriert 75 % der gegnerischen Verteidigung!',
+    'teleporterShock': 'Tipp: Hast du den Teleporter-Skin probiert? Er phast durch Wände und bekommt keinen Schock von den Arena-Rändern!',
+    'starSpeedy': 'Tipp: Ein Stern-Oberteil mit einem schnellen Unterteil ergibt einen richtig starken Glaskanonen-Build!',
+    'arenaWall': 'Tipp: Sind deine Spinner zu nah an den Gegnern? Versuch, über eine Arena-Wand zu starten — der erste Wandstoß gibt dir tatsächlich einen Geschwindigkeitsschub!'
   }
 }

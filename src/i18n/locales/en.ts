@@ -275,5 +275,12 @@ export default {
   },
   'skinChest': {
     'acquired': '{name} Acquired!'
+  },
+  'tips': {
+    'tankyBottom': 'Tip: Have you tried using a tanky bottom part? It gives you a lot of HP to survive more rounds!',
+    'tankPiercer': 'Tip: Having trouble breaking through tanks? Try the Piercer top — it bypasses 75% of enemy defense!',
+    'teleporterShock': 'Tip: Have you tried the Teleporter skin? It phases through walls and won\'t get shocked by the arena borders!',
+    'starSpeedy': 'Tip: A Star top combined with a Speedy bottom makes a really strong glass cannon build!',
+    'arenaWall': 'Tip: Are your spinners too close to the enemies? Try launching over an arena wall — the first wall bump actually speeds you up!'
   }
 }

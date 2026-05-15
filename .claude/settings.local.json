@@ -178,7 +178,8 @@
       "Bash(python)",
       "Bash(PYTHONIOENCODING=utf-8 python)",
       "PowerShell(pnpm build:crazy-web *)",
-      "Bash(pnpm typecheck *)"
+      "Bash(pnpm typecheck *)",
+      "Bash(npx biome *)"
     ]
   },
   "defaultMode": "auto"

@@ -267,5 +267,12 @@ export default {
   },
   'skinChest': {
     'acquired': '{name} obtenu !'
+  },
+  'tips': {
+    'tankyBottom': 'Astuce : As-tu essayé une pièce inférieure de type tank ? Elle donne beaucoup de PV pour tenir plus de manches !',
+    'tankPiercer': 'Astuce : Tu as du mal à percer les tanks ? Essaie la pièce supérieure Perforante — elle ignore 75 % de la défense ennemie !',
+    'teleporterShock': 'Astuce : As-tu essayé le skin Téléporteur ? Il traverse les murs et ne se prend pas de choc des bords de l\'arène !',
+    'starSpeedy': 'Astuce : Une pièce supérieure Étoile avec une pièce inférieure Rapide forme un build canon de verre redoutable !',
+    'arenaWall': 'Astuce : Tes spinners sont trop près des ennemis ? Essaie de lancer par-dessus un mur de l\'arène — le premier rebond contre le mur te donne en fait un boost de vitesse !'
   }
 }

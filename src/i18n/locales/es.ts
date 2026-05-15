@@ -279,5 +279,12 @@ export default {
   },
   'skinChest': {
     'acquired': '¡{name} conseguido!'
+  },
+  'tips': {
+    'tankyBottom': 'Consejo: ¿Has probado a usar una pieza inferior tipo tanque? ¡Te da mucha vida para aguantar más rondas!',
+    'tankPiercer': 'Consejo: ¿Te cuesta romper a los tanques? ¡Prueba la pieza superior Perforante — ignora el 75% de la defensa enemiga!',
+    'teleporterShock': 'Consejo: ¿Has probado la skin Teletransportadora? ¡Atraviesa paredes y no recibe descargas en los bordes de la arena!',
+    'starSpeedy': 'Consejo: ¡Una pieza superior Estrella con una pieza inferior Veloz forma un build de cañón de cristal muy fuerte!',
+    'arenaWall': 'Consejo: ¿Tus spinners están demasiado cerca de los enemigos? Prueba a lanzar por encima de una pared de la arena — ¡el primer rebote contra la pared te da un empujón de velocidad!'
   }
 }
