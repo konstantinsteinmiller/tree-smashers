@@ -546,8 +546,7 @@ const BASE_STAGES: Stage[] = [
   s(95, 'stage_95', [
     e('cushioned', 'tanky', 28, 28, 'castle', 'partners'),
     e('round', 'tanky', 28, 28, 'piranha', 'partners'),
-    e('star', 'balanced', 28, 23, 'reddragon', 'partners'),
-    e('triangle', 'tanky', 27, 27, 'thunder', 'thunder'),
+    e('triangle', 'tanky', 27, 27, 'thunderstorm', 'thunder'),
     e('quadratic', 'balanced', 28, 23, 'mysticaleye', 'partners')
   ], 2700, 480, { isBoss: true }),
   s(96, 'stage_96', [
@@ -574,7 +573,6 @@ const BASE_STAGES: Stage[] = [
   // 100 — HEALERS boss (grand finale)
   s(100, 'stage_100', [
     e('cushioned', 'balanced', 29, 32, 'mountain', 'healers'),
-    e('round', 'balanced', 33, 28, 'piranha', 'healers'),
     e('cushioned', 'tanky', 28, 33, 'gear', 'healers'),
     e('round', 'balanced', 33, 30, 'turtle', 'healers'),
     e('quadratic', 'speedy', 29, 32, 'mysticaleye', 'healers')

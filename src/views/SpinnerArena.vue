@@ -413,20 +413,10 @@ const bladeStats = computed(() =>
   })
 )
 
-// Set when the player surrenders the current battle. The PvP surrender flow
-// passes through the normal game_over → reward modal → onRewardContinue
-// path; this flag tells onRewardContinue to skip the ad-counter increment so
-// surrendered matches don't count toward the interstitial cadence. Cleared
-// in onRewardContinue after it's read. Campaign/ghost surrenders bypass the
-// reward flow entirely (direct initGame below) so the flag isn't needed
-// there, but we still set it for symmetry / future-proofing.
-let surrenderedThisBattle = false
-
 const onSurrender = () => {
   stopPhysics()
   clearBattleVfx()
   stopBattleMusic()
-  surrenderedThisBattle = true
   if (pvpMode.value) {
     // Notify opponent, then force a loss game-over
     pvpSendSurrender()
@@ -434,6 +424,13 @@ const onSurrender = () => {
     phase.value = 'game_over'
     return
   }
+  // Campaign/ghost surrender re-inits the same stage directly (no reward
+  // modal → no `onRewardContinue` → no automatic counter bump). Count the
+  // surrender as a battle attempt for interstitial cadence — otherwise a
+  // player who repeatedly surrenders never sees the midgame ad. The
+  // actual ad fires before the next battle's meteor-shower intro
+  // (`shouldShowMidgameAdNow` check in `beginBattle`).
+  incrementAdCounter()
   // Re-init the same stage with no rewards — player stays on current stage
   initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
 }
@@ -931,14 +928,14 @@ const onRewardContinue = async () => {
   // Snapshot mode flags before tearing down state
   const wasPvp = pvpMode.value
   const wasGhost = ghostMode.value
-  const wasSurrender = surrenderedThisBattle
-  surrenderedThisBattle = false
 
-  // Surrendered battles don't count toward the cadence — the player chose
-  // to bail, not to "finish" the match, so we don't penalise them with an
-  // ad on top of the abandoned reward. The actual ad fires before the
-  // next battle's meteor-shower intro (see `beginBattle`).
-  if (!wasSurrender) incrementAdCounter()
+  // Every battle attempt counts toward the cadence — including
+  // surrendered ones. A player who quits a tough match still committed
+  // to a battle attempt, and excluding surrenders from the counter let
+  // serial-surrenderers bypass interstitials indefinitely. The actual
+  // ad fires before the next battle's meteor-shower intro (see
+  // `beginBattle`).
+  incrementAdCounter()
 
   // Tear down mode state
   if (wasPvp) {

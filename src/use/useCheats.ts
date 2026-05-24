@@ -115,7 +115,7 @@ const useCheats = () => {
     'ctrl+shift+alt+1': () => setSpinnerStage(11),
     'ctrl+shift+alt+2': () => setSpinnerStage(12),
     'ctrl+shift+alt+3': () => setSpinnerStage(13),
-    'ctrl+shift+alt+4': () => setSpinnerStage(14),
+    'ctrl+shift+alt+4': () => setSpinnerStage(94),
     'ctrl+shift+alt+5': () => setSpinnerStage(15),
     'ctrl+shift+alt+6': () => setSpinnerStage(16),
     'ctrl+shift+alt+7': () => setSpinnerStage(17),
