@@ -140,6 +140,10 @@ export default {
   'prev': 'Prev',
   'next': 'Next',
   'page': 'Page',
+  'challenge': {
+    'title': 'Daily Challenge',
+    'alreadyClaimed': 'Diamond already claimed today'
+  },
   'spinner': {
     'youWin': 'YOU WIN!',
     'youLose': 'YOU LOSE!',

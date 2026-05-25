@@ -132,6 +132,10 @@ export default {
   'prev': '前へ',
   'next': '次へ',
   'page': 'ページ',
+  'challenge': {
+    'title': 'デイリーチャレンジ',
+    'alreadyClaimed': '本日のダイヤは受取済み'
+  },
   'spinner': {
     'youWin': '勝利！',
     'youLose': '敗北！',

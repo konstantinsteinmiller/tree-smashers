@@ -12,6 +12,13 @@ import type {
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import { bossHpRubberBandMul } from '@/use/useSpinnerCampaign'
+import {
+  resolveWall as shapeResolveWall,
+  clampInside as shapeClampInside,
+  traceArenaPath,
+  type ArenaShape
+} from '@/use/arenaShapes'
+import { selectedBgSkin, DEFAULT_BG_SKIN_ID } from '@/use/useBgSkins'
 import { computeStats } from '@/use/useSpinnerConfig'
 import { spinnerModelImgPath } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -155,6 +162,21 @@ function renderSpritesheetAnim(ctx: CanvasRenderingContext2D, anim: SpritesheetA
 
 const arenaType: Ref<ArenaType> = ref('default')
 export { arenaType }
+
+// Arena boundary shape. 'circle' is the classic arena; the daily challenge
+// randomises a non-circular shape so the walls change how blades ricochet.
+// Set per match in initGame. Geometry lives in `@/use/arenaShapes`.
+const arenaShape: Ref<ArenaShape> = ref('circle')
+export { arenaShape }
+
+// Thin, shape-aware wrappers so call sites don't repeat `arenaShape.value` /
+// `ARENA_RADIUS`. resolveArenaWall returns null when a blade is clear of the
+// wall; clampInArena pulls a point inside so a circle of `radius` (+ optional
+// clearance) fits.
+const resolveArenaWall = (x: number, y: number, radius: number) =>
+  shapeResolveWall(arenaShape.value, x, y, radius, ARENA_RADIUS)
+const clampInArena = (x: number, y: number, radius: number, extra = 0) =>
+  shapeClampInside(arenaShape.value, x, y, radius, ARENA_RADIUS, extra)
 
 // ─── Simulation Speed (visual travel speed only) ────────────────────────────
 
@@ -644,6 +666,56 @@ export const useSpinnerGame = () => {
   // ── Background tile pattern ─────────────────────────────────────────────
   const bgTileImage = preloadImage(prependBaseUrl('images/bg/bg-tile_400x400.webp'))
   let bgTilePattern: CanvasPattern | null = null
+
+  // ── Background SKIN rendering ───────────────────────────────────────────
+  // The arena background is the currently-equipped bg skin (see useBgSkins).
+  // The default skin reuses the tile pattern above. Premium skins tile a real
+  // image when one is present + loaded, otherwise fall back to a cached
+  // gradient placeholder. Read fresh each frame so a selection change applies
+  // immediately.
+  const bgSkinImages = new Map<string, HTMLImageElement>()
+  const bgSkinPatterns = new Map<string, CanvasPattern | null>()
+  let bgSkinGradient: { id: string; w: number; h: number; grad: CanvasGradient } | null = null
+
+  const resolveBgFill = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number
+  ): string | CanvasPattern | CanvasGradient => {
+    const skin = selectedBgSkin.value
+    if (skin.id === DEFAULT_BG_SKIN_ID) {
+      if (!bgTilePattern && bgTileImage.complete && bgTileImage.naturalWidth > 0) {
+        bgTilePattern = ctx.createPattern(bgTileImage, 'repeat')
+      }
+      return bgTilePattern ?? '#0d1117'
+    }
+    // Real artwork (dropped in later) tiles when available …
+    if (skin.img) {
+      let img = bgSkinImages.get(skin.id)
+      if (!img) {
+        img = new Image()
+        img.src = prependBaseUrl(skin.img)
+        bgSkinImages.set(skin.id, img)
+      }
+      if (img.complete && img.naturalWidth > 0) {
+        let pat = bgSkinPatterns.get(skin.id)
+        if (pat === undefined) {
+          pat = ctx.createPattern(img, 'repeat')
+          bgSkinPatterns.set(skin.id, pat)
+        }
+        if (pat) return pat
+      }
+    }
+    // … otherwise the gradient placeholder (cached per id + canvas size).
+    if (!bgSkinGradient || bgSkinGradient.id !== skin.id || bgSkinGradient.w !== w || bgSkinGradient.h !== h) {
+      const grad = ctx.createLinearGradient(0, 0, w, h)
+      grad.addColorStop(0, skin.colors[0])
+      grad.addColorStop(0.5, skin.colors[1])
+      grad.addColorStop(1, skin.colors[2])
+      bgSkinGradient = { id: skin.id, w, h, grad }
+    }
+    return bgSkinGradient.grad
+  }
 
   // ── Spark VFX ───────────────────────────────────────────────────────────
   const sparkImage = preloadImage(prependBaseUrl('images/vfx/big-spark_1280x256.webp'))
@@ -1319,10 +1391,14 @@ export const useSpinnerGame = () => {
     owner: 'player' | 'npc',
     x: number, y: number,
     config: SpinnerConfig,
-    isBoss = false
+    isBoss = false,
+    // Grant boss-tier HP (2×) WITHOUT the boss size bump, slower spin, boss
+    // rubber-banding or boss render treatment. Used by the daily challenge's
+    // lone enemy: "treated like a boss regarding stats" only.
+    bossStats = false
   ): SpinnerState {
     const stats = computeStats(config, config.topLevel ?? 0, config.bottomLevel ?? 0)
-    const bossHpMultiplier = isBoss ? 2 : 1
+    const bossHpMultiplier = (isBoss || bossStats) ? 2 : 1
     const boostHpMultiplier = (firstGameBoost && owner === 'player') ? 2 : 1
     // Campaign-only NPC HP scaling by difficulty: EASY -10%, HARD +30%.
     // PvP and ghost fights are excluded so both modes stay authoritative.
@@ -1412,13 +1488,10 @@ export const useSpinnerGame = () => {
     twin.linkedIds = [parent.id]
     parent.ghostPending = false
 
-    // Ensure twin is clamped inside the arena.
-    const d = Math.hypot(twin.x, twin.y)
-    const maxR = ARENA_RADIUS - twin.radius
-    if (d > maxR) {
-      twin.x *= maxR / d
-      twin.y *= maxR / d
-    }
+    // Ensure twin is clamped inside the arena (shape-aware).
+    const tc = clampInArena(twin.x, twin.y, twin.radius)
+    twin.x = tc.x
+    twin.y = tc.y
 
     if (parent.owner === 'npc') npcBlades.value = [...npcBlades.value, twin]
     else playerBlades.value = [...playerBlades.value, twin]
@@ -1460,13 +1533,11 @@ export const useSpinnerGame = () => {
       child.vx = dx * drift
       child.vy = dy * drift
 
-      // Clamp inside the arena so newborns don't instantly wall-bounce.
-      const d = Math.hypot(child.x, child.y)
-      const maxR = ARENA_RADIUS - child.radius - 4
-      if (d > maxR) {
-        child.x *= maxR / d
-        child.y *= maxR / d
-      }
+      // Clamp inside the arena so newborns don't instantly wall-bounce
+      // (shape-aware).
+      const cc = clampInArena(child.x, child.y, child.radius, 4)
+      child.x = cc.x
+      child.y = cc.y
       children.push(child)
     }
     if (parent.owner === 'npc') npcBlades.value = [...npcBlades.value, ...children]
@@ -1526,9 +1597,13 @@ export const useSpinnerGame = () => {
     bouncerCount = 0,
     enablePowerups = false,
     powerupIntervalMs: [number, number] = [POWERUP_DEFAULT_INTERVAL_MIN_MS, POWERUP_DEFAULT_INTERVAL_MAX_MS],
-    pvp: { enabled: boolean; myTurnFirst: boolean } | null = null
+    pvp: { enabled: boolean; myTurnFirst: boolean } | null = null,
+    shape: ArenaShape = 'circle'
   ) => {
     pvpMode.value = !!pvp?.enabled
+    // Set the arena shape BEFORE spawns so spawn/bouncer/power-up placement can
+    // clamp to the active boundary geometry.
+    arenaShape.value = shape
     BLADE_RADIUS = pvpMode.value ? PVP_BLADE_RADIUS : DEFAULT_BLADE_RADIUS
     pvpTickCount = 0
     firstGameBoost = boost
@@ -1607,77 +1682,58 @@ export const useSpinnerGame = () => {
         }
       }
 
-      // Clamp all NPC positions inside the arena
+      // Clamp all NPC positions inside the arena (shape-aware so non-circular
+      // floors don't spawn a blade beyond an edge/corner).
       for (const pos of npcPositions) {
-        const d = Math.hypot(pos.x, pos.y)
-        const maxR = ARENA_RADIUS - BLADE_RADIUS * 2
-        if (d > maxR) {
-          pos.x *= maxR / d
-          pos.y *= maxR / d
-        }
+        const c = clampInArena(pos.x, pos.y, BLADE_RADIUS, BLADE_RADIUS)
+        pos.x = c.x
+        pos.y = c.y
       }
     }
 
     npcBlades.value = nTeam.map((cfg, i) =>
-      createBladeState('npc', npcPositions[i]!.x, npcPositions[i]!.y, cfg, cfg.isBoss)
+      createBladeState('npc', npcPositions[i]!.x, npcPositions[i]!.y, cfg, cfg.isBoss, cfg.bossStats)
     )
 
     // ── Boss ability wiring ───────────────────────────────────────────────
-    // Decide the enemy team's "ability theme" from its leading boss entry.
-    // A single ability applies to the whole enemy roster so the player
-    // reads the fight as one coherent encounter (e.g. "all these blades
-    // are a partner group").
+    // partners/healers are TEAM-WIDE coordination abilities: the whole roster
+    // shares one group (no friendly fire; healers also chip-heal allies). The
+    // remaining abilities are INDEPENDENT and wired PER BLADE from each blade's
+    // own `bossAbility`, so a daily-challenge roster can mix them (e.g. one
+    // ghost + one split + one life-leech). Campaign stages use a single ability
+    // type per stage, so this produces identical behaviour there.
     const leadAbility = nTeam.find(c => c.bossAbility)?.bossAbility
     if (leadAbility === 'partners' || leadAbility === 'healers') {
-      // All enemy blades share the same group — no friendly fire between
-      // them, and healer groups also tick a chip-heal on ally contact.
       const gid = nextGroupId++
       for (const blade of npcBlades.value) {
         blade.groupId = gid
         blade.bouncesAllies = true
         if (leadAbility === 'healers') blade.healsAllies = true
       }
-    } else if (leadAbility === 'ghost') {
-      // Each ghost boss gets its own group and is flagged to spawn its
-      // twin on the first launch. The split is deferred to launch time so
-      // the dramatic "one blade becomes two" beat is preserved.
+    } else {
       for (const blade of npcBlades.value) {
-        if (blade.config.bossAbility === 'ghost') {
-          blade.groupId = nextGroupId++
-          blade.ghostPending = true
-        }
-      }
-    } else if (leadAbility === 'split') {
-      // The split boss keeps its own group so its children never hurt
-      // each other when they swarm. Flagged here — spawning happens on
-      // death inside resolveCollision.
-      for (const blade of npcBlades.value) {
-        if (blade.config.bossAbility === 'split') {
-          blade.groupId = nextGroupId++
-          blade.splitsOnDeath = true
-        }
-      }
-    } else if (leadAbility === 'child-emitter') {
-      // Child-emitter: marks boss blades so they spawn a mini distraction
-      // spinner on each collision (handled in resolveCollision).
-      for (const blade of npcBlades.value) {
-        if (blade.config.bossAbility === 'child-emitter') {
-          blade.isChildEmitter = true
-          blade.groupId = nextGroupId++
-        }
-      }
-    } else if (leadAbility === 'stat-switch') {
-      // Stat-switch boss: starts in defense phase. Phase toggled each turn.
-      for (const blade of npcBlades.value) {
-        if (blade.config.bossAbility === 'stat-switch') {
-          blade.statSwitchPhase = 'defense'
-        }
-      }
-    } else if (leadAbility === 'life-leech') {
-      // Life-leech boss: heals 30% of damage dealt on collision.
-      for (const blade of npcBlades.value) {
-        if (blade.config.bossAbility === 'life-leech') {
-          blade.isLifeLeech = true
+        switch (blade.config.bossAbility) {
+          case 'ghost':
+            // Own group + deferred twin split on first launch (the dramatic
+            // "one blade becomes two" beat).
+            blade.groupId = nextGroupId++
+            blade.ghostPending = true
+            break
+          case 'split':
+            // Own group so its death-spawned children never self-damage.
+            blade.groupId = nextGroupId++
+            blade.splitsOnDeath = true
+            break
+          case 'child-emitter':
+            blade.isChildEmitter = true
+            blade.groupId = nextGroupId++
+            break
+          case 'stat-switch':
+            blade.statSwitchPhase = 'defense'
+            break
+          case 'life-leech':
+            blade.isLifeLeech = true
+            break
         }
       }
     }
@@ -1698,7 +1754,13 @@ export const useSpinnerGame = () => {
     }
 
     isBossStage.value = nTeam.some(cfg => cfg.isBoss)
-    arenaType.value = isBossStage.value ? 'boss' : arena
+    // Respect the stage's declared arena. Boss stages carry an explicit
+    // arenaType of 'boss' from the campaign table (see useSpinnerCampaign.s),
+    // so boss visuals still apply — but a boss can now be staged in 'lava',
+    // 'shock', etc. by naming that arena, and non-boss modes (daily challenge)
+    // are never forced into the boss arena. `isBossStage` (above) still drives
+    // boss STATS independently of the arena visuals.
+    arenaType.value = arena
 
     isDragging.value = false
     selectedBladeId.value = null
@@ -1757,8 +1819,9 @@ export const useSpinnerGame = () => {
         for (let attempt = 0; attempt < 40 && !placed; attempt++) {
           const angle = Math.random() * Math.PI * 2
           const r = BOUNCER_MIN_R + Math.random() * (BOUNCER_MAX_R - BOUNCER_MIN_R)
-          const x = Math.cos(angle) * r
-          const y = Math.sin(angle) * r
+          // Clamp into the active shape so a bouncer never overlaps a
+          // non-circular wall (no-op on the circle arena).
+          const { x, y } = clampInArena(Math.cos(angle) * r, Math.sin(angle) * r, BOUNCER_RADIUS, 6)
           let ok = true
           for (const b of arenaBouncers) {
             if (Math.hypot(b.x - x, b.y - y) < minSepBouncer) {
@@ -1782,12 +1845,8 @@ export const useSpinnerGame = () => {
         if (!placed) {
           const slotAngle = (i / clampedBouncerCount) * Math.PI * 2
           const r = (BOUNCER_MIN_R + BOUNCER_MAX_R) / 2
-          placed = {
-            x: Math.cos(slotAngle) * r,
-            y: Math.sin(slotAngle) * r,
-            radius: BOUNCER_RADIUS,
-            flash: 0
-          }
+          const { x, y } = clampInArena(Math.cos(slotAngle) * r, Math.sin(slotAngle) * r, BOUNCER_RADIUS, 6)
+          placed = { x, y, radius: BOUNCER_RADIUS, flash: 0 }
         }
         arenaBouncers.push(placed)
       }
@@ -2526,30 +2585,26 @@ export const useSpinnerGame = () => {
   }
 
   const bounceOffWalls = (blade: SpinnerState) => {
-    const dist = Math.sqrt(blade.x * blade.x + blade.y * blade.y)
-    const maxDist = ARENA_RADIUS - blade.radius
+    // Shape-aware wall query: null when the blade is clear of the boundary,
+    // otherwise the outward normal + a clamped centre just inside the wall.
+    const hit = resolveArenaWall(blade.x, blade.y, blade.radius)
+    if (!hit) return
+    const { nx, ny } = hit
 
-    if (dist <= maxDist) return
-    if (dist < 0.01) return // avoid division by zero at exact center
-
-    // Teleporter: pass through wall → emerge on opposite side
+    // Teleporter: pass through wall → emerge on the opposite side. Mirror the
+    // position through the centre and clamp it just inside whatever shape.
     if (blade.isTeleporter) {
-      blade.x = -blade.x * (maxDist - 2) / dist
-      blade.y = -blade.y * (maxDist - 2) / dist
+      const tp = clampInArena(-blade.x, -blade.y, blade.radius, 2)
+      blade.x = tp.x
+      blade.y = tp.y
       // Keep velocity — blade continues in the same direction
       return
     }
 
-    // Outward normal at contact point
-    const nx = blade.x / dist
-    const ny = blade.y / dist
-
     // Push blade inside the arena by a small margin so it doesn't
     // re-trigger the wall bounce on the very next frame ("wall hug").
-    const pushInside = 0.5
-    const clampDist = maxDist - pushInside
-    blade.x = nx * clampDist
-    blade.y = ny * clampDist
+    blade.x = hit.clampX
+    blade.y = hit.clampY
 
     // Only reflect if the blade is moving INTO the wall (dot > 0,
     // since the normal points outward). Blades already heading inward
@@ -2622,7 +2677,8 @@ export const useSpinnerGame = () => {
         blade.vx *= 0.1
         blade.vy *= 0.1
         blade.hitFlash = HIT_FLASH_FRAMES
-        spawnShockBolt(nx * ARENA_RADIUS, ny * ARENA_RADIUS, blade.x, blade.y)
+        // Bolt originates at the actual wall contact point (shape-aware).
+        spawnShockBolt(blade.x + nx * blade.radius, blade.y + ny * blade.radius, blade.x, blade.y)
       }
     }
   }
@@ -3242,11 +3298,10 @@ export const useSpinnerGame = () => {
     const fitSize = Math.min(canvasWidth, canvasHeight)
     const scale = fitSize / (ARENA_RADIUS * 2 + ARENA_PADDING)
 
-    // Tiled background — create pattern lazily once the image is loaded
-    if (!bgTilePattern && bgTileImage.complete && bgTileImage.naturalWidth > 0) {
-      bgTilePattern = ctx.createPattern(bgTileImage, 'repeat')
-    }
-    ctx.fillStyle = bgTilePattern ?? '#0d1117'
+    // Background = currently-equipped bg skin (tile pattern, artwork, or
+    // gradient placeholder). Resolved fresh each frame so equipping a new
+    // skin in the modal applies immediately.
+    ctx.fillStyle = resolveBgFill(ctx, canvasWidth, canvasHeight)
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
     ctx.save()
@@ -3621,6 +3676,10 @@ export const useSpinnerGame = () => {
   // Caller must have already translated to the arena origin.
   const renderArenaStatic = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
     const theme = ARENA_THEMES[arenaType.value]
+    // All boundary geometry traces the active arena shape (circle/oval/
+    // hexagon/diamond/roundedRect). The radial gradients stay centred and
+    // ARENA_RADIUS-based — clipped to whatever path we fill.
+    const traceArena = (scale = 1) => traceArenaPath(ctx, arenaShape.value, ARENA_RADIUS, scale)
 
     // Arena floor
     if (theme.floorGrad) {
@@ -3631,8 +3690,7 @@ export const useSpinnerGame = () => {
     } else {
       ctx.fillStyle = '#161b22'
     }
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS, 0, Math.PI * 2)
+    traceArena()
     ctx.fill()
 
     // Outer glow halo
@@ -3641,8 +3699,7 @@ export const useSpinnerGame = () => {
     glowGrad.addColorStop(0.4, `${theme.neonRgba} 0.05)`)
     glowGrad.addColorStop(1, `${theme.neonRgba} 0)`)
     ctx.fillStyle = glowGrad
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS + 40, 0, Math.PI * 2)
+    traceArena((ARENA_RADIUS + 40) / ARENA_RADIUS)
     ctx.fill()
 
     // Neon border — skip shadowBlur on Firefox (very expensive for canvas shadows)
@@ -3652,19 +3709,16 @@ export const useSpinnerGame = () => {
       ctx.shadowColor = theme.neonColor
       ctx.shadowBlur = theme.shadowBlur
     }
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS, 0, Math.PI * 2)
+    traceArena()
     ctx.stroke()
     ctx.shadowBlur = 0
 
     // Inner rings
     ctx.strokeStyle = theme.ringColor
     ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS * 0.6, 0, Math.PI * 2)
+    traceArena(0.6)
     ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS * 0.3, 0, Math.PI * 2)
+    traceArena(0.3)
     ctx.stroke()
 
     // Ice arena: frost rings for distinct visual
@@ -3675,8 +3729,7 @@ export const useSpinnerGame = () => {
       outerFrost.addColorStop(0.5, 'rgba(100, 180, 240, 0.1)')
       outerFrost.addColorStop(1, 'rgba(80, 160, 220, 0)')
       ctx.fillStyle = outerFrost
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS + 18, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS + 18) / ARENA_RADIUS)
       ctx.fill()
 
       // Inner frost band — darker icy rim inside the border
@@ -3685,15 +3738,13 @@ export const useSpinnerGame = () => {
       innerFrost.addColorStop(0.6, 'rgba(80, 160, 220, 0.08)')
       innerFrost.addColorStop(1, 'rgba(120, 200, 255, 0.18)')
       ctx.fillStyle = innerFrost
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS - 2, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS - 2) / ARENA_RADIUS)
       ctx.fill()
 
       // Secondary inner border ring
       ctx.strokeStyle = 'rgba(140, 210, 255, 0.3)'
       ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS - 8, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS - 8) / ARENA_RADIUS)
       ctx.stroke()
     }
 
@@ -3705,8 +3756,7 @@ export const useSpinnerGame = () => {
       outerShock.addColorStop(0.5, 'rgba(180, 50, 160, 0.1)')
       outerShock.addColorStop(1, 'rgba(120, 30, 120, 0)')
       ctx.fillStyle = outerShock
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS + 18, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS + 18) / ARENA_RADIUS)
       ctx.fill()
 
       // Inner shock band — darker violet rim inside the border
@@ -3715,15 +3765,13 @@ export const useSpinnerGame = () => {
       innerShock.addColorStop(0.6, 'rgba(180, 50, 160, 0.08)')
       innerShock.addColorStop(1, 'rgba(255, 100, 200, 0.18)')
       ctx.fillStyle = innerShock
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS - 2, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS - 2) / ARENA_RADIUS)
       ctx.fill()
 
       // Secondary inner border ring
       ctx.strokeStyle = 'rgba(255, 120, 220, 0.3)'
       ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.arc(0, 0, ARENA_RADIUS - 8, 0, Math.PI * 2)
+      traceArena((ARENA_RADIUS - 8) / ARENA_RADIUS)
       ctx.stroke()
     }
   }
@@ -3739,8 +3787,7 @@ export const useSpinnerGame = () => {
     innerGlow.addColorStop(0, `${theme.innerGlowRgba} ${pulse * 0.15})`)
     innerGlow.addColorStop(1, `${theme.innerGlowRgba} 0)`)
     ctx.fillStyle = innerGlow
-    ctx.beginPath()
-    ctx.arc(0, 0, ARENA_RADIUS * 0.7, 0, Math.PI * 2)
+    traceArenaPath(ctx, arenaShape.value, ARENA_RADIUS, 0.7)
     ctx.fill()
   }
 
@@ -3759,7 +3806,10 @@ export const useSpinnerGame = () => {
   const ARENA_STATIC_BUFFER_RADIUS = 280
   const ARENA_STATIC_BUFFER_SIZE = ARENA_STATIC_BUFFER_RADIUS * 2
   let arenaStaticBuffer: OffscreenCanvas | HTMLCanvasElement | null = null
-  let arenaStaticCacheKey: ArenaType | null = null
+  // Cache key combines arena THEME and SHAPE — either change invalidates the
+  // pre-composited static buffer.
+  let arenaStaticCacheKey: string | null = null
+  const arenaStaticKey = (): string => `${arenaType.value}:${arenaShape.value}`
 
   const createArenaStaticBuffer = (): OffscreenCanvas | HTMLCanvasElement => {
     if (typeof OffscreenCanvas !== 'undefined') {
@@ -3783,14 +3833,14 @@ export const useSpinnerGame = () => {
     bctx.translate(ARENA_STATIC_BUFFER_RADIUS, ARENA_STATIC_BUFFER_RADIUS)
     renderArenaStatic(bctx)
     bctx.restore()
-    arenaStaticCacheKey = arenaType.value
+    arenaStaticCacheKey = arenaStaticKey()
   }
 
   // Blit the cached static arena at the arena origin. Caller has already
   // translated+scaled into arena-local space, so we draw the buffer
   // centred at (0,0).
   const drawArenaStaticCached = (ctx: CanvasRenderingContext2D) => {
-    if (arenaStaticCacheKey !== arenaType.value) rebuildArenaStaticBuffer()
+    if (arenaStaticCacheKey !== arenaStaticKey()) rebuildArenaStaticBuffer()
     if (!arenaStaticBuffer) return
     ctx.drawImage(
       arenaStaticBuffer as CanvasImageSource,
@@ -3970,8 +4020,9 @@ export const useSpinnerGame = () => {
       // Bias slightly toward the inner arena so spawned crates aren't
       // pinned against the wall where blades have less room to redirect.
       const r = placementR * (0.25 + matchRng() * 0.7)
-      const x = Math.cos(angle) * r
-      const y = Math.sin(angle) * r
+      // Clamp into the active shape so crates never spawn beyond a
+      // non-circular wall (no-op on the circle arena).
+      const { x, y } = clampInArena(Math.cos(angle) * r, Math.sin(angle) * r, fullRadius, 12)
 
       let ok = true
       for (const blade of allBlades.value) {

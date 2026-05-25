@@ -132,6 +132,10 @@ export default {
   'prev': 'Назад',
   'next': 'Вперёд',
   'page': 'Стр.',
+  'challenge': {
+    'title': 'Ежедневный вызов',
+    'alreadyClaimed': 'Алмаз сегодня уже получен'
+  },
   'spinner': {
     'youWin': 'ПОБЕДА!',
     'youLose': 'ПОРАЖЕНИЕ!',

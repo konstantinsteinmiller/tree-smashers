@@ -7,13 +7,14 @@ import { resourceCache } from '@/use/useAssets'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 
 export interface RouletteResult {
-  type: 'multiplier' | 'skin'
+  type: 'multiplier' | 'skin' | 'diamonds'
   multiplier?: number
   skin?: { topPartId: TopPartId; modelId: SpinnerModelId }
+  diamonds?: number
 }
 
 interface Segment {
-  kind: 'multiplier' | 'skin'
+  kind: 'multiplier' | 'skin' | 'diamonds'
   color: string
   result: RouletteResult
   imgSrc?: string
@@ -27,16 +28,25 @@ const emit = defineEmits<{
 
 // ─── Build segments ─────────────────────────────────────────────────────────
 // 13 segments total:
-//   3x 0.5x, 3x 1x, 2x 1.5x, 1x 2x, 1x 3x  (10 multiplier)
+//   2x 0.5x, 3x 1x, 2x 1.5x, 1x 2x, 1x 3x  (9 multiplier)
+//   1x 5-diamond jackpot (was a 3rd 0.5x slot, now ultra-rare)
 //   2x normal skin, 1x special skin            (3 skin)
 
 const MULTIPLIER_DEFS: { label: string; multiplier: number; color: string; count: number; weight: number }[] = [
-  { label: '0.5x', multiplier: 0.5, color: '#dc2626', count: 3, weight: 8.33 },
+  // One of the original three 0.5x slots was repurposed into the diamond
+  // jackpot below — hence count 2 here.
+  { label: '0.5x', multiplier: 0.5, color: '#dc2626', count: 2, weight: 8.33 },
   { label: '1x', multiplier: 1, color: '#2563eb', count: 3, weight: 16.67 },
   { label: '1.5x', multiplier: 1.5, color: '#16a34a', count: 2, weight: 7.5 },
   { label: '2x', multiplier: 2, color: '#d97706', count: 1, weight: 10 },
   { label: '3x', multiplier: 3, color: '#a855f7', count: 1, weight: 3 }
 ]
+
+/** Diamonds granted by the jackpot segment. */
+const DIAMOND_JACKPOT = 5
+// Weight tuned so the jackpot is ~0.25% of the wheel (total weight ≈ 105) —
+// it occupies a visible slice but practically never lands.
+const DIAMOND_JACKPOT_WEIGHT = 0.26
 
 const getUnownedSkins = (): { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }[] => {
   const result: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }[] = []
@@ -67,6 +77,15 @@ const buildSegments = (): Segment[] => {
       })
     }
   }
+
+  // Ultra-rare diamond jackpot (replaces one former 0.5x slot).
+  segments.push({
+    kind: 'diamonds',
+    label: String(DIAMOND_JACKPOT),
+    color: '#0e7490',
+    result: { type: 'diamonds', diamonds: DIAMOND_JACKPOT },
+    weight: DIAMOND_JACKPOT_WEIGHT
+  })
 
   const unowned = getUnownedSkins()
   const normalSkins = unowned.filter(s => !s.isSpecial).sort(() => Math.random() - 0.5)
@@ -196,6 +215,23 @@ const drawCoinIcon = (ctx: CanvasRenderingContext2D, cx: number, cy: number, siz
   ctx.fillText('$', cx, cy + 1)
 }
 
+const drawDiamondIcon = (ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) => {
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.beginPath()
+  ctx.moveTo(0, -size)
+  ctx.lineTo(size * 0.8, -size * 0.15)
+  ctx.lineTo(0, size)
+  ctx.lineTo(-size * 0.8, -size * 0.15)
+  ctx.closePath()
+  ctx.fillStyle = '#67e8f9'
+  ctx.fill()
+  ctx.strokeStyle = '#0e7490'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  ctx.restore()
+}
+
 const drawWheel = (rotation: number) => {
   const canvas = canvasRef.value
   if (!canvas) return
@@ -276,7 +312,8 @@ const drawWheel = (rotation: number) => {
         ctx.drawImage(img, radius * 0.5 - imgSize / 2, -imgSize / 2, imgSize, imgSize)
       }
     } else {
-      drawCoinIcon(ctx, radius * 0.72, 0, 8 * k)
+      if (seg.kind === 'diamonds') drawDiamondIcon(ctx, radius * 0.72, 0, 8 * k)
+      else drawCoinIcon(ctx, radius * 0.72, 0, 8 * k)
       ctx.fillStyle = '#fff'
       ctx.font = `bold ${Math.max(10, Math.round(13 * k))}px sans-serif`
       ctx.textAlign = 'center'

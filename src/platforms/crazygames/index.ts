@@ -23,6 +23,7 @@ export {
   createCrazyGamesSaveStrategy,
   showRewardedAd,
   showMidgameAd,
+  submitCgScore,
   triggerHappytime,
   startGameplay,
   stopGameplay,

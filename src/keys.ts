@@ -12,5 +12,10 @@
 
 export const STAGE_KEY = 'spinner_campaign_stage'
 export const COINS_KEY = 'spinner_coins'
+/** Premium currency. Earned from the daily challenge and select Battle Pass
+ *  stages; reserved for future high-value skins / IAP-alternative spending.
+ *  The `spinner_` prefix opts it into the cloud-save payload (SaveMergePolicy),
+ *  so diamonds sync across devices like coins. */
+export const DIAMONDS_KEY = 'spinner_diamonds'
 export const UPGRADES_KEY = 'spinner_upgrades'
 export const SKINS_KEY = 'spinner_owned_skins'

@@ -4,9 +4,11 @@ import { useI18n } from 'vue-i18n'
 import FModal from '@/components/molecules/FModal.vue'
 import FIconButton from '@/components/atoms/FIconButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
+import IconDiamond from '@/components/icons/IconDiamond.vue'
 import useBattlePass, {
   BP_TOTAL_STAGES,
-  BP_XP_PER_STAGE
+  BP_XP_PER_STAGE,
+  BP_DIAMOND_AMOUNT
 } from '@/use/useBattlePass'
 import {
   modelImgPath,
@@ -30,6 +32,7 @@ const {
   isStageUnlocked,
   bpCoinReward,
   bpIsSkinStage,
+  bpIsDiamondStage,
   claimStage,
   claimedSkins,
   isMaxed,
@@ -56,6 +59,7 @@ const { canShowPvP } = usePVP()
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
+  (e: 'diamonds-awarded', sourceEl: HTMLElement): void
 }>()
 
 const { t } = useI18n()
@@ -91,6 +95,7 @@ const stageCards = computed(() =>
       stage,
       coins: bpCoinReward(stage),
       isSkin: bpIsSkinStage(stage),
+      isDiamond: bpIsDiamondStage(stage),
       unlocked: isStageUnlocked(stage),
       claimed: isStageClaimed(stage),
       inProgress: stage === inProgressStage.value
@@ -278,6 +283,7 @@ const onClaim = (stage: number) => {
   const res = claimStage(stage, offeredSkins.value[stage])
   if (res) {
     if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
+    if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value)
     refreshOfferedSkins()
     refreshHonorOfferedSkins()
   }
@@ -415,17 +421,22 @@ const onStripPointerUp = (e: PointerEvent) => {
               card.claimed \
                 ? 'bg-green-900/40 border-green-500/50' \
                 : card.unlocked \
-                  ? (card.isSkin ? 'bg-purple-900/40 border-purple-400' : 'bg-yellow-900/40 border-yellow-400') \
+                  ? (card.isDiamond ? 'bg-cyan-900/40 border-cyan-400' : card.isSkin ? 'bg-purple-900/40 border-purple-400' : 'bg-yellow-900/40 border-yellow-400') \
                   : card.inProgress \
-                    ? (card.isSkin ? 'bg-purple-900/25 border-purple-500/70' : 'bg-yellow-900/25 border-yellow-500/70') \
-                    : (card.isSkin ? 'bg-purple-900/20 border-purple-700/60' : 'bg-slate-700/50 border-slate-600')\
+                    ? (card.isDiamond ? 'bg-cyan-900/25 border-cyan-500/70' : card.isSkin ? 'bg-purple-900/25 border-purple-500/70' : 'bg-yellow-900/25 border-yellow-500/70') \
+                    : (card.isDiamond ? 'bg-cyan-900/20 border-cyan-700/60' : card.isSkin ? 'bg-purple-900/20 border-purple-700/60' : 'bg-slate-700/50 border-slate-600')\
             ]"
           )
             //- Stage number
             div.text-gray-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]") S{{ card.stage }}
 
             //- Reward icon
-            template(v-if="card.isSkin && bpSkinForStage(card.stage)")
+            template(v-if="card.isDiamond")
+              IconDiamond(
+                class="w-5 h-5 sm:w-6 sm:h-6 my-0.5"
+                :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
+              )
+            template(v-else-if="card.isSkin && bpSkinForStage(card.stage)")
               div.skin-thumb-wrap.relative.flex.items-center.justify-center(
                 class="w-6 h-6 sm:w-8 sm:h-8 my-0.5"
               )
@@ -448,9 +459,14 @@ const onStripPointerUp = (e: PointerEvent) => {
               class="text-[7px] sm:text-[9px] truncate max-w-full"
             ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
 
-            //- Coin amount (shown on coin stages, and as fallback hint on skin stages w/ empty pool)
+            //- Diamond amount (diamond stages)
+            div.text-cyan-300.font-black.game-text.leading-tight(
+              v-if="card.isDiamond"
+              class="text-[9px] sm:text-xs"
+            ) +{{ BP_DIAMOND_AMOUNT }}
+            //- Coin amount (coin stages + skin stages with an empty pool)
             div.text-yellow-400.font-black.game-text.leading-tight(
-              v-if="!card.isSkin || !bpSkinForStage(card.stage)"
+              v-else-if="!card.isSkin || !bpSkinForStage(card.stage)"
               class="text-[9px] sm:text-xs"
             ) +{{ card.coins }}
 

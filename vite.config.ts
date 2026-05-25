@@ -214,7 +214,23 @@ export default defineConfig(({ mode, command }) => {
     build: {
       minify: 'esbuild',
       // Disable source maps in production if you want maximum protection
-      sourcemap: !shouldObfuscate
+      sourcemap: !shouldObfuscate,
+      rollupOptions: {
+        output: {
+          // Pin each heavy, dynamically-imported platform ad plugin to its own
+          // async chunk. Without this, Rollup's default chunker may merge a
+          // small plugin (e.g. playgamaPlugin) into a hot-path chunk
+          // (index/App/SpinnerArena) — a nondeterministic split that
+          // `bundlePurity.test.ts` rightly flags. Isolating them keeps the
+          // hot path clean AND keeps each platform's plugin out of the others'
+          // builds: a non-active platform's dead-branch import is DCE'd, so the
+          // chunk is simply never fetched.
+          manualChunks(id: string) {
+            if (id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
+            if (id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
+          }
+        }
+      }
     }
   }
 })

@@ -45,6 +45,12 @@ export const BP_XP_LOSS = 12.5              // 1/8 of a stage
  *  stage version. */
 export const BP_SKIN_STAGES = new Set<number>([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
 
+/** Normal-track stages that award a diamond instead of coins. Spaced so the
+ *  premium currency trickles in a few times per season. */
+export const BP_DIAMOND_STAGES = new Set<number>([15, 35, 55])
+/** Diamonds granted per diamond stage. */
+export const BP_DIAMOND_AMOUNT = 1
+
 const STORAGE_KEY = 'spinner_battle_pass'
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -155,6 +161,8 @@ export const bpCoinReward = (stage: number): number => {
 
 export const bpIsSkinStage = (stage: number): boolean => BP_SKIN_STAGES.has(stage)
 
+export const bpIsDiamondStage = (stage: number): boolean => BP_DIAMOND_STAGES.has(stage)
+
 // ─── Skin helpers ──────────────────────────────────────────────────────────
 
 const unlockSkinEverywhere = (modelId: SpinnerModelId) => {
@@ -167,7 +175,7 @@ const unlockSkinEverywhere = (modelId: SpinnerModelId) => {
 
 // ─── XP accrual ─────────────────────────────────────────────────────────────
 
-const { addCoins } = useSpinnerConfig()
+const { addCoins, addDiamonds } = useSpinnerConfig()
 
 const addXp = (amount: number) => {
   if (amount <= 0) return
@@ -204,6 +212,7 @@ export interface ClaimResult {
   stage: number
   coins: number
   skin: SpinnerModelId | null
+  diamonds: number
 }
 
 const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimResult | null => {
@@ -213,8 +222,13 @@ const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimRe
 
   let coins = 0
   let skin: SpinnerModelId | null = null
+  let diamonds = 0
 
-  if (bpIsSkinStage(stage)) {
+  if (bpIsDiamondStage(stage)) {
+    // Diamond stages pay premium currency instead of coins.
+    diamonds = BP_DIAMOND_AMOUNT
+    addDiamonds(diamonds)
+  } else if (bpIsSkinStage(stage)) {
     const pool = getOfferableSkinPool()
     // Prefer the skin that was previewed to the player, fall back to random
     if (offeredSkin && pool.includes(offeredSkin)) {
@@ -238,7 +252,7 @@ const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimRe
 
   state.value.claimedStages = [...state.value.claimedStages, stage]
   saveState()
-  return { stage, coins, skin }
+  return { stage, coins, skin, diamonds }
 }
 
 // ─── Derived ────────────────────────────────────────────────────────────────
@@ -299,6 +313,7 @@ export default function useBattlePass() {
     isStageUnlocked,
     bpCoinReward,
     bpIsSkinStage,
+    bpIsDiamondStage,
     // xp events (called by game-over handlers)
     awardCampaignWin,
     awardLeaderboardWin,

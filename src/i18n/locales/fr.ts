@@ -132,6 +132,10 @@ export default {
   'prev': 'Préc.',
   'next': 'Suiv.',
   'page': 'Page',
+  'challenge': {
+    'title': 'Défi quotidien',
+    'alreadyClaimed': 'Diamant déjà récupéré aujourd\'hui'
+  },
   'spinner': {
     'youWin': 'VICTOIRE !',
     'youLose': 'DÉFAITE !',

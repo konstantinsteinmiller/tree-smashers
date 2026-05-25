@@ -132,6 +132,10 @@ export default {
   'prev': '上一页',
   'next': '下一页',
   'page': '页',
+  'challenge': {
+    'title': '每日挑战',
+    'alreadyClaimed': '今日钻石已领取'
+  },
   'spinner': {
     'youWin': '胜利！',
     'youLose': '失败！',

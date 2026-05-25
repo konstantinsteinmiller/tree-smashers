@@ -81,7 +81,14 @@ const s = (
   rewardWin: number,
   rewardLose: number,
   opts: { isBoss?: boolean; arenaType?: ArenaType; bouncers?: number } = {}
-): Stage => ({ id, name, enemyTeam, rewardWin, rewardLose, ...opts })
+): Stage => {
+  // Boss stages default to the dedicated 'boss' arena (red borders) UNLESS the
+  // stage explicitly names another arena (e.g. a boss fight staged in 'lava').
+  // This makes boss visuals a data-driven modifier and replaces the old
+  // hard-coded `isBossStage ? 'boss'` override in useSpinnerGame.initGame.
+  const arenaType: ArenaType | undefined = opts.arenaType ?? (opts.isBoss ? 'boss' : undefined)
+  return { id, name, enemyTeam, rewardWin, rewardLose, ...opts, arenaType }
+}
 
 // ─── Base 100 Hand-Editable Stages ─────────────────────────────────────────
 //
@@ -982,6 +989,7 @@ export const buildCheatBossStage = (ability: BossAbility): Stage => {
     id: -1, // sentinel — cheat stages never persist or advance
     name,
     isBoss: true,
+    arenaType: 'boss', // keep the boss-arena visuals for ability showcases
     enemyTeam,
     // Rough mid-campaign reward band — not meaningful, just non-zero.
     rewardWin: 500,

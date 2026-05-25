@@ -30,6 +30,14 @@ export const showMediatorAds = import.meta.env.VITE_APP_SHOW_MEDIATOR_ADS === 't
 export const isNative = import.meta.env.VITE_APP_NATIVE === 'true'
 export const isWeb = import.meta.env.VITE_APP_NATIVE !== 'true'
 export const isDemo = import.meta.env.VITE_APP_DEMO === 'true'
+
+// ─── Feature kill-switches (default ON) ─────────────────────────────────────
+// Gated with `!== 'false'` so a feature stays visible unless explicitly
+// disabled in .env — lets us hide a new feature instantly for a production
+// hotfix without touching code. See .env for the flags.
+export const isDailyChallengeEnabled = import.meta.env.VITE_APP_FEATURE_DAILY_CHALLENGE !== 'false'
+export const isBgSkinsEnabled = import.meta.env.VITE_APP_FEATURE_BG_SKINS !== 'false'
+
 export const version: string = APP_VERSION
 
 // ─── Persisted settings (localStorage-backed) ──────────────────────────────

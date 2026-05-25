@@ -27,6 +27,7 @@
 
 import { ref } from 'vue'
 import { isCrazyWeb } from '@/use/useUser'
+import { isDebug } from '@/use/useMatch'
 import { CrazyGamesStrategy } from '@/utils/save/CrazyGamesStrategy'
 import type { SaveStrategy } from '@/utils/save/types'
 
@@ -538,6 +539,87 @@ export const showMidgameAd = (): Promise<void> => {
   })
 }
 
+// ─── Leaderboard score submission (low-level primitive) ────────────────────
+//
+// CrazyGames leaderboards (https://docs.crazygames.com/sdk/leaderboards-client)
+// expect each score to be AES-GCM encrypted client-side before being handed
+// to `SDK.user.submitScore({ encryptedScore, score })`. CG decrypts the score
+// server-side with the SAME key and validates it — that's the key you shared
+// with your CG contact to provision the leaderboard config. It lives in
+// `VITE_APP_CRAZY_GAMES_LEADERBOARD_KEY` (a 32-byte, base64-encoded key) and
+// is inlined at build time.
+//
+// This module only knows how to submit ONE already-decided score. The policy
+// that decides WHICH scores to submit — tracking the last-submitted value and
+// ramping +1 at a time so a manipulated save can't teleport up the board —
+// lives in `useLeaderboard` next to the rest of the player-progress state.
+
+const LEADERBOARD_ENCRYPTION_KEY = import.meta.env.VITE_APP_CRAZY_GAMES_LEADERBOARD_KEY as string | undefined
+
+/**
+ * Encrypt a numeric score exactly as the CG leaderboards-client spec
+ * requires: random 12-byte IV, AES-GCM, then `base64(iv ++ ciphertext)`.
+ * Verbatim port of the helper from the CrazyGames docs.
+ */
+const encryptScore = async (score: number, encryptionKey: string): Promise<string> => {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12))
+  const algorithm = { name: 'AES-GCM', iv }
+  const keyBytes = Uint8Array.from(atob(encryptionKey), c => c.charCodeAt(0))
+  const cryptoKey = await window.crypto.subtle.importKey('raw', keyBytes, algorithm, false, ['encrypt'])
+  const dataBuffer = new TextEncoder().encode(score.toString())
+  const encryptedBuffer = await window.crypto.subtle.encrypt(algorithm, cryptoKey, dataBuffer)
+  const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength)
+  combined.set(iv)
+  combined.set(new Uint8Array(encryptedBuffer), iv.length)
+  return btoa(String.fromCharCode(...combined))
+}
+
+/**
+ * Submit a single score to the CrazyGames leaderboard. Encrypts the value and
+ * hands it to `SDK.user.submitScore`.
+ *
+ * Fully inert outside a live CG build: returns `false` (without touching the
+ * SDK) when the SDK isn't active, the `submitScore` method is missing (older
+ * shims), the leaderboard key isn't configured, the score isn't a positive
+ * finite number, or the SDK call throws. Resolves `true` only when the submit
+ * was handed to the SDK without error — the ramp in `useLeaderboard` uses that
+ * boolean to decide whether to advance its persisted "last submitted" pointer,
+ * so a failed/no-op submit is retried later instead of being skipped. Per the
+ * CG docs the response is "always successful" (validation is server-side), so
+ * `true` means "accepted by the SDK", not "ranked". The `isDebug`-gated traces
+ * let you cross-check calls against the CG developer-portal logs.
+ */
+export const submitCgScore = async (score: number): Promise<boolean> => {
+  if (!sdk || !isSdkActive.value) {
+    if (isDebug.value) console.info('[cg-leaderboard] skip — SDK inactive', { score })
+    return false
+  }
+  const submit = sdk.user?.submitScore
+  if (typeof submit !== 'function') {
+    if (isDebug.value) console.warn('[cg-leaderboard] skip — SDK.user.submitScore unavailable')
+    return false
+  }
+  if (!LEADERBOARD_ENCRYPTION_KEY) {
+    if (isDebug.value) console.warn('[cg-leaderboard] skip — VITE_APP_CRAZY_GAMES_LEADERBOARD_KEY not set')
+    return false
+  }
+  if (!Number.isFinite(score) || score < 1) {
+    if (isDebug.value) console.warn('[cg-leaderboard] skip — invalid score', { score })
+    return false
+  }
+
+  try {
+    const encryptedScore = await encryptScore(score, LEADERBOARD_ENCRYPTION_KEY)
+    if (isDebug.value) console.info('[cg-leaderboard] submitting score', { score })
+    await Promise.resolve(submit.call(sdk.user, { encryptedScore, score }))
+    if (isDebug.value) console.info('[cg-leaderboard] submit OK', { score })
+    return true
+  } catch (e) {
+    if (isDebug.value) console.warn('[cg-leaderboard] submit failed', { score }, e)
+    return false
+  }
+}
+
 // ─── Default export (composable-style convenience) ───────────────────────
 
 const useCrazyGames = () => ({
@@ -553,6 +635,7 @@ const useCrazyGames = () => ({
   stopLoading,
   showRewardedAd,
   showMidgameAd,
+  submitCgScore,
   addCrazyMuteListener,
   onCrazyMuteChange,
   setCrazyMuted,

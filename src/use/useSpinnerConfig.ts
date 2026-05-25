@@ -8,7 +8,7 @@ import type {
   SpinnerConfig,
   SpinnerStats
 } from '@/types/spinner'
-import { COINS_KEY } from '@/keys'
+import { COINS_KEY, DIAMONDS_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
 
@@ -159,16 +159,27 @@ const loadStoredCoins = (): number => {
   return 0
 }
 
+const loadStoredDiamonds = (): number => {
+  try {
+    const raw = localStorage.getItem(DIAMONDS_KEY)
+    if (raw) return parseInt(raw, 10) || 0
+  } catch { /* fall through */
+  }
+  return 0
+}
+
 // ─── Module-Level Singleton State ────────────────────────────────────────────
 
 const playerTeam: Ref<SpinnerConfig[]> = ref(loadStoredTeam())
 const coins: Ref<number> = ref(loadStoredCoins())
+const diamonds: Ref<number> = ref(loadStoredDiamonds())
 const hasFirstWin: Ref<boolean> = ref(localStorage.getItem(FIRST_WIN_KEY) === '1')
 
 // Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
 watch(saveDataVersion, () => {
   playerTeam.value = loadStoredTeam()
   coins.value = loadStoredCoins()
+  diamonds.value = loadStoredDiamonds()
   hasFirstWin.value = localStorage.getItem(FIRST_WIN_KEY) === '1'
 })
 
@@ -184,6 +195,13 @@ const addCoins = (amount: number) => {
   localStorage.setItem(COINS_KEY, coins.value.toString())
 }
 
+/** Grant (or, with a negative amount, spend) premium diamonds. Clamped at 0
+ *  so a spend can never drive the balance negative. */
+const addDiamonds = (amount: number) => {
+  diamonds.value = Math.max(0, diamonds.value + amount)
+  localStorage.setItem(DIAMONDS_KEY, diamonds.value.toString())
+}
+
 const markFirstWin = () => {
   hasFirstWin.value = true
   localStorage.setItem(FIRST_WIN_KEY, '1')
@@ -192,9 +210,11 @@ const markFirstWin = () => {
 const useSpinnerConfig = () => ({
   playerTeam,
   coins,
+  diamonds,
   hasFirstWin,
   saveTeam,
   addCoins,
+  addDiamonds,
   markFirstWin
 })
 

@@ -140,6 +140,10 @@ export default {
   'prev': 'Zurück',
   'next': 'Weiter',
   'page': 'Seite',
+  'challenge': {
+    'title': 'Tägliche Herausforderung',
+    'alreadyClaimed': 'Diamant heute bereits erhalten'
+  },
   'spinner': {
     'youWin': 'DU GEWINNST!',
     'youLose': 'DU VERLIERST!',

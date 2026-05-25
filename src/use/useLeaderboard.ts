@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { TopPartId, BottomPartId, SpinnerConfig } from '@/types/spinner'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
-import { crazyPlayerName } from '@/use/useCrazyGames'
+import { crazyPlayerName, submitCgScore } from '@/use/useCrazyGames'
 import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -25,6 +25,9 @@ export interface LeaderboardEntry {
 const LEADERBOARD_KEY = 'spinner_leaderboard'
 const LEADERBOARD_UPDATED_KEY = 'spinner_leaderboard_updated_at'
 const PLAYER_MAX_STAGE_KEY = 'spinner_player_max_stage'
+/** Highest stage we've already pushed to the CrazyGames leaderboard. The
+ *  anti-cheat ramp (see below) only ever submits one stage above this. */
+const CG_SUBMITTED_STAGE_KEY = 'spinner_cg_submitted_stage'
 
 /** "Every 1 in-game hour" — refresh fake NPC progression once per real hour. */
 export const LEADERBOARD_UPDATE_INTERVAL_MS = 60 * 60 * 1000
@@ -201,6 +204,14 @@ const loadPlayerMaxStage = (): number => {
   }
 }
 
+const loadCgSubmittedStage = (): number => {
+  try {
+    return parseInt(localStorage.getItem(CG_SUBMITTED_STAGE_KEY) || '0', 10) || 0
+  } catch {
+    return 0
+  }
+}
+
 const saveEntries = (entries: LeaderboardEntry[]) => {
   localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries))
 }
@@ -226,11 +237,27 @@ const savePlayerMaxStage = (stage: number) => {
   }
 }
 
+const saveCgSubmittedStage = (stage: number) => {
+  // Cloud-synced so the ramp's progress follows the player across devices —
+  // a new device hydrates the already-submitted value and resumes the climb
+  // instead of re-ramping from zero. Same remote-only treatment as
+  // savePlayerMaxStage (keeps it out of the localStorage panel CG QA audits);
+  // the `spinner_` prefix opts it into the SaveMergePolicy cloud payload.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sm: any = (typeof window !== 'undefined' ? (window as any).__saveManager : null)
+  if (sm?.setRemoteOnly) {
+    sm.setRemoteOnly(CG_SUBMITTED_STAGE_KEY, stage.toString())
+  } else {
+    localStorage.setItem(CG_SUBMITTED_STAGE_KEY, stage.toString())
+  }
+}
+
 // ─── Singleton State ────────────────────────────────────────────────────────
 
 const npcEntries: Ref<LeaderboardEntry[]> = ref(loadEntries())
 const lastUpdatedAt: Ref<number> = ref(loadLastUpdate())
 const playerMaxStage: Ref<number> = ref(loadPlayerMaxStage())
+const cgSubmittedStage: Ref<number> = ref(loadCgSubmittedStage())
 const newcomerWindow: Ref<NewcomerWindow> = ref(loadNewcomerWindow())
 
 // Re-read on hydrate-success bump. Mirrors the watcher in
@@ -240,7 +267,17 @@ watch(saveDataVersion, () => {
   npcEntries.value = loadEntries()
   lastUpdatedAt.value = loadLastUpdate()
   playerMaxStage.value = loadPlayerMaxStage()
+  // Only ever RAISE the submitted pointer (another device may have climbed
+  // higher). Never lower it: saveCgSubmittedStage is remote-only and doesn't
+  // write the local blob, so loadCgSubmittedStage returns a stale low value
+  // mid-ramp — clobbering with it would re-submit stages we already shipped.
+  cgSubmittedStage.value = Math.max(cgSubmittedStage.value, loadCgSubmittedStage())
   newcomerWindow.value = loadNewcomerWindow()
+  // Resume any catch-up ramp that a prior session left unfinished, aiming at
+  // the freshly-hydrated max stage — so a returning player keeps climbing the
+  // CG board even if they don't win another round this session. No-op (and
+  // self-pausing) until the CG SDK is active; see submitCGLeaderboardScore.
+  submitCGLeaderboardScore(playerMaxStage.value)
 })
 
 // ─── Ghost Fight Daily Tracking ────────────────────────────────────────────
@@ -488,11 +525,80 @@ const forceLeaderboardTick = (playerStage: number) => {
   tickLeaderboard(playerStage)
 }
 
+// ─── CrazyGames leaderboard submission (anti-cheat ramp) ────────────────────
+//
+// The CG leaderboard score IS the campaign stage. A manipulated save (e.g.
+// `spinner_campaign_stage` edited to 94, then one win → 95) would otherwise
+// submit a single huge jump that CG's backend rejects as a hack — and even a
+// legit big gap (this feature's first rollout on an existing high save, or a
+// fresh device before its `cgSubmittedStage` hydrates) looks the same to them.
+//
+// So we never submit more than one stage above the last value CG accepted
+// (`cgSubmittedStage`). When the real stage is further ahead we walk the score
+// up one step at a time, spaced CG_RAMP_INTERVAL_MS apart, so the climb reads
+// as organic progression. Normal play advances exactly one stage per win, so
+// its lone +1 drains in a single pass with no artificial delay.
+//
+// The pointer only advances when `submitCgScore` reports the SDK accepted the
+// value, so a paused/failed submit is retried on the next call rather than
+// silently skipped. `cgSubmittedStage` is cloud-synced (saveCgSubmittedStage),
+// so the ramp survives reloads and follows the player across devices.
+
+/** Spacing between catch-up increments. Tunable against whatever rate the CG
+ *  backend tolerates before flagging — a lone +1 from normal play never waits. */
+const CG_RAMP_INTERVAL_MS = 30 * 1000
+
+let cgRampTarget = 0
+let cgRampRunning = false
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+
+const drainCgRamp = async () => {
+  if (cgRampRunning) return
+  cgRampRunning = true
+  try {
+    while (cgSubmittedStage.value < cgRampTarget) {
+      const next = cgSubmittedStage.value + 1
+      const accepted = await submitCgScore(next)
+      if (!accepted) {
+        // SDK inactive / not a CG build / submit threw. Leave the pointer put
+        // so the next submitCGLeaderboardScore call retries this same step.
+        break
+      }
+      cgSubmittedStage.value = next
+      saveCgSubmittedStage(next)
+      // Throttle only while a backlog remains; the final step exits here
+      // immediately so a normal single-stage win never stalls.
+      if (cgSubmittedStage.value < cgRampTarget) await sleep(CG_RAMP_INTERVAL_MS)
+    }
+  } finally {
+    cgRampRunning = false
+  }
+}
+
+/**
+ * Submit the player's stage to the CrazyGames leaderboard via the +1 ramp
+ * described above. Safe to call on every stage change and from boot/hydrate;
+ * raises the ramp target and kicks the drain (a no-op if one is already
+ * running). Inert outside a live CG build because `submitCgScore` no-ops there.
+ */
+export const submitCGLeaderboardScore = (stage: number) => {
+  if (!Number.isFinite(stage)) return
+  const target = Math.floor(stage)
+  if (target <= cgSubmittedStage.value) return        // already on the board at/above this
+  cgRampTarget = Math.max(cgRampTarget, target)       // raise the goal
+  void drainCgRamp()                                  // (re)start the climb; no-op if already running
+}
+
 const recordPlayerStage = (stage: number) => {
   if (stage > playerMaxStage.value) {
     playerMaxStage.value = stage
     savePlayerMaxStage(stage)
   }
+  // Push to the CG leaderboard through the anti-cheat ramp. Kept outside the
+  // new-max guard so a ramp that stalled mid-climb last session resumes here
+  // even when this stage isn't a fresh personal best.
+  submitCGLeaderboardScore(stage)
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────

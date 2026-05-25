@@ -68,6 +68,9 @@ export interface SpinnerConfig {
   modelId?: string
   isBoss?: boolean
   bossAbility?: BossAbility
+  /** Boss-tier HP (2×) without the boss size/spin/arena treatment. Used by the
+   *  daily challenge's lone enemy, which fights at boss stats but normal size. */
+  bossStats?: boolean
 }
 
 export interface SpinnerStats {

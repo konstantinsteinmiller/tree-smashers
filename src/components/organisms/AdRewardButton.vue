@@ -1,23 +1,31 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
+import IconDiamond from '@/components/icons/IconDiamond.vue'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 
 interface Props {
-  /** How many coins the player gets after watching the ad. */
+  /** How many coins the player gets after watching the ad (coins variant). */
   coins?: number
+  /** Reward currency. 'coins' (default, arena) or 'diamond' (BG-skin/IAP shop). */
+  reward?: 'coins' | 'diamond'
+  /** How many diamonds the player gets after watching the ad (diamond variant). */
+  diamonds?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  coins: 125
+  coins: 125,
+  reward: 'coins',
+  diamonds: 1
 })
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
+  (e: 'diamonds-awarded', sourceEl: HTMLElement): void
 }>()
 
-const { addCoins } = useSpinnerConfig()
+const { addCoins, addDiamonds } = useSpinnerConfig()
 const rootEl = ref<HTMLElement | null>(null)
 
 // ─── 30-second post-tap cooldown ────────────────────────────────────────────
@@ -66,8 +74,13 @@ const triggerAdReward = async () => {
 }
 
 const grantReward = () => {
-  addCoins(props.coins)
-  if (rootEl.value) emit('coins-awarded', rootEl.value)
+  if (props.reward === 'diamond') {
+    addDiamonds(props.diamonds)
+    if (rootEl.value) emit('diamonds-awarded', rootEl.value)
+  } else {
+    addCoins(props.coins)
+    if (rootEl.value) emit('coins-awarded', rootEl.value)
+  }
 }
 </script>
 
@@ -84,8 +97,12 @@ const grantReward = () => {
         class="bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30]"
       )
         div.flex.items-center.gap-1
-          span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coins }}
-          IconCoin.inline(class="w-4 h-4 text-yellow-300")
+          template(v-if="reward === 'diamond'")
+            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ diamonds }}
+            IconDiamond.inline(class="w-4 h-4")
+          template(v-else)
+            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coins }}
+            IconCoin.inline(class="w-4 h-4 text-yellow-300")
         img.object-contain(
           src="/images/icons/movie_128x96.webp"
           class="h-5 w-5 sm:h-5 sm:w-5"

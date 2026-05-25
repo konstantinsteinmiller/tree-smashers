@@ -25,6 +25,8 @@ import IconDefense from '@/components/icons/IconDefense.vue'
 import IconHp from '@/components/icons/IconHp.vue'
 import IconSpeed from '@/components/icons/IconSpeed.vue'
 import IconWeight from '@/components/icons/IconWeight.vue'
+import BGSkinButton from '@/components/organisms/BGSkinButton.vue'
+import { isBgSkinsEnabled } from '@/use/useUser'
 import { stopGameplay } from '@/use/useCrazyGames'
 
 interface Props {
@@ -205,6 +207,12 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           h3.text-yellow-300.font-black.uppercase.italic.label-section(
             class="tracking-wider"
           ) {{ t('topBlade') }}
+          //- Background-skin shop launcher (top-right of the TOP BLADE header).
+          //- Feature-flagged so it can be hidden for a production hotfix.
+          BGSkinButton(
+            v-if="isBgSkinsEnabled"
+            class="absolute right-0 top-1/2 -translate-y-[50%]"
+          )
         div.grid.top-grid
           div(
             v-for="part in TOP_PARTS_LIST"

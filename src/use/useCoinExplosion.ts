@@ -1,9 +1,12 @@
 /**
- * Reusable coin-explosion VFX.
+ * Reusable burst VFX. Particles explode outward from a source element, then
+ * fly toward a target element (typically a HUD badge).
  *
- * Coins burst outward from a source element, then fly toward a target
- * element (typically the CoinBadge in the HUD).
+ * Two visual variants share the exact same motion:
+ *   - 'coin'    → the yellow coin SVG, flies to the CoinBadge coin row.
+ *   - 'diamond' → the diamond webp, flies to the CoinBadge diamond row.
  */
+import { prependBaseUrl } from '@/utils/function'
 
 const COIN_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px">' +
@@ -12,19 +15,34 @@ const COIN_SVG =
   '<text x="12" y="18" text-anchor="middle" font-size="16" font-weight="bold" fill="#2f920e">$</text>' +
   '</svg>'
 
+export type CoinExplosionVariant = 'coin' | 'diamond'
+
+/** Inner HTML for one particle of the given variant. The diamond uses the
+ *  shared icon webp (base-url aware) sized to match the 20px coin glyph. */
+const particleHtml = (variant: CoinExplosionVariant): string => {
+  if (variant === 'diamond') {
+    const src = prependBaseUrl('images/icons/diamond_256x256.webp')
+    return `<img src="${src}" alt="" style="width:20px;height:20px;object-fit:contain;` +
+      `filter:drop-shadow(0 0 3px rgba(120,220,255,0.7))" draggable="false"/>`
+  }
+  return COIN_SVG
+}
+
 export interface CoinExplosionOptions {
-  /** Element the coins burst out of. */
+  /** Element the particles burst out of. */
   sourceEl: HTMLElement
-  /** Element the coins fly toward (e.g. CoinBadge). */
+  /** Element the particles fly toward (e.g. CoinBadge). */
   targetEl: HTMLElement
-  /** Number of coins to spawn (default 20). */
+  /** Number of particles to spawn (default 20). */
   count?: number
   /** Max burst radius in px (default 120). */
   burstRadius?: number
+  /** Which icon to render (default 'coin'). */
+  variant?: CoinExplosionVariant
 }
 
 export function spawnCoinExplosion(opts: CoinExplosionOptions) {
-  const { sourceEl, targetEl, count = 20, burstRadius = 120 } = opts
+  const { sourceEl, targetEl, count = 20, burstRadius = 120, variant = 'coin' } = opts
 
   const sourceRect = sourceEl.getBoundingClientRect()
   const cx = sourceRect.left + sourceRect.width / 2
@@ -39,7 +57,7 @@ export function spawnCoinExplosion(opts: CoinExplosionOptions) {
 
   for (let i = 0; i < count; i++) {
     const el = document.createElement('div')
-    el.innerHTML = COIN_SVG
+    el.innerHTML = particleHtml(variant)
     el.style.cssText =
       'position:absolute;left:0;top:0;pointer-events:none;z-index:100;will-change:transform,opacity;'
     el.style.transform = `translate(${cx - 10}px,${cy - 10}px)`

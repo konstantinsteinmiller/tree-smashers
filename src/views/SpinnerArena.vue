@@ -10,14 +10,14 @@ import OptionsModal from '@/components/organisms/OptionsModal.vue'
 import useSounds, { useMusic } from '@/use/useSound'
 import useSpinnerGame, { ARENA_RADIUS, BLADE_RADIUS, simSpeed, countdownText } from '@/use/useSpinnerGame'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
-import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin } from '@/use/useSpinnerCampaign'
+import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin, getStageById } from '@/use/useSpinnerCampaign'
 import useTips from '@/use/useTips'
 import type { TipId } from '@/use/useTips'
 import TipBadge from '@/components/atoms/TipBadge.vue'
 import { useHint } from '@/use/useHint'
 import { useScreenshake } from '@/use/useScreenshake'
 import type { SpinnerConfig } from '@/types/spinner'
-import useUser, { isMobileLandscape, isMobilePortrait } from '@/use/useUser'
+import useUser, { isMobileLandscape, isMobilePortrait, isDailyChallengeEnabled } from '@/use/useUser'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconAttack from '@/components/icons/IconAttack.vue'
 import IconDefense from '@/components/icons/IconDefense.vue'
@@ -31,6 +31,9 @@ import SkinChestTimer from '@/components/organisms/SkinChestTimer.vue'
 import type { GrantedSkin } from '@/use/useSkinChest'
 import AdRewardButton from '@/components/organisms/AdRewardButton.vue'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
+import ChallengeIcon from '@/components/organisms/ChallengeIcon.vue'
+import IconDiamond from '@/components/icons/IconDiamond.vue'
+import useDailyChallenge from '@/use/useDailyChallenge'
 import { prependBaseUrl } from '@/utils/function'
 import FMuteButton from '@/components/atoms/FMuteButton.vue'
 import FButtonSwitch from '@/components/atoms/FButtonSwitch.vue'
@@ -93,7 +96,14 @@ const {
   statsFor
 } = useSpinnerGame()
 
-const { playerTeam, hasFirstWin, saveTeam, addCoins, markFirstWin } = useSpinnerConfig()
+const { playerTeam, hasFirstWin, saveTeam, addCoins, addDiamonds, markFirstWin } = useSpinnerConfig()
+const {
+  hasWonToday: dailyWonToday,
+  canPlayToday: dailyCanPlay,
+  generateChallenge,
+  recordAttempt: recordDailyAttempt,
+  markDailyChallengeWon
+} = useDailyChallenge()
 const {
   currentStage,
   currentStageId,
@@ -313,6 +323,8 @@ const showReward: Ref<boolean> = ref(false)
 const showRoulette = ref(false)
 const rouletteMultiplier = ref(1)
 const rouletteSkinResult = ref<RouletteResult | null>(null)
+// Diamonds won on the ultra-rare roulette jackpot (0 = not a diamond outcome).
+const rouletteDiamonds = ref(0)
 const pendingBossReward = ref(false)
 const showRouletteReward = ref(false)
 const rouletteRewardReady = ref(false) // tap-to-continue unlocked
@@ -424,14 +436,23 @@ const onSurrender = () => {
     phase.value = 'game_over'
     return
   }
-  // Campaign/ghost surrender re-inits the same stage directly (no reward
-  // modal → no `onRewardContinue` → no automatic counter bump). Count the
-  // surrender as a battle attempt for interstitial cadence — otherwise a
-  // player who repeatedly surrenders never sees the midgame ad. The
-  // actual ad fires before the next battle's meteor-shower intro
-  // (`shouldShowMidgameAdNow` check in `beginBattle`).
+  // Surrendering a special mode (ghost / daily challenge) returns to the
+  // campaign — clear those mode flags FIRST so their HUD comes back (the
+  // StageBadge and, for daily, the ChallengeIcon, whose v-if depends on
+  // !dailyChallengeMode). Without this the icon stayed hidden until reload.
+  ghostMode.value = false
+  ghostEnemy.value = null
+  dailyChallengeMode.value = false
+  dailyDiamondEarned.value = false
+  dailyCoinReward.value = 0
+  // Campaign surrender re-inits the same stage directly (no reward modal →
+  // no `onRewardContinue` → no automatic counter bump). Count the surrender
+  // as a battle attempt for interstitial cadence — otherwise a player who
+  // repeatedly surrenders never sees the midgame ad. The actual ad fires
+  // before the next battle's meteor-shower intro (`shouldShowMidgameAdNow`
+  // check in `beginBattle`).
   incrementAdCounter()
-  // Re-init the same stage with no rewards — player stays on current stage
+  // Re-init the (now campaign) stage with no rewards — player stays on current stage
   initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
 }
 
@@ -529,10 +550,14 @@ const triggerSpeedBoostAd = async () => {
 
 // Reference to the CoinBadge component — TreasureChest reads its `rootEl`
 // for the fly-to-badge VFX target.
-const coinBadgeRef = ref<{ rootEl: HTMLElement | null } | null>(null)
+const coinBadgeRef = ref<{ rootEl: HTMLElement | null; diamondRowEl: HTMLElement | null } | null>(null)
 const coinBadgeEl = computed(() => coinBadgeRef.value?.rootEl ?? null)
+const coinBadgeDiamondEl = computed(() => coinBadgeRef.value?.diamondRowEl ?? null)
 const rewardCoinRef = ref<HTMLElement | null>(null)
+const rewardDiamondRef = ref<HTMLElement | null>(null)
+const rewardDailyCoinRef = ref<HTMLElement | null>(null)
 const rouletteRewardCoinRef = ref<HTMLElement | null>(null)
+const rouletteRewardDiamondRef = ref<HTMLElement | null>(null)
 
 /** Fire coin explosion from any source element toward the HUD coin badge. */
 const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
@@ -540,6 +565,23 @@ const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
     spawnCoinExplosion({ sourceEl, targetEl: coinBadgeEl.value })
   }
 }
+
+/** Fire a diamond explosion from any source element toward the HUD diamond row. */
+const fireDiamondExplosion = (sourceEl: HTMLElement | null) => {
+  if (sourceEl && coinBadgeDiamondEl.value) {
+    spawnCoinExplosion({ sourceEl, targetEl: coinBadgeDiamondEl.value, variant: 'diamond', count: 14 })
+  }
+}
+
+// ─── Daily Challenge mode ──────────────────────────────────────────────────
+// A separate bonus fight (random shape + roster) launched from the menu via
+// ChallengeIcon. Mirrors ghostMode: no coins / no stage advance — the reward
+// is one diamond on the FIRST win each day.
+const dailyChallengeMode = ref(false)
+const dailyDiamondEarned = ref(false)
+// Coins awarded for a daily-challenge WIN (75% of the current stage's win
+// reward, non-boss baseline). 0 on a loss / surrender.
+const dailyCoinReward = ref(0)
 
 let speedBoostIntervalId: number | null = null
 
@@ -696,6 +738,32 @@ watch(isGameOver, (over) => {
       return
     }
 
+    // Daily challenge — no stage advance. A win pays coins (75% of the current
+    // stage's win reward) on EVERY win, plus 1 diamond on the FIRST win of the
+    // day. The coin baseline uses a non-boss stage so a boss stage's reward
+    // spike doesn't inflate the daily payout.
+    if (dailyChallengeMode.value) {
+      if (gameResult.value === 'win') {
+        bpAwardLeaderboardWin()
+        const baseStage = currentStage.value.isBoss
+          ? getStageById(currentStageId.value - 1)
+          : currentStage.value
+        dailyCoinReward.value = Math.max(0, Math.round(baseStage.rewardWin * 0.75))
+        if (dailyCoinReward.value > 0) addCoins(dailyCoinReward.value)
+        if (markDailyChallengeWon()) {
+          addDiamonds(1)
+          dailyDiamondEarned.value = true
+        }
+      } else if (gameResult.value === 'lose') {
+        dailyCoinReward.value = 0
+        bpAwardLoss()
+      }
+      coinsAwarded.value = true
+      showReward.value = true
+      stopBattleMusic()
+      return
+    }
+
     // Boss rubber-banding: count consecutive campaign-boss losses so the
     // next attempt spawns the boss with reduced HP (see
     // bossHpRubberBandMul in useSpinnerCampaign). Win resets the streak.
@@ -749,7 +817,14 @@ watch(isGameOver, (over) => {
 })
 
 const onRouletteResult = (result: RouletteResult) => {
-  if (result.type === 'multiplier') {
+  rouletteDiamonds.value = 0
+  if (result.type === 'diamonds') {
+    // Ultra-rare jackpot: grant diamonds INSTEAD of the multiplied coins.
+    rouletteDiamonds.value = result.diamonds ?? 0
+    rouletteMultiplier.value = 1
+    rouletteSkinResult.value = null
+    addDiamonds(rouletteDiamonds.value)
+  } else if (result.type === 'multiplier') {
     rouletteMultiplier.value = result.multiplier ?? 1
     rouletteSkinResult.value = null
   } else {
@@ -757,9 +832,12 @@ const onRouletteResult = (result: RouletteResult) => {
     rouletteMultiplier.value = 1
   }
   showRoulette.value = false
-  // Award coins — boss win uses multiplied reward, cheat uses base reward
-  const coins = Math.round(rewardAmount.value * rouletteMultiplier.value)
-  addCoins(coins)
+  // Award coins — boss win uses multiplied reward, cheat uses base reward.
+  // The diamond jackpot pays diamonds (above) and no coins.
+  if (rouletteDiamonds.value === 0) {
+    const coins = Math.round(rewardAmount.value * rouletteMultiplier.value)
+    addCoins(coins)
+  }
   coinsAwarded.value = true
   pendingBossReward.value = false
   // Show celebration overlay with VFX
@@ -771,9 +849,10 @@ const onRouletteResult = (result: RouletteResult) => {
   // the platform uses these events to time featured-game highlights.
   // No-op outside a crazy-web build thanks to the isSdkActive guard inside.
   triggerHappytime()
-  // Fire coin explosion from the reward label once the overlay renders
+  // Fire the matching explosion once the overlay renders.
   nextTick(() => {
-    fireCoinExplosion(rouletteRewardCoinRef.value)
+    if (rouletteDiamonds.value > 0) fireDiamondExplosion(rouletteRewardDiamondRef.value)
+    else fireCoinExplosion(rouletteRewardCoinRef.value)
   })
   // Enable "tap to continue" after VFX settles
   setTimeout(() => {
@@ -784,6 +863,7 @@ const onRouletteResult = (result: RouletteResult) => {
 const onRouletteRewardContinue = async () => {
   if (!rouletteRewardReady.value) return
   showRouletteReward.value = false
+  rouletteDiamonds.value = 0
 
   // Boss-win path is campaign-only (never PvP/ghost) and never surrendered,
   // so the counter always ticks. The actual ad fires before the next
@@ -839,7 +919,15 @@ watch(showReward, async (show) => {
     currentTip.value = null
   }
   await nextTick()
-  fireCoinExplosion(rewardCoinRef.value)
+  // A daily-challenge win bursts coins (the 75% bonus) and, on the first win of
+  // the day, also bursts a diamond toward the HUD diamond row. Everything else
+  // bursts coins from the standard reward label.
+  if (dailyChallengeMode.value) {
+    if (dailyCoinReward.value > 0) fireCoinExplosion(rewardDailyCoinRef.value)
+    if (dailyDiamondEarned.value) fireDiamondExplosion(rewardDiamondRef.value)
+  } else {
+    fireCoinExplosion(rewardCoinRef.value)
+  }
 })
 
 // ─── Interstitial cadence ─────────────────────────────────────────────────
@@ -928,6 +1016,7 @@ const onRewardContinue = async () => {
   // Snapshot mode flags before tearing down state
   const wasPvp = pvpMode.value
   const wasGhost = ghostMode.value
+  const wasDaily = dailyChallengeMode.value
 
   // Every battle attempt counts toward the cadence — including
   // surrendered ones. A player who quits a tough match still committed
@@ -947,6 +1036,10 @@ const onRewardContinue = async () => {
   } else if (wasGhost) {
     ghostMode.value = false
     ghostEnemy.value = null
+  } else if (wasDaily) {
+    dailyChallengeMode.value = false
+    dailyDiamondEarned.value = false
+    dailyCoinReward.value = 0
   }
 
   // Reset the award guard RIGHT BEFORE initGame so the game-over watcher
@@ -972,6 +1065,25 @@ const onGhostFight = (entry: LeaderboardEntry) => {
     modelId: b.modelId
   })
   initGame(myTeam, [toConfig(entry.blade), toConfig(entry.blade2)], false, 'default')
+}
+
+// ─── Daily Challenge ────────────────────────────────────────────────────────
+
+const startDailyChallenge = () => {
+  if (!dailyCanPlay.value) return // out of attempts today (icon should be hidden)
+  const myTeam = playerTeamWithUpgrades()
+  if (!myTeam.length) return
+  recordDailyAttempt() // win, lose, or surrender — each click is one of the 3 tries
+  const { enemies, shape } = generateChallenge()
+  ghostMode.value = false
+  pvpMode.value = false
+  dailyChallengeMode.value = true
+  dailyDiamondEarned.value = false
+  dailyCoinReward.value = 0
+  coinsAwarded.value = false
+  // No bouncers, no power-ups, never a boss arena — the variety comes from the
+  // random shape + ability roster. The shape is the 9th initGame arg.
+  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape)
 }
 
 const onOpenConfig = () => {
@@ -1256,9 +1368,9 @@ onUnmounted(() => {
           paddingRight: 'calc(0.5rem + env(safe-area-inset-right, 0px))'\
         }"
       )
-        //- Stage indicator (fancy themed badge) — hidden during ghost fights and PvP
+        //- Stage indicator (fancy themed badge) — hidden during ghost fights, PvP, and daily challenge
         StageBadge(
-          v-if="!ghostMode && !pvpMode"
+          v-if="!ghostMode && !pvpMode && !dailyChallengeMode"
           :stage-id="currentStageId"
           :name="currentStage.name"
           :cycle-suffix="currentStage.cycleSuffix"
@@ -1281,6 +1393,15 @@ onUnmounted(() => {
             //- 100c after 10 min). Replaces the previous mini+big chest
             //- pair. Hidden during PvP.
             TreasureChest(v-if="!pvpMode" :target-el="coinBadgeEl")
+
+      //- Daily Challenge launcher — menu screen only (campaign, not in a
+      //- PvP/ghost/daily fight). Fixed below the FLogoProgress logo so it
+      //- never overlaps the stage badge, coin badge, or bottom HUD row.
+      ChallengeIcon(
+        v-if="isDailyChallengeEnabled && dailyCanPlay && !pvpMode && !ghostMode && !dailyChallengeMode"
+        :reward-available="!dailyWonToday"
+        @start="startDailyChallenge"
+      )
 
       //- Center overlay messages
       div.absolute.flex.items-center.justify-center(class="inset-0 z-[10]")
@@ -1396,7 +1517,7 @@ onUnmounted(() => {
             v-if="currentStageId >= 3"
             @coins-awarded="fireCoinExplosion"
           )
-          BattlePass(v-if="currentStageId >= 6" @coins-awarded="fireCoinExplosion")
+          BattlePass(v-if="currentStageId >= 6" @coins-awarded="fireCoinExplosion" @diamonds-awarded="fireDiamondExplosion")
 
       //- Bottom-right buttons — two stacked rows:
       //-   row 1: 1x/2x speed switch
@@ -1480,7 +1601,7 @@ onUnmounted(() => {
       @continue="onRewardContinue"
     )
       template(#ribbon)
-        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl" :class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : t('spinner.rewards') }}
+        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl" :class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : (dailyChallengeMode ? t('challenge.title') : t('spinner.rewards')) }}
       //- `mb-20 sm:mb-24` reserves a click-to-continue safety strip at the
       //- bottom of the slot area. Because FReward's slot wrapper uses
       //- `justify-center`, the margin participates in flex centering — it
@@ -1500,6 +1621,21 @@ onUnmounted(() => {
           div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
             span.text-purple-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
             span.text-purple-400.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
+        //- Daily challenge reward: 1 diamond on the first win each day
+        template(v-else-if="dailyChallengeMode")
+          template(v-if="gameResult === 'win'")
+            //- Coin bonus (every win)
+            div.flex.items-center.gap-3(v-if="dailyCoinReward > 0" ref="rewardDailyCoinRef")
+              IconCoin(class="w-8 h-8 text-yellow-300")
+              span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ dailyCoinReward }}
+            //- Diamond (first win of the day only)
+            div.flex.items-center.gap-3(v-if="dailyDiamondEarned" ref="rewardDiamondRef")
+              IconDiamond(class="w-8 h-8")
+              span.font-black.game-text.text-cyan-300(class="text-2xl sm:text-4xl") +1
+            div.font-bold.game-text.text-cyan-200(
+              v-else
+              class="text-xs sm:text-sm opacity-80"
+            ) {{ t('challenge.alreadyClaimed') }}
         //- Campaign / leaderboard rewards
         template(v-else)
           div.flex.items-center.gap-3(ref="rewardCoinRef")
@@ -1544,8 +1680,15 @@ onUnmounted(() => {
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
       div.flex.flex-col.items-center.gap-6.roulette-reward-enter
+        //- Diamond jackpot (ultra-rare)
+        template(v-if="rouletteDiamonds > 0")
+          div.roulette-reward-glow.flex.flex-col.items-center.gap-2
+            IconDiamond(class="w-20 h-20 sm:w-28 sm:h-28")
+          div.flex.items-center.gap-3(ref="rouletteRewardDiamondRef")
+            IconDiamond(class="w-8 h-8")
+            span.text-cyan-300.font-black.game-text(class="text-3xl sm:text-5xl") +{{ rouletteDiamonds }}
         //- Skin reward
-        template(v-if="rouletteSkinResult?.skin")
+        template(v-else-if="rouletteSkinResult?.skin")
           div.roulette-reward-glow.flex.flex-col.items-center.gap-3
             img.object-contain.drop-shadow-lg(
               :src="modelImgPath(rouletteSkinResult.skin.modelId)"

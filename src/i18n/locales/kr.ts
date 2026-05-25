@@ -132,6 +132,10 @@ export default {
   'prev': '이전',
   'next': '다음',
   'page': '페이지',
+  'challenge': {
+    'title': '일일 도전',
+    'alreadyClaimed': '오늘 다이아몬드를 이미 획득함'
+  },
   'spinner': {
     'youWin': '승리!',
     'youLose': '패배!',
