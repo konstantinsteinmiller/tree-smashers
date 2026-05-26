@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
 import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resourceCache } from '@/use/useAssets'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
+import { isNative } from '@/use/useUser'
+import { prependBaseUrl } from '@/utils/function'
 
 export interface RouletteResult {
   type: 'multiplier' | 'skin' | 'diamonds'
@@ -25,6 +28,8 @@ interface Segment {
 const emit = defineEmits<{
   (e: 'result', value: RouletteResult): void
 }>()
+
+const { t } = useI18n()
 
 // ─── Build segments ─────────────────────────────────────────────────────────
 // 13 segments total:
@@ -475,7 +480,7 @@ onUnmounted(() => {
       span.text-white.font-bold.game-text.uppercase.tracking-wider.animate-pulse(
         v-if="isSpinning"
         class="text-sm"
-      ) Spinning...
+      ) {{ t('spinner.spinning') }}
       //- Post-first-spin: ad respin + skip — laid out side-by-side so the
       //- "Skip" link sits inline with the "Spin Again" CTA instead of
       //- stacking under it.
@@ -484,13 +489,14 @@ onUnmounted(() => {
           class="px-3 py-1.5 text-sm bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30] text-white hover:scale-105 active:scale-95"
           @click="onAdRespin"
         )
+          span.game-text(v-if="isNative") {{ t('spinner.ad') }}
           img.object-contain(
-            src="/images/icons/movie_128x96.webp"
+            :src="prependBaseUrl('images/icons/movie_128x96.webp')"
             class="h-5 w-5"
           )
-          span.game-text Spin Again
+          span.game-text {{ t('spinner.spinAgain') }}
         button.text-white.font-bold.game-text.uppercase.tracking-wider.cursor-pointer.underline.opacity-60(
           class="text-xs hover:opacity-100"
           @click="onSkipAd"
-        ) Skip
+        ) {{ t('spinner.skip') }}
 </template>

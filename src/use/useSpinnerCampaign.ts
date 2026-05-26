@@ -108,11 +108,11 @@ const BASE_STAGES: Stage[] = [
   s(1, 'stage_1', [
     e('cushioned', 'balanced', 0, 0, 'shell'),
     e('round', 'balanced', 0, 0, 'turtle')
-  ], 80, 30),
+  ], 100, 30),
   s(2, 'stage_2', [
     e('quadratic', 'balanced', 0, 0, 'mysticaleye'),
     e('triangle', 'balanced', 0, 0, 'thunder')
-  ], 90, 30),
+  ], 100, 30),
   s(3, 'stage_3', [
     e('triangle', 'speedy', 1, 0, 'eagle'),
     e('round', 'tanky', 0, 1, 'bear')

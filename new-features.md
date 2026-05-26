@@ -2,6 +2,10 @@
 
 - for higher player reach
 
+## combat log
+
+- [ ] show damage inflicted between spinners with explanations why, special abilities etc.
+
 ## different arena shapes (daily challenge, yields 1 diamond each win, level adjusted to your upgrades and skills)
 
 - oval

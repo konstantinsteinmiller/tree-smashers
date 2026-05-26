@@ -80,6 +80,19 @@ const androidInterstitialAdUnit = import.meta.env.VITE_APP_LEVELPLAY_ANDROID_INT
 const iosRewardedAdUnit = import.meta.env.VITE_APP_LEVELPLAY_IOS_REWARDED_ID ?? ''
 const iosInterstitialAdUnit = import.meta.env.VITE_APP_LEVELPLAY_IOS_INTERSTITIAL_ID ?? ''
 
+// ─── Families Policy: REWARDED-ONLY on native ──────────────────────────────
+// Google Play "Families Ad Format Requirements" reject full-screen
+// interstitials that can't be closed within 5 seconds — a control the publisher
+// does NOT have over a mediated network ad (the close button belongs to the
+// AdMob/Unity ad surface, not our app). The native (Tauri Android + iOS) build
+// is our kids-6+ / COPPA-strict target, so it ships rewarded-only: no
+// interstitial unit is loaded and `showMidgameAd` is a no-op. User-initiated
+// rewarded ads stay (they end on a close and are clearly opt-in).
+//
+// Flip to `true` ONLY for a non-child-directed native build, and re-confirm the
+// Families policy first.
+const NATIVE_INTERSTITIALS_ENABLED = false
+
 const isReady = ref(false)
 const isRewardedReady = ref(false)
 const isInterstitialReady = ref(false)
@@ -157,14 +170,17 @@ export const createLevelPlayProvider = (): AdProvider => ({
       platform === 'android' ? androidRewardedAdUnit : platform === 'ios' ? iosRewardedAdUnit : ''
     const interstitialAdUnitId =
       platform === 'android' ? androidInterstitialAdUnit : platform === 'ios' ? iosInterstitialAdUnit : ''
+    // Families Policy: suppress the interstitial unit so the SDK never loads or
+    // serves a full-screen interstitial on native (see NATIVE_INTERSTITIALS_ENABLED).
+    const effectiveInterstitialAdUnitId = NATIVE_INTERSTITIALS_ENABLED ? interstitialAdUnitId : ''
 
     setDebug({
       platform,
       appKeyConfigured: !!appKey,
       rewardedIdConfigured: !!rewardedAdUnitId,
-      interstitialIdConfigured: !!interstitialAdUnitId
+      interstitialIdConfigured: !!effectiveInterstitialAdUnitId
     })
-    logDebug(`platform=${platform} appKey=${appKey ? 'set' : 'EMPTY'} rew=${rewardedAdUnitId ? 'set' : 'EMPTY'} int=${interstitialAdUnitId ? 'set' : 'EMPTY'}`)
+    logDebug(`platform=${platform} appKey=${appKey ? 'set' : 'EMPTY'} rew=${rewardedAdUnitId ? 'set' : 'EMPTY'} int=${effectiveInterstitialAdUnitId ? 'set' : 'DISABLED(families)'}`)
 
     if (!appKey) {
       setDebug({ initState: 'no-app-key', initError: `no app key for platform "${platform}"` })
@@ -208,7 +224,7 @@ export const createLevelPlayProvider = (): AdProvider => ({
         payload: {
           appKey,
           rewardedAdUnitId,
-          interstitialAdUnitId,
+          interstitialAdUnitId: effectiveInterstitialAdUnitId,
           isChildDirected: true,
           admobTfcd: true,
           admobTfua: true,
@@ -254,6 +270,12 @@ export const createLevelPlayProvider = (): AdProvider => ({
   // Not part of the cross-provider AdProvider surface — exposed via the
   // module export `launchLevelPlayTestSuite` below for the debug overlay.
   showMidgameAd: async () => {
+    // Families Policy: rewarded-only on native — interstitials are disabled so
+    // we never risk a non-closeable full-screen ad. No-op (and never loaded).
+    if (!NATIVE_INTERSTITIALS_ENABLED) {
+      logDebug('show_interstitial disabled (Families rewarded-only)')
+      return
+    }
     if (!isReady.value) {
       logDebug('show_interstitial skipped: not ready')
       return

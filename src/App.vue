@@ -174,7 +174,8 @@ const isGameShowAllowed = computed(() =>
   capabilities.value.allowedToShowOnGameDistribution ||
   capabilities.value.allowedToShowOnY8 ||
   capabilities.value.allowedToShowOnGamePix ||
-  capabilities.value.allowedToShowOnPlaygama
+  capabilities.value.allowedToShowOnPlaygama ||
+  hostname.includes('localhost')
 )
 const isGlitchDenied = computed(() => capabilities.value.isGlitchDenied)
 const showOnlyAvailableText = computed(() => capabilities.value.showOnlyAvailableText)
