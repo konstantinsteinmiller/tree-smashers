@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': 'Вы не получите награду.',
     'surrenderCancel': 'Отмена',
     'surrenderQuit': 'Выйти',
-    'spinnerLabel': 'Спиннер {n}'
+    'spinnerLabel': 'Спиннер {n}',
+    'yourTurn': 'Ваш ход',
+    'opponentTurn': 'Ход соперника',
+    'npcTurn': 'Ход врага'
   },
   'pvp': {
     'title': 'PvP Битва',

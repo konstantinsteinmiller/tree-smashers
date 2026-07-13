@@ -17,6 +17,7 @@ electron/dist-demo
 out
 
 dist-purity-cg
+dist-purity-check
 
 node_modules
 .DS_Store

@@ -7,6 +7,7 @@ import FModal from '@/components/molecules/FModal.vue'
 import FReward from '@/components/atoms/FReward.vue'
 import SpinnerConfigModal from '@/components/organisms/SpinnerConfigModal.vue'
 import OptionsModal from '@/components/organisms/OptionsModal.vue'
+import CombatLog from '@/components/organisms/CombatLog.vue'
 import useSounds, { useMusic } from '@/use/useSound'
 import useSpinnerGame, { ARENA_RADIUS, BLADE_RADIUS, simSpeed, countdownText } from '@/use/useSpinnerGame'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
@@ -1470,13 +1471,20 @@ onUnmounted(() => {
         div(
           v-for="(bs, idx) in bladeStats"
           :key="bs.id"
-          class="blade-stat-card"
+          class="blade-stat-card relative"
           :class="{ 'blade-stat-dead': bs.dead }"
           :style="{\
             transform: `scale(${uiStatScale})`,\
             transformOrigin: idx === 0 ? 'bottom left' : 'bottom right'\
           }"
         )
+          //- Combat log — minimised, pinned directly above the Spinner 2
+          //- (bottom-right) stat box. Right-aligned and on the RIGHT card so
+          //- the virtual joystick (which spawns on the left where the player
+          //- drags) can't cover it. `bottom-full` anchors it to the card's top
+          //- edge regardless of card height/scale.
+          div.absolute.right-0(v-if="idx === 1" class="bottom-full mb-1")
+            CombatLog
           div.blade-stat-label.game-text {{ t('spinner.spinnerLabel', { n: idx + 1 }) }}
           div.blade-stat-grid
             div.blade-stat-row

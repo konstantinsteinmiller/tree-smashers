@@ -90,7 +90,7 @@ const useCheats = () => {
     setSettingValue('quest-campaign', false)
     console.warn('[CHEAT] Campaign progress reset.')
   }
-  const { addCoins } = useSpinnerConfig()
+  const { addCoins, addDiamonds } = useSpinnerConfig()
 
   /**
    * CHEAT MAPPING
@@ -147,6 +147,10 @@ const useCheats = () => {
       console.warn('[CHEAT] Jumped to stage 88 (sandstorm boss).')
     },
     'ctrl+shift+alt+k': () => addCoins(3000),
+    'ctrl+shift+alt+j': () => {
+      addDiamonds(10)
+      console.warn('[CHEAT] Granted 10 diamonds.')
+    },
     'ctrl+shift+alt+c': clearCheatStage,
     'ctrl+shift+alt+p': () => {
       cheatRouletteSignal.value++

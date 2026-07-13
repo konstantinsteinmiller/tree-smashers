@@ -40,14 +40,46 @@ export const BG_SKINS: BgSkinDef[] = [
     colors: ['#0d1117', '#161b22', '#0d1117']
   },
   // ── Tier 1 — 15k coins / 10 diamonds ──────────────────────────────────────
-  { id: 'aurora', tier: 1, coinCost: 15000, diamondCost: 10, colors: ['#06251b', '#1f9e6e', '#56ffc8'] },
-  { id: 'ember', tier: 1, coinCost: 15000, diamondCost: 10, colors: ['#2a0a05', '#b83a16', '#ff8a2a'] },
+  // First three premium slots now ship real seamless/tileable artwork (the
+  // canvas tiles `img`; the gradient `colors` remain the load-time fallback
+  // and the modal swatch when the image hasn't decoded yet).
+  {
+    id: 'aurora', tier: 1, coinCost: 15000, diamondCost: 5,
+    img: 'images/bg/bg-tile-beyblade_800x436.webp',
+    colors: ['#06251b', '#1f9e6e', '#56ffc8']
+  },
+  {
+    id: 'ember', tier: 1, coinCost: 15000, diamondCost: 5,
+    img: 'images/bg/bg-tile-brainrot-desaturated_800x436.webp',
+    colors: ['#2a0a05', '#b83a16', '#ff8a2a']
+  },
+  {
+    id: 'fidget', tier: 1, coinCost: 15000, diamondCost: 5,
+    img: 'images/bg/bg-tile-fidget_800x436.webp',
+    colors: ['#101826', '#3b7a99', '#8fe0ff']
+  },
   // ── Tier 2 — 30k coins / 20 diamonds ──────────────────────────────────────
-  { id: 'nebula', tier: 2, coinCost: 30000, diamondCost: 20, colors: ['#1a0838', '#7a1fc4', '#c87bff'] },
-  { id: 'circuit', tier: 2, coinCost: 30000, diamondCost: 20, colors: ['#04161a', '#0f7f96', '#33e6ff'] },
+  {
+    id: 'nebula', tier: 2, coinCost: 30000, diamondCost: 10,
+    img: 'images/bg/bg-tile-brainrot_800x436.webp',
+    colors: ['#1a0838', '#7a1fc4', '#c87bff']
+  },
+  {
+    id: 'circuit', tier: 2, coinCost: 50000, diamondCost: 10,
+    img: 'images/bg/bg-tile-techno-magic_800x436.webp',
+    colors: ['#04161a', '#0f7f96', '#33e6ff']
+  },
   // ── Tier 3 — 100k coins / 75 diamonds (the most awesome) ──────────────────
-  { id: 'cosmos', tier: 3, coinCost: 100000, diamondCost: 75, colors: ['#05010f', '#243a8c', '#9fc3ff'] },
-  { id: 'prism', tier: 3, coinCost: 100000, diamondCost: 75, colors: ['#3a0a4a', '#e0247f', '#ffd24a'] }
+  {
+    id: 'cosmos', tier: 3, coinCost: 100000, diamondCost: 10,
+    img: 'images/bg/bg-tile-steampunk_800x436.webp',
+    colors: ['#05010f', '#243a8c', '#9fc3ff']
+  },
+  {
+    id: 'prism', tier: 3, coinCost: 100000, diamondCost: 15,
+    img: 'images/bg/bg-tile-kpop_800x436.webp',
+    colors: ['#3a0a4a', '#e0247f', '#ffd24a']
+  }
 ]
 
 const OWNED_KEY = 'spinner_bg_skins_owned'

@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': 'Vous ne recevrez aucune récompense.',
     'surrenderCancel': 'Annuler',
     'surrenderQuit': 'Quitter',
-    'spinnerLabel': 'Toupie {n}'
+    'spinnerLabel': 'Toupie {n}',
+    'yourTurn': 'Votre tour',
+    'opponentTurn': 'Tour de l\'adversaire',
+    'npcTurn': 'Tour de l\'ennemi'
   },
   'pvp': {
     'title': 'Combat PvP',

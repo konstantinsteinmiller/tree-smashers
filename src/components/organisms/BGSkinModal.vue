@@ -99,20 +99,20 @@ const swatchStyle = (skin: BgSkinDef) =>
                   IconDiamond(class="w-3 h-3")
                   span.game-text {{ skin.diamondCost }}
 
-      //- Diamond acquisition row
-      div.flex.flex-col.items-center.gap-2.border-t.border-slate-600(class="pt-2")
-        span.text-slate-300.font-bold.uppercase.game-text(class="text-[10px] sm:text-xs") {{ t('bg.needDiamonds') }}
-        div.flex.items-center.justify-center.gap-3
-          //- Watch-ad-for-diamond
-          AdRewardButton(reward="diamond" :diamonds="1")
-          //- Open the diamond IAP shop (prices revealed inside the shop)
-          button.rounded-lg.border-2.font-bold.flex.items-center.gap-1.cursor-pointer.transition-transform(
-            class="px-3 py-1.5 text-xs sm:text-sm bg-gradient-to-b from-[#23c4ff] to-[#1b6fb0] border-[#0f1a30] text-white hover:scale-105 active:scale-95"
-            @click="shopOpen = true"
-          )
-            span.game-text {{ t('bg.buy') }}
-            span.game-text.font-black 100
-            IconDiamond(class="w-4 h-4")
+      ////- Diamond acquisition row
+      //div.flex.flex-col.items-center.gap-2.border-t.border-slate-600(class="pt-2")
+      //  span.text-slate-300.font-bold.uppercase.game-text(class="text-[10px] sm:text-xs") {{ t('bg.needDiamonds') }}
+      //  div.flex.items-center.justify-center.gap-3
+      //    //- Watch-ad-for-diamond
+      //    AdRewardButton(reward="diamond" :diamonds="1")
+      //    //- Open the diamond IAP shop (prices revealed inside the shop)
+      //    button.rounded-lg.border-2.font-bold.flex.items-center.gap-1.cursor-pointer.transition-transform(
+      //      class="px-3 py-1.5 text-xs sm:text-sm bg-gradient-to-b from-[#23c4ff] to-[#1b6fb0] border-[#0f1a30] text-white hover:scale-105 active:scale-95"
+      //      @click="shopOpen = true"
+      //    )
+      //      span.game-text {{ t('bg.buy') }}
+      //      span.game-text.font-black 100
+      //      IconDiamond(class="w-4 h-4")
 
   //- Diamond IAP shop (nested) — prices only revealed here
   InAppPurchaseShop(v-model="shopOpen")
@@ -134,12 +134,13 @@ en:
     buy: "Buy"
     skins:
       classic: "Classic"
-      aurora: "Aurora"
-      ember: "Ember"
-      nebula: "Nebula"
-      circuit: "Circuit"
-      cosmos: "Cosmos"
-      prism: "Prism"
+      aurora: "Spinner Blades"
+      fidget: "Fidget"
+      ember: "Brainrot Desaturated"
+      nebula: "Brainrot"
+      circuit: "Techno Magical"
+      cosmos: "Steampunk"
+      prism: "K-Pop"
 de:
   bg:
     title: "Hintergründe"
@@ -150,12 +151,13 @@ de:
     buy: "Kaufen"
     skins:
       classic: "Klassisch"
-      aurora: "Aurora"
-      ember: "Glut"
-      nebula: "Nebel"
-      circuit: "Schaltkreis"
-      cosmos: "Kosmos"
-      prism: "Prisma"
+      aurora: "Kreiselklingen"
+      fidget: "Fidget"
+      ember: "Brainrot Entsättigt"
+      nebula: "Brainrot"
+      circuit: "Techno-Magisch"
+      cosmos: "Steampunk"
+      prism: "K-Pop"
 fr:
   bg:
     title: "Arrière-plans"
@@ -166,12 +168,13 @@ fr:
     buy: "Acheter"
     skins:
       classic: "Classique"
-      aurora: "Aurore"
-      ember: "Braise"
-      nebula: "Nébuleuse"
-      circuit: "Circuit"
-      cosmos: "Cosmos"
-      prism: "Prisme"
+      aurora: "Lames Toupie"
+      fidget: "Fidget"
+      ember: "Brainrot Désaturé"
+      nebula: "Brainrot"
+      circuit: "Techno-Magique"
+      cosmos: "Steampunk"
+      prism: "K-Pop"
 es:
   bg:
     title: "Fondos"
@@ -182,12 +185,13 @@ es:
     buy: "Comprar"
     skins:
       classic: "Clásico"
-      aurora: "Aurora"
-      ember: "Brasa"
-      nebula: "Nebulosa"
-      circuit: "Circuito"
-      cosmos: "Cosmos"
-      prism: "Prisma"
+      aurora: "Cuchillas Giratorias"
+      fidget: "Fidget"
+      ember: "Brainrot Desaturado"
+      nebula: "Brainrot"
+      circuit: "Tecno-Mágico"
+      cosmos: "Steampunk"
+      prism: "K-Pop"
 jp:
   bg:
     title: "背景"
@@ -198,12 +202,13 @@ jp:
     buy: "購入"
     skins:
       classic: "クラシック"
-      aurora: "オーロラ"
-      ember: "エンバー"
-      nebula: "ネビュラ"
-      circuit: "サーキット"
-      cosmos: "コスモス"
-      prism: "プリズム"
+      aurora: "スピナーブレード"
+      fidget: "フィジェット"
+      ember: "ブレインロット（低彩度）"
+      nebula: "ブレインロット"
+      circuit: "テクノマジカル"
+      cosmos: "スチームパンク"
+      prism: "K-POP"
 kr:
   bg:
     title: "배경"
@@ -214,12 +219,13 @@ kr:
     buy: "구매"
     skins:
       classic: "클래식"
-      aurora: "오로라"
-      ember: "엠버"
-      nebula: "네뷸라"
-      circuit: "서킷"
-      cosmos: "코스모스"
-      prism: "프리즘"
+      aurora: "스피너 블레이드"
+      fidget: "피젯"
+      ember: "브레인롯 (저채도)"
+      nebula: "브레인롯"
+      circuit: "테크노 매지컬"
+      cosmos: "스팀펑크"
+      prism: "K-POP"
 zh:
   bg:
     title: "背景"
@@ -230,12 +236,13 @@ zh:
     buy: "购买"
     skins:
       classic: "经典"
-      aurora: "极光"
-      ember: "余烬"
-      nebula: "星云"
-      circuit: "电路"
-      cosmos: "宇宙"
-      prism: "棱镜"
+      aurora: "旋转刀刃"
+      fidget: "指尖陀螺"
+      ember: "脑腐（低饱和）"
+      nebula: "脑腐"
+      circuit: "科技魔法"
+      cosmos: "蒸汽朋克"
+      prism: "K-Pop"
 ru:
   bg:
     title: "Фоны"
@@ -246,10 +253,11 @@ ru:
     buy: "Купить"
     skins:
       classic: "Классика"
-      aurora: "Аврора"
-      ember: "Уголь"
-      nebula: "Туманность"
-      circuit: "Схема"
-      cosmos: "Космос"
-      prism: "Призма"
+      aurora: "Клинки-волчки"
+      fidget: "Фиджет"
+      ember: "Брейнрот приглушённый"
+      nebula: "Брейнрот"
+      circuit: "Техно-магия"
+      cosmos: "Стимпанк"
+      prism: "K-Pop"
 </i18n>

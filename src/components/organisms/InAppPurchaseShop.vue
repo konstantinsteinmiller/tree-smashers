@@ -63,7 +63,7 @@ const purchase = (pack: Pack) => {
           //- Tag ribbon
           span.absolute.rounded-full.font-black.uppercase.game-text(
             v-if="pack.tagKey"
-            class="-top-2 right-3 bg-amber-400 text-[#1a2b4b] text-[8px] sm:text-[10px] px-2 py-0.5"
+            class="-top-2 right-3 bg-amber-400 text-white text-[8px] sm:text-[10px] px-2 py-0.5"
           ) {{ t('shop.' + pack.tagKey) }}
           div.flex.items-center.gap-2
             IconDiamond(class="w-7 h-7 sm:w-8 sm:h-8")

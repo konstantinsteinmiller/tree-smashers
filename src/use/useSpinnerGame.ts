@@ -32,9 +32,26 @@ import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
 import { matchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
+
+// Translate a global i18n key from inside this (non-component) composable.
+// It reads the app-wide vue-i18n instance main.ts parks on `window.__i18n`
+// (same window-singleton pattern as `window.__saveManager`). Used for the
+// transient turn-announcement text, so not reacting to a mid-string locale
+// change is fine; falls back to the raw key if i18n isn't ready.
+const translate = (key: string): string => {
+  try {
+    const g = (window as unknown as {
+      __i18n?: { global?: { t?: (k: string) => string } }
+    }).__i18n?.global
+    return g?.t ? g.t(key) : key
+  } catch {
+    return key
+  }
+}
 
 const isFirefox = /firefox/i.test(navigator.userAgent)
 
@@ -1587,6 +1604,47 @@ export const useSpinnerGame = () => {
     return killed
   }
 
+  // ─── Combat log ──────────────────────────────────────────────────────────
+  // Map a player blade to its HUD "Spinner N" number (index in playerBlades,
+  // matching the stat-card order); null for enemy blades.
+  const spinnerNumberOf = (blade: SpinnerState): number | null => {
+    if (blade.owner !== 'player') return null
+    const idx = playerBlades.value.indexOf(blade)
+    return idx >= 0 ? idx + 1 : null
+  }
+
+  // Record one collision hit for the (minimised-by-default) combat log. Cheap:
+  // structured params only, no i18n here — CombatLog.vue renders the sentence.
+  const logCombatHit = (
+    attacker: SpinnerState,
+    target: SpinnerState,
+    dmg: number,
+    crit: boolean,
+    attackerSpeed: number,
+    targetSpeed: number
+  ): void => {
+    const rounded = Math.round(dmg)
+    if (rounded <= 0) return
+    // Only log hits the player is part of — enemy-vs-enemy friendly fire would
+    // read as "Enemy … deals to Enemy …" (two indistinguishable sides) and
+    // just clutters a strategist's feed.
+    if (attacker.owner === 'npc' && target.owner === 'npc') return
+    let speedFavors: 'attacker' | 'target' | null = null
+    if (attackerSpeed >= targetSpeed * 2) speedFavors = 'attacker'
+    else if (targetSpeed >= attackerSpeed * 2) speedFavors = 'target'
+    pushCombatEntry({
+      attackerOwner: attacker.owner,
+      attackerSpinner: spinnerNumberOf(attacker),
+      attackerPart: attacker.config.topPartId,
+      targetOwner: target.owner,
+      targetSpinner: spinnerNumberOf(target),
+      targetPart: target.config.topPartId,
+      dmg: rounded,
+      crit,
+      speedFavors
+    })
+  }
+
   // ─── Game Lifecycle ──────────────────────────────────────────────────────
 
   const initGame = (
@@ -1611,6 +1669,7 @@ export const useSpinnerGame = () => {
     // game-start message; single-player reseeds locally per match.
     if (!pvpMode.value) seedMatchRngRandom()
     stopPhysics()
+    clearCombatLog()
     nextBladeId = 0
     // Clear cached player model images so skin changes take effect
     for (const key of [...bladeModelImages.keys()]) {
@@ -1858,7 +1917,7 @@ export const useSpinnerGame = () => {
     if (pvp?.enabled) {
       phase.value = 'deciding_turn'
       const startsWithPlayer = pvp.myTurnFirst
-      turnAnnouncement.value = startsWithPlayer ? 'YOUR TURN' : 'OPPONENT\'S TURN'
+      turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.opponentTurn')
       startPhysics()
       spawnMeteorShower(80, 50, 65)
       setTimeout(() => {
@@ -1876,6 +1935,11 @@ export const useSpinnerGame = () => {
 
   const startMatch = () => {
     if (phase.value !== 'tap_to_start') return
+
+    // Truncate the combat log to THIS battle: wipe it the moment the player
+    // leaves the menu (tap-to-start) and combat actually begins, so the feed
+    // never mixes in hits from a previous match.
+    clearCombatLog()
 
     // Trigger meteor shower intro
     spawnMeteorShower(80, 50, 65)
@@ -2310,7 +2374,7 @@ export const useSpinnerGame = () => {
         //   the time so wins feel earned rather than handed out.
         const playerStartChance = lastGameResult.value === 'lose' ? 0.80 : 0.30
         const startsWithPlayer = matchRng() < playerStartChance
-        turnAnnouncement.value = startsWithPlayer ? 'YOUR TURN' : 'NPC TURN'
+        turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.npcTurn')
         setTimeout(() => {
           phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
           turnAnnouncement.value = ''
@@ -3074,6 +3138,7 @@ export const useSpinnerGame = () => {
           lastCritAt.set(b.id, nowCrit)
         }
         if (applyBladeDamage(b, dmgAtoB, cx, cy, a.owner, aCrit)) hadKill = true
+        logCombatHit(a, b, dmgAtoB, aCrit, aSpeed, bSpeed)
         // Life-leech: attacker heals 30% of damage dealt
         if (a.isLifeLeech) {
           const heal = dmgAtoB * 0.3
@@ -3096,6 +3161,7 @@ export const useSpinnerGame = () => {
           lastCritAt.set(a.id, nowCrit)
         }
         if (applyBladeDamage(a, dmgBtoA, cx, cy, b.owner, bCrit)) hadKill = true
+        logCombatHit(b, a, dmgBtoA, bCrit, bSpeed, aSpeed)
         // Life-leech: attacker heals 30% of damage dealt
         if (b.isLifeLeech) {
           const heal = dmgBtoA * 0.3
@@ -3318,10 +3384,18 @@ export const useSpinnerGame = () => {
     renderCloudParticles(ctx)
     renderSandGrains(ctx)
 
-    // Auras (rendered under blades)
-    for (const blade of allBlades.value) {
-      if (blade.hp <= 0) continue
-      renderAura(ctx, blade)
+    // Auras (rendered under blades) — ONLY in the circular / standard arena.
+    // A blade aura is a soft radial fade; on the non-circular shapes
+    // (oval / hexagon / diamond / rounded-rect, used by the daily challenge)
+    // the straight walls slice that fade into a hard-edged glow no matter
+    // whether we let it bleed past the wall or clip it to the floor. Per
+    // design feedback we simply skip all fade-out glows there and keep them
+    // only for the round arena, where the aura stays fully inside the ring.
+    if (arenaShape.value === 'circle') {
+      for (const blade of allBlades.value) {
+        if (blade.hp <= 0) continue
+        renderAura(ctx, blade)
+      }
     }
 
     // Render all models
@@ -3693,14 +3767,30 @@ export const useSpinnerGame = () => {
     traceArena()
     ctx.fill()
 
-    // Outer glow halo
-    const glowGrad = ctx.createRadialGradient(0, 0, ARENA_RADIUS - 2, 0, 0, ARENA_RADIUS + 40)
-    glowGrad.addColorStop(0, `${theme.neonRgba} 0.15)`)
-    glowGrad.addColorStop(0.4, `${theme.neonRgba} 0.05)`)
-    glowGrad.addColorStop(1, `${theme.neonRgba} 0)`)
-    ctx.fillStyle = glowGrad
-    traceArena((ARENA_RADIUS + 40) / ARENA_RADIUS)
-    ctx.fill()
+    // Outer glow halo — a soft outward bloom that FOLLOWS the arena shape and
+    // fades all the way to transparency. Built from a stack of increasingly
+    // wide, increasingly faint boundary strokes (widest/faintest drawn first)
+    // so the overlap is brightest right at the wall and dissolves outward. The
+    // old radial gradient only matched a circle/oval: on the cornered shapes
+    // (diamond / hexagon / rounded-rect) it hit full alpha along the flat walls
+    // and got clipped by the path there, leaving a hard-edged glow band. This
+    // whole layer is baked into the cached static buffer, so the extra strokes
+    // cost nothing per frame.
+    ctx.save()
+    ctx.lineJoin = 'round'
+    const HALO_LAYERS = 12
+    const HALO_REACH = 42 // px the glow reaches beyond the wall
+    for (let i = HALO_LAYERS - 1; i >= 0; i--) {
+      const f = i / (HALO_LAYERS - 1) // 1 = widest / outermost
+      ctx.lineWidth = theme.borderWidth + HALO_REACH * 2 * f
+      // Bright + dense near the wall, tapering to nearly invisible at the
+      // outer edge so there is no residual hard step.
+      const a = 0.03 * (1 - f) + 0.003
+      ctx.strokeStyle = `${theme.neonRgba} ${a.toFixed(3)})`
+      traceArena()
+      ctx.stroke()
+    }
+    ctx.restore()
 
     // Neon border — skip shadowBlur on Firefox (very expensive for canvas shadows)
     ctx.strokeStyle = theme.neonColor

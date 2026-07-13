@@ -158,7 +158,10 @@ export default {
     'surrenderConfirm': 'You will not receive any rewards.',
     'surrenderCancel': 'Cancel',
     'surrenderQuit': 'Quit',
-    'spinnerLabel': 'Spinner {n}'
+    'spinnerLabel': 'Spinner {n}',
+    'yourTurn': 'Your Turn',
+    'opponentTurn': 'Opponent\'s Turn',
+    'npcTurn': 'Enemy Turn'
   },
   'pvp': {
     'title': 'PvP Battle',

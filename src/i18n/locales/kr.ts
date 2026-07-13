@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': '보상을 받을 수 없습니다.',
     'surrenderCancel': '취소',
     'surrenderQuit': '나가기',
-    'spinnerLabel': '스피너 {n}'
+    'spinnerLabel': '스피너 {n}',
+    'yourTurn': '내 턴',
+    'opponentTurn': '상대 턴',
+    'npcTurn': '적 턴'
   },
   'pvp': {
     'title': 'PvP 대전',

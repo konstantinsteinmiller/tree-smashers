@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': 'No recibirás ninguna recompensa.',
     'surrenderCancel': 'Cancelar',
     'surrenderQuit': 'Salir',
-    'spinnerLabel': 'Peonza {n}'
+    'spinnerLabel': 'Peonza {n}',
+    'yourTurn': 'Tu turno',
+    'opponentTurn': 'Turno del rival',
+    'npcTurn': 'Turno enemigo'
   },
   'pvp': {
     'title': 'Batalla PvP',

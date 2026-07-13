@@ -26,6 +26,7 @@ import IconHp from '@/components/icons/IconHp.vue'
 import IconSpeed from '@/components/icons/IconSpeed.vue'
 import IconWeight from '@/components/icons/IconWeight.vue'
 import BGSkinButton from '@/components/organisms/BGSkinButton.vue'
+import IconDiamond from '@/components/icons/IconDiamond.vue'
 import { isBgSkinsEnabled } from '@/use/useUser'
 import { stopGameplay } from '@/use/useCrazyGames'
 
@@ -207,12 +208,23 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           h3.text-yellow-300.font-black.uppercase.italic.label-section(
             class="tracking-wider"
           ) {{ t('topBlade') }}
-          //- Background-skin shop launcher (top-right of the TOP BLADE header).
-          //- Feature-flagged so it can be hidden for a production hotfix.
-          BGSkinButton(
+          //- Background-skin shop launcher, pinned to the far right of the
+          //- TOP BLADE header. Wrapped in an absolutely-positioned box because
+          //- BGSkinButton has two root nodes (button + teleported modal), so a
+          //- `class` passed directly to it can't fall through — it would land
+          //- back in flow and overlap the centred title. A diamond badge tucks
+          //- behind the button's top-right corner to signal that backgrounds
+          //- are bought with diamonds. Feature-flagged for production hotfixes.
+          div.absolute.flex.items-center(
             v-if="isBgSkinsEnabled"
-            class="absolute right-0 top-1/2 -translate-y-[50%]"
+            class="right-0 top-1/2 -translate-y-[50%]"
           )
+            div.relative
+              BGSkinButton
+              //- Diamond badge rendered AFTER the button (and z-10) so it sits
+              //- ON TOP for clear recognition. Bottom-left corner keeps it off
+              //- the modal frame edge, whose overflow clip halved it before.
+              IconDiamond(class="absolute -bottom-1 -left-1 w-3.5 h-3.5 z-10 pointer-events-none")
         div.grid.top-grid
           div(
             v-for="part in TOP_PARTS_LIST"

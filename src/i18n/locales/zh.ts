@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': '你将不会获得任何奖励。',
     'surrenderCancel': '取消',
     'surrenderQuit': '退出',
-    'spinnerLabel': '陀螺 {n}'
+    'spinnerLabel': '陀螺 {n}',
+    'yourTurn': '你的回合',
+    'opponentTurn': '对手回合',
+    'npcTurn': '敌方回合'
   },
   'pvp': {
     'title': 'PvP对战',

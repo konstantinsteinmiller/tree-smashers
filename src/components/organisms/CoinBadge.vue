@@ -33,18 +33,18 @@ defineExpose({ rootEl, diamondRowEl })
         IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-100 drop-shadow")
       span.game-text.coin-badge__value.justify-self-end {{ coins }}
 
-      //- Diamond row
-      div.flex.items-center.justify-center.rounded-full(
-        ref="diamondRowEl"
-        class="w-7 h-7 sm:w-8 sm:h-8"
-      )
-        img.object-contain(
-          :src="diamondFancySrc"
-          alt="diamonds"
-          draggable="false"
-          class="w-7 h-7 sm:w-8 sm:h-8"
-        )
-      span.game-text.coin-badge__value.coin-badge__value--diamond.justify-self-end {{ diamonds }}
+      ////- Diamond row
+      //div.flex.items-center.justify-center.rounded-full(
+      //  ref="diamondRowEl"
+      //  class="w-7 h-7 sm:w-8 sm:h-8"
+      //)
+      //  img.object-contain(
+      //    :src="diamondFancySrc"
+      //    alt="diamonds"
+      //    draggable="false"
+      //    class="w-7 h-7 sm:w-8 sm:h-8"
+      //  )
+      //span.game-text.coin-badge__value.coin-badge__value--diamond.justify-self-end {{ diamonds }}
 </template>
 
 <style scoped lang="sass">

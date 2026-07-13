@@ -150,7 +150,10 @@ export default {
     'surrenderConfirm': '報酬は受け取れません。',
     'surrenderCancel': 'キャンセル',
     'surrenderQuit': 'やめる',
-    'spinnerLabel': 'スピナー{n}'
+    'spinnerLabel': 'スピナー{n}',
+    'yourTurn': 'あなたのターン',
+    'opponentTurn': '相手のターン',
+    'npcTurn': '敵のターン'
   },
   'pvp': {
     'title': 'PvPバトル',

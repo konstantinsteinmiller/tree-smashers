@@ -11,6 +11,11 @@
 
 ### 2 diamonds every 25 levels on BattlePass
 
+## league with pvp league ranks
+
+- [ ] simulated pvp battles based on remote player stats
+- [ ] boss enemies to rise in league ranks
+
 ## new Bosses for 100+ stages
 
 - aoe burn

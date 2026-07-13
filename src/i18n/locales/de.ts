@@ -158,7 +158,10 @@ export default {
     'surrenderConfirm': 'Du erhältst keine Belohnungen.',
     'surrenderCancel': 'Abbrechen',
     'surrenderQuit': 'Aufgeben',
-    'spinnerLabel': 'Spinner {n}'
+    'spinnerLabel': 'Spinner {n}',
+    'yourTurn': 'Dein Zug',
+    'opponentTurn': 'Gegner am Zug',
+    'npcTurn': 'Gegner am Zug'
   },
   'pvp': {
     'title': 'PvP Kampf',
