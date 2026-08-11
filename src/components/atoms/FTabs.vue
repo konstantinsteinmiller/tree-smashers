@@ -37,16 +37,16 @@ const selectTab = (value: string | number) => {
       //- Tab Body
       div(
         :class="[\
-          'relative px-3 py-1 sm:px-5 sm:py-1.5 border-x-4 border-t-4 border-[#0f1a30] rounded-t-xl sm:rounded-t-2xl font-black uppercase italic tracking-wider transition-colors',\
+          'relative px-4 py-1.5 sm:px-6 sm:py-2 border-x-4 border-t-4 border-[#0f1a30] rounded-t-xl sm:rounded-t-2xl font-black uppercase italic tracking-wider transition-colors',\
           tab.icon ? 'cursor-pointer': '', \
             modelValue === tab.value \
             ? 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000] text-white shadow-[inset_0_4px_0_rgba(255,255,255,0.4)]'\
             : 'bg-[#2a4372] opacity-80 text-[#8fa7d1] hover:bg-[#34538d]'\
         ]"
       )
-        div.w-7.h-7.object-fill(v-if="tab.icon")
+        div.object-fill(v-if="tab.icon" class="w-8 h-8 sm:w-9 sm:h-9")
           img.object-fill(:src="tab.icon" class="")
-        span(v-else class="brawl-text text-xs sm:text-base") {{ tab.label }}
+        span(v-else class="brawl-text text-sm sm:text-lg") {{ tab.label }}
 </template>
 
 <style lang="sass" scoped>
@@ -54,6 +54,9 @@ const selectTab = (value: string | number) => {
   text-shadow: 2px 2px 0 #000
 
 @media (orientation: landscape) and (max-height: 500px)
+  // Still a step down from the portrait size to protect the scarce vertical
+  // space, but no longer the 0.7rem that made tab labels the smallest text
+  // in the game. Rides the +20% root scale, so this is ~16px, not 11px.
   .brawl-text
-    font-size: 0.7rem
+    font-size: 0.85rem
 </style>

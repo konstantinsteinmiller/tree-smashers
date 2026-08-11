@@ -47,7 +47,12 @@ const swatchStyle = (skin: BgSkinDef) =>
     :is-closable="true"
     :title="t('bg.title')"
   )
-    div(class="space-y-3 px-2 sm:px-4 py-2 max-h-[70vh] overflow-y-auto")
+    //- No local `max-h` / `overflow-y` — FModal's content slot is the single
+    //- scroll authority (it derives its cap from the overlay's real content
+    //- box). A second nested scroller here fought with it: the scrollbar
+    //- stopped short of the frame and the scroll-edge fade rendered on the
+    //- wrong box.
+    div(class="space-y-3 px-2 sm:px-4 py-2")
       //- Balance row
       div.flex.items-center.justify-center.gap-3
         div.flex.items-center.gap-1.rounded-full.font-bold(class="px-2 py-0.5 bg-yellow-600/50 text-yellow-200 text-xs sm:text-sm")
@@ -68,40 +73,53 @@ const swatchStyle = (skin: BgSkinDef) =>
           div.relative(class="h-16 sm:h-20" :style="swatchStyle(skin)")
             span.absolute.rounded-full.font-black.uppercase.game-text(
               v-if="selectedBgSkinId === skin.id"
-              class="top-1 right-1 bg-cyan-400 text-[#04161a] text-[8px] px-1.5 py-0.5"
+              class="top-1 right-1 bg-cyan-400 text-[#04161a] text-[0.6rem] px-1.5 py-0.5"
             ) {{ t('bg.equipped') }}
-          div.flex.flex-col.items-center.gap-1.p-1.bg-slate-800
-            span.text-white.font-bold.game-text.truncate.max-w-full(class="text-[10px] sm:text-xs") {{ t('bg.skins.' + skin.id) }}
+          //- `flex-1 justify-center` centres the label + action block in the
+          //- space the grid row gives this card. Grid rows stretch every card
+          //- to the tallest one, so an owned skin (one short "Equipped" line)
+          //- otherwise sat pinned to the top of a card sized for two stacked
+          //- price buttons, leaving a big dead gap underneath.
+          div.flex.flex-col.items-center.justify-center.gap-1.p-1.bg-slate-800(class="flex-1")
+            span.text-white.font-bold.game-text.truncate.max-w-full(class="text-[0.75rem] sm:text-xs") {{ t('bg.skins.' + skin.id) }}
             //- Action area
             template(v-if="isBgSkinOwned(skin.id)")
-              button.rounded-lg.font-bold.cursor-pointer.transition-all(
+              button.w-full.rounded-lg.font-bold.cursor-pointer.transition-all(
                 v-if="selectedBgSkinId !== skin.id"
-                class="px-3 py-0.5 text-[10px] sm:text-xs bg-cyan-600 hover:bg-cyan-500 text-white"
+                class="px-3 py-2 text-[0.85rem] sm:text-sm bg-cyan-600 hover:bg-cyan-500 text-white"
                 @click="selectBgSkin(skin.id)"
               ) {{ t('bg.select') }}
-              span.text-cyan-300.font-bold(v-else class="text-[9px] sm:text-[10px]") {{ t('bg.equippedShort') }}
+              span.text-cyan-300.font-bold(v-else class="text-[0.75rem] sm:text-[0.85rem]") {{ t('bg.equippedShort') }}
             template(v-else)
-              div.flex.items-center.gap-1
+              //- The two price buttons are STACKED, not side by side.
+              //-
+              //- They were a 65x24 pair sitting shoulder to shoulder in a
+              //- half-width card. That is both under the tap-target floor and
+              //- the worst place to put one: the two targets spend DIFFERENT
+              //- currencies, so a mis-tap costs the player diamonds they meant
+              //- to keep. Full-width rows remove the horizontal ambiguity
+              //- entirely and give each button a comfortable height.
+              div.flex.flex-col.items-stretch.gap-1.w-full
                 //- Coin price
-                button.rounded-lg.font-bold.flex.items-center.gap-1.transition-all(
-                  class="px-1.5 py-0.5 text-[9px] sm:text-[10px]"
+                button.w-full.rounded-lg.font-bold.flex.items-center.justify-center.gap-1.transition-all(
+                  class="px-2 py-2.5 text-[0.75rem] sm:text-[0.9rem]"
                   :class="coins >= skin.coinCost ? 'bg-yellow-500 hover:bg-yellow-400 text-white cursor-pointer' : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
                   @click="buyBgSkinWithCoins(skin.id)"
                 )
-                  IconCoin(class="w-3 h-3 text-yellow-200")
+                  IconCoin(class="w-5 h-5 text-yellow-200")
                   span.game-text {{ skin.coinCost >= 1000 ? (skin.coinCost / 1000) + 'k' : skin.coinCost }}
                 //- Diamond price
-                button.rounded-lg.font-bold.flex.items-center.gap-1.transition-all(
-                  class="px-1.5 py-0.5 text-[9px] sm:text-[10px]"
+                button.w-full.rounded-lg.font-bold.flex.items-center.justify-center.gap-1.transition-all(
+                  class="px-2 py-2.5 text-[0.75rem] sm:text-[0.9rem]"
                   :class="diamonds >= skin.diamondCost ? 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer' : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
                   @click="buyBgSkinWithDiamonds(skin.id)"
                 )
-                  IconDiamond(class="w-3 h-3")
+                  IconDiamond(class="w-5 h-5")
                   span.game-text {{ skin.diamondCost }}
 
       ////- Diamond acquisition row
       //div.flex.flex-col.items-center.gap-2.border-t.border-slate-600(class="pt-2")
-      //  span.text-slate-300.font-bold.uppercase.game-text(class="text-[10px] sm:text-xs") {{ t('bg.needDiamonds') }}
+      //  span.text-slate-300.font-bold.uppercase.game-text(class="text-[0.75rem] sm:text-xs") {{ t('bg.needDiamonds') }}
       //  div.flex.items-center.justify-center.gap-3
       //    //- Watch-ad-for-diamond
       //    AdRewardButton(reward="diamond" :diamonds="1")

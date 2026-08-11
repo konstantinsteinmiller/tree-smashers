@@ -374,7 +374,7 @@ onUnmounted(() => {
 
     //- Keyboard hints (bottom)
     div.absolute.bottom-3.left-1.right-1.text-center.pointer-events-none(class="z-10")
-      div.text-slate-500.game-text(class="text-[10px] sm:text-xs")
+      div.text-slate-500.game-text(class="text-[0.75rem] sm:text-xs")
         | [1] Cinematic &nbsp; [2] Battle &nbsp; [Space] Pause/Resume &nbsp; [R] Restart
 </template>
 

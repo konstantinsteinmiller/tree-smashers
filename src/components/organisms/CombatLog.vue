@@ -74,7 +74,7 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
   )
     svg(viewBox="0 0 24 24" class="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true")
       path(fill="currentColor" d="M4 5h16v2H4zM4 9h16v2H4zM4 13h10v2H4zM4 17h10v2H4z")
-    span.combat-log-toggle-text.game-text.uppercase(class="text-[9px] sm:text-[10px] tracking-wide") {{ t('short') }}
+    span.combat-log-toggle-text.game-text.uppercase(class="text-[0.7rem] sm:text-[0.75rem] tracking-wide") {{ t('short') }}
 
   //- Expanded feed
   FModal(
@@ -84,8 +84,11 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
     @update:model-value="open = false"
   )
     div(class="px-1 sm:px-3 py-1")
-      div.text-center.text-slate-400.game-text(class="text-[10px] sm:text-xs mb-2") {{ t('hint', { n: maxEntries }) }}
-      div.combat-log-list.flex.flex-col(class="gap-1 max-h-[60vh] overflow-y-auto pr-1")
+      div.text-center.text-slate-400.game-text(class="text-[0.75rem] sm:text-xs mb-2") {{ t('hint', { n: maxEntries }) }}
+      //- No local scroll cap — FModal's content slot scrolls (see the
+      //- `.modal-content-slot` rule there). A `max-h-[60vh]` here produced a
+      //- second, nested scroller whose bar stopped well short of the frame.
+      div.combat-log-list.flex.flex-col(class="gap-1 pr-1")
         div.text-center.text-slate-400.game-text(
           v-if="rendered.length === 0"
           class="text-xs py-6"
@@ -97,7 +100,7 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
             r.mine ? 'text-cyan-200' : 'text-red-200',\
             r.crit ? 'font-black' : 'font-medium'\
           ]"
-          class="text-[11px] sm:text-sm leading-snug"
+          class="text-[0.85rem] sm:text-sm leading-snug"
         ) {{ r.text }}
 </template>
 

@@ -16,7 +16,7 @@ const { t } = useI18n()
   //- to the reward overlay's continue handler). The badge itself stays
   //- clickable so it can dismiss the overlay too.
   div.tip-badge.relative.flex.items-start.gap-3.rounded-2xl.px-4.py-3.pointer-events-auto(
-    class="max-w-[90vw] sm:max-w-[420px]"
+    class="max-w-[90vw] sm:max-w-[26rem]"
   )
     //- Glowing star icon — same yellow as the coin reward to read as
     //- a premium hint, not a generic toast.
@@ -62,4 +62,26 @@ const { t } = useI18n()
   100%
     transform: scale(1) translateY(0)
     opacity: 1
+
+// Short landscape: the reward overlay has to fit the ribbon, the result text,
+// the reward row, this badge AND the tap-to-continue prompt into ~390px. The
+// badge is the least important of them, so it gets wider and tighter here —
+// a wider box means fewer wrapped lines, which is what actually costs height.
+// (A three-line Chinese tip is the worst case; two lines fit comfortably.)
+@media (orientation: landscape) and (max-height: 500px)
+  .tip-badge
+    max-width: min(90vw, 34rem)
+    padding: 0.5rem 0.85rem
+    gap: 0.5rem
+
+  .tip-text
+    font-size: 0.8rem
+
+  .tip-star
+    width: 1.6rem
+    height: 1.6rem
+
+    svg
+      width: 1rem
+      height: 1rem
 </style>

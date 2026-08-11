@@ -96,13 +96,13 @@ const dotColor = (b: boolean): string => b ? 'text-green-400' : 'text-red-400'
         | int err: {{ levelPlayDebug.lastInterstitialShowError }}
 
       div.border-t.border-zinc-700.pt-1.mt-1(class="space-y-0.5")
-        div.text-zinc-400(class="text-[10px]") events (newest last)
+        div.text-zinc-400(class="text-[0.75rem]") events (newest last)
         div.text-zinc-100.leading-tight.break-words(
           v-for="(e, i) in levelPlayDebug.events"
           :key="i"
-          class="text-[10px]"
+          class="text-[0.75rem]"
         ) {{ e }}
-        div.text-zinc-500(v-if="!levelPlayDebug.events.length" class="text-[10px]") (none yet)
+        div.text-zinc-500(v-if="!levelPlayDebug.events.length" class="text-[0.75rem]") (none yet)
 
-      div.text-zinc-500.pt-1(class="text-[10px]") tap to collapse
+      div.text-zinc-500.pt-1(class="text-[0.75rem]") tap to collapse
 </template>

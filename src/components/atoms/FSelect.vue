@@ -16,7 +16,9 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'SELECT...',
-  maxHeight: '200px'
+  // rem, not px, so the dropdown's scroll window grows with the global UI
+  // scale instead of showing fewer and fewer rows as the type gets bigger.
+  maxHeight: '15rem'
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -92,13 +94,18 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             v-for="option in options"
             :key="option.value"
             @click="selectOption(option.value)"
-            class="group/item relative mb-1 last:mb-0 cursor-pointer p-3 rounded-xl transition-all duration-75 active:scale-[0.97]"
+            class="group/item relative mb-1 last:mb-0 cursor-pointer p-3.5 rounded-xl transition-all duration-75 active:scale-[0.97]"
             :class="modelValue === option.value ? 'bg-[#50aaff]' : 'hover:bg-[#2266ff]'"
           )
             //- Option Shine (only for selected/hover)
             span(class="absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-white/10")
 
-            span(class="text relative block text-white uppercase text-md tracking-wide") {{ option.label }}
+            //- Was `text-md`, which is not a Tailwind class — it emitted
+            //- nothing, so every dropdown row silently inherited whatever
+            //- font-size the parent happened to carry (10px in the Options
+            //- modal). `text-base sm:text-lg` makes the language list legible,
+            //- which matters most for exactly the locales QA tested.
+            span(class="text relative block text-white uppercase text-base sm:text-lg tracking-wide") {{ option.label }}
 </template>
 
 <style scoped lang="sass">

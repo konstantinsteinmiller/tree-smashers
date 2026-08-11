@@ -45,13 +45,19 @@ const containerClasses = computed(() => {
   return {
     'w-full': true,
     'flex justify-center': isBrawl,
-    // Brawl specific scaling
-    'scale-75': isBrawl && props.size === 'sm',
-    'scale-90': isBrawl && props.size === 'md',
+    // Both variants used to shrink hard at `sm` / `md` (`scale-60` / `scale-80`
+    // for the default variant), which stacked with the already-small mobile
+    // text to produce the sub-40px CTAs Playgama QA called out. Raised so the
+    // smallest variant still clears the 44pt / 48dp tap-target floor.
+    //
+    // NOTE: one key per class string. Two entries that resolve to the SAME
+    // Tailwind class silently collapse in an object literal — the second wins
+    // and the first condition is dead. That is why `md` is expressed as a
+    // single predicate covering both variants rather than one line each.
+    'scale-85': isBrawl && props.size === 'sm',
+    'scale-80': !isBrawl && props.size === 'sm',
+    'scale-95': props.size === 'md',
     'scale-125': isBrawl && props.size === 'xl',
-    // Default specific scaling
-    'scale-60': !isBrawl && props.size === 'sm',
-    'scale-80': !isBrawl && props.size === 'md',
     'scale-110': props.size === 'lg',
     'scale-120': !isBrawl && props.size === 'xl',
     'attention-bounce': props.attention,
@@ -88,8 +94,8 @@ const containerClasses = computed(() => {
         :style="{ backgroundImage: `linear-gradient(to bottom, ${theme.from}, ${theme.to})` }"
         :class="[\
           variant === 'brawl' \
-            ? 'min-w-[120px] md:min-w-[180px] border-b-[3px] border-black/20 px-8 py-3 md:py-4 rounded-lg' \
-            : 'min-w-[80px] md:min-w-[140px] rounded-xl md:rounded-2xl border-[2px] border-[#0f1a30] px-4 md:px-6 py-2 md:py-3'\
+            ? 'min-w-[7.5rem] md:min-w-[11.25rem] border-b-[3px] border-black/20 px-8 py-3.5 md:py-4 rounded-lg' \
+            : 'min-w-[5.5rem] md:min-w-[9rem] rounded-xl md:rounded-2xl border-[2px] border-[#0f1a30] px-5 md:px-7 py-2.5 md:py-3.5'\
         ]"
         class="relative block"
       )
@@ -108,8 +114,8 @@ const containerClasses = computed(() => {
           span.text(
             :class="[\
               variant === 'brawl' \
-                ? 'text-lg md:text-2xl tracking-tighter italic' \
-                : 'text-sm md:text-xl tracking-wide'\
+                ? 'text-xl md:text-3xl tracking-tighter italic' \
+                : 'text-base md:text-2xl tracking-wide'\
             ]"
             class="relative block text-white uppercase font-black"
           )

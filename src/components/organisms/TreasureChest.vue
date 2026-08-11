@@ -201,20 +201,20 @@ const collectChest = () => {
     //- the way.
     div.flex.flex-col.items-center.leading-tight(class="mt-0.5")
       template(v-if="phase === 'cooldown'")
-        span.game-text.text-white.font-bold(class="text-[10px] sm:text-xs") {{ timeDisplay }}
+        span.game-text.text-white.font-bold(class="text-[0.75rem] sm:text-xs") {{ timeDisplay }}
       template(v-else-if="phase === 'small'")
         //- Coin icon styled to match the DailyRewards button
         //- (`<IconCoin class="text-yellow-300">`) so reward labels read
         //- as the same visual currency across the HUD.
-        span.font-black.text-yellow-300.flex.items-center(class="text-[11px] sm:text-sm gap-0.5")
+        span.font-black.text-yellow-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
           span.game-text +25
           IconCoin(class="w-4 h-4")
-        span.game-text.text-white.font-bold(class="text-[8px] sm:text-[10px] opacity-80") {{ timeDisplay }}
+        span.game-text.text-white.font-bold(class="text-[0.6rem] sm:text-[0.75rem] opacity-80") {{ timeDisplay }}
       template(v-else)
         //- Big-reward state — chest aura + amber `+100` is signal
         //- enough; the older "READY" suffix duplicated the meaning of
         //- the pulsing icon and made the label feel cluttered.
-        span.font-black.text-amber-400.flex.items-center(class="text-[11px] sm:text-sm gap-0.5")
+        span.font-black.text-amber-400.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
           span.game-text +100
           IconCoin(class="w-4 h-4")
 </template>

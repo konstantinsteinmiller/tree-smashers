@@ -203,7 +203,13 @@ const plattformText = computed(() => capabilities.value.plattformText)
 
 <style lang="sass">
 *
-  font-family: 'Angry', cursive
+  // `--font-game` is defined in `assets/css/fonts.sass`. It keeps `Angry`
+  // first (so Latin + digits render in the display face) and then names a
+  // real CJK system font for every platform we ship to, because `Angry`
+  // has no Han/Kana/Hangul coverage at all. See that file for the full
+  // rationale — the old `'Angry', cursive` stack is what Playgama QA saw
+  // as broken Chinese.
+  font-family: var(--font-game)
   user-select: none
   // Standard
   -webkit-user-select: none

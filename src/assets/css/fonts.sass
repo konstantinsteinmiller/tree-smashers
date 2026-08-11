@@ -4,3 +4,60 @@
   font-weight: 700
   font-display: swap
   src: url(./font/angrybirds-regular.ttf) format('truetype')
+
+// ─── Global font stack ──────────────────────────────────────────────────────
+//
+// `Angry` (angrybirds-regular.ttf) is a LATIN-ONLY display face: it carries
+// no Han, Kana or Hangul glyphs. The previous stack was `'Angry', cursive`,
+// which meant every CJK codepoint fell through to the browser's generic
+// `cursive` family — Comic Sans MS on Windows, an unpredictable handwriting
+// face elsewhere — none of which ship CJK coverage either. The browser then
+// had to improvise a last-resort fallback, and on Android WebViews / Linux
+// portal sandboxes that resolves to tofu (□□□) or a badly-hinted serif.
+// Playgama QA reported exactly this as "missing fonts" for Chinese.
+//
+// Per-character fallback means Latin/digits still render in `Angry`; only the
+// codepoints Angry lacks walk further down the list. So we name a real CJK
+// face for every platform we ship to BEFORE reaching a generic:
+//
+//   • PingFang SC / Hiragino Sans GB   — macOS + iOS (Simplified Chinese)
+//   • Microsoft YaHei / SimHei         — Windows (Simplified Chinese)
+//   • Noto Sans CJK SC / Source Han    — Android, ChromeOS, Linux
+//   • WenQuanYi Micro Hei              — older Linux portal sandboxes
+//   • Yu Gothic / Meiryo / Hiragino    — Japanese
+//   • Malgun Gothic / Apple SD Gothic  — Korean
+//
+// Never inline a CJK webfont here: a full Simplified-Chinese subset is
+// 3–8 MB, which would blow the portal download budget many times over.
+// System faces are always present on the target device and cost 0 bytes.
+:root
+  --font-game: 'Angry', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Noto Sans CJK JP', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans CJK KR', 'Segoe UI', system-ui, sans-serif
+
+// ─── CJK typography corrections ─────────────────────────────────────────────
+//
+// The arena UI leans hard on `italic`, `uppercase` and tight `tracking-*`.
+// All three are Latin-display idioms that actively damage CJK:
+//
+//   • `italic` — no CJK system face ships a true italic, so the browser
+//     synthesises an oblique by shearing the glyph box. Han glyphs are dense
+//     and square; shearing them smears the strokes and pushes the rightmost
+//     column past the element's bounds. That is the "text overflows UI
+//     bounds" half of the Playgama report.
+//   • negative `letter-spacing` (tracking-tight/tighter) — Latin glyphs have
+//     side bearings to eat into, Han glyphs do not, so the columns collide.
+//   • `text-transform: uppercase` — a no-op for Han/Kana/Hangul but it does
+//     force an extra layout pass on some WebViews.
+//
+// `<html data-locale>` carries our raw internal locale code and is kept in
+// sync by `applyDocumentLocale()` in `src/i18n/index.ts`. We key off it rather
+// than `lang` because `lang` holds the BCP-47 form (`ja` / `ko` / `zh-Hans`)
+// for screen readers, while our internal codes are `jp` / `kr` / `zh`.
+html[data-locale='zh'], html[data-locale='jp'], html[data-locale='kr']
+  *
+    font-style: normal !important
+    font-synthesis: none
+
+  // Only neutralise NEGATIVE tracking — positive tracking (`tracking-wide`,
+  // `tracking-wider`) actually helps Han legibility, so it stays.
+  [class*='tracking-tight']
+    letter-spacing: normal !important

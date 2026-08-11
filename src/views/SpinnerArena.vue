@@ -1501,6 +1501,14 @@ onUnmounted(() => {
               span.text-cyan-400 {{ bs.spd.toFixed(1) }}
 
       //- Bottom-left column: mute → settings → daily/ad/battlepass row
+      //-
+      //- `bottom: 1rem` (was 0.5rem). The stack is scaled by `uiBtnScale`
+      //- about its BOTTOM-left corner, so anything the buttons paint below
+      //- their own layout box — the `translate-y-1` 3D shadow, and the extra
+      //- half of an `sm:scale-115` button — is multiplied by that same factor
+      //- on the way down. At 1280px wide (scale 1.28) the shadows were
+      //- clipping ~3px off the bottom edge of the screen; at 1920 it would
+      //- have been ~8px. 1rem clears it at the scale ceiling of 2.
       div(
         v-if="showConfigButton && !showReward && !showConfigSpotlight"
         class="ui-stack-bl fixed pointer-events-auto z-50 flex flex-col items-start gap-1"
@@ -1610,14 +1618,14 @@ onUnmounted(() => {
     )
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl" :class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : (dailyChallengeMode ? t('challenge.title') : t('spinner.rewards')) }}
-      //- `mb-20 sm:mb-24` reserves a click-to-continue safety strip at the
-      //- bottom of the slot area. Because FReward's slot wrapper uses
-      //- `justify-center`, the margin participates in flex centering — it
-      //- pushes the entire reward column UP, guaranteeing the tip badge
-      //- (last child of the column) can't dip into the click-to-continue
-      //- band even when the player is on a short landscape viewport.
-      div.flex.flex-col.items-center.gap-4(class="mb-20 sm:mb-24")
-        div.font-black.uppercase.tracking-wider.game-text(
+      //- The click-to-continue prompt used to be absolutely positioned at the
+      //- overlay's bottom edge, so this column reserved a `mb-20 sm:mb-24`
+      //- safety strip to stay out from under it. The prompt is a normal flex
+      //- child now (see FReward), so the strip is no longer needed — and on a
+      //- short landscape viewport those 96px were pushing the result text off
+      //- the top of the scroll area. A small gap is all that's left.
+      div.reward-column.flex.flex-col.items-center.gap-4(class="mb-2 sm:mb-3")
+        div.reward-result-text.font-black.uppercase.tracking-wider.game-text(
           class="text-3xl sm:text-5xl"
           :class="gameResult === 'win' ? 'text-green-400' : 'text-red-400'"
         ) {{ resultText }}
@@ -1915,6 +1923,21 @@ onUnmounted(() => {
   .blade-stat-icon
     width: 0.75rem
     height: 0.75rem
+
+// ─── Reward overlay — short-landscape fit ───────────────────────────────────
+// A 390px-tall landscape viewport has to hold the parchment ribbon, the result
+// text, the reward row and the player tip. At the portrait sizes (`sm:text-5xl`
+// applies from 640px WIDE, which every landscape phone is) the result text
+// alone is ~58px and the tip badge ended up half below the fold. The reward
+// body scrolls, so nothing was unreachable — but a clipped tip badge reads as
+// a broken layout. Trimming the type and the gaps lets the whole column fit.
+@media (orientation: landscape) and (max-height: 500px)
+  .reward-column
+    gap: 0.5rem
+
+  .reward-result-text
+    font-size: 1.875rem
+    line-height: 2.125rem
 
 // ─── Roulette overlay — viewport-fit ────────────────────────────────────────
 // Shrink the result text and the slot's vertical gap on short-but-not-mobile

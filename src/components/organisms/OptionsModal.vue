@@ -128,9 +128,12 @@ const languagesList = computed(() => {
     div(v-if="currentTab === 'general'")
       div(class="flex flex-col gap-2 p-2")
         //- Language Selection
-        div(class="z-[10] flex flex-col gap-2 scale-80 sm:scale-100")
+        div(class="z-[10] flex flex-col gap-2 scale-90 sm:scale-100")
+          //- The old `!text-[10px] md:text-[12px]` here was dead weight: every
+          //- element inside FSelect declares its own font-size, so the class
+          //- only ever styled the (empty) root box. Dropped rather than
+          //- resized — the sizes now live in FSelect itself.
           FSelect(
-            class="!text-[10px] md:text-[12px]"
             :label="t('language')"
             :options="languagesList"
             :model-value="userLanguage"
@@ -141,14 +144,14 @@ const languagesList = computed(() => {
 
         //- Danger zone: wipe all progress (keeps settings + purchased skins).
         //- Guarded by the confirmation modal below.
-        div(class="flex flex-col items-center gap-1 scale-80 sm:scale-100")
+        div(class="flex flex-col items-center gap-1 scale-90 sm:scale-100")
           FButton(
             color-from="#ff6b6b"
             color-to="#c62828"
             shadow-color="#6b1212"
             @click="showResetConfirm = true"
           ) {{ t('resetCampaign') }}
-          span.game-text(class="text-[9px] md:text-[11px] text-slate-400 text-center px-2") {{ t('resetKeepsNote') }}
+          span.game-text(class="text-[0.7rem] md:text-[0.85rem] text-slate-400 text-center px-2") {{ t('resetKeepsNote') }}
 
 
     //- Difficulty Tab
@@ -181,7 +184,7 @@ const languagesList = computed(() => {
   )
     div(class="flex flex-col gap-2 p-2 max-w-sm mx-auto")
       p.game-text(class="text-sm md:text-base text-white") {{ t('sureResetCampaign') }}
-      p.game-text(class="text-[11px] md:text-xs text-slate-300") {{ t('resetKeepsNote') }}
+      p.game-text(class="text-[0.85rem] md:text-xs text-slate-300") {{ t('resetKeepsNote') }}
     template(#footer)
       FButton(
         type="secondary"

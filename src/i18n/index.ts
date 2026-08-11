@@ -27,6 +27,37 @@ export const isSupportedLocale = (code: string | null | undefined): code is stri
   !!code && LANGUAGES.includes(code)
 
 /**
+ * Our internal locale codes are not all valid BCP-47 tags — the project uses
+ * `jp` for Japanese and `kr` for Korean (the correct tags are `ja` / `ko`).
+ * `<html lang>` is consumed by screen readers and by the browser's own font
+ * fallback / line-breaking machinery, so it has to carry the real tag.
+ */
+const BCP47: Record<string, string> = {
+  zh: 'zh-Hans',
+  jp: 'ja',
+  kr: 'ko'
+}
+
+/**
+ * Mirror the active locale onto the document element.
+ *
+ *   • `lang`        — BCP-47, for a11y + the browser's CJK font/line-break
+ *                     heuristics (Han glyph shaping differs between
+ *                     zh-Hans / ja / ko and the browser needs the hint).
+ *   • `data-locale` — our raw internal code, which the CJK typography
+ *                     corrections in `assets/css/fonts.sass` key off.
+ *
+ * Called from `setI18nLocale` (every runtime switch) and once from `main.ts`
+ * for the boot locale, so the very first paint is already correct.
+ */
+export const applyDocumentLocale = (code: string): void => {
+  if (typeof document === 'undefined') return
+  const el = document.documentElement
+  el.setAttribute('lang', BCP47[code] ?? code)
+  el.setAttribute('data-locale', code)
+}
+
+/**
  * Dynamically load a single locale's message bundle. Safe to call for
  * already-loaded locales (returns the cached object immediately).
  * Throws if the locale file is missing so callers can fall back to `en`.
@@ -71,12 +102,14 @@ export const setI18nLocale = async (
   // Already-loaded locales can switch synchronously.
   if (g.availableLocales.includes(target)) {
     g.locale.value = target
+    applyDocumentLocale(target)
     return
   }
   try {
     const msgs = await loadLocaleMessages(target)
     g.setLocaleMessage(target, msgs)
     g.locale.value = target
+    applyDocumentLocale(target)
   } catch (e) {
     console.error(`[i18n] failed to load locale "${target}"`, e)
   }

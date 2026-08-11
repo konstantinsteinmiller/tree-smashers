@@ -84,7 +84,7 @@ const onClick = () => {
     //- Timer label — warm orange (#f4a35d-ish), tuned to be readable
     //- without yelling for attention. Stays on the right of the skin.
     span.game-text.font-bold.skin-chest-timer-label(
-      class="text-[10px] sm:text-xs"
+      class="text-[0.75rem] sm:text-xs"
     ) {{ skinChestTimeDisplay }}
 </template>
 

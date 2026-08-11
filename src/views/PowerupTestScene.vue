@@ -139,7 +139,7 @@ onUnmounted(() => {
     div.absolute.top-2.left-2.flex.flex-col.gap-2.pointer-events-auto
       div.text-white.font-bold.game-text(class="text-xs sm:text-sm bg-black/60 px-2 py-1 rounded")
         | Powerup Test — crate every 5s
-      div.text-white.game-text(class="text-[10px] sm:text-xs bg-black/60 px-2 py-1 rounded")
+      div.text-white.game-text(class="text-[0.75rem] sm:text-xs bg-black/60 px-2 py-1 rounded")
         | Active crates: {{ powerups.length }}
       button(
         @click="restart"

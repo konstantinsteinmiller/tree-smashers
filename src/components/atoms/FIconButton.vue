@@ -52,6 +52,12 @@ const theme = computed(() => {
   }
 })
 
+// These multipliers are shared by the ARENA HUD (the options and team-config
+// buttons in the bottom corners) and by in-modal controls. The HUD sizing was
+// already tuned for touch, so it is deliberately left alone here — a pass that
+// raised these to fix the Playgama "too small" report made the menu cramped
+// and was reverted. In-modal controls that genuinely were too small are sized
+// at their own call sites.
 const sizeClasses = computed(() => {
   switch (props.size) {
     case 'sm':

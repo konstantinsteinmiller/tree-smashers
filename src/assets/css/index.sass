@@ -1,6 +1,20 @@
 @use './fonts'
 @use './components'
 
+// ─── UI scale: NOT global ───────────────────────────────────────────────────
+//
+// A first pass at the Playgama "UI elements are too small" report scaled the
+// ROOT font size to 120%, which moves every rem-based Tailwind utility at
+// once. It was reverted: the arena HUD (stage badge, coin badge, chest, the
+// bottom-left/bottom-right button stacks) was already sized and tuned for
+// touch, and blowing it up 20% pushed the stacks into the logo, clipped their
+// 3D shadows against the screen edges, and made the menu feel cramped.
+//
+// The elements QA actually meant were inside the MODALS — 7-12px labels and
+// 24px buttons. Those are fixed at their own call sites instead, so the menu
+// keeps the proportions it already had. Anything hunting for "why is this
+// element that size" should look at the component, not here.
+
 /* Prevent all touch zooming and remove the 300ms delay */
 html, body
   touch-action: manipulation

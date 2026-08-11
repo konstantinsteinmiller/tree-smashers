@@ -35,6 +35,7 @@ export {
   isPlaygamaAdsBlocked,
   isPlaygamaAdShowing,
   playgamaLocale,
+  playgamaLocaleReady,
   registerPlaygamaMusicControls
 } from '@/utils/playgamaPlugin'
 

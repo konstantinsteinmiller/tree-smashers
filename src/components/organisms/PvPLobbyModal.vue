@@ -275,7 +275,11 @@ watch(() => props.isOpen, (open) => {
     :title="t('pvp.title')"
     @update:model-value="onClose"
   )
-    div.pvp-scroll(class="p-4 sm:p-6 max-h-[55vh] overflow-y-auto overflow-x-hidden")
+    //- Scrolling is FModal's job (single scroll authority — see the
+    //- `.modal-content-slot` rule there). The old `max-h-[55vh]` capped this
+    //- panel at just over half the screen even when the modal had far more
+    //- room, and nested a second scrollbar inside the slot's.
+    div.pvp-scroll(class="p-4 sm:p-6 overflow-x-hidden")
 
       //- ── Idle: Create or Join ─────────────────────────────────────────
       template(v-if="status === 'idle'")
@@ -299,7 +303,7 @@ watch(() => props.isOpen, (open) => {
                   class="w-4 h-4 sm:w-5 sm:h-5"
                   :style="{ backgroundColor: ARENA_CARDS[arena]?.color }"
                 )
-                div.text-white.font-bold.game-text.truncate(class="text-[9px] sm:text-xs") {{ t('arenas.' + arena) }}
+                div.text-white.font-bold.game-text.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
 
           //- Team Size
           div
@@ -375,7 +379,7 @@ watch(() => props.isOpen, (open) => {
 
           //- Invite code (easy to copy on mobile)
           div.rounded-lg.border-2.border-slate-600.bg-slate-800.p-3
-            div.text-gray-400.game-text.uppercase.font-bold.mb-1(class="text-[10px]") {{ t('pvp.inviteCode') }}
+            div.text-gray-400.game-text.uppercase.font-bold.mb-1(class="text-[0.75rem]") {{ t('pvp.inviteCode') }}
             div.flex.items-center.gap-2
               div.text-yellow-300.font-mono.font-bold.truncate.flex-1.select-all.tracking-widest(class="text-base") {{ inviteCode }}
               button.shrink-0.cursor-pointer(
@@ -436,15 +440,15 @@ watch(() => props.isOpen, (open) => {
           div.flex.items-center.justify-center.gap-4.rounded-lg.border-2.border-slate-600.bg-slate-800.py-2.px-4
             div.flex.flex-col.items-center
               span.text-green-400.font-black.game-text(class="text-lg") {{ wins }}
-              span.text-gray-400.font-bold.uppercase(class="text-[9px]") {{ t('pvp.wins') }}
+              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.wins') }}
             div.text-slate-500.font-bold.game-text(class="text-lg") :
             div.flex.flex-col.items-center
               span.text-red-400.font-black.game-text(class="text-lg") {{ losses }}
-              span.text-gray-400.font-bold.uppercase(class="text-[9px]") {{ t('pvp.losses') }}
+              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.losses') }}
             div.border-l.border-slate-600.h-8
             div.flex.flex-col.items-center
               span.text-yellow-400.font-black.game-text(class="text-lg") {{ honor }}
-              span.text-gray-400.font-bold.uppercase(class="text-[9px]") {{ t('pvp.honor') }}
+              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.honor') }}
 
           //- Arena Selection (host can change, guest sees read-only)
           div
@@ -466,7 +470,7 @@ watch(() => props.isOpen, (open) => {
                   class="w-4 h-4 sm:w-5 sm:h-5"
                   :style="{ backgroundColor: ARENA_CARDS[arena]?.color }"
                 )
-                div.text-white.font-bold.game-text.truncate(class="text-[9px] sm:text-xs") {{ t('arenas.' + arena) }}
+                div.text-white.font-bold.game-text.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
 
           //- Team size (host can change)
           div

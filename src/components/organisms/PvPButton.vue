@@ -27,7 +27,7 @@ defineEmits<{
           |  ⚔️
           //- PvP label
           span.absolute.font-black.text-white.game-text.uppercase(
-            class="text-[7px] sm:text-[8px] bottom-0 tracking-wide"
+            class="text-[0.55rem] sm:text-[0.6rem] bottom-0 tracking-wide"
             style="text-shadow: 0 1px 2px rgba(0,0,0,0.6)"
           ) PvP
 </template>

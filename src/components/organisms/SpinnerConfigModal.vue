@@ -199,9 +199,9 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
       //- ── Top Blade Parts ──────────────────────────────────────────────────
       div.top-col
-        div.relative.flex.justify-center.items-center.mb-2
+        div.relative.flex.justify-center.items-center.mb-3
           div.absolute.left-0.flex.items-center.gap-1.rounded.font-bold(
-            class="top-1/2 -translate-y-[50%] px-1.5 py-0.5 bg-yellow-600/60 text-yellow-300 text-[11px] sm:text-xs"
+            class="top-1/2 -translate-y-[50%] px-1.5 py-0.5 bg-yellow-600/60 text-yellow-300 text-[0.85rem] sm:text-xs"
           )
             IconCoin(class="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 text-yellow-300")
             span {{ coins }}
@@ -219,7 +219,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
             v-if="isBgSkinsEnabled"
             class="right-0 top-1/2 -translate-y-[50%]"
           )
-            div.relative
+            div.relative(class=" -mb-4")
               BGSkinButton
               //- Diamond badge rendered AFTER the button (and z-10) so it sits
               //- ON TOP for clear recognition. Bottom-left corner keeps it off
@@ -238,8 +238,16 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
             //- Floating skin row above the card border:
             //- Desktop/landscape: all owned skin thumbnails + plus button
             //- Mobile portrait: selected skin + plus button only (skin selection in shop)
+            //- `z-30`, above the `z-20` level badge.
+            //-
+            //- The skin row floats over its card's TOP edge, and the level
+            //- badge ("Lv.1") hangs off the BOTTOM-right corner of the card
+            //- in the row above — so on the second grid row the two share
+            //- space. At `z-10` the badge won, burying the interactive "+"
+            //- (which bounces upward to draw attention, making the collision
+            //- worse) under a decorative, `pointer-events-none` label.
             div.skin-row.-mt-2.absolute.left-0.right-0.flex.justify-center.items-center.pointer-events-none(
-              class="z-10"
+              class="z-30"
             )
               div.flex.items-center.justify-center.rounded-full.bg-slate-900.border.border-slate-600.pointer-events-auto.skin-row-inner(
                 class="px-1 py-0.5 gap-0.5 sm:gap-1 shadow-md"
@@ -264,7 +272,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                     :title="t('purchaseMoreSkins')"
                   ) +
             div.text-center.part-card-body
-              div.text-white.font-bold.truncate.game-text(class="text-[11px] sm:text-xs") {{ t('parts.' + part.id) }}
+              div.text-white.font-bold.truncate.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
               div.flex.flex-col.items-center.stat-list
                 div.flex.items-center.justify-center.text-red-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
                   IconAttack.inline-block.stat-icon
@@ -311,7 +319,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               : 'bg-slate-700 border-2 border-slate-600 hover:border-slate-400'"
             )
               div.text-center.part-card-body
-                div.text-white.font-bold.game-text(class="text-[11px] sm:text-xs") {{ t('parts.' + part.id) }}
+                div.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
                 div.flex.flex-col.items-center.stat-list
                   div.flex.items-center.justify-center.text-cyan-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
                     IconSpeed.inline-block.stat-icon
@@ -382,7 +390,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     div.skin-picker-body(class="px-2 sm:px-4 py-2")
       div.flex.items-center.justify-between.mb-2.skin-picker-header
         div.flex.items-center.gap-1.rounded.font-bold(
-          class="px-2 py-0.5 bg-yellow-600/60 text-yellow-300 text-[10px] sm:text-xs"
+          class="px-2 py-0.5 bg-yellow-600/60 text-yellow-300 text-[0.75rem] sm:text-xs"
         )
           IconCoin(class="w-3.5 h-3.5 text-yellow-300")
           span {{ coins }}g
@@ -404,18 +412,18 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
             class="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg"
             :alt="modelId"
           )
-          div.text-white.font-bold.skin-card-name(class="mt-0.5 text-[9px] sm:text-xs") {{ t('skins.' + modelId) }}
+          div.text-white.font-bold.skin-card-name(class="mt-0.5 text-[0.7rem] sm:text-xs") {{ t('skins.' + modelId) }}
           //- Action button
           template(v-if="getSelectedSkin(skinPickerTopId, Number(activeBladeIndex)) === modelId")
-            div.text-yellow-400.font-bold.skin-card-action(class="mt-0.5 text-[8px] sm:text-[10px]") {{ t('equipped') }}
+            div.text-yellow-400.font-bold.skin-card-action(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem]") {{ t('equipped') }}
           template(v-else-if="isSkinOwned(skinPickerTopId, modelId)")
             button.rounded-lg.font-bold.transition-all.skin-card-action(
-              class="mt-0.5 text-[8px] sm:text-[10px] px-3 py-0.5 bg-green-600 hover:bg-green-500 text-white cursor-pointer"
+              class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-3 py-0.5 bg-green-600 hover:bg-green-500 text-white cursor-pointer"
               @click="handleSelectSkin(skinPickerTopId, modelId)"
             ) {{ t('selectButton') }}
           template(v-else)
             button.rounded-lg.font-bold.transition-all.skin-card-action(
-              class="mt-0.5 text-[8px] sm:text-[10px] px-2 py-0.5 flex items-center gap-1"
+              class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5 flex items-center gap-1"
               :class="coins >= skinCost(modelId)\
                 ? 'bg-yellow-500 hover:bg-yellow-400 text-white cursor-pointer'\
                 : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
@@ -453,7 +461,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   padding-right: 0.25rem
 
 .hint-text
-  font-size: 10px
+  font-size: 0.75rem
   line-height: 1.25
 
 // ─── Base Layout (portrait / desktop) ────────────────────────────────────────
@@ -462,23 +470,25 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   display: flex
   flex-direction: column
   gap: 0.5rem
-  padding: 0.25rem 0.25rem
-  // Subtract a fixed chrome budget from the viewport instead of using
-  // a plain `vh` cap. The FModal renders the tab heads (`BLADE 1` /
-  // `BLADE 2`) above the modal-container via `bottom: 100%`, plus the
-  // modal frame's own padding + close-button overhang. With a flat
-  // `75vh` cap the content could grow tall enough that the modal's
-  // top edge reached the viewport top — and the tabs (which sit
-  // ABOVE that edge) ended up clipped by the browser chrome.
-  // The 9rem (~144px) budget covers tabs + frame top padding +
-  // safe-area + a small breathing margin so the tabs are always
-  // fully visible. `dvh` reacts correctly to mobile-browser address-
-  // bar collapse — `vh` would over-budget when the bar is showing.
-  max-height: calc(100dvh - 9rem)
-  overflow-y: auto
-  // Reserve scrollbar gutter so hover-scale doesn't pop a scrollbar in/out
-  // (which squeezes content horizontally and produces a visible jitter).
-  scrollbar-gutter: stable
+  // Slightly wider side padding than the old 0.25rem so the right-hand
+  // column (and the background-skin button in the header) clears the
+  // modal's scrollbar instead of sitting flush underneath it.
+  padding: 0.25rem 0.45rem
+// NO local `max-height` / `overflow-y` any more.
+//
+// This used to cap itself at `calc(100dvh - 9rem)` and scroll internally,
+// which meant the game had two competing scroll authorities: this element
+// and (since the 2026-08 UI-scale pass) FModal's own content slot. Two
+// nested scrollers on one modal give you a scrollbar that stops halfway,
+// a fade affordance on the wrong box, and a chrome budget that has to be
+// re-tuned by hand at every breakpoint — the `- 9rem` / `- 10rem` magic
+// numbers below were exactly that hand-tuning.
+//
+// FModal now derives the cap from the overlay's real content box and the
+// measured header strip, so it is correct at every viewport without a
+// per-component budget. Landscape already did it this way (see the
+// `overflow: visible` override further down); this just makes portrait and
+// desktop agree with it.
 
 .top-col, .bottom-col
   min-width: 0
@@ -489,9 +499,13 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   // past 1/3 of the modal width and trigger horizontal scrolling.
   grid-template-columns: repeat(3, minmax(0, 1fr))
   gap: 0.5rem
-  // Leave room for the floating skin row that overflows above each card
-  padding-top: 1.1rem
-  row-gap: 1.4rem
+  // Leave room for the floating skin row that overflows above each card.
+  // Raised from 1.1rem in the 2026-08 UI-scale pass: the skin row's "+"
+  // discs and the section header (coin pill on the left, background-skin
+  // button on the right) both grew, and at the old clearance the first and
+  // third cards' discs collided with them.
+  padding-top: 1.5rem
+  row-gap: 1.5rem
 
 .bottom-grid
   gap: 0.5rem
@@ -512,7 +526,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   // grid, or any card in flex-column where content fills the height).
   margin-bottom: 0.3rem
   gap: 2px
-  font-size: 11px
+  font-size: 0.85rem
 
   span
     text-shadow: 1px 1px 0 #333, -1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333
@@ -538,19 +552,28 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   display: flex
   align-items: center
 
+// The visible "+" is deliberately small (it floats over the card's top edge
+// and a large disc would cover the skin thumbnail), so the TAP area is
+// decoupled from it: the hitbox pads out and cancels the padding with an
+// equal negative margin, keeping the visual row exactly where it was.
+// Playgama QA measured the old combination at ~41px — the numbers below put
+// it at ~50px on a 360px phone while the disc itself only grows a little.
 .skin-plus-hitbox
   display: flex
   align-items: center
   justify-content: center
-  padding: 0.5rem
-  margin: -0.5rem
+  padding: 0.65rem
+  margin: -0.65rem
   margin-left: 0
   cursor: pointer
 
+// Kept modest on purpose: the disc floats over the card's top edge, so a
+// large one covers the skin thumbnail and collides with the header row. The
+// TAP area comes from `.skin-plus-hitbox` above, not from this box.
 .skin-plus-btn
-  width: 1.25rem
-  height: 1.25rem
-  font-size: 1rem
+  width: 1.35rem
+  height: 1.35rem
+  font-size: 1.2rem
   line-height: 1
   padding: 0
 
@@ -559,18 +582,21 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 .level-badge
   right: -0.2rem
   bottom: -0.25rem
-  font-size: 9px
+  font-size: 0.7rem
   line-height: 1
   padding: 1px 4px
   text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000
 
+// Full-card-width action bar. It was 25px tall, which is the single most
+// tapped control in the modal — raised to ~38px so the whole bar is a
+// comfortable target without adding a second row to each card.
 .upgrade-btn
-  font-size: 10px
-  padding: 0.2rem 0
+  font-size: 0.9rem
+  padding: 0.62rem 0
 
 .upgrade-coin-icon
-  width: 0.75rem
-  height: 0.75rem
+  width: 0.85rem
+  height: 0.85rem
 
 .stats-bar
   padding-top: 0.375rem
@@ -582,7 +608,13 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
 .stats-items
   gap: 0.5rem
-  font-size: 12px
+  font-size: 0.9rem
+  // The template already sets `flex-wrap`, but without `min-width: 0` the row
+  // cannot shrink below its min-content width, so it never actually wraps —
+  // it just overflows its column. In the two-column landscape layout that put
+  // the last stat (`1.0x`) half off the right edge of the modal.
+  min-width: 0
+  flex: 1 1 auto
 
 .stat-summary-icon
   width: 0.875rem
@@ -592,20 +624,14 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 // ─── sm+ breakpoint (≥640px) ─────────────────────────────────────────────────
 
 @media (min-width: 640px)
-  .config-layout
-    // Slightly larger chrome budget for sm+ — the modal frame's
-    // top padding grows from `pt-7` to `sm:pt-6` / `md:pt-10`, the
-    // tabs scale up to text-base, and the desktop browser chrome /
-    // scrollbar takes a bit more vertical space. 10rem (~160px)
-    // keeps the tabs fully visible from the smallest desktop
-    // viewport (~600px tall) up to 4K monitors.
-    max-height: calc(100dvh - 10rem)
+  // (The sm+ `max-height: calc(100dvh - 10rem)` budget lived here. Dropped
+  // along with the base one — FModal owns the height cap now.)
 
   .label-section
     font-size: 1.15rem
 
   .hint-text
-    font-size: 11px
+    font-size: 0.85rem
 
   // Keep the 3-column wrap from the base layout (so the 6 top parts
   // render as a 3x2 grid). The previous repeat(6, 1fr) packed all six
@@ -629,7 +655,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     padding-top: 0.5rem
 
   .stat-list
-    font-size: 12px
+    font-size: 0.9rem
     gap: 2px
 
   .stat-icon
@@ -652,31 +678,31 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     align-items: center
 
   .skin-plus-hitbox
-    padding: 0.25rem
-    margin: -0.25rem
+    padding: 0.6rem
+    margin: -0.6rem
     margin-left: 0
 
   .skin-plus-btn
-    width: 1.45rem
-    height: 1.45rem
-    font-size: 1.1rem
+    width: 1.7rem
+    height: 1.7rem
+    font-size: 1.25rem
 
   .level-badge
     right: -0.3rem
     bottom: -0.35rem
-    font-size: 11px
+    font-size: 0.85rem
     padding: 2px 5px
 
   .upgrade-btn
-    font-size: 11px
-    padding: 0.2rem 0
+    font-size: 0.85rem
+    padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.75rem
-    height: 0.75rem
+    width: 0.9rem
+    height: 0.9rem
 
   .stats-items
-    font-size: 13px
+    font-size: 0.85rem
 
   .stat-summary-icon
     width: 1rem
@@ -695,7 +721,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     column-gap: 2px
     row-gap: 2px
     margin-top: 0.125rem
-    font-size: 16px
+    font-size: 1.2rem
     justify-items: stretch
 
   .stat-glass
@@ -709,7 +735,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   // Bottom stats summary row also gets the readability bump.
   .stats-items
-    font-size: 16px
+    font-size: 1.2rem
     gap: 0.5rem
 
   .stat-summary-icon
@@ -730,9 +756,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     flex-direction: row
     flex-wrap: wrap
     gap: 0.25rem
-    padding: 0
-    max-height: none
-    overflow: visible
+    // Horizontal padding, NOT `padding: 0`. In the two-column landscape
+    // layout the right-hand column ends flush with the modal body's edge, so
+    // the scrollbar drew straight over the last card and the last stat pill
+    // ("1.0x") — it read as clipped content.
+    padding: 0 0.45rem
 
   // Landscape mobile is the tightest viewport — keep the section labels
   // readable but only modestly larger so the cards still fit without
@@ -751,7 +779,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     padding-top: 0.2rem
 
   .hint-text
-    font-size: 11px
+    font-size: 0.85rem
     line-height: 1.2
 
   .top-col
@@ -772,7 +800,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   .top-grid
     grid-template-columns: repeat(3, minmax(0, 1fr))
     gap: 0.25rem
-    padding-top: 0.55rem
+    padding-top: 0.8rem
     row-gap: 1rem
 
   .bottom-grid
@@ -804,7 +832,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   // gap kept at 1px, and the value text bumped slightly to 12px so the
   // upgraded multipliers (e.g. "5.10x") stay legible at a glance.
   .stat-list
-    font-size: 12px
+    font-size: 0.9rem
     column-gap: 1px
     row-gap: 1px
 
@@ -834,30 +862,32 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     height: 100%
 
   .skin-plus-hitbox
-    padding: 0.25rem
-    margin: -0.25rem
+    padding: 0.55rem
+    margin: -0.55rem
     margin-left: 0
 
   .skin-plus-btn
-    width: 0.85rem
-    height: 0.85rem
-    font-size: 0.7rem
+    width: 1.1rem
+    height: 1.1rem
+    font-size: 0.9rem
 
   .level-badge
     right: -0.15rem
     bottom: -0.2rem
-    font-size: 7px
+    font-size: 0.55rem
     padding: 1px 2px
 
   // Bump the upgrade cost text so it stays readable alongside the now-
-  // larger stat pills above it.
+  // larger stat pills above it. The bar keeps real padding even on the
+  // shortest landscape phones — it was `padding: 0` and collapsed to a
+  // ~17px sliver, which is unusable with a thumb.
   .upgrade-btn
-    font-size: 10px
-    padding: 0 0
+    font-size: 0.75rem
+    padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.7rem
-    height: 0.7rem
+    width: 0.8rem
+    height: 0.8rem
 
   .stats-bar
     padding-top: 0.15rem
@@ -866,7 +896,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   .stats-items
     gap: 0.3rem
-    font-size: 12px
+    font-size: 0.9rem
 
   .stat-summary-icon
     width: 0.85rem
@@ -896,12 +926,12 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   .skin-card-name
     margin-top: 0.1rem
-    font-size: 9px
+    font-size: 0.7rem
     line-height: 1.1
 
   .skin-card-action
     margin-top: 0.1rem
-    font-size: 9px
+    font-size: 0.7rem
     padding-top: 0
     padding-bottom: 0
     line-height: 1.2
@@ -923,7 +953,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   .top-grid
     gap: 0.4rem
-    padding-top: 0.75rem
+    padding-top: 1rem
     row-gap: 1.25rem
 
   .bottom-grid
@@ -943,12 +973,12 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     height: 1rem
 
   .skin-plus-btn
-    width: 1.05rem
-    height: 1.05rem
-    font-size: 0.85rem
+    width: 1.35rem
+    height: 1.35rem
+    font-size: 1rem
 
   .stat-list
-    font-size: 14px
+    font-size: 0.9rem
     column-gap: 2px
     row-gap: 2px
 
@@ -961,15 +991,15 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     height: 0.85rem
 
   .upgrade-btn
-    font-size: 12px
-    padding: 1px 0
+    font-size: 0.85rem
+    padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.8rem
-    height: 0.8rem
+    width: 0.9rem
+    height: 0.9rem
 
   .level-badge
-    font-size: 9px
+    font-size: 0.62rem
     padding: 1px 3px
 
   .stats-bar
@@ -979,7 +1009,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   .stats-items
     gap: 0.45rem
-    font-size: 14px
+    font-size: 0.9rem
 
   .stat-summary-icon
     width: 1rem
@@ -990,7 +1020,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     padding-top: 0.35rem
 
   .hint-text
-    font-size: 13px
+    font-size: 0.85rem
     line-height: 1.25
 
   // Skin picker — give thumbnails a touch more room so they don't look
@@ -1011,11 +1041,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
   .skin-card-name
     margin-top: 0.15rem
-    font-size: 11px
+    font-size: 0.85rem
 
   .skin-card-action
     margin-top: 0.15rem
-    font-size: 11px
+    font-size: 0.85rem
 </style>
 
 <i18n>

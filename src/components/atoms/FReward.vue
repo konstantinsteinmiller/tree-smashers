@@ -28,13 +28,28 @@
           slot(name="ribbon")
             span.text-white.font-black.uppercase.italic.game-text {{ t('spinner.rewards') }}
 
-      div.relative.w-full.h-full.flex.flex-col.items-center.justify-center
+      //- Defensive scroll. The reward overlay is centred and unbounded, so
+      //- anything taller than the viewport (the roulette wheel plus its
+      //- buttons on a short landscape screen, a skin-reward column, or simply
+      //- a locale whose result text wraps to more lines than English) used to
+      //- be clipped with no way to reach it. `overscroll-contain` keeps a
+      //- fling inside the overlay, and a scroll gesture does not synthesise
+      //- the click that drives tap-to-continue.
+      div.reward-body.relative.w-full.flex.flex-col.items-center.justify-center
         slot
 
+      //- The tap-to-continue prompt is a normal flex child, NOT an absolutely
+      //- positioned strip pinned to the bottom.
+      //-
+      //- As an absolute element it took no part in layout, so on a short
+      //- landscape viewport it printed straight over the tip badge — two
+      //- lines of Chinese stacked on top of each other. In flow, the body
+      //- above it (`flex: 1`) simply gets less room and scrolls, and the two
+      //- can never occupy the same pixels.
       Transition(name="fade")
-        div.absolute.bottom-8.left-0.right-0.flex.justify-center.animate-pulse.pointer-events-none(
+        div.shrink-0.w-full.flex.justify-center.animate-pulse.pointer-events-none(
           v-if="showContinue"
-          class="sm:bottom-12"
+          class="mt-3 pb-1 sm:mt-5"
         )
           div.text-sm.text-center.text-white.font-black.uppercase.italic.tracking-widest.brawl-text(class="md:text-2xl")
             | {{ isMobile ? t('tapToContinue') : t('clickToContinue') }}
@@ -77,6 +92,35 @@ const handleOverlayClick = () => {
 .brawl-text
   text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
 
+// `flex: 1 1 auto` + `min-height: 0`, NOT `h-full`.
+//
+// `h-full` resolved against the OVERLAY's height, so the body claimed the
+// full screen even though the ribbon above it had already taken ~180px of a
+// 390px landscape viewport. Everything below was pushed off the bottom. As a
+// flex item it takes exactly the space the ribbon and the continue prompt
+// leave over, and scrolls anything that still doesn't fit (a roulette wheel
+// plus its buttons, a skin-reward column, or a locale whose result text wraps
+// to more lines than English).
+.reward-body
+  flex: 1 1 auto
+  min-height: 0
+  overflow-y: auto
+  overflow-x: hidden
+  overscroll-behavior: contain
+  // `safe center` instead of the plain `center` from the utility class.
+  // A centred flex column that overflows its scroll container pushes content
+  // past the START edge, where scrolling cannot reach it — the result text
+  // ("YOU LOSE") disappeared behind the ribbon on a 390px-tall landscape
+  // screen. `safe` degrades to flex-start exactly when overflow would occur
+  // and behaves like `center` the rest of the time.
+  justify-content: safe center
+  // Hidden scrollbar: this is a celebration screen, and a scrollbar would
+  // read as chrome. The content is short enough that a fling reveals it.
+  scrollbar-width: none
+
+  &::-webkit-scrollbar
+    display: none
+
 // ─── Parchment ribbon ────────────────────────────────────────────────────────
 
 .ribbon-wrap
@@ -107,10 +151,14 @@ const handleOverlayClick = () => {
   justify-content: center
   text-align: center
 
+// Short landscape: the parchment is 553x188, so a 400px-wide ribbon is ~136px
+// tall — over a third of a 390px viewport, before the result text, the reward
+// row and the tip badge have had any. Capped tighter here so the actual
+// reward has room; the ribbon is decoration and reads fine smaller.
 @media (orientation: landscape) and (max-height: 500px)
   .ribbon-wrap
-    width: 50vw
-    max-width: 400px
+    width: 40vw
+    max-width: 300px
 
 // Short but not landscape-mobile (e.g. CG iframe in landscape with the
 // portal chrome bar visible — ~700–860 px viewport). The default desktop

@@ -120,6 +120,10 @@ const indexToRank = (entry: LeaderboardEntry): number =>
         img.w-7.h-7(src="/images/icons/trophy_128x128.webp" alt="trophy")
 
   //- ─── Modal ──────────────────────────────────────────────────────────────
+  //- The whole panel scrolls in FModal's body (the single scroll authority),
+  //- and the PAGINATION lives in the modal's footer slot — the footer sits
+  //- outside the scroll area, so the page controls are always on screen
+  //- without this component having to fight the modal for a definite height.
   FModal(
     :class="{ 'is-mobile-landscape': isMobileLandscape }"
     :model-value="isOpen"
@@ -128,28 +132,27 @@ const indexToRank = (entry: LeaderboardEntry): number =>
   )
     div.flex.flex-col.gap-3.w-full
 
-      //- Player summary card
-      div.flex.items-center.justify-between.rounded-lg.border-2(
+      //- Player summary card. `shrink-0` keeps the rank number from being
+      //- compressed against the card's bottom edge when the list is long.
+      div.shrink-0.flex.items-center.justify-between.rounded-lg.border-2(
         v-if="playerEntry"
-        class="bg-gradient-to-b from-[#ffcd00]/20 to-[#f7a000]/10 border-[#ffcd00]/60 px-3 py-2"
+        class="bg-gradient-to-b from-[#ffcd00]/20 to-[#f7a000]/10 border-[#ffcd00]/60 px-3 py-2 gap-2"
       )
         div.flex.flex-col.items-start
-          span.text-white.uppercase.tracking-wider.game-text(class="text-[10px] sm:text-xs opacity-80") {{ t('yourRank') }}
+          span.text-white.uppercase.tracking-wider.game-text(class="text-[0.75rem] sm:text-xs opacity-80") {{ t('yourRank') }}
           span.text-yellow-300.font-black.game-text(class="text-xl sm:text-2xl leading-none") {{ `#${playerRank}` }}
             span.font-bold(class="text-xs sm:text-sm text-white/60 ml-1") /{{ totalEntries }}
         div.flex.flex-col.items-center
           button(
             @click="jumpToMe"
-            class="rounded-md border border-[#ffcd00]/60 bg-black/30 text-yellow-300 font-bold px-2 py-1 text-[10px] sm:text-xs hover:bg-black/50 cursor-pointer game-text"
+            class="rounded-md border border-[#ffcd00]/60 bg-black/30 text-yellow-300 font-bold px-3 py-2.5 text-[0.9rem] sm:text-sm hover:bg-black/50 cursor-pointer game-text"
           ) {{ t('jumpToMe') }}
         div.flex.flex-col.items-end
-          span.text-white.uppercase.tracking-wider.game-text(class="text-[10px] sm:text-xs opacity-80") {{ t('maxStage') }}
+          span.text-white.uppercase.tracking-wider.game-text(class="text-[0.75rem] sm:text-xs opacity-80") {{ t('maxStage') }}
           span.text-yellow-300.font-black.game-text(class="text-xl sm:text-2xl leading-none") {{ playerEntry.maxStage }}
 
-      //- Scrollable list
-      div.lb-scroll.flex.flex-col.gap-1.overflow-y-auto.pr-1(
-        class="max-h-[50vh] sm:max-h-[55vh]"
-      )
+      //- Entry list. No local scroll cap — FModal's body scrolls the panel.
+      div.lb-scroll.flex.flex-col.gap-1.pr-1
         div(
           v-for="entry in pagedEntries"
           :key="entry.id"
@@ -172,15 +175,15 @@ const indexToRank = (entry: LeaderboardEntry): number =>
             ) {{ entry.name }}
             div.flex.items-center.gap-1.flex-wrap
               span.rounded.border.font-mono(
-                class="text-[9px] sm:text-[10px] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
               ) {{ entry.blade.topPartId }} +{{ entry.blade.topLevel ?? 0 }}
               span.rounded.border.font-mono(
-                class="text-[9px] sm:text-[10px] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
               ) {{ entry.blade.bottomPartId }} +{{ entry.blade.bottomLevel ?? 0 }}
 
           //- Max stage
           div.flex.flex-col.items-center.shrink-0(class="w-10 sm:w-12")
-            span.uppercase.game-text(class="text-[8px] sm:text-[9px] text-white/60 leading-none") {{ t('stage') }}
+            span.uppercase.game-text(class="text-[0.6rem] sm:text-[0.7rem] text-white/60 leading-none") {{ t('stage') }}
             span.text-yellow-300.font-black.game-text(class="text-sm sm:text-base leading-none") {{ entry.maxStage }}
 
           //- Fight button (crossed swords) — never shown for the player
@@ -199,45 +202,39 @@ const indexToRank = (entry: LeaderboardEntry): number =>
             div.relative
               div.absolute.inset-0.translate-y-1.rounded-md(class="bg-[#6b1212] inset-x-[1px]")
               div.relative.rounded-md.border-2.text-white(
-                class="bg-gradient-to-b from-[#ff5e5e] to-[#c01818] border-[#0f1a30] p-1.5 sm:p-2"
+                class="bg-gradient-to-b from-[#ff5e5e] to-[#c01818] border-[#0f1a30] px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
               ) ⚔️
 
           //- "YOU" tag for the player row
           span.text-yellow-300.font-black.game-text.shrink-0(
             v-else
-            class="text-[10px] sm:text-xs px-2"
+            class="text-[0.75rem] sm:text-xs px-2"
           ) {{ t('you') }}
 
-      //- Pagination controls
-      div.flex.items-center.justify-center.gap-2.pt-1
+    //- Pagination lives in the FOOTER slot, not in the scrolling body — with
+    //- 20 entries per page the controls would otherwise sit ~700px below the
+    //- fold, and paging is the one thing you always want to reach.
+    template(#footer)
+      div.flex.items-center.justify-center.gap-2
         button(
           @click="goPrev"
           :disabled="currentPage === 1"
-          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-3 py-1 text-xs hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
+          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-4 py-2.5 text-sm sm:text-base hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
         ) ‹ {{ t('prev') }}
         span.text-white.font-bold.game-text(class="text-xs sm:text-sm")
           | {{ t('page') }} {{ currentPage }} / {{ totalPages }}
         button(
           @click="goNext"
           :disabled="currentPage === totalPages"
-          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-3 py-1 text-xs hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
+          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-4 py-2.5 text-sm sm:text-base hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
         ) {{ t('next') }} ›
 </template>
 
 <style scoped lang="sass">
-.lb-scroll
-  scrollbar-width: thin
-  scrollbar-color: #ffcd00 transparent
-
-  &::-webkit-scrollbar
-    width: 6px
-
-  &::-webkit-scrollbar-thumb
-    background: #ffcd00
-    border-radius: 3px
-
-  &::-webkit-scrollbar-track
-    background: transparent
+// (The `.lb-scroll` scrollbar styling that used to live here is gone with the
+// element's own `overflow-y`. FModal's body is the scroller now and carries
+// the shared `game-scroll` styling, so the list no longer paints a second,
+// differently-coloured bar inside the first.)
 
 .is-mobile-landscape
   :deep(.model-container)

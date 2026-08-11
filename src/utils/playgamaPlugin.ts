@@ -44,6 +44,51 @@ let gameplayStartedActive = false
 let heldPause = false
 let visibilityHidden = false
 
+// ─── Portal language ───────────────────────────────────────────────────────
+//
+// Playgama QA (2026-08) reported "the language parameter was ignored on
+// initialization" for Chinese. Two separate bugs caused it:
+//
+//   1. `main.ts` only ever consumed `crazyLocale` when picking the boot
+//      locale — `playgamaLocale` was exported here and read by nobody.
+//   2. The Bridge reports a BCP-47 tag (`zh-CN`, `zh-Hans`, `ja`, `ko`,
+//      `pt-BR`, …) but this project's internal codes are `zh`, `jp`, `kr`.
+//      A bare `split('-')[0]` turned `ja` into `ja`, which is not in
+//      `LANGUAGES`, so Japanese silently fell back to English too.
+//
+// `normalizePlaygamaLanguage` fixes (2); the `localeReady` gate below fixes
+// the timing half of (1) — `bridge.platform.language` only becomes readable
+// after `bridge.initialize()` resolves, which is *after* `main.ts` needs to
+// build the i18n instance.
+
+/** BCP-47 (or portal-specific) tag → the internal code used by `LANGUAGES`. */
+const LANGUAGE_ALIASES: Record<string, string> = {
+  ja: 'jp',
+  jpn: 'jp',
+  ko: 'kr',
+  kor: 'kr',
+  zh: 'zh',
+  cmn: 'zh',
+  chi: 'zh',
+  zho: 'zh'
+}
+
+export const normalizePlaygamaLanguage = (raw: string): string | null => {
+  const base = raw.toLowerCase().split(/[-_]/)[0]
+  if (!base) return null
+  return LANGUAGE_ALIASES[base] ?? base
+}
+
+// Resolves as soon as we know whether the portal has a language for us —
+// either because `initialize()` finished, or because it failed / timed out.
+// `main.ts` races this against a short budget so a slow or unreachable
+// Bridge can never hold up first paint.
+let resolveLocaleReady: () => void = () => {
+}
+export const playgamaLocaleReady: Promise<void> = new Promise((resolve) => {
+  resolveLocaleReady = resolve
+})
+
 const getBridge = (): any =>
   typeof window === 'undefined' ? null : (window as any).bridge ?? (window as any).playgamaBridge ?? null
 
@@ -132,12 +177,14 @@ export const playgamaPlugin = (): Promise<void> => {
     const sdkRoot = await ensureSdkLoaded()
     if (!sdkRoot) {
       isPlaygamaAdsBlocked.value = true
+      resolveLocaleReady()
       return
     }
     const bridge = getBridge()
     if (!bridge || typeof bridge.initialize !== 'function') {
       console.warn('[playgama] bridge object missing initialize()')
       isPlaygamaAdsBlocked.value = true
+      resolveLocaleReady()
       return
     }
     try {
@@ -153,8 +200,14 @@ export const playgamaPlugin = (): Promise<void> => {
 
       const lang = bridge?.platform?.language
       if (typeof lang === 'string' && lang.length > 0) {
-        playgamaLocale.value = lang.toLowerCase().split(/[-_]/)[0] ?? null
+        playgamaLocale.value = normalizePlaygamaLanguage(lang)
+        console.info('[playgama] portal language:', lang, '→', playgamaLocale.value)
+      } else {
+        console.info('[playgama] portal reported no language — keeping stored/browser locale')
       }
+      // Resolve the locale gate regardless of the outcome so `main.ts` stops
+      // waiting the moment we know the answer (or know there isn't one).
+      resolveLocaleReady()
 
       const ev = bridge?.EVENT_NAME ?? {}
       const pauseEventName = ev.PAUSE_STATE_CHANGED ?? 'pause_state_changed'
@@ -190,6 +243,10 @@ export const playgamaPlugin = (): Promise<void> => {
     } catch (e) {
       console.warn('[playgama] initialize() failed', e)
       isPlaygamaAdsBlocked.value = true
+    } finally {
+      // Unblock the boot-locale race on every exit path — a Bridge that
+      // never answers must not leave `main.ts` waiting on a dead promise.
+      resolveLocaleReady()
     }
   })()
   return initPromise

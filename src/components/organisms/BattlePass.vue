@@ -379,18 +379,21 @@ const onStripPointerUp = (e: PointerEvent) => {
     :is-closable="true"
     :title="t('battlePass')"
   )
-    div(class="space-y-3 px-1 sm:px-3 py-2 max-h-[70vh] overflow-y-auto")
+    //- Scrolling is FModal's job (single scroll authority — see the
+    //- `.modal-content-slot` rule there). The old `max-h-[70vh]` nested a
+    //- second scroller inside the already-scrollable slot.
+    div(class="space-y-3 px-1 sm:px-3 py-2")
       //- Summary row: current stage + xp progress bar
       div(class="flex items-center gap-2 px-1 sm:px-2")
         div.flex.flex-col.items-start.shrink-0
-          span.text-gray-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]") {{ t('stage') }}
+          span.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") {{ t('stage') }}
           span.text-white.font-black.game-text.leading-none(class="text-lg sm:text-xl") {{ unlockedStages }}/{{ BP_TOTAL_STAGES }}
         div.flex-1.flex.flex-col.gap-1
           div.flex.justify-between.items-end
-            span.text-gray-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]")
+            span.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]")
               template(v-if="isMaxed") {{ t('complete') }}
               template(v-else) {{ t('stage') }} {{ inProgressStage }}
-            span.text-yellow-400.font-black.game-text(class="text-[9px] sm:text-xs")
+            span.text-yellow-400.font-black.game-text(class="text-[0.7rem] sm:text-xs")
               template(v-if="isMaxed") {{ t('max') }}
               template(v-else) {{ Math.floor(currentXp) }}/{{ BP_XP_PER_STAGE }} xp
           div.relative.w-full.overflow-hidden.rounded-full.border(
@@ -428,7 +431,7 @@ const onStripPointerUp = (e: PointerEvent) => {
             ]"
           )
             //- Stage number
-            div.text-gray-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]") S{{ card.stage }}
+            div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") S{{ card.stage }}
 
             //- Reward icon
             template(v-if="card.isDiamond")
@@ -456,22 +459,22 @@ const onStripPointerUp = (e: PointerEvent) => {
             //- Skin label
             div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
               v-if="card.isSkin && bpSkinForStage(card.stage)"
-              class="text-[7px] sm:text-[9px] truncate max-w-full"
+              class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
 
             //- Diamond amount (diamond stages)
             div.text-cyan-300.font-black.game-text.leading-tight(
               v-if="card.isDiamond"
-              class="text-[9px] sm:text-xs"
+              class="text-[0.7rem] sm:text-xs"
             ) +{{ BP_DIAMOND_AMOUNT }}
             //- Coin amount (coin stages + skin stages with an empty pool)
             div.text-yellow-400.font-black.game-text.leading-tight(
               v-else-if="!card.isSkin || !bpSkinForStage(card.stage)"
-              class="text-[9px] sm:text-xs"
+              class="text-[0.7rem] sm:text-xs"
             ) +{{ card.coins }}
 
             //- Status row
-            div(class="mt-0.5 text-[8px] sm:text-[10px] font-bold")
+            div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
               span.text-green-400(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
                 FIconButton(
@@ -498,16 +501,16 @@ const onStripPointerUp = (e: PointerEvent) => {
               class="w-4 h-4 sm:w-5 sm:h-5 hover:bg-purple-800"
               @click="showHonorInfo = !showHonorInfo"
             )
-              span.font-bold(class="text-[9px] sm:text-[10px]") ?
+              span.font-bold(class="text-[0.7rem] sm:text-[0.75rem]") ?
           //- Progress
-          span.text-purple-300.font-bold.game-text(class="text-[10px] sm:text-xs")
+          span.text-purple-300.font-bold.game-text(class="text-[0.75rem] sm:text-xs")
             template(v-if="isHonorMaxed") {{ t('complete') }}
             template(v-else) {{ honorPoints }}/{{ HONOR_PER_STAGE }} {{ t('honorAbbr') }}
 
         //- Info tooltip (toggled)
         div.text-purple-200.rounded-lg.bg-purple-900.bg-opacity-60.p-2(
           v-if="showHonorInfo"
-          class="text-[9px] sm:text-xs leading-snug"
+          class="text-[0.7rem] sm:text-xs leading-snug"
         ) {{ t('honorInfo') }}
 
         //- Honor progress bar
@@ -537,7 +540,7 @@ const onStripPointerUp = (e: PointerEvent) => {
             ]"
           )
             //- Stage label
-            div.text-purple-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]") H{{ card.stage }}
+            div.text-purple-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") H{{ card.stage }}
 
             //- Skin preview
             template(v-if="honorSkinForStage(card.stage)")
@@ -553,16 +556,16 @@ const onStripPointerUp = (e: PointerEvent) => {
             template(v-else-if="card.claimed")
               div.flex.items-center.justify-center.text-green-400(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-lg") ✓
             template(v-else)
-              div.flex.items-center.justify-center.text-purple-500(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-[10px]") ?
+              div.flex.items-center.justify-center.text-purple-500(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-[0.75rem]") ?
 
             //- Skin label
             div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
               v-if="honorSkinForStage(card.stage)"
-              class="text-[7px] sm:text-[9px] truncate max-w-full"
+              class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + honorSkinForStage(card.stage)) }}
 
             //- Status
-            div(class="mt-0.5 text-[8px] sm:text-[10px] font-bold")
+            div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
               span.text-green-400(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
                 FIconButton(
@@ -578,10 +581,10 @@ const onStripPointerUp = (e: PointerEvent) => {
       //- Season reset countdown
       div.text-center(
         v-if="daysUntilReset != null"
-        class="text-[10px] sm:text-xs text-amber-400/80 font-bold"
+        class="text-[0.75rem] sm:text-xs text-amber-400/80 font-bold"
       ) {{ t('seasonReset', { n: daysUntilReset }) }}
       //- Footer tip
-      div.text-center(class="text-[10px] sm:text-xs text-slate-400")
+      div.text-center(class="text-[0.75rem] sm:text-xs text-slate-400")
         template(v-if="isMaxed")
           | {{ t('battlePassComplete') }}
         template(v-else-if="hasUnclaimedReward")

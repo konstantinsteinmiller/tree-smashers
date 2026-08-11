@@ -168,10 +168,10 @@ const stageTheme = computed<StageTheme>(() => {
       //- Label + name stack
       div.flex.flex-col.leading-tight
         span.font-black.uppercase.tracking-wider.game-text.text-white(
-          class="text-[9px] sm:text-[11px] opacity-90"
+          class="text-[0.7rem] sm:text-[0.85rem] opacity-90"
         ) {{ isBoss ? t('bossStage') : t('stage') + ' ' + stageId }}
         span.font-bold.italic.game-text(
           :class="stageTheme.accent"
-          class="text-[10px] sm:text-xs"
+          class="text-[0.75rem] sm:text-xs"
         ) {{ displayName }}
 </template>

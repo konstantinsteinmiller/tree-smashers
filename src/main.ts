@@ -4,6 +4,7 @@ import '@/assets/css/tailwind.css'
 import '@/assets/css/index.sass'
 import { createI18n } from 'vue-i18n'
 import {
+  applyDocumentLocale,
   loadLocaleMessages,
   resolveInitialLocale,
   setI18nLocale,
@@ -256,18 +257,63 @@ const bootstrap = async () => {
   // `playgamaGameLoadingStop` (in App.vue, on `areAllAssetsLoaded`)
   // which fires both `in_game_loading_stopped` AND the certification-
   // mandatory `game_ready` edge.
+  //
+  // `playgamaLocaleGate` is awaited (with a short budget) further down, just
+  // before the i18n instance is built — the Bridge only exposes
+  // `platform.language` once `initialize()` has resolved, and Playgama QA
+  // rejected the 2026-08 build because we built i18n before that ever
+  // happened and every player got English.
+  //
+  // NOTE: the plugin symbols are pulled from THIS dynamic import rather than
+  // a static one at the top of the file. `resolveSaveStrategy` and the
+  // GameDistribution branch follow the same rule: a static import would put
+  // `playgamaPlugin` (and the Bridge wiring it drags in) into the main chunk
+  // of every non-Playgama build.
+  let playgamaLocaleGate: Promise<string | null> | null = null
   if (import.meta.env.VITE_APP_PLAYGAMA === 'true') {
-    void import('@/utils/playgamaPlugin').then(({ playgamaPlugin, playgamaLoadingStart }) => {
-      playgamaPlugin().then(() => playgamaLoadingStart())
-    })
+    playgamaLocaleGate = import('@/utils/playgamaPlugin').then(
+      async ({ playgamaPlugin, playgamaLoadingStart, playgamaLocaleReady, playgamaLocale }) => {
+        void playgamaPlugin().then(() => playgamaLoadingStart())
+        await playgamaLocaleReady
+        return playgamaLocale.value
+      }
+    )
   }
 
+  // ─── Portal locale ─────────────────────────────────────────────────────
+  //
+  // Both CrazyGames and Playgama tell us which language the player picked on
+  // the portal. That hint seeds the boot locale for first-time players (it
+  // NEVER overrides an explicit in-game choice — see the watcher below).
+  //
   // CG QA: NO locally-saved data on CG builds — we no longer mirror the
   // CrazyGames-reported locale into sessionStorage. The portal locale is
   // passed straight into resolveInitialLocale below so it influences the
   // first-paint i18n bundle without touching any storage surface.
+  //
+  // CrazyGames' locale is readable synchronously (initCrazyGames() was
+  // awaited at the top of bootstrap). Playgama's is not: `bridge.platform
+  // .language` only exists after `bridge.initialize()` resolves. So we race
+  // the Bridge against a small budget — long enough to win on a healthy
+  // connection, short enough that a blocked/absent SDK can never stall the
+  // splash screen. If the Bridge answers late, the watcher below still
+  // applies the portal language reactively.
+  const PORTAL_LOCALE_BUDGET_MS = 1500
+  const pgLocale = playgamaLocaleGate
+    ? await Promise.race([
+      playgamaLocaleGate,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), PORTAL_LOCALE_BUDGET_MS))
+    ]).catch(() => null)
+    : null
+
   const cgLocale = crazyLocale.value
-  const portalLocale = cgLocale && LANGUAGES.includes(cgLocale) ? cgLocale : null
+  // Whichever portal we are actually running on is the only one that can
+  // report anything, so a simple coalesce is unambiguous. `||` rather than
+  // `??` on purpose: an empty string is as meaningless as null here, and
+  // `crazyLocale` is derived from a `split()` that can produce one.
+  const rawPortalLocale = cgLocale || pgLocale
+  const portalLocale =
+    rawPortalLocale && LANGUAGES.includes(rawPortalLocale) ? rawPortalLocale : null
 
   const { default: App } = await import('@/App.vue')
 
@@ -292,11 +338,17 @@ const bootstrap = async () => {
     fallbackWarn: false
   })
 
-  // Apply the player's saved language once hydrate finishes. The CG
-  // portal locale (`cgLocale`) is used ONLY to seed first-time players —
-  // it never overrides an explicit OptionsModal choice. After hydrate
-  // has populated localStorage from sdk.data, a null value at
-  // `spinner_user_language` means "this player has never picked a
+  // Stamp `<html lang>` / `<html data-locale>` for the boot locale. `lang`
+  // drives the browser's CJK font-fallback and line-breaking heuristics, and
+  // `data-locale` gates the CJK typography corrections in `fonts.sass` — both
+  // have to be right on the FIRST paint, not just after a runtime switch.
+  applyDocumentLocale(initial)
+
+  // Apply the player's saved language once hydrate finishes. The portal
+  // locale (`portalLocale` — CrazyGames or Playgama) is used ONLY to seed
+  // first-time players; it never overrides an explicit OptionsModal choice.
+  // After hydrate has populated localStorage from the cloud backend, a null
+  // value at `spinner_user_language` means "this player has never picked a
   // language on any device" and we can safely seed the portal locale.
   // useUser.ts deliberately does NOT seed a language default, so the
   // null/non-null probe here is a reliable signal.
@@ -310,11 +362,11 @@ const bootstrap = async () => {
         if (!ready) return
         stopLangSync?.()
         const hasStoredLanguage = localStorage.getItem('spinner_user_language') != null
-        if (!hasStoredLanguage && cgLocale && LANGUAGES.includes(cgLocale)) {
-          setSettingValue('language', cgLocale)
+        if (!hasStoredLanguage && portalLocale) {
+          setSettingValue('language', portalLocale)
         }
         // Apply whichever language is now authoritative — the stored
-        // value (cloud-hydrated or just-seeded). Never `cgLocale`
+        // value (cloud-hydrated or just-seeded). Never `portalLocale`
         // unconditionally, because that's what was overwriting an
         // explicit Spanish choice on every English-portal refresh.
         if (isSupportedLocale(storedLang.value)) {

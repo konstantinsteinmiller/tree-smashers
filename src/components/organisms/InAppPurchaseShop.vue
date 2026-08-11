@@ -52,7 +52,7 @@ const purchase = (pack: Pack) => {
     :title="t('shop.title')"
   )
     div(class="space-y-2 px-2 sm:px-4 py-2")
-      div.text-center.text-slate-300(class="text-[11px] sm:text-sm") {{ t('shop.subtitle') }}
+      div.text-center.text-slate-300(class="text-[0.85rem] sm:text-sm") {{ t('shop.subtitle') }}
       div.flex.flex-col.gap-2
         button.iap-pack.relative.flex.items-center.justify-between.rounded-xl.border-2.cursor-pointer.transition-all(
           v-for="pack in PACKS"
@@ -63,14 +63,14 @@ const purchase = (pack: Pack) => {
           //- Tag ribbon
           span.absolute.rounded-full.font-black.uppercase.game-text(
             v-if="pack.tagKey"
-            class="-top-2 right-3 bg-amber-400 text-white text-[8px] sm:text-[10px] px-2 py-0.5"
+            class="-top-2 right-3 bg-amber-400 text-white text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5"
           ) {{ t('shop.' + pack.tagKey) }}
           div.flex.items-center.gap-2
             IconDiamond(class="w-7 h-7 sm:w-8 sm:h-8")
             span.text-white.font-black.game-text(class="text-base sm:text-xl") {{ pack.diamonds }}
           span.text-cyan-200.font-black.game-text(class="text-sm sm:text-lg") {{ pack.price }}
       //- Honest note while real IAP isn't wired in production builds.
-      div.text-center.text-slate-500(class="text-[9px] sm:text-[10px] mt-1") {{ t('shop.note') }}
+      div.text-center.text-slate-500(class="text-[0.7rem] sm:text-[0.75rem] mt-1") {{ t('shop.note') }}
 </template>
 
 <i18n lang="yaml">

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FModal from '@/components/molecules/FModal.vue'
-import FIconButton from '@/components/atoms/FIconButton.vue'
+import FButton from '@/components/atoms/FButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
@@ -275,11 +275,23 @@ const collect = (dayIndex: number) => {
     //- padding here so the cards always render below the ribbon
     //- regardless of viewport. (CG QA 2026-05-05.)
     div(class="space-y-3 px-1 sm:px-3 pt-6 sm:pt-8 pb-2")
-      div.grid.grid-cols-7.gap-1(class="sm:gap-2")
+      //- Seven cards WRAPPED, not crammed into one row.
+      //-
+      //- `grid-cols-7` gave each card ~44px of a 360px phone, which squeezed
+      //- the day label, the reward icon, the skin name and the amount into a
+      //- column barely wider than the coin icon — the skin names in
+      //- particular ("CASTLE", "DEMON") ended up wider than their card. Four
+      //- per row roughly doubles the width; the remaining three centre on the
+      //- second row thanks to `justify-center`. Flex-wrap rather than a grid
+      //- because a grid cannot centre a partial final row.
+      //-
+      //- `basis` is `25% - gap` so four cards plus their three gaps fit a row
+      //- exactly. From `sm` up the original single row of seven is restored.
+      div.flex.flex-wrap.justify-center(class="gap-1.5 sm:gap-2")
         div(
           v-for="(reward, i) in DAILY_REWARDS"
           :key="i"
-          class="flex flex-col items-center rounded-xl p-1 sm:p-2 border-2 transition-all"
+          class="basis-[calc(25%-0.375rem)] sm:basis-[calc(14.2857%-0.5rem)] flex flex-col items-center rounded-xl p-1 sm:p-2 border-2 transition-all"
           :class="[\
             i < state.currentDay \
               ? 'bg-green-900/40 border-green-500/50' \
@@ -289,7 +301,7 @@ const collect = (dayIndex: number) => {
           ]"
         )
           //- Day label
-          div.text-gray-300.font-bold.uppercase(class="text-[8px] sm:text-[10px]") D{{ i + 1 }}
+          div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") D{{ i + 1 }}
 
           //- Reward icon — skin image on skin days, coin on all others
           template(v-if="isSkinDay(i) && dailySkinForDay(i)")
@@ -310,32 +322,52 @@ const collect = (dayIndex: number) => {
           //- Skin label (only when a skin is actually offered for this day)
           div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
             v-if="isSkinDay(i) && dailySkinForDay(i)"
-            class="text-[8px] sm:text-[10px]"
+            class="text-[0.6rem] sm:text-[0.75rem]"
           ) {{ t('skins.' + dailySkinForDay(i)) }}
 
           //- Coin reward amount — shown on every day (additive on skin days)
-          div.text-yellow-400.font-black.game-text.leading-tight(class="text-[9px] sm:text-xs") +{{ reward }}
+          div.text-yellow-400.font-black.game-text.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}
 
-          //- Status
-          div(class="mt-0.5 text-[8px] sm:text-[10px] font-bold")
+          //- Status.
+          //-
+          //- The "ready" state used to be a real FIconButton here, which was
+          //- the only way to claim. Seven cells across a 360px phone leaves
+          //- ~44px for the whole cell, so that button could never be more
+          //- than 29x29 — under the tap-target floor and one of the controls
+          //- Playgama QA flagged. Claiming moved to the full-width footer
+          //- CTA; this is now a purely decorative "you are here" marker, so
+          //- its size no longer has to carry a hit box.
+          div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
             span.text-green-400(v-if="i < state.currentDay") ✓
             template(v-else-if="i === state.currentDay")
-              FIconButton(
+              span.text-yellow-300.attention-bounce.inline-block.pointer-events-none(
                 v-if="!collectedToday"
-                type="primary"
-                size="sm"
-                icon="right"
-                @click="collect(i)"
-              )
+                class="text-base sm:text-lg leading-none"
+              ) ▾
               span.text-yellow-300(v-else) ✓
             span.text-slate-500(v-else) —
 
       //- Footer info
-      div.text-center(class="text-[10px] sm:text-xs text-slate-400")
+      div.text-center(class="text-[0.75rem] sm:text-xs text-slate-400")
         template(v-if="collectedToday")
           | {{ t('comeBackTomorrow') }}
         template(v-else)
           | {{ t('collectTodaysReward') }}
+
+    //- Primary collect CTA.
+    //-
+    //- The chevron inside the current day's cell stays as the visual
+    //- "this is the one" marker, but it can never be a comfortable tap
+    //- target: seven cells across a 360px phone leaves ~44px per cell for
+    //- the WHOLE cell, so the button inside it measured 29x29. Playgama QA
+    //- flagged controls at that size. The real action now lives in the
+    //- modal footer, which is full-width, sits outside the scroll region,
+    //- and reads as the obvious next step.
+    template(#footer)
+      FButton(
+        v-if="!collectedToday"
+        @click="collect(state.currentDay)"
+      ) {{ t('collectCta') }}
 </template>
 
 <style scoped lang="sass">
@@ -352,32 +384,40 @@ en:
   dailyRewards: "Daily Rewards"
   comeBackTomorrow: "Come back tomorrow for your next reward!"
   collectTodaysReward: "Collect today's reward! Don't miss a day or progress resets."
+  collectCta: "Collect"
 de:
   dailyRewards: "Tägliche Belohnungen"
   comeBackTomorrow: "Komm morgen für deine nächste Belohnung wieder!"
   collectTodaysReward: "Hol dir deine heutige Belohnung! Verpasse keinen Tag, sonst beginnt der Fortschritt von vorn."
+  collectCta: "Abholen"
 fr:
   dailyRewards: "Récompenses quotidiennes"
   comeBackTomorrow: "Reviens demain pour ta prochaine récompense !"
   collectTodaysReward: "Récupère ta récompense du jour ! Ne manque pas un jour ou la progression repart à zéro."
+  collectCta: "Récupérer"
 es:
   dailyRewards: "Recompensas diarias"
   comeBackTomorrow: "¡Vuelve mañana por tu próxima recompensa!"
   collectTodaysReward: "¡Reclama la recompensa de hoy! No te pierdas un día o el progreso se reinicia."
+  collectCta: "Reclamar"
 jp:
   dailyRewards: "デイリー報酬"
   comeBackTomorrow: "明日また来て次の報酬を受け取ろう！"
   collectTodaysReward: "今日の報酬を受け取ろう！1日でも逃すと進行がリセットされます。"
+  collectCta: "受け取る"
 kr:
   dailyRewards: "일일 보상"
   comeBackTomorrow: "내일 다시 와서 다음 보상을 받으세요!"
   collectTodaysReward: "오늘의 보상을 받으세요! 하루라도 놓치면 진행이 초기화됩니다."
+  collectCta: "받기"
 zh:
   dailyRewards: "每日奖励"
   comeBackTomorrow: "明天回来领取下一个奖励！"
   collectTodaysReward: "领取今日奖励！错过一天进度将重置。"
+  collectCta: "领取"
 ru:
   dailyRewards: "Ежедневные награды"
   comeBackTomorrow: "Возвращайтесь завтра за следующей наградой!"
   collectTodaysReward: "Заберите сегодняшнюю награду! Пропустите день — прогресс сбросится."
+  collectCta: "Забрать"
 </i18n>
