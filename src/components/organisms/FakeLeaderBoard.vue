@@ -172,14 +172,14 @@ const indexToRank = (entry: LeaderboardEntry): number =>
           div.flex.flex-col.items-start.min-w-0.flex-1
             span.font-bold.game-text.truncate.w-full.text-left(
               :class="[entry.isPlayer ? 'text-yellow-300' : 'text-white', 'text-xs sm:text-sm']"
-            ) {{ entry.name }}
+            ) {{ entry.name || t('you') }}
             div.flex.items-center.gap-1.flex-wrap
-              span.rounded.border.font-mono(
+              span.rounded.border.game-text(
                 class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
-              ) {{ entry.blade.topPartId }} +{{ entry.blade.topLevel ?? 0 }}
-              span.rounded.border.font-mono(
+              ) {{ t('parts.' + entry.blade.topPartId) }} +{{ entry.blade.topLevel ?? 0 }}
+              span.rounded.border.game-text(
                 class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
-              ) {{ entry.blade.bottomPartId }} +{{ entry.blade.bottomLevel ?? 0 }}
+              ) {{ t('parts.' + entry.blade.bottomPartId) }} +{{ entry.blade.bottomLevel ?? 0 }}
 
           //- Max stage
           div.flex.flex-col.items-center.shrink-0(class="w-10 sm:w-12")

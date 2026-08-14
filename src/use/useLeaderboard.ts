@@ -613,8 +613,13 @@ const useLeaderboard = () => {
       id: 'player',
       // Prefer the CrazyGames-side display name when we have one so the
       // leaderboard shows the player's real handle instead of a generic
-      // placeholder. Falls back to "You" for anonymous / non-CG sessions.
-      name: crazyPlayerName.value || 'You',
+      // placeholder.
+      //
+      // Empty (NOT the literal "You") for anonymous / non-CG sessions: this
+      // is a composable, so it has no `t()`, and baking English in here is
+      // what made the player's own row the one untranslated name in the
+      // list. `FakeLeaderBoard` substitutes `t('you')` when this is blank.
+      name: crazyPlayerName.value || '',
       maxStage: playerStage,
       blade: { topPartId: 'star', bottomPartId: 'balanced' },
       blade2: { topPartId: 'round', bottomPartId: 'balanced' },

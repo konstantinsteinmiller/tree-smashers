@@ -108,6 +108,14 @@ export default {
     'cheat_partners': 'Железное Братство',
     'cheat_healers': 'Хор Исцеления'
   },
+  'node-w1': {
+    'name': 'Разведчик Оазиса',
+    'desc': 'Путник отдыхает у Зелёного оазиса. Дружеский матч в начале твоего пути.'
+  },
+  'node-w1-b': {
+    'name': 'Скиталец Дюн',
+    'desc': 'Обитатели песков проверят твою решимость. Они предпочитают быстрые и ловкие удары.'
+  },
   'gameName': 'Chaos Arena',
   'cancel': 'Отмена',
   'close': 'Закрыть',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': 'Алмаз сегодня уже получен'
   },
   'spinner': {
+    'ad': 'Реклама',
+    'spinning': 'Вращение...',
+    'spinAgain': 'Крутить снова',
+    'skip': 'Пропустить',
     'youWin': 'ПОБЕДА!',
     'youLose': 'ПОРАЖЕНИЕ!',
     'rewards': 'НАГРАДЫ',
@@ -198,6 +210,17 @@ export default {
     'copy': 'Копировать',
     'shareTitle': 'Chaos Arena PvP',
     'shareText': 'Присоединяйся к моему PvP-бою в Chaos Arena!'
+  },
+  'parts': {
+    'star': 'Звёздный клинок',
+    'triangle': 'Шипастый',
+    'round': 'Круглый щит',
+    'quadratic': 'Квадро-ядро',
+    'cushioned': 'Мягкий панцирь',
+    'piercer': 'Бронебой',
+    'speedy': 'Быстрый',
+    'tanky': 'Танк',
+    'balanced': 'Баланс'
   },
   'arenas': {
     'default': 'Обычная',

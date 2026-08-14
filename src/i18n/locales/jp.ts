@@ -108,7 +108,15 @@ export default {
     'cheat_partners': '鉄の兄弟団',
     'cheat_healers': '癒しの聖歌隊'
   },
-  'gameName': 'カードクエスト',
+  'node-w1': {
+    'name': 'オアシスの斥候',
+    'desc': '旅人が緑のオアシスで休んでいる。旅の始まりにふさわしい親善試合だ。'
+  },
+  'node-w1-b': {
+    'name': '砂丘の放浪者',
+    'desc': '砂に棲む者たちが君の覚悟を試す。素早く俊敏な一撃を好む。'
+  },
+  'gameName': 'Chaos Arena',
   'cancel': 'キャンセル',
   'close': '閉じる',
   'understood': '了解',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': '本日のダイヤは受取済み'
   },
   'spinner': {
+    'ad': '広告',
+    'spinning': '回転中...',
+    'spinAgain': 'もう一度回す',
+    'skip': 'スキップ',
     'youWin': '勝利！',
     'youLose': '敗北！',
     'rewards': '報酬',
@@ -198,6 +210,17 @@ export default {
     'copy': 'コピー',
     'shareTitle': 'カオスアリーナ PvP',
     'shareText': 'カオスアリーナPvPバトルに参加しよう！'
+  },
+  'parts': {
+    'star': 'スターブレード',
+    'triangle': 'スパイキー',
+    'round': 'ラウンドガード',
+    'quadratic': 'クアッドコア',
+    'cushioned': 'ソフトシェル',
+    'piercer': 'アーマーブレイク',
+    'speedy': 'スピード',
+    'tanky': 'タンク',
+    'balanced': 'バランス'
   },
   'arenas': {
     'default': 'デフォルト',

@@ -145,6 +145,10 @@ export default {
     'alreadyClaimed': 'Diamant heute bereits erhalten'
   },
   'spinner': {
+    'ad': 'Werbung',
+    'spinning': 'Dreht...',
+    'spinAgain': 'Nochmal drehen',
+    'skip': 'Überspringen',
     'youWin': 'DU GEWINNST!',
     'youLose': 'DU VERLIERST!',
     'rewards': 'BELOHNUNGEN',
@@ -206,6 +210,17 @@ export default {
     'copy': 'Kopieren',
     'shareTitle': 'Chaos Arena PvP',
     'shareText': 'Tritt meinem Chaos Arena PvP-Kampf bei!'
+  },
+  'parts': {
+    'star': 'Sternklinge',
+    'triangle': 'Stachel',
+    'round': 'Rundschutz',
+    'quadratic': 'Quad-Kern',
+    'cushioned': 'Weichpanzer',
+    'piercer': 'Panzerbrecher',
+    'speedy': 'Flink',
+    'tanky': 'Robust',
+    'balanced': 'Ausgeglichen'
   },
   'arenas': {
     'default': 'Standard',

@@ -86,6 +86,7 @@ const {
   isJoystickDragging,
   renderJoystickOverlay,
   stopPhysics,
+  disposePhysics,
   render,
   pixelToGame,
   spawnMeteorShower,
@@ -1306,7 +1307,8 @@ onUnmounted(() => {
   window.removeEventListener('orientationchange', onViewportChange)
   window.visualViewport?.removeEventListener('resize', onViewportChange)
   window.visualViewport?.removeEventListener('scroll', onViewportChange)
-  stopPhysics()
+  // Also drops this instance's syncer from the platform pause registry.
+  disposePhysics()
   if (renderRafId !== null) cancelAnimationFrame(renderRafId)
   if (canvasObserver) {
     canvasObserver.disconnect()

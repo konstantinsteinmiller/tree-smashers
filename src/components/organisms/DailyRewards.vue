@@ -300,8 +300,10 @@ const collect = (dayIndex: number) => {
                 : (isSkinDay(i) ? 'bg-purple-900/20 border-purple-700/60' : 'bg-slate-700/50 border-slate-600')\
           ]"
         )
-          //- Day label
-          div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") D{{ i + 1 }}
+          //- Day label. The "D" prefix was hardcoded, so every locale showed
+          //- "D1…D7". It goes through i18n now — each language picks its own
+          //- abbreviation, kept short because the card is only ~80px wide.
+          div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") {{ t('dayShort', { n: i + 1 }) }}
 
           //- Reward icon — skin image on skin days, coin on all others
           template(v-if="isSkinDay(i) && dailySkinForDay(i)")
@@ -385,39 +387,47 @@ en:
   comeBackTomorrow: "Come back tomorrow for your next reward!"
   collectTodaysReward: "Collect today's reward! Don't miss a day or progress resets."
   collectCta: "Collect"
+  dayShort: "D{n}"
 de:
   dailyRewards: "Tägliche Belohnungen"
   comeBackTomorrow: "Komm morgen für deine nächste Belohnung wieder!"
   collectTodaysReward: "Hol dir deine heutige Belohnung! Verpasse keinen Tag, sonst beginnt der Fortschritt von vorn."
   collectCta: "Abholen"
+  dayShort: "T{n}"
 fr:
   dailyRewards: "Récompenses quotidiennes"
   comeBackTomorrow: "Reviens demain pour ta prochaine récompense !"
   collectTodaysReward: "Récupère ta récompense du jour ! Ne manque pas un jour ou la progression repart à zéro."
   collectCta: "Récupérer"
+  dayShort: "J{n}"
 es:
   dailyRewards: "Recompensas diarias"
   comeBackTomorrow: "¡Vuelve mañana por tu próxima recompensa!"
   collectTodaysReward: "¡Reclama la recompensa de hoy! No te pierdas un día o el progreso se reinicia."
   collectCta: "Reclamar"
+  dayShort: "D{n}"
 jp:
   dailyRewards: "デイリー報酬"
   comeBackTomorrow: "明日また来て次の報酬を受け取ろう！"
   collectTodaysReward: "今日の報酬を受け取ろう！1日でも逃すと進行がリセットされます。"
   collectCta: "受け取る"
+  dayShort: "{n}日目"
 kr:
   dailyRewards: "일일 보상"
   comeBackTomorrow: "내일 다시 와서 다음 보상을 받으세요!"
   collectTodaysReward: "오늘의 보상을 받으세요! 하루라도 놓치면 진행이 초기화됩니다."
   collectCta: "받기"
+  dayShort: "{n}일차"
 zh:
   dailyRewards: "每日奖励"
   comeBackTomorrow: "明天回来领取下一个奖励！"
   collectTodaysReward: "领取今日奖励！错过一天进度将重置。"
   collectCta: "领取"
+  dayShort: "第{n}天"
 ru:
   dailyRewards: "Ежедневные награды"
   comeBackTomorrow: "Возвращайтесь завтра за следующей наградой!"
   collectTodaysReward: "Заберите сегодняшнюю награду! Пропустите день — прогресс сбросится."
   collectCta: "Забрать"
+  dayShort: "Д{n}"
 </i18n>

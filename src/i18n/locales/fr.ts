@@ -108,6 +108,14 @@ export default {
     'cheat_partners': 'Confrérie de Fer',
     'cheat_healers': 'Chœur Guérisseur'
   },
+  'node-w1': {
+    'name': 'Éclaireur de l\'Oasis',
+    'desc': 'Un voyageur se repose près de l\'Oasis Verte. Un match amical pour commencer ton périple.'
+  },
+  'node-w1-b': {
+    'name': 'Vagabond des Dunes',
+    'desc': 'Les habitants des sables testent ta détermination. Ils préfèrent les frappes rapides et agiles.'
+  },
   'gameName': 'Chaos Arena',
   'cancel': 'Annuler',
   'close': 'Fermer',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': 'Diamant déjà récupéré aujourd\'hui'
   },
   'spinner': {
+    'ad': 'Pub',
+    'spinning': 'Rotation...',
+    'spinAgain': 'Relancer',
+    'skip': 'Passer',
     'youWin': 'VICTOIRE !',
     'youLose': 'DÉFAITE !',
     'rewards': 'RÉCOMPENSES',
@@ -198,6 +210,17 @@ export default {
     'copy': 'Copier',
     'shareTitle': 'Chaos Arena PvP',
     'shareText': 'Rejoins mon combat PvP Chaos Arena !'
+  },
+  'parts': {
+    'star': 'Lame étoile',
+    'triangle': 'Épineux',
+    'round': 'Bouclier rond',
+    'quadratic': 'Noyau carré',
+    'cushioned': 'Carapace',
+    'piercer': 'Perce-blindage',
+    'speedy': 'Rapide',
+    'tanky': 'Résistant',
+    'balanced': 'Équilibré'
   },
   'arenas': {
     'default': 'Défaut',

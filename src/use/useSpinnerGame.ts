@@ -1,4 +1,5 @@
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
+import { isGamePaused, registerPauseSyncer } from '@/use/useGamePause'
 import type {
   SpinnerState,
   SpinnerConfig,
@@ -3317,8 +3318,19 @@ export const useSpinnerGame = () => {
   let physicsAccumulator = 0
   let lastPhysicsTime = 0
 
-  const startPhysics = () => {
-    physicsAccumulator = 0
+  // Whether GAMEPLAY wants the simulation running. The loop actually runs only
+  // when this is true AND the platform hasn't suspended us — see the pause-gate
+  // block above the composable.
+  let physicsWanted = false
+
+  const runPhysicsLoop = () => {
+    // Guard against a second RAF chain: two concurrent chains both reassign
+    // `physicsRafId`, so neither ever sees null and the simulation silently
+    // runs at double speed.
+    if (physicsRafId !== null) return
+    // Fresh delta baseline. On resume the wall-clock gap since the last tick
+    // can be minutes; feeding that straight into the accumulator would burn
+    // the entire catch-up budget simulating a frame nobody saw.
     lastPhysicsTime = performance.now()
 
     const loop = (now: number) => {
@@ -3343,11 +3355,42 @@ export const useSpinnerGame = () => {
     physicsRafId = requestAnimationFrame(loop)
   }
 
-  const stopPhysics = () => {
+  const haltPhysicsLoop = () => {
     if (physicsRafId !== null) {
       cancelAnimationFrame(physicsRafId)
       physicsRafId = null
     }
+  }
+
+  // The loop runs only when GAMEPLAY wants it AND the platform hasn't
+  // suspended us. Keeping the two inputs separate is what stops a platform
+  // resume from restarting a simulation gameplay had legitimately ended —
+  // battle over, modal open, reward screen up.
+  const syncPhysicsLoop = () => {
+    if (physicsWanted && !isGamePaused.value) runPhysicsLoop()
+    else haltPhysicsLoop()
+  }
+  const unregisterPauseSyncer = registerPauseSyncer(syncPhysicsLoop)
+
+  const startPhysics = () => {
+    physicsWanted = true
+    physicsAccumulator = 0
+    syncPhysicsLoop()
+  }
+
+  const stopPhysics = () => {
+    physicsWanted = false
+    syncPhysicsLoop()
+  }
+
+  /**
+   * Drop this instance's syncer from the pause registry. `useSpinnerGame` is a
+   * factory (fresh state per call), so a torn-down arena would otherwise stay
+   * reachable from the gate. Call from the owning view's `onUnmounted`.
+   */
+  const disposePhysics = () => {
+    unregisterPauseSyncer()
+    stopPhysics()
   }
 
   // ─── Canvas Rendering ────────────────────────────────────────────────────
@@ -5258,6 +5301,7 @@ export const useSpinnerGame = () => {
     renderJoystickOverlay,
     startPhysics,
     stopPhysics,
+    disposePhysics,
     spawnMeteorShower,
 
     // PvP

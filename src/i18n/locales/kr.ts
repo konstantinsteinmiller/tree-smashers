@@ -108,7 +108,15 @@ export default {
     'cheat_partners': '철의 형제단',
     'cheat_healers': '치유의 합창단'
   },
-  'gameName': '카드 퀘스트',
+  'node-w1': {
+    'name': '오아시스 정찰병',
+    'desc': '한 여행자가 푸른 오아시스 곁에서 쉬고 있습니다. 여정을 시작하기 좋은 친선 경기입니다.'
+  },
+  'node-w1-b': {
+    'name': '사구의 방랑자',
+    'desc': '모래에 사는 자들이 당신의 각오를 시험합니다. 빠르고 민첩한 공격을 선호합니다.'
+  },
+  'gameName': 'Chaos Arena',
   'cancel': '취소',
   'close': '닫기',
   'understood': '이해함',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': '오늘 다이아몬드를 이미 획득함'
   },
   'spinner': {
+    'ad': '광고',
+    'spinning': '회전 중...',
+    'spinAgain': '다시 돌리기',
+    'skip': '건너뛰기',
     'youWin': '승리!',
     'youLose': '패배!',
     'rewards': '보상',
@@ -198,6 +210,17 @@ export default {
     'copy': '복사',
     'shareTitle': '카오스 아레나 PvP',
     'shareText': '카오스 아레나 PvP 배틀에 참가하세요!'
+  },
+  'parts': {
+    'star': '스타 블레이드',
+    'triangle': '가시',
+    'round': '라운드 가드',
+    'quadratic': '쿼드 코어',
+    'cushioned': '소프트 쉘',
+    'piercer': '관통자',
+    'speedy': '스피드',
+    'tanky': '탱커',
+    'balanced': '밸런스'
   },
   'arenas': {
     'default': '기본',

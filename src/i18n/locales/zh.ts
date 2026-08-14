@@ -108,7 +108,15 @@ export default {
     'cheat_partners': '钢铁兄弟会',
     'cheat_healers': '治愈唱诗班'
   },
-  'gameName': '卡牌任务',
+  'node-w1': {
+    'name': '绿洲斥候',
+    'desc': '一位旅人在绿洲旁歇息。用一场友谊赛开启你的旅程。'
+  },
+  'node-w1-b': {
+    'name': '沙丘浪客',
+    'desc': '沙中居民考验你的决心。他们擅长迅捷灵巧的攻击。'
+  },
+  'gameName': 'Chaos Arena',
   'cancel': '取消',
   'close': '关闭',
   'understood': '明白',
@@ -127,7 +135,7 @@ export default {
   'clickToContinue': '点击屏幕继续',
   'vs': 'VS',
   'stage': '关卡',
-  'bossStage': 'Boss 关卡',
+  'bossStage': '首领关卡',
   'you': '你',
   'prev': '上一页',
   'next': '下一页',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': '今日钻石已领取'
   },
   'spinner': {
+    'ad': '广告',
+    'spinning': '旋转中...',
+    'spinAgain': '再转一次',
+    'skip': '跳过',
     'youWin': '胜利！',
     'youLose': '失败！',
     'rewards': '奖励',
@@ -198,6 +210,17 @@ export default {
     'copy': '复制',
     'shareTitle': '混沌竞技场 PvP',
     'shareText': '加入我的混沌竞技场PvP对战！'
+  },
+  'parts': {
+    'star': '星刃',
+    'triangle': '尖刺',
+    'round': '圆盾',
+    'quadratic': '方核',
+    'cushioned': '软甲',
+    'piercer': '穿甲者',
+    'speedy': '极速',
+    'tanky': '坦克',
+    'balanced': '均衡'
   },
   'arenas': {
     'default': '默认',

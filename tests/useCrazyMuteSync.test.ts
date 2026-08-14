@@ -71,17 +71,24 @@ describe('useCrazyMuteSync — applyMute', () => {
     expect(userSoundVolume.value).toBe(0)
   })
 
-  it('platform-mute → in-game-mute (snapshot taken)', async () => {
+  it('platform-mute → in-game-mute (snapshot taken), WITHOUT persisting', async () => {
     userMusicVolume.value = 0.6
     userSoundVolume.value = 0.7
 
     const { applyMute } = await import('@/use/useCrazyMuteSync')
     applyMute(true) // SDK says "platform muted"
 
-    expect(setSettingValueMock).toHaveBeenCalledWith('music', 0)
-    expect(setSettingValueMock).toHaveBeenCalledWith('sound', 0)
+    // Silences everything — every SFX gain and the bg-music element volume
+    // are derived from these two refs.
     expect(userMusicVolume.value).toBe(0)
     expect(userSoundVolume.value).toBe(0)
+
+    // But it must NOT write through `setSettingValue`. A platform mute is
+    // transient session state, not a preference the player expressed.
+    // Persisting it means a player who arrives at an already-muted portal
+    // gets 0/0 saved to the cloud, and a later session on an unmuted portal
+    // finds no in-session snapshot to restore from — silent for good.
+    expect(setSettingValueMock).not.toHaveBeenCalled()
   })
 
   it('platform-mute then platform-unmute → restores the snapshot', async () => {

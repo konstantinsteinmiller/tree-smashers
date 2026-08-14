@@ -115,29 +115,108 @@ export const setI18nLocale = async (
   }
 }
 
+/** The one key that holds an EXPLICIT in-game language choice. */
+export const LANGUAGE_KEY = 'spinner_user_language'
+
+/**
+ * Has the player ever picked a language in OptionsModal?
+ *
+ * `spinner_user_language` is written by exactly one code path —
+ * `setSettingValue('language', …)` behind the OptionsModal dropdown. A
+ * portal-reported language is deliberately NEVER persisted there (see the
+ * portal-locale block in `main.ts`), so a non-null value here means "the
+ * player chose this" and nothing else.
+ *
+ * That distinction is the fix for the bug Playgama QA hit twice: the old
+ * code seeded the portal locale into this key, which made a portal answer
+ * indistinguishable from a player choice. Once anything landed in the key,
+ * every later load short-circuited on it and the portal language was
+ * ignored for good.
+ */
+export const hasExplicitLanguageChoice = (): boolean => {
+  try {
+    return isSupportedLocale(localStorage.getItem(LANGUAGE_KEY))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Forget the player's stored language choice.
+ *
+ * Used only when the PLATFORM language actively changes underneath us — at
+ * that point the stored choice is stale and the portal is the fresher signal.
+ * The removal routes through the patched `localStorage.removeItem`, so the
+ * cloud copy is dropped too and other devices don't resurrect it.
+ */
+export const clearExplicitLanguageChoice = (): void => {
+  try {
+    localStorage.removeItem(LANGUAGE_KEY)
+  } catch { /* ignore */
+  }
+}
+
+/**
+ * Last portal-reported language we observed, so we can tell "the portal is
+ * still reporting the same thing" from "the portal actively switched".
+ *
+ * NOT a `spinner_`/`ca_` key on purpose: those are payload keys that mirror to
+ * the cloud, and syncing this marker would make a second device with a
+ * different portal language look like a language switch. It is pure
+ * device-local bookkeeping.
+ */
+const PORTAL_LANGUAGE_SEEN_KEY = 'pg_portal_language_seen'
+
+/**
+ * Record the portal's current language and report whether it CHANGED since the
+ * last load.
+ *
+ * This is the fix for the case Playgama QA demonstrated: pick English in-game,
+ * then flip the platform language to Chinese in the guided testing tools. The
+ * stored English choice is legitimately authoritative on every ordinary load —
+ * but not when the platform language itself just moved. Returns false on the
+ * very first observation (no previous value ⇒ nothing changed), so a returning
+ * player's choice is never dropped just because we had not been tracking yet.
+ *
+ * The marker is not persisted on CrazyGames builds: CG QA's standing rule is
+ * "NO locally-saved data" beyond dev toggles. With no marker, CG simply keeps
+ * its existing behaviour (stored choice always wins).
+ */
+export const notePortalLanguageChange = (code: string): boolean => {
+  if (import.meta.env.VITE_APP_CRAZY_WEB === 'true') return false
+  try {
+    const previous = localStorage.getItem(PORTAL_LANGUAGE_SEEN_KEY)
+    if (previous !== code) localStorage.setItem(PORTAL_LANGUAGE_SEEN_KEY, code)
+    return isSupportedLocale(previous) && previous !== code
+  } catch {
+    return false
+  }
+}
+
 /**
  * Resolve the locale we should boot with, synchronously, before creating
  * the i18n instance so the first dynamic import targets only the right
  * locale file. Resolution order:
  *
- *   1. Caller-supplied `preferred` hint — typically the CrazyGames-reported
- *      portal locale or the player's stored choice from `useUser`. Caller
- *      is responsible for picking the right source; this function does
- *      not touch sessionStorage (CG QA: NO locally-saved data).
- *   2. localStorage `spinner_user_language` — the cloud-hydrated player
- *      choice. On CG builds this has already been populated from
- *      `sdk.data` by `SaveManager.init()` before `main.ts` calls us.
- *   3. navigator.language short code — first-ever load with no portal
- *      or stored hint.
+ *   1. localStorage `spinner_user_language` — the player's explicit in-game
+ *      choice, cloud-hydrated by `SaveManager.init()` before `main.ts`
+ *      calls us. It outranks the portal: a player who deliberately picked
+ *      Spanish must stay in Spanish on a Chinese-language portal.
+ *   2. Caller-supplied `preferred` hint — the portal-reported language
+ *      (Playgama Bridge `platform.language`, CrazyGames `systemInfo
+ *      .locale`). This is the source language for a first-time player.
+ *   3. navigator.language short code — no portal, no stored choice.
  *   4. 'en' fallback.
+ *
+ * Does not touch sessionStorage (CG QA: NO locally-saved data).
  */
 export const resolveInitialLocale = (preferred?: string | null): string => {
-  if (isSupportedLocale(preferred)) return preferred
   try {
-    const stored = localStorage.getItem('spinner_user_language')
+    const stored = localStorage.getItem(LANGUAGE_KEY)
     if (isSupportedLocale(stored)) return stored
   } catch { /* ignore */
   }
+  if (isSupportedLocale(preferred)) return preferred
   const nav = typeof navigator !== 'undefined'
     ? navigator.language?.split('-')[0]
     : undefined

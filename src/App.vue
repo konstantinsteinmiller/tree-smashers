@@ -15,6 +15,8 @@ import SaveStatusBanner from '@/components/atoms/SaveStatusBanner.vue'
 import AdsBlockedModal from '@/components/atoms/AdsBlockedModal.vue'
 import VConsoleHideButton from '@/components/atoms/VConsoleHideButton.vue'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
+import { applyMute } from '@/use/usePlatformMute'
+import { setGamePaused } from '@/use/useGamePause'
 import {
   isCrazyWeb,
   isWaveDash,
@@ -50,7 +52,9 @@ useCrazyMuteSync()
 // are not touched by the obfuscator's string array.
 import {
   registerPlaygamaMusicControls,
-  playgamaGameLoadingStop
+  playgamaGameLoadingStop,
+  isPlaygamaAudioEnabled,
+  isPlaygamaPaused
 } from '@/utils/playgamaPlugin'
 
 if (isPlaygama) {
@@ -60,6 +64,23 @@ if (isPlaygama) {
   // re-introduce the useSound ↔ useUser ↔ useMatch circular-import
   // deadlock).
   registerPlaygamaMusicControls({ pauseMusic, continueMusic })
+
+  // ─── Certification: platform mute ────────────────────────────────────
+  // `bridge.platform.isAudioEnabled` + AUDIO_STATE_CHANGED. `applyMute`
+  // zeroes both volume refs, which is a true global mute here — every SFX
+  // gain and the bg-music element volume derive from them. `immediate`
+  // covers the player who arrives at an already-muted portal.
+  watch(isPlaygamaAudioEnabled, (enabled) => {
+    applyMute(!enabled)
+  }, { immediate: true })
+
+  // ─── Certification: stop the game loop on platform pause ─────────────
+  // PAUSE_STATE_CHANGED is the Bridge's aggregated overlay/visibility/ad
+  // signal. Suspending is independent of gameplay's own start/stop calls,
+  // so resuming never restarts a battle that had legitimately ended.
+  watch(isPlaygamaPaused, (paused) => {
+    setGamePaused(paused)
+  }, { immediate: true })
 
   // `game_ready` + `in_game_loading_stopped` are certification-
   // mandatory. Fire them the moment all assets are loaded so the

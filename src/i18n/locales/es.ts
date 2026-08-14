@@ -108,6 +108,14 @@ export default {
     'cheat_partners': 'Hermandad de Hierro',
     'cheat_healers': 'Coro Sanador'
   },
+  'node-w1': {
+    'name': 'Explorador del Oasis',
+    'desc': 'Un viajero descansa junto al Oasis Verde. Un combate amistoso para empezar tu viaje.'
+  },
+  'node-w1-b': {
+    'name': 'Errante de las Dunas',
+    'desc': 'Los moradores de la arena ponen a prueba tu determinación. Prefieren golpes rápidos y ágiles.'
+  },
   'gameName': 'Chaos Arena',
   'cancel': 'Cancelar',
   'close': 'Cerrar',
@@ -137,6 +145,10 @@ export default {
     'alreadyClaimed': 'Diamante ya reclamado hoy'
   },
   'spinner': {
+    'ad': 'Anuncio',
+    'spinning': 'Girando...',
+    'spinAgain': 'Girar de nuevo',
+    'skip': 'Saltar',
     'youWin': '¡GANASTE!',
     'youLose': '¡PERDISTE!',
     'rewards': 'RECOMPENSAS',
@@ -198,6 +210,17 @@ export default {
     'copy': 'Copiar',
     'shareTitle': 'Chaos Arena PvP',
     'shareText': '¡Únete a mi batalla PvP de Chaos Arena!'
+  },
+  'parts': {
+    'star': 'Cuchilla estelar',
+    'triangle': 'Espinoso',
+    'round': 'Guardia redonda',
+    'quadratic': 'Núcleo cuádruple',
+    'cushioned': 'Coraza blanda',
+    'piercer': 'Perforador',
+    'speedy': 'Veloz',
+    'tanky': 'Tanque',
+    'balanced': 'Equilibrado'
   },
   'arenas': {
     'default': 'Predeterminado',

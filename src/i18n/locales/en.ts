@@ -145,6 +145,10 @@ export default {
     'alreadyClaimed': 'Diamond already claimed today'
   },
   'spinner': {
+    'ad': 'Ad',
+    'spinning': 'Spinning...',
+    'spinAgain': 'Spin Again',
+    'skip': 'Skip',
     'youWin': 'YOU WIN!',
     'youLose': 'YOU LOSE!',
     'rewards': 'REWARDS',
@@ -206,6 +210,17 @@ export default {
     'copy': 'Copy',
     'shareTitle': 'Chaos Arena PvP',
     'shareText': 'Join my Chaos Arena PvP battle!'
+  },
+  'parts': {
+    'star': 'Star Blade',
+    'triangle': 'Spiky',
+    'round': 'Round Guard',
+    'quadratic': 'Quad Core',
+    'cushioned': 'Soft Shell',
+    'piercer': 'Tank Piercer',
+    'speedy': 'Speedy',
+    'tanky': 'Tanky',
+    'balanced': 'Balanced'
   },
   'arenas': {
     'default': 'Default',

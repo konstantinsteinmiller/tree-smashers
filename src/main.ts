@@ -5,7 +5,11 @@ import '@/assets/css/index.sass'
 import { createI18n } from 'vue-i18n'
 import {
   applyDocumentLocale,
+  clearExplicitLanguageChoice,
+  hasExplicitLanguageChoice,
+  LANGUAGE_KEY,
   loadLocaleMessages,
+  notePortalLanguageChange,
   resolveInitialLocale,
   setI18nLocale,
   isSupportedLocale
@@ -269,11 +273,29 @@ const bootstrap = async () => {
   // GameDistribution branch follow the same rule: a static import would put
   // `playgamaPlugin` (and the Bridge wiring it drags in) into the main chunk
   // of every non-Playgama build.
+  // Assigned once the i18n instance exists (further down). The late-arrival
+  // watcher registered inside the dynamic import below calls through this
+  // holder, so it is safe to wire the watcher up before i18n is built.
+  let applyPortalLocale: (code: string) => void = () => {
+  }
+
   let playgamaLocaleGate: Promise<string | null> | null = null
   if (import.meta.env.VITE_APP_PLAYGAMA === 'true') {
     playgamaLocaleGate = import('@/utils/playgamaPlugin').then(
       async ({ playgamaPlugin, playgamaLoadingStart, playgamaLocaleReady, playgamaLocale }) => {
         void playgamaPlugin().then(() => playgamaLoadingStart())
+        // Late-arrival path. The block comment below promised this and the
+        // code never delivered it: when the Bridge answered after the boot
+        // budget expired, `platform.language` was read, stored in the ref,
+        // and then read by nobody — the exact "language parameter was
+        // ignored on initialization" that Playgama QA reported twice.
+        //
+        // `playgamaLocale` only ever holds a code we actually ship (the
+        // plugin's `normalizePlaygamaLanguage` returns null otherwise), so
+        // any non-null value here is safe to apply.
+        watch(playgamaLocale, (code) => {
+          if (code) applyPortalLocale(code)
+        })
         await playgamaLocaleReady
         return playgamaLocale.value
       }
@@ -283,8 +305,8 @@ const bootstrap = async () => {
   // ─── Portal locale ─────────────────────────────────────────────────────
   //
   // Both CrazyGames and Playgama tell us which language the player picked on
-  // the portal. That hint seeds the boot locale for first-time players (it
-  // NEVER overrides an explicit in-game choice — see the watcher below).
+  // the portal. That hint is the source language for first-time players (it
+  // NEVER overrides an explicit in-game choice — see `applyPortalLocale`).
   //
   // CG QA: NO locally-saved data on CG builds — we no longer mirror the
   // CrazyGames-reported locale into sessionStorage. The portal locale is
@@ -294,11 +316,17 @@ const bootstrap = async () => {
   // CrazyGames' locale is readable synchronously (initCrazyGames() was
   // awaited at the top of bootstrap). Playgama's is not: `bridge.platform
   // .language` only exists after `bridge.initialize()` resolves. So we race
-  // the Bridge against a small budget — long enough to win on a healthy
+  // the Bridge against a budget — long enough to win on a healthy
   // connection, short enough that a blocked/absent SDK can never stall the
-  // splash screen. If the Bridge answers late, the watcher below still
-  // applies the portal language reactively.
-  const PORTAL_LOCALE_BUDGET_MS = 1500
+  // splash screen. If the Bridge answers after it, the `watch(playgamaLocale)`
+  // registered above applies the portal language reactively.
+  //
+  // In practice the gate is usually already settled by the time we get here:
+  // `PlaygamaStrategy.hydrate()` awaits the very same `playgamaPlugin()`
+  // singleton during `saveManager.init()` above, so the Bridge handshake has
+  // normally completed and this race resolves on the first tick. The budget
+  // is the safety net for the builds where the strategy bailed early.
+  const PORTAL_LOCALE_BUDGET_MS = 3000
   const pgLocale = playgamaLocaleGate
     ? await Promise.race([
       playgamaLocaleGate,
@@ -314,6 +342,17 @@ const bootstrap = async () => {
   const rawPortalLocale = cgLocale || pgLocale
   const portalLocale =
     rawPortalLocale && LANGUAGES.includes(rawPortalLocale) ? rawPortalLocale : null
+
+  // Did the PLATFORM language change since our last load? If so it outranks a
+  // stored in-game choice — that choice is now stale. This is the case
+  // Playgama QA demonstrated: pick English in-game, then flip the platform
+  // language to Chinese in the guided testing tools and reload. Must run
+  // BEFORE `resolveInitialLocale`, which would otherwise short-circuit on the
+  // stored English and never look at the portal.
+  if (portalLocale && notePortalLanguageChange(portalLocale)) {
+    console.info('[i18n] portal language switched to', portalLocale, '— dropping stored choice')
+    clearExplicitLanguageChoice()
+  }
 
   const { default: App } = await import('@/App.vue')
 
@@ -344,16 +383,56 @@ const bootstrap = async () => {
   // have to be right on the FIRST paint, not just after a runtime switch.
   applyDocumentLocale(initial)
 
-  // Apply the player's saved language once hydrate finishes. The portal
-  // locale (`portalLocale` — CrazyGames or Playgama) is used ONLY to seed
-  // first-time players; it never overrides an explicit OptionsModal choice.
-  // After hydrate has populated localStorage from the cloud backend, a null
-  // value at `spinner_user_language` means "this player has never picked a
-  // language on any device" and we can safely seed the portal locale.
-  // useUser.ts deliberately does NOT seed a language default, so the
-  // null/non-null probe here is a reliable signal.
+  // ─── Language authority ────────────────────────────────────────────────
+  //
+  // Two sources, and the split between them is what Playgama QA's repeated
+  // "language parameter was ignored on initialization" came down to:
+  //
+  //   • The PLAYER's choice lives in `spinner_user_language` and is written
+  //     by exactly one path — the OptionsModal dropdown. It is authoritative
+  //     forever and syncs through the cloud strategy.
+  //   • The PORTAL's language (Playgama `bridge.platform.language`, CG
+  //     `systemInfo.locale`) is re-reported on every single load, so it
+  //     never needs persisting. It drives the live `userLanguage` ref and
+  //     i18n only.
+  //
+  // The old code seeded the portal locale INTO `spinner_user_language`. That
+  // made the two indistinguishable, so the first load that failed to get a
+  // portal answer in time wrote 'en'-equivalent state that then out-ranked
+  // every subsequent correct answer — the bug survived a re-test because it
+  // had persisted itself into the player's cloud save. We no longer write
+  // the portal locale anywhere; assigning the ref keeps OptionsModal's
+  // dropdown showing the language actually on screen.
+  const { userLanguage: storedLang } = useUser()
+
+  // `userLanguage` is the single source of truth for what is on screen, and
+  // this is the one place it gets pushed into i18n. Every late-arriving
+  // correction therefore lands the same way, whether it comes from the
+  // OptionsModal dropdown, a slow Bridge answering after the boot budget, or
+  // a background cloud retry finally delivering the player's choice from
+  // another device. `setI18nLocale` lazy-loads the locale chunk and no-ops
+  // when the locale is already active, so re-entry is free.
+  watch(storedLang, (code) => {
+    if (isSupportedLocale(code)) void setI18nLocale(i18n, code)
+  })
+
+  applyPortalLocale = (code: string): void => {
+    if (!isSupportedLocale(code)) return
+    // A platform language SWITCH outranks the stored choice (see the boot-time
+    // check above); this covers the switch landing mid-session rather than
+    // across a reload. `notePortalLanguageChange` is idempotent, so re-running
+    // it for the value we already recorded at boot reports no change.
+    if (notePortalLanguageChange(code)) {
+      console.info('[i18n] portal language switched to', code, '— dropping stored choice')
+      clearExplicitLanguageChoice()
+    } else if (hasExplicitLanguageChoice()) {
+      // Ordinary load: an explicit in-game choice always wins over the portal.
+      return
+    }
+    storedLang.value = code
+  }
+
   {
-    const { userLanguage: storedLang, setSettingValue } = useUser()
     const { isDbInitialized: dbReady } = await import('@/use/useMatch')
     let stopLangSync: (() => void) | null = null
     stopLangSync = watch(
@@ -361,17 +440,18 @@ const bootstrap = async () => {
       (ready) => {
         if (!ready) return
         stopLangSync?.()
-        const hasStoredLanguage = localStorage.getItem('spinner_user_language') != null
-        if (!hasStoredLanguage && portalLocale) {
-          setSettingValue('language', portalLocale)
+        // Cloud hydrate has landed by now, so this probe sees the player's
+        // real choice if they have one on any device.
+        const chosen = localStorage.getItem(LANGUAGE_KEY)
+        if (isSupportedLocale(chosen)) {
+          storedLang.value = chosen
+          return
         }
-        // Apply whichever language is now authoritative — the stored
-        // value (cloud-hydrated or just-seeded). Never `portalLocale`
-        // unconditionally, because that's what was overwriting an
-        // explicit Spanish choice on every English-portal refresh.
-        if (isSupportedLocale(storedLang.value)) {
-          setI18nLocale(i18n, storedLang.value)
-        }
+        // No explicit choice — mirror whatever we booted with (portal or
+        // browser) into the ref so the OptionsModal dropdown agrees with
+        // the screen, then let the portal correct it if it answers late.
+        storedLang.value = initial
+        if (portalLocale) applyPortalLocale(portalLocale)
       },
       { immediate: true }
     )
