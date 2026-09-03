@@ -18,6 +18,7 @@ out
 
 dist-purity-cg
 dist-purity-check
+dist-youtube-e2e
 
 node_modules
 .DS_Store

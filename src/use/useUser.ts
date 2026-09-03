@@ -26,6 +26,16 @@ export const isGameDistribution = import.meta.env.VITE_APP_GAME_DISTRIBUTION ===
 export const isY8 = import.meta.env.VITE_APP_Y8 === 'true'
 export const isGamePix = import.meta.env.VITE_APP_GAMEPIX === 'true'
 export const isPlaygama = import.meta.env.VITE_APP_PLAYGAMA === 'true'
+// ─── Distribution channel, NOT a platform ──────────────────────────────────
+// chaos-arena reaches YouTube Playables THROUGH Playgama: the build is a
+// normal Playgama build (`VITE_APP_PLAYGAMA=true`, Bridge, PlaygamaStrategy,
+// Playgama ads) that additionally satisfies YouTube's certification rules.
+// So this flag never selects a save strategy or an ad provider — it only
+// gates the handful of things YouTube forbids: external requests, a CSP meta
+// tag, and the Page Visibility API. It is deliberately absent from
+// `PlatformFlags` and from the mutually-exclusive platform-flag assertion in
+// `vite.config.ts` for that reason.
+export const isYouTube = import.meta.env.VITE_APP_YOUTUBE === 'true'
 export const showMediatorAds = import.meta.env.VITE_APP_SHOW_MEDIATOR_ADS === 'true'
 export const isNative = import.meta.env.VITE_APP_NATIVE === 'true'
 export const isWeb = import.meta.env.VITE_APP_NATIVE !== 'true'

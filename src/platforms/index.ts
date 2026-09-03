@@ -7,6 +7,14 @@
 // composables) are still resolved lazily by `resolveSaveStrategy` /
 // `resolveAdProvider` so non-active platforms tree-shake cleanly.
 //
+// A descriptor module MUST contain nothing but its descriptor. Because every
+// one of them is statically imported here, a single
+// `export ... from '@/utils/<platform>Plugin'` inside a descriptor drags that
+// platform's SDK into EVERY build's entry graph. That is how the Playgama
+// build we submitted to YouTube Playables ended up preloading a 277 KB
+// `plugin-gd-*.js` chunk. `tests/platforms/bundlePurity.test.ts` guards the
+// outcome; this comment guards the cause.
+//
 // Adding a new platform:
 //   1. Create `src/platforms/<name>/index.ts` exporting `{ platform: { id, envFlag, capabilities } }`.
 //   2. Append the platform to `ALL_PLATFORMS` below.

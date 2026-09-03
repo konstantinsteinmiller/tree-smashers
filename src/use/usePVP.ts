@@ -250,7 +250,17 @@ const send = (msg: PvPMessage) => {
 // the browser may have killed the PeerJS signaling WebSocket. If the host
 // is still waiting for a guest, we MUST reconnect to the signaling server
 // so incoming connection offers can be relayed.
-document.addEventListener('visibilitychange', () => {
+//
+// Gated on the build flag. This is module-scope, so on a PvP-disabled build
+// it was registering a listener for a feature that can never run — and on
+// YouTube Playables, where "Game MUST NOT use the web Page Visibility API",
+// that listener was a certification liability for no benefit at all.
+// The gate is the INLINE `import.meta.env` literal, not the `isPvpEnabled`
+// const above. Vite substitutes the literal at build time so esbuild folds
+// `if ('false' === 'true')` away entirely; an exported const is not reliably
+// propagated into the branch, and the listener survived minification when
+// this was written as `if (isPvpEnabled)`.
+if (import.meta.env.VITE_APP_PVP_ENABLED === 'true') document.addEventListener('visibilitychange', () => {
   pvpLog(`visibility: hidden=${document.hidden} connOpen=${conn?.open} peerOpen=${peer?.open} peerDisconnected=${peer?.disconnected} status=${status.value}`)
   if (document.hidden) return
 

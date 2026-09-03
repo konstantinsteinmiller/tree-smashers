@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="color-scheme" content="dark only">
   <link rel="icon" href="/favicon.ico">
+  <!--
+    Web Storage shim. MUST stay the first of OUR scripts and MUST stay a
+    classic (non-module) tag: module scripts are deferred, so a shim installed
+    from inside the module graph would run after the entry chunk's static
+    imports have already executed their module-scope `localStorage.getItem`
+    calls. YouTube Playables sets `window.localStorage` to null, which is what
+    crashed the 2026-09 submission. See public/js/storage-shim.js.
+  -->
+  <script src="/js/storage-shim.js"></script>
   <!-- CSP meta tag injected by vite.config.ts at build time -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">

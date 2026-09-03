@@ -28,7 +28,7 @@
 // The build is cheap (<10s with Vite's cache).
 
 import { describe, it, expect, beforeAll } from 'vitest'
-import { build } from 'vite'
+import { execFile } from 'node:child_process'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -46,21 +46,40 @@ beforeAll(async () => {
   // Drop any prior artefact so we measure a fresh build.
   fs.rmSync(OUT_DIR, { recursive: true, force: true })
 
-  await build({
-    root: PROJECT_ROOT,
-    mode: 'crazy-web',
-    configFile: path.resolve(PROJECT_ROOT, 'vite.config.ts'),
-    build: {
-      outDir: OUT_DIR,
-      emptyOutDir: true,
-      sourcemap: false
-    },
-    logLevel: 'silent',
-    // Force-disable the obfuscator so string-marker greps work.
-    define: {
-      'import.meta.env.VITE_ENABLE_OBFUSCATION': JSON.stringify('false')
-    }
-  } as any)
+  // Build in a CHILD PROCESS, not via Vite's JS API.
+  //
+  // `loadEnv` lets `process.env` VITE_* values override `.env.<mode>.local`,
+  // and Vitest runs every test file in one process: the moment another suite
+  // calls `vi.stubEnv('VITE_APP_PLAYGAMA', 'true')`, an in-process
+  // `build({ mode: 'crazy-web' })` here inherits it and produces a CrazyGames
+  // bundle that genuinely contains the Playgama plugin. This test then failed
+  // in a full run and passed standalone — a false alarm that looks exactly
+  // like the real regression it exists to catch.
+  //
+  // The child gets the same clean environment `pnpm build:crazy-web` does,
+  // with every platform flag explicitly cleared so nothing inherited from the
+  // developer's shell can hijack the build either.
+  const cleanEnv: NodeJS.ProcessEnv = { ...process.env }
+  for (const key of Object.keys(cleanEnv)) {
+    if (key.startsWith('VITE_')) delete cleanEnv[key]
+  }
+  cleanEnv.VITE_ENABLE_OBFUSCATION = 'false' // string-marker greps need readable output
+
+  await new Promise<void>((resolve, reject) => {
+    execFile(
+      process.execPath,
+      [
+        path.resolve(PROJECT_ROOT, 'node_modules/vite/bin/vite.js'),
+        'build',
+        '--mode', 'crazy-web',
+        '--outDir', OUT_DIR,
+        '--logLevel', 'error'
+      ],
+      { cwd: PROJECT_ROOT, env: cleanEnv },
+      (err, _stdout, stderr) => (err ? reject(new Error(`${err.message}
+${stderr}`)) : resolve())
+    )
+  })
 
   const assetsDir = path.join(OUT_DIR, 'assets')
   for (const f of fs.readdirSync(assetsDir)) {

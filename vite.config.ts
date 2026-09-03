@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 
 import { defineConfig, loadEnv } from 'vite'
@@ -20,6 +21,48 @@ export default defineConfig(({ mode, command }) => {
   // Vite can no longer transform, breaking module specifiers at runtime.
   const isProduction = (mode === 'production' || env.VITE_NODE_ENV === 'production') && command === 'build'
   const shouldObfuscate = env.VITE_ENABLE_OBFUSCATION === 'true'
+  const sourcemapEnabled = env.VITE_BUILD_SOURCEMAP === 'false' ? false : !shouldObfuscate
+
+  // ─── Exactly ONE platform flag per build ───────────────────────────────
+  //
+  // Vite merges `.env` with `.env.<mode>`, so a platform flag left true in
+  // the base `.env` stays true for every mode that does not explicitly clear
+  // it. Both `resolveSaveStrategy` and `resolveAdProvider` take the FIRST
+  // matching arm, so an inherited flag silently hijacks the build — the game
+  // ships with another portal's save strategy and ad provider and nothing in
+  // the output hints at it. Fail the build instead.
+  const PLATFORM_FLAGS = [
+    'VITE_APP_CRAZY_WEB',
+    'VITE_APP_WAVEDASH',
+    'VITE_APP_ITCH',
+    'VITE_APP_GLITCH',
+    'VITE_APP_GAME_DISTRIBUTION',
+    'VITE_APP_Y8',
+    'VITE_APP_GAMEPIX',
+    'VITE_APP_PLAYGAMA'
+  ]
+  const activeFlags = PLATFORM_FLAGS.filter(f => env[f] === 'true')
+  if (activeFlags.length > 1) {
+    throw new Error(
+      `[build] ${activeFlags.join(', ')} are all "true" in mode "${mode}". `
+      + 'Exactly one platform flag may be active per build — check .env and '
+      + `.env.${mode}.local.`
+    )
+  }
+
+  // `VITE_APP_YOUTUBE` is a distribution CHANNEL, not a platform: chaos-arena
+  // reaches YouTube Playables through Playgama's partner pipeline, so the
+  // Bridge still owns saves, ads and lifecycle. The flag only gates what
+  // YouTube forbids on top of that. A YouTube build with no platform beneath
+  // it would ship the Noop ad provider and LocalStorageStrategy into a runtime
+  // where localStorage is null — i.e. silently no saves at all.
+  if (env.VITE_APP_YOUTUBE === 'true' && activeFlags.length === 0) {
+    throw new Error(
+      `[build] VITE_APP_YOUTUBE is "true" in mode "${mode}" but no platform `
+      + 'flag is set. YouTube Playables is published VIA a platform (Playgama) '
+      + '— set VITE_APP_PLAYGAMA=true alongside it.'
+    )
+  }
 
   // Initialize plugins array
   const plugins = []
@@ -108,17 +151,31 @@ export default defineConfig(({ mode, command }) => {
   // The whole per-platform CSP shape lives in `src/platforms/csp.ts`
   // — extracted so it's unit-testable. Adding a new platform's CSP
   // contribution = edit that file, not this one.
+  //
+  // An EMPTY string means "this platform must not ship a CSP meta tag at
+  // all" — YouTube Playables, where the policy would also apply to
+  // YouTube's own SDK and telemetry running in the same document. The
+  // placeholder comment is simply left in the HTML in that case.
   const cspValue = buildCsp(env)
 
-  plugins.push({
-    name: 'inject-csp',
-    transformIndexHtml(html: string) {
-      return html.replace(
-        '<!-- CSP meta tag injected by vite.config.ts at build time -->',
-        `<meta http-equiv="Content-Security-Policy" content="${cspValue}" />`
-      )
-    }
-  })
+  if (cspValue) {
+    plugins.push({
+      name: 'inject-csp',
+      transformIndexHtml(html: string) {
+        return html.replace(
+          '<!-- CSP meta tag injected by vite.config.ts at build time -->',
+          `<meta http-equiv="Content-Security-Policy" content="${cspValue}" />`
+        )
+      }
+    })
+  }
+
+  // YouTube Playables is a distribution CHANNEL layered on the Playgama
+  // build, not a platform of its own — see `.env.youtube.local`. The Bridge's
+  // `youtube` adapter is what talks to YouTube's ytgame SDK, so the game
+  // never carries a `game_api/v1` tag of its own.
+  const isYouTube = env.VITE_APP_YOUTUBE === 'true'
+  const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
 
   // Strip the CrazyGames SDK <script> tag from index.html for non-CrazyGames builds
   // so it doesn't block or error on other platforms (e.g. Wavedash).
@@ -150,6 +207,59 @@ export default defineConfig(({ mode, command }) => {
         )
       }
     })
+  }
+
+  // ─── YouTube channel: where does the Bridge come from? ──────────────────
+  //
+  // YouTube Playables forbids external server calls, and Playgama's own
+  // YouTube requirements repeat it ("your game must not make external calls,
+  // all assets bundled"). Every other Playgama build loads the Bridge from
+  // `<script src="https://bridge.playgama.com/v1/stable/playgama-bridge.js">`,
+  // which is exactly such a call.
+  //
+  // Self-hosting that file does NOT fix it. The CDN build is a webpack bundle
+  // with `publicPath = "https://bridge.playgama.com/v1/stable/"`, so it fetches
+  // its per-platform adapter chunks from the CDN at runtime, and it posts to
+  // `api.playgama.com/api/events/v3/bridge/analytics` — which YouTube calls out
+  // by name ("not contain any external calls, including built-in analytics").
+  // Playgama's documented route for a self-contained build is the npm package
+  // (`npm i @playgama/bridge`, v2) instead of the CDN tag.
+  //
+  // That migration is a decision about the Playgama integration as a whole, so
+  // it is opt-in rather than assumed: set `VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true`
+  // once `public/js/playgama-bridge.js` is a genuinely self-contained build.
+  // Until then a YouTube build keeps the CDN tag and says so at build time.
+  if (isYouTube) {
+    const vendored = resolve(dirname(fileURLToPath(import.meta.url)), 'public/js/playgama-bridge.js')
+    const wantsLocal = env.VITE_APP_PLAYGAMA_BRIDGE_LOCAL === 'true'
+    if (wantsLocal && !existsSync(vendored)) {
+      throw new Error(
+        '[build] VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true but public/js/playgama-bridge.js '
+        + 'is missing. Run `pnpm fetch:playgama-bridge` (and read its warning about '
+        + 'runtime adapter fetches before shipping it).'
+      )
+    }
+    if (wantsLocal) {
+      plugins.push({
+        name: 'bundle-playgama-sdk',
+        transformIndexHtml(html: string) {
+          return html.replace(
+            /<script[^>]*src="https:\/\/bridge\.playgama\.com\/[^"]*"[^>]*><\/script>/,
+            '<script src="/js/playgama-bridge.js"></script>'
+          )
+        }
+      })
+    } else {
+      console.warn(
+        [
+          '--- ⚠️  YouTube build keeps the Playgama Bridge CDN tag ---',
+          '    bridge.playgama.com is an external request, which YouTube Playables',
+          '    prohibits. This is fine if Playgama repackages the bundle for YouTube',
+          '    on their side; if they do not, migrate to the @playgama/bridge npm',
+          '    package and set VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true.'
+        ].join('\n')
+      )
+    }
   }
 
   // Emit `dist/playgama-bridge-config.json` ONLY for `pnpm build:playgama`.
@@ -213,21 +323,59 @@ export default defineConfig(({ mode, command }) => {
     },
     build: {
       minify: 'esbuild',
-      // Disable source maps in production if you want maximum protection
-      sourcemap: !shouldObfuscate,
+      // Source maps ship by default on unobfuscated builds (they are only
+      // ever fetched with devtools open) but can be turned off per mode with
+      // `VITE_BUILD_SOURCEMAP=false`.
+      //
+      // YouTube Playables sets it. That build deliberately runs WITHOUT the
+      // obfuscator so a QA stack trace is readable — but the bundle is served
+      // from a public URL, and shipping maps alongside it would publish the
+      // full original source, which is the very thing the obfuscator exists to
+      // prevent everywhere else. Unobfuscated minified code already gives a
+      // greppable file+line; the maps would only add ~2.4 MB of upload and a
+      // complete source disclosure.
+      sourcemap: sourcemapEnabled,
       rollupOptions: {
         output: {
-          // Pin each heavy, dynamically-imported platform ad plugin to its own
-          // async chunk. Without this, Rollup's default chunker may merge a
-          // small plugin (e.g. playgamaPlugin) into a hot-path chunk
+          // Pin the ACTIVE platform's heavy ad/SDK plugin to its own async
+          // chunk. Without this, Rollup's default chunker may merge a small
+          // plugin (e.g. playgamaPlugin) into a hot-path chunk
           // (index/App/SpinnerArena) — a nondeterministic split that
-          // `bundlePurity.test.ts` rightly flags. Isolating them keeps the
-          // hot path clean AND keeps each platform's plugin out of the others'
-          // builds: a non-active platform's dead-branch import is DCE'd, so the
-          // chunk is simply never fetched.
+          // `bundlePurity.test.ts` rightly flags.
+          //
+          // Two rules, and the ORDER between them is what matters.
+          //
+          // `manualChunks` is called for every module in the GRAPH, including
+          // ones tree-shaking will remove: a dead-branch
+          // `await import('@/utils/gameDistributionPlugin')` puts that module
+          // in the graph on every build. Naming it creates the chunk group
+          // anyway, the seed is then shaken away, and Rollup fills the empty
+          // group with whatever shares its dependency signature. That is how
+          // YouTube QA's crash report came back as
+          // `plugin-gd-CQHccaXY.js:19:42110` for a null-localStorage read in
+          // `useSpinnerConfig.ts`, on a build shipping no GameDistribution
+          // code at all — the "plugin-gd" chunk was Vue plus the composables.
+          //
+          // So each plugin pin is GATED on its own platform flag: a build with
+          // none of that platform's code in it never names a group for it, and
+          // the composables stay in `index` where they belong. Claiming the
+          // framework as `vendor-vue` FIRST does the rest — it is the largest
+          // thing an emptied group could otherwise absorb.
+          //
+          // The pins still exist because Rollup's default chunker can merge a
+          // small ACTIVE plugin chunk into App nondeterministically, which is
+          // the leak `bundlePurity.test.ts` exists to catch.
           manualChunks(id: string) {
-            if (id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
-            if (id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
+            // Vendor first. A manual-chunk group survives its seed module
+            // being tree-shaken away, and Rollup will then fill the empty
+            // group with whatever shares its dependency signature. Claiming
+            // the framework explicitly means the biggest such candidate can
+            // never drift into a platform-plugin group again.
+            if (/node_modules[\/](@vue|vue|vue-router|vue-i18n|@intlify)[\/]/.test(id)) {
+              return 'vendor-vue'
+            }
+            if (isPlaygama && id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
+            if (isGameDistribution && id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
           }
         }
       }

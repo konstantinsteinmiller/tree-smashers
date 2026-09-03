@@ -26,6 +26,7 @@ import {
   isY8,
   isGamePix,
   isPlaygama,
+  isYouTube,
   isNative,
   orientation
 } from '@/use/useUser'
@@ -78,6 +79,15 @@ if (isPlaygama) {
   // PAUSE_STATE_CHANGED is the Bridge's aggregated overlay/visibility/ad
   // signal. Suspending is independent of gameplay's own start/stop calls,
   // so resuming never restarts a battle that had legitimately ended.
+  //
+  // On the YouTube channel this is the ONLY pause source we are allowed to
+  // have: Playables certification says "Game MUST NOT use the web Page
+  // Visibility API or similar web APIs and MUST only use Playables SDK
+  // onPause and onResume", and the Bridge's `youtube` adapter is what
+  // forwards those events here. That is why `handleVisibilityChange` below
+  // is not registered on a YouTube build — it would be a second, forbidden
+  // pause source. It also means the Bridge pause edge has to carry the save
+  // flush that `visibilitychange` normally triggers; see `main.ts`.
   watch(isPlaygamaPaused, (paused) => {
     setGamePaused(paused)
   }, { immediate: true })
@@ -148,13 +158,19 @@ onMounted(() => {
       windowHeight.value = window.innerHeight
     }, 400)
     window.addEventListener('orientationchange', delayedUpdateGlobalDimensions)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    // Playables certification: "Game MUST NOT use the web Page Visibility API
+    // or similar web APIs and MUST only use Playables SDK `onPause` and
+    // `onResume`." On the YouTube channel the Bridge's PAUSE_STATE_CHANGED
+    // handler above already pauses music and the game loop from those very
+    // SDK events, so this listener would be a second, forbidden pause source
+    // rather than an addition.
+    if (!isYouTube) document.addEventListener('visibilitychange', handleVisibilityChange)
   }
 })
 onUnmounted(() => {
   window.removeEventListener('resize', updateGlobalDimensions)
   window.removeEventListener('orientationchange', delayedUpdateGlobalDimensions)
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (!isYouTube) document.removeEventListener('visibilitychange', handleVisibilityChange)
   clearInterval(dimensionsInterval.value)
 })
 
@@ -178,7 +194,8 @@ onUnmounted(() => {
 const hostname = window.location.hostname
 const parentOrigin = window.location.ancestorOrigins?.[0] ?? document.referrer ?? ''
 const platformFlags = {
-  isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama
+  isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
+  isPlaygama
 }
 const capabilities = computed(() => resolveCapabilities({
   flags: platformFlags,

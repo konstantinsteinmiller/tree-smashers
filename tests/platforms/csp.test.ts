@@ -209,6 +209,25 @@ describe('buildCsp', () => {
     })
   })
 
+  describe('YouTube Playables build (VITE_APP_YOUTUBE=true)', () => {
+    // Playables ships NO CSP meta tag. An empty string is the signal
+    // `vite.config.ts` uses to skip injecting one — see the comment at the top
+    // of `buildCsp`. A meta-tag policy would apply to YouTube's own SDK and
+    // telemetry running in the same document, so any host we forget silently
+    // breaks their runtime with no way for us to observe it.
+    it('returns an empty policy so no meta tag is emitted', () => {
+      expect(buildCsp({ VITE_APP_YOUTUBE: 'true' })).toBe('')
+    })
+
+    it('wins over any other flag that happens to be set', () => {
+      expect(buildCsp({ VITE_APP_YOUTUBE: 'true', VITE_APP_GAME_DISTRIBUTION: 'true' })).toBe('')
+    })
+
+    it('a non-YouTube build still gets a full policy', () => {
+      expect(buildCsp({ VITE_APP_YOUTUBE: 'false' })).not.toBe('')
+    })
+  })
+
   describe('directive ordering and shape', () => {
     it('emits all 8 standard directives separated by "; "', () => {
       const csp = buildCsp(baseEnv())

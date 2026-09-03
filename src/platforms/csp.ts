@@ -129,6 +129,23 @@ const CSP_DIRECTIVES = [
  * `transformIndexHtml` time.
  */
 export const buildCsp = (env: Record<string, string>): string => {
+  // ─── YouTube Playables: NO policy at all ─────────────────────────────────
+  //
+  // Returning '' tells `vite.config.ts` to skip the meta tag entirely (the
+  // placeholder comment in index.html is simply left in place).
+  //
+  // A CSP meta tag applies to the whole DOCUMENT, and on Playables that
+  // document is shared with YouTube's own runtime: their `game_api/v1` SDK,
+  // their telemetry beacons to `play.google.com/log`, and whatever else the
+  // host injects into our frame. Any policy we write is a policy we impose on
+  // THEM, and a single missing host silently breaks YouTube's own plumbing
+  // with no way for us to see it. YouTube already sandboxes the frame and
+  // enforces the "no external server calls" rule at review time, so a
+  // self-imposed policy here buys nothing and can only cause false failures.
+  //
+  // Same call the Poki build makes, for the same reason.
+  if (env.VITE_APP_YOUTUBE === 'true') return ''
+
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
   const isGlitch = env.VITE_APP_GLITCH === 'true'
   const isCrazyWeb = env.VITE_APP_CRAZY_WEB === 'true'

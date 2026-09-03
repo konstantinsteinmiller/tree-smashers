@@ -214,6 +214,13 @@ const bootstrap = async () => {
   // is best-effort — the strategy's setItem may not finish before the
   // process is suspended. But it dramatically widens the window where
   // writes complete vs. relying on the natural debounce.
+  //
+  // YouTube Playables is the exception. "Game MUST NOT use the web Page
+  // Visibility API or similar web APIs and MUST only use Playables SDK
+  // `onPause` and `onResume`" — so on that build the SDK's pause edge is the
+  // flush trigger instead. It carries the same guarantee ("the game has a
+  // short window to save any state before it is evicted") and reaches the
+  // whole SaveManager, not just the strategy's own pause hook.
   const flushOnHide = (): void => {
     if (document.visibilityState === 'hidden') {
       void saveManager.flush().catch((e) => {
@@ -221,12 +228,27 @@ const bootstrap = async () => {
       })
     }
   }
-  document.addEventListener('visibilitychange', flushOnHide)
-  window.addEventListener('pagehide', () => {
-    void saveManager.flush().catch((e) => {
-      console.warn('[save] pagehide flush failed', e)
+  if (import.meta.env.VITE_APP_YOUTUBE === 'true') {
+    // The Bridge's PAUSE_STATE_CHANGED is the only lifecycle signal we are
+    // allowed to consume here, and on the `youtube` adapter it is fed by
+    // Playables' own `onPause` — which exists precisely because "the game has
+    // a short window to save any state before it is evicted".
+    void import('@/utils/playgamaPlugin').then(({ isPlaygamaPaused }) => {
+      watch(isPlaygamaPaused, (paused) => {
+        if (!paused) return
+        void saveManager.flush().catch((e) => {
+          console.warn('[save] platform-pause flush failed', e)
+        })
+      })
     })
-  })
+  } else {
+    document.addEventListener('visibilitychange', flushOnHide)
+    window.addEventListener('pagehide', () => {
+      void saveManager.flush().catch((e) => {
+        console.warn('[save] pagehide flush failed', e)
+      })
+    })
+  }
 
   // NOTE: gates below use `import.meta.env.VITE_APP_*` literals (not the
   // `isGlitch` / `isGameDistribution` constants imported from useUser).

@@ -19,28 +19,12 @@
 
 export type { PlatformModule } from '../types'
 
-// Strategy class (cloud-save backed by `bridge.storage`).
-export { PlaygamaStrategy } from '@/utils/save/PlaygamaStrategy'
-
-// Plugin surface (SDK init, locale, lifecycle messages, ad show wrappers).
-export {
-  playgamaPlugin,
-  playgamaLoadingStart,
-  playgamaGameLoadingStop,
-  playgamaGameplayStart,
-  playgamaGameplayStop,
-  showInterstitialPG,
-  showRewardedPG,
-  isPlaygamaSdkActive,
-  isPlaygamaAdsBlocked,
-  isPlaygamaAdShowing,
-  playgamaLocale,
-  playgamaLocaleReady,
-  registerPlaygamaMusicControls
-} from '@/utils/playgamaPlugin'
-
-// AdProvider wrapper.
-export { createPlaygamaProvider } from '@/use/ads/PlaygamaProvider'
+// DESCRIPTOR ONLY — no `export … from '@/utils/playgamaPlugin'` here. The
+// registry statically imports every descriptor, so a re-export of the Bridge
+// wiring would land it in every other platform's entry graph. See the note in
+// `../gamedistribution/index.ts` for what that cost us on the YouTube
+// submission. App.vue, `resolveSaveStrategy` and `PlaygamaProvider` import the
+// implementation from its own module instead.
 
 // Platform-module descriptor for the registry. Empty `hostnameMatcher`
 // signals "no URL gate" — capabilities.ts treats the Playgama arm as
