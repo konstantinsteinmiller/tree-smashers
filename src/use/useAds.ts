@@ -9,12 +9,13 @@
 //                                  `isCrazyGamesFullRelease` inside the
 //                                  provider)
 //   • `isGameDistribution` build → GameDistribution.com SDK
-//   • `showMediatorAds && isNative` → Unity LevelPlay (Tauri plugin)
+//   • `showMediatorAds && isNative` → Google AdMob (Tauri plugin, direct —
+//                                  no mediation; see AdMobProvider.ts)
 //   • everything else           → Noop (ads UI hidden, calls inert)
 //
 // The CrazyGames SDK is still initialised directly from `main.ts` — it
-// has to run before the SaveManager hydrates. LevelPlay and GameDistribution
-// init happen after mount via `initAds()` — LevelPlay because the native
+// has to run before the SaveManager hydrates. AdMob and GameDistribution
+// init happen after mount via `initAds()` — AdMob because the native
 // side needs the Android Activity / iOS ViewController to be alive,
 // GameDistribution because the SDK script is dynamically injected and we
 // don't want to pay that latency on the boot critical path.
@@ -34,6 +35,11 @@ import {
 import type { AdProvider } from './ads/types'
 import { resolveAdProvider } from '@/platforms/resolveAdProvider'
 import { isRewardedThrottled, recordRewardedGranted } from '@/use/useRewardedThrottle'
+import {
+  requestRewardedIntro,
+  requiresRewardedIntro,
+  type RewardedIntroReward
+} from '@/use/useRewardedIntro'
 
 const provider: AdProvider = resolveAdProvider({
   flags: { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama },
@@ -81,13 +87,34 @@ export const dismissAdsBlockedModal = (): void => {
 
 export const initAds = (): Promise<void> => provider.init()
 
-export const showRewardedAd = async (): Promise<boolean> => {
-  // Throttle gate: refuse the SDK call once the player has burned
-  // their 10-min budget. Returning `false` here matches the
-  // contract callers already handle (no grant). The reward UI is
-  // already hidden via `isRewardedReady`, so this branch only fires
-  // if a placement somehow bypassed that check.
+/**
+ * Show a rewarded ad and report whether the reward was earned.
+ *
+ * @param reward what the player earns, shown on the intro screen. Structured
+ *   rather than a string so the modal can render it through i18n. Optional —
+ *   omit it and the generic copy is used.
+ *
+ * Two gates run before the provider is ever asked for an ad:
+ *
+ *   1. **Throttle.** Refuse the SDK call once the player has burned their
+ *      10-minute budget. Returning `false` matches the contract callers
+ *      already handle (no grant). The reward UI is already hidden via
+ *      `isRewardedReady`, so this only fires if a placement bypassed it.
+ *
+ *   2. **Intro screen** (native builds). AdMob's rewarded-interstitial format
+ *      requires a developer-supplied intro naming the reward with a working
+ *      decline option, and Google Play's Families policy requires ads to be
+ *      clearly distinguishable from game content. Declining resolves `false`
+ *      and no ad request is made. This is the ONLY place the intro is
+ *      triggered, so every present and future rewarded placement inherits it.
+ *      See `useRewardedIntro.ts`.
+ */
+export const showRewardedAd = async (reward: RewardedIntroReward | null = null): Promise<boolean> => {
   if (isRewardedThrottled.value) return false
+  if (requiresRewardedIntro) {
+    const accepted = await requestRewardedIntro(reward)
+    if (!accepted) return false
+  }
   const granted = await provider.showRewardedAd()
   if (granted) {
     recordRewardedGranted()

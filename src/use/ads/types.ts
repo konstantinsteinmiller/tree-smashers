@@ -1,5 +1,5 @@
 // Provider-agnostic ad surface. Every platform-specific ad backend
-// (CrazyGames SDK, Unity LevelPlay via the Tauri mobile plugin, etc.)
+// (CrazyGames SDK, Google AdMob via the Tauri mobile plugin, etc.)
 // implements this interface so the four in-game ad placements
 // (midgame interstitial, AdRewardButton, RouletteWheel respin, 2x
 // speed-boost reward) never have to know which provider is active.
@@ -51,7 +51,7 @@ export interface AdProvider {
    * Each provider populates this differently:
    *   - CrazyGames    → `sdk.ad.hasAdblock()` at init + error.code on show.
    *   - GameDistribution → SDK_ERROR events with `Blocked:` messages.
-   *   - LevelPlay (native) → always false; mobile SDKs aren't subject to
+   *   - AdMob (native) → always false; mobile SDKs aren't subject to
    *                          browser-extension blockers.
    *   - Noop           → always false.
    *

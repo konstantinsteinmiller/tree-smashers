@@ -419,7 +419,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-build",
- "tauri-plugin-levelplay",
+ "tauri-plugin-admob",
  "tauri-plugin-log",
  "tauri-plugin-shell",
 ]
@@ -3772,7 +3772,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-levelplay"
+name = "tauri-plugin-admob"
 version = "0.1.0"
 dependencies = [
  "log",

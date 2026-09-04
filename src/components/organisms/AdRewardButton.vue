@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
+import { isNative } from '@/use/useUser'
 
 interface Props {
   /** How many coins the player gets after watching the ad (coins variant). */
@@ -25,6 +27,7 @@ const emit = defineEmits<{
   (e: 'diamonds-awarded', sourceEl: HTMLElement): void
 }>()
 
+const { t } = useI18n()
 const { addCoins, addDiamonds } = useSpinnerConfig()
 const rootEl = ref<HTMLElement | null>(null)
 
@@ -63,7 +66,13 @@ onUnmounted(() => {
 // through — whichever ad provider the active build selected.
 const triggerAdReward = async () => {
   if (cooldownActive.value) return
-  const ok = await showRewardedAd()
+  // Naming the reward is what makes the native intro screen's "clear reward
+  // messaging" requirement pass — see useRewardedIntro.ts.
+  const ok = await showRewardedAd(
+    props.reward === 'diamond'
+      ? { kind: 'diamonds', amount: props.diamonds }
+      : { kind: 'coins', amount: props.coins }
+  )
   if (ok) {
     grantReward()
     // Arm the 30s cooldown ONLY on a successful watch — a no-fill or
@@ -103,8 +112,15 @@ const grantReward = () => {
           template(v-else)
             span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coins }}
             IconCoin.inline(class="w-4 h-4 text-yellow-300")
-        img.object-contain(
-          src="/images/icons/movie_128x96.webp"
-          class="h-5 w-5 sm:h-5 sm:w-5"
-        )
+        //- Ad disclosure. Google Play's Families policy rejects ads and ad
+        //- offers that "aren't clearly distinguishable from your app's
+        //- content", so the native build labels the button in words, not just
+        //- with the film-reel glyph. Mirrors RewardedAdButton.
+        div.flex.items-center.gap-1
+          span.game-text.leading-tight(v-if="isNative" class="text-[10px] sm:text-xs") {{ t('spinner.ad') }}
+          img.object-contain(
+            src="/images/icons/movie_128x96.webp"
+            class="h-5 w-5 sm:h-5 sm:w-5"
+            :alt="t('spinner.ad')"
+          )
 </template>

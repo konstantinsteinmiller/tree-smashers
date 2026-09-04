@@ -22,4 +22,12 @@ log = "0.4"
 tauri = { version = "2.10.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
-tauri-plugin-levelplay = { path = "plugins/tauri-plugin-levelplay" }
+# Ads: Google AdMob, direct integration, no mediation.
+#
+# `tauri-plugin-levelplay` (Unity LevelPlay / ironSource) is still on disk at
+# plugins/tauri-plugin-levelplay/ but is NOT listed here on purpose. The Tauri
+# CLI builds gen/android/tauri.settings.gradle from THIS dependency list, so
+# dropping the line is what actually keeps the ironSource + Unity Ads artifacts
+# out of the APK/AAB. Re-adding it re-adds those SDKs — read ADS_STATE.md at
+# the repo root before you do.
+tauri-plugin-admob = { path = "plugins/tauri-plugin-admob" }

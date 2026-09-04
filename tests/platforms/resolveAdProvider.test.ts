@@ -78,7 +78,7 @@ describe('resolveAdProvider', () => {
     expect(provider.name).toBe('playgama')
   })
 
-  it('returns LevelPlay when VITE_APP_NATIVE env is set AND showMediatorAds AND isNative are both true', async () => {
+  it('returns AdMob when VITE_APP_NATIVE env is set AND showMediatorAds AND isNative are both true', async () => {
     vi.stubEnv('VITE_APP_NATIVE', 'true')
     const resolveAdProvider = await loadResolver()
     const provider = resolveAdProvider({
@@ -86,7 +86,7 @@ describe('resolveAdProvider', () => {
       showMediatorAds: true,
       isNative: true
     })
-    expect(provider.name).toBe('levelplay')
+    expect(provider.name).toBe('admob')
   })
 
   it('returns Noop when showMediatorAds is true but isNative is false (web build)', async () => {
@@ -134,7 +134,7 @@ describe('resolveAdProvider', () => {
       expect(provider.name).toBe('crazygames')
     })
 
-    it('isGameDistribution wins over LevelPlay when both env flags are set', async () => {
+    it('isGameDistribution wins over AdMob when both env flags are set', async () => {
       vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
       vi.stubEnv('VITE_APP_NATIVE', 'true')
       const resolveAdProvider = await loadResolver()

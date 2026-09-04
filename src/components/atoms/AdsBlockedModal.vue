@@ -7,7 +7,7 @@
 //      ad-fetch chain.
 //
 // Same component services every ad backend the game ships with
-// (CrazyGames, GameDistribution, LevelPlay-on-native, Noop) — each
+// (CrazyGames, GameDistribution, AdMob-on-native, Noop) — each
 // provider populates its own `isAdsBlocked` ref via SDK-specific
 // detection (CG's `sdk.ad.hasAdblock()`, GD's SDK_ERROR `Blocked:`
 // pattern, etc.) and `useAds.showRewardedAd()` is the single seam that
@@ -65,7 +65,7 @@ const host = computed(() => {
           //- concatenated around it — word order around "allow ads on <host>"
           //- differs per language (in ja/ko/zh the host comes first).
           p.text-sm.mb-5(class="text-slate-300")
-            i18n-t(keypath="adsBlocked.allowHost" tag="span" scope="local")
+            i18n-t(keypath="adsBlocked.allowHost" tag="span" scope="parent")
               template(#host)
                 span.font-mono.font-bold(class="text-amber-300") {{ host }}
 

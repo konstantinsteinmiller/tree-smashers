@@ -1,0 +1,95 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="com.plugin.admob" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+7
+8    <!-- AdMob ad fetches and connectivity probes. -->
+9    <uses-permission android:name="android.permission.INTERNET" />
+9-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:6:3-64
+9-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:6:20-62
+10    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+10-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:7:3-76
+10-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:7:20-74
+11
+12    <!--
+13    COPPA / Google Play Families Policy: every advertising-identifier
+14    permission introduced by the Google Mobile Ads stack must be explicitly
+15    removed via manifest merger on a kids app. These overrides win over the
+16    transitive declarations pulled in by play-services-ads.
+17
+18    If any of these lines is removed, Google Play will flag the app for a
+19    Families Policy violation and block publishing.
+20
+21    - AD_ID — classic Google Play Services advertising identifier.
+22    - ACCESS_ADSERVICES_AD_ID — Android 13+ Privacy Sandbox ad ID.
+23    - ACCESS_ADSERVICES_ATTRIBUTION / _TOPICS — Privacy Sandbox
+24      interest-based / attribution APIs. Prohibited on kids apps.
+25    -->
+26    <uses-permission
+26-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:23:3-24:41
+27        android:name="com.google.android.gms.permission.AD_ID"
+27-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:23:20-74
+28        tools:node="remove" />
+28-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:24:20-39
+29    <uses-permission
+29-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:25:3-26:41
+30        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+30-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:25:20-77
+31        tools:node="remove" />
+31-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:26:20-39
+32    <uses-permission
+32-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:27:3-28:41
+33        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+33-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:27:20-83
+34        tools:node="remove" />
+34-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:28:20-39
+35    <uses-permission
+35-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:29:3-30:41
+36        android:name="android.permission.ACCESS_ADSERVICES_TOPICS"
+36-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:29:20-78
+37        tools:node="remove" />
+37-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:30:20-39
+38    <!--
+39    Required by play-services-ads: the SDK ships a `MobileAdsInitProvider`
+40    ContentProvider that auto-registers from the AdMob library's manifest and
+41    runs at process startup. It crashes the whole app if it cannot find this
+42    meta-data tag.
+43
+44    The value is injected at build time via the manifest placeholder
+45    `admobAppId`, defined in the consuming app's build.gradle.kts and sourced
+46    from the `VITE_APP_ADMOB_ANDROID_APP_ID` env var (see .env.tauri). When
+47    unset, the fallback is Google's documented AdMob test app ID — benign,
+48    returns a static "Test Ad" placeholder, no account required.
+49
+50    Format reminder: AdMob App ID uses TILDE (`~`) as separator. A value with
+51    a slash (`/`) is an *ad unit* ID — wrong tag.
+52
+53    `OPTIMIZE_INITIALIZATION` / `OPTIMIZE_AD_LOADING` move the SDK's heavy
+54    startup work off the main thread. Cheap, and it keeps the game's first
+55    frame from stalling behind ad-SDK init on low-end Android devices.
+56    -->
+57    <application>
+57-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:51:3-61:17
+58        <meta-data
+58-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:52:5-54:38
+59            android:name="com.google.android.gms.ads.APPLICATION_ID"
+59-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:53:7-63
+60            android:value="${admobAppId}" />
+60-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:54:7-36
+61        <meta-data
+61-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:55:5-57:29
+62            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+62-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:56:7-77
+63            android:value="true" />
+63-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:57:7-27
+64        <meta-data
+64-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:58:5-60:29
+65            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+65-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:59:7-73
+66            android:value="true" />
+66-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\AndroidManifest.xml:60:7-27
+67    </application>
+68
+69</manifest>

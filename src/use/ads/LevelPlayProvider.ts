@@ -1,3 +1,27 @@
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  DISABLED — NOT WIRED INTO ANY BUILD.  Kept as a reference implementation ║
+// ║  for a future mediation attempt. Do not "fix" it back into service.       ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+//
+// Google Play rejected com.chaos.arena (version codes 1000012 / 1000020) on
+// 2026-09 under "Families Ad Format Requirements" — unclosable ads and ads not
+// clearly distinguishable from app content. A mediation waterfall gives the
+// publisher no control over the winning creative's close affordance, so the
+// native build was switched to `AdMobProvider` (direct Google Mobile Ads SDK,
+// rewarded-interstitial units only).
+//
+// What is actually disconnected, in order of what matters:
+//   1. `src-tauri/Cargo.toml` no longer depends on `tauri-plugin-levelplay`,
+//      so the Tauri CLI leaves it out of gen/android/tauri.settings.gradle and
+//      the ironSource + Unity Ads artifacts never enter the APK/AAB.
+//   2. `src-tauri/src/lib.rs` registers `tauri_plugin_admob` instead.
+//   3. `resolveAdProvider` returns `createAdMobProvider()` on native.
+//   4. The `VITE_APP_LEVELPLAY_*` env vars in `.env.tauri` are commented out,
+//      so every id below reads as an empty string.
+//
+// Re-enabling is a deliberate, multi-step job with a Play-policy review
+// attached. Read ADS_STATE.md at the repo root before starting it.
+//
 // Unity LevelPlay (ironSource) provider, wired through the Tauri plugin
 // at `src-tauri/plugins/tauri-plugin-levelplay/`. COPPA / Families
 // Policy flags are applied on the native side BEFORE `LevelPlay.init`

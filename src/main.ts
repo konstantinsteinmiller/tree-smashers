@@ -493,7 +493,7 @@ const bootstrap = async () => {
 
   // Kick off the ad provider's init after mount. For CrazyGames the
   // SDK is already up (initCrazyGames ran above) so this is a no-op;
-  // for LevelPlay the native bridge needs the Android Activity / iOS
+  // for AdMob the native bridge needs the Android Activity / iOS
   // ViewController to be alive, which is true once the webview has
   // rendered. Never awaited — ads are not on the critical path, and
   // placements stay hidden via `isAdsReady` until the provider signals

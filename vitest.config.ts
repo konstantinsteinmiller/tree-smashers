@@ -1,9 +1,19 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    // Without this, `@vitejs/plugin-vue` drops the SFC `<i18n>` custom block
+    // on the floor and every component that keeps its copy there renders raw
+    // keypaths under test. That blind spot hid a real bug: `<i18n-t>` with
+    // the invalid `scope="local"` resolves against the GLOBAL messages, so
+    // `rewardedIntro.bodyReward` shipped untranslated. Mirrors the
+    // `defaultSFCLang` used by `vite.config.ts`.
+    VueI18nPlugin({ defaultSFCLang: 'yaml' })
+  ],
   // Vite's production config (`vite.config.ts`) injects `APP_VERSION` at
   // build time via `define`. Vitest doesn't run that plugin, so any
   // module that reads `APP_VERSION` at import time (e.g. `useUser.ts`)

@@ -1,0 +1,10 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Default permissions for the AdMob plugin — exposes init plus the rewarded-interstitial show command, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state."
+permissions = [
+  "allow-init",
+  "allow-show-rewarded",
+  "allow-registerListener",
+  "allow-removeListener"
+]

@@ -10,9 +10,10 @@ import { isDebug } from '@/use/useMatch'
 import useAssets from '@/use/useAssets'
 import FLogoProgress from '@/components/atoms/FLogoProgress.vue'
 import FPerfMeter from '@/components/atoms/FPerfMeter.vue'
-import LevelPlayDebugOverlay from '@/components/atoms/LevelPlayDebugOverlay.vue'
+import NativeAdsDebugOverlay from '@/components/atoms/NativeAdsDebugOverlay.vue'
 import SaveStatusBanner from '@/components/atoms/SaveStatusBanner.vue'
 import AdsBlockedModal from '@/components/atoms/AdsBlockedModal.vue'
+import RewardedAdIntroModal from '@/components/atoms/RewardedAdIntroModal.vue'
 import VConsoleHideButton from '@/components/atoms/VConsoleHideButton.vue'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
 import { applyMute } from '@/use/usePlatformMute'
@@ -224,9 +225,12 @@ const plattformText = computed(() => capabilities.value.plattformText)
   div(v-if="isGameShowAllowed" id="app-root" class="h-screen h-dvh w-screen app-container root-protection game-ui-immune")
     FLogoProgress
     FPerfMeter(v-if="isDebug" :offset-y="52")
-    LevelPlayDebugOverlay(v-if="isNative && isDebug")
+    NativeAdsDebugOverlay(v-if="isNative && isDebug")
     SaveStatusBanner
     AdsBlockedModal
+    //- Rewarded-ad intro screen. Required before every native rewarded ad
+    //- (AdMob rewarded-interstitial contract + Play Families ad disclosure).
+    RewardedAdIntroModal
     VConsoleHideButton
     RouterView
 

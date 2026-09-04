@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3">
+  <dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~">
+    <source path="C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\main\jniLibs"/>
+  </dataSet>
+  <dataSet config="release"
+           ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~">
+    <source path="C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-admob\android\src\release\jniLibs"/>
+  </dataSet>
+</merger>

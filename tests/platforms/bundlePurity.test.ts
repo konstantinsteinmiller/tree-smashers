@@ -13,7 +13,7 @@
 // build's bundle. Heavy modules that leaked into the CG bundle:
 //   • `gameDistributionPlugin.ts` (~500 LOC + GD SDK loader)
 //   • `glitchPlugin.ts` (Glitch.fun licensing/heartbeat)
-//   • `LevelPlayProvider` → `@tauri-apps/api/core` (Unity LevelPlay shim)
+//   • the native ads provider → `@tauri-apps/api/core` (Tauri shim)
 //   • `peerjs` (~150KB obfuscated, transitively via `usePVP.ts`)
 //
 // CG QA flagged the bloat on 2026-04-30. The fix:
@@ -147,13 +147,16 @@ describe('CrazyGames build — bundle purity', () => {
     expect(leaks, `Glitch SDK code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
   })
 
-  it('does NOT bundle @tauri-apps / LevelPlay code in any hot-path chunk', () => {
+  it('does NOT bundle @tauri-apps / native-ads code in any hot-path chunk', () => {
     // Tauri runtime globals appear ONLY when `@tauri-apps/api/core` is
     // bundled. The package writes/reads these on the global window.
     // (Plain `"@tauri-apps/api"` strings appear in error messages we
     // wrote and are OK.)
-    const leaks = findInHotPath(/__TAURI_INTERNALS__|__TAURI_INVOKE_KEY__|__TAURI_TO_IPC_KEY__|levelPlayInit|__levelplay/)
-    expect(leaks, `Tauri/LevelPlay code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
+    // `plugin:admob|` is the invoke-name prefix AdMobProvider builds its
+    // commands from; it appears in a web bundle only if that provider
+    // survived tree-shaking.
+    const leaks = findInHotPath(/__TAURI_INTERNALS__|__TAURI_INVOKE_KEY__|__TAURI_TO_IPC_KEY__|plugin:admob\||plugin:levelplay\|/)
+    expect(leaks, `Tauri/native-ads code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
   })
 
   it('does NOT bundle PeerJS / WebRTC plumbing in any hot-path chunk', () => {

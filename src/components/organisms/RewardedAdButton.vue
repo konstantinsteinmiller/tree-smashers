@@ -35,7 +35,7 @@ const isVisible = computed(() => isRewardedReady.value && props.coins > 0 && !cl
 
 const triggerDouble = async () => {
   if (claimed.value) return
-  const ok = await showRewardedAd()
+  const ok = await showRewardedAd({ kind: 'coins', amount: props.coins })
   if (ok) {
     claimed.value = true
     addCoins(props.coins)

@@ -424,7 +424,7 @@ const onSkipAd = () => {
 /** User watches ad — respin the wheel with fresh segments. */
 const onAdRespin = async () => {
   showAdButton.value = false
-  const ok = await showRewardedAd()
+  const ok = await showRewardedAd({ kind: 'respin' })
   if (ok) {
     segments.value = buildSegments()
     preloadImages()

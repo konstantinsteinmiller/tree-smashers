@@ -72,7 +72,7 @@ export const isGdAdsBlocked = ref(false)
 
 // ─── Debug surface ────────────────────────────────────────────────────────
 //
-// Mirror of `levelPlayDebug` in LevelPlayProvider — a reactive snapshot
+// Mirror of `adMobDebug` in AdMobProvider — a reactive snapshot
 // the on-screen overlay renders. Populated as the SDK lifecycle progresses
 // AND as SDK events arrive (the SDK fires many events; we tail the most
 // recent so the dev can see what's happening on a deployed gd.com URL
@@ -186,7 +186,7 @@ export const gameDistributionPlugin = (): Promise<void> => {
     // bidder waterfall so personalized-ad demand is excluded and only
     // contextual / family-safe creatives are eligible. Required because
     // (a) the game is also published to Apple Kids / Google Families on
-    // mobile via Tauri builds (where the LevelPlay plugin sets the
+    // mobile via Tauri builds (where the AdMob plugin sets the
     // analogous flags) and (b) gd.com aggregates traffic from many
     // sites whose visitors include under-13 players — declaring it
     // here keeps the audience signal consistent across surfaces. See

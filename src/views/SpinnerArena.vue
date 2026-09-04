@@ -543,7 +543,7 @@ const onSpeedSwitchClick = (value: 1 | 2) => {
 // we unlock the 2x speed boost for SPEED_BOOST_DURATION_MS and flip the
 // sim to 2x immediately so the reward is felt right away.
 const triggerSpeedBoostAd = async () => {
-  const ok = await showRewardedAd()
+  const ok = await showRewardedAd({ kind: 'speed' })
   if (!ok) return
   speedBoostExpiresAt.value = Date.now() + SPEED_BOOST_DURATION_MS
   localStorage.setItem(SPEED_BOOST_KEY, String(speedBoostExpiresAt.value))
