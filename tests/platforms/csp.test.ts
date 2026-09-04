@@ -21,7 +21,7 @@ describe('buildCsp', () => {
       expect(csp).toContain('https://wavedash.com')
       expect(csp).toContain('https://itch.io')
       expect(csp).toContain('https://glitch.fun')
-      expect(csp).toContain('https://bridge.playgama.com')
+      expect(csp).toContain('https://*.playgama.com')
       expect(csp).toContain('https://*.playgama.com')
     })
 
@@ -162,7 +162,7 @@ describe('buildCsp', () => {
       const csp = buildCsp(env())
       expect(csp).toContain('https://playgama.com')
       expect(csp).toContain('https://*.playgama.com')
-      expect(csp).toContain('https://bridge.playgama.com')
+      expect(csp).toContain('https://*.playgama.com')
     })
 
     it('opens script-src to https: + unsafe-inline + unsafe-eval (Bridge waterfall)', () => {

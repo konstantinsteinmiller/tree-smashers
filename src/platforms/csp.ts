@@ -29,8 +29,11 @@ const BASE_HOSTS: ReadonlyArray<string> = [
   'https://gamedistribution.com',
   'https://*.gamedistribution.com',
   'https://playgama.com',
+  // Covers `api.playgama.com` (the Bridge's analytics/config endpoints) and
+  // any partner subdomain. `bridge.playgama.com` used to be listed explicitly
+  // for the Bridge's CDN <script> tag; since the v2 migration the SDK is
+  // bundled from npm and nothing fetches that host any more.
   'https://*.playgama.com',
-  'https://bridge.playgama.com',
   'https://www.clarity.ms',
   'https://api.jsonbin.io'
 ]

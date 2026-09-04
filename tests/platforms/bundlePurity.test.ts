@@ -195,6 +195,30 @@ describe('CrazyGames build — bundle purity', () => {
     expect(leaks, `Playgama plugin code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
   })
 
+  it('does NOT emit an @playgama/bridge chunk at all on a non-Playgama build', () => {
+    // Since the v1 → v2 migration the Bridge is an npm dependency (~286 KB)
+    // rather than a CDN <script>, so a leak is far more expensive than it used
+    // to be. `playgamaBridgeLoader.ts` gates the dynamic import behind an
+    // `import.meta.env` literal TERNARY — a plain `if (isPlaygama) await
+    // import(...)` is NOT enough, because Rollup still emits the chunk when
+    // the syntactic dynamic import survives. This asserts the chunk is absent
+    // entirely, not merely unreferenced.
+    const bridgeChunks = [...chunkContents.keys()].filter(n => /playgama-bridge/.test(n))
+    expect(
+      bridgeChunks,
+      `@playgama/bridge chunk emitted on a CrazyGames build: ${bridgeChunks.join(', ')}`
+    ).toEqual([])
+
+    // Marker check too, in case a future chunk rename hides the package inside
+    // someone else's chunk. These strings are unique to the Bridge package:
+    // two of its PLATFORM_ID values and the DOM id of its YouTube subscribe
+    // overlay.
+    const inlined = [...chunkContents.entries()].filter(
+      ([, content]) => /jio_games|microsoft_store|bridge-youtube-subscribe/.test(content)
+    ).map(([name]) => name)
+    expect(inlined, `@playgama/bridge inlined into: ${inlined.join(', ')}`).toEqual([])
+  })
+
   it('does NOT bundle Wavedash SDK code in any hot-path chunk', () => {
     // `@wvdsh/sdk-js` is the Wavedash NPM package; the runtime relies on
     // `window.WavedashJS` injected by Wavedash's iframe wrapper, so

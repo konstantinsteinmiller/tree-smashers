@@ -1,5 +1,4 @@
 import { fileURLToPath, URL } from 'node:url'
-import { existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 
 import { defineConfig, loadEnv } from 'vite'
@@ -99,7 +98,15 @@ export default defineConfig(({ mode, command }) => {
           // `@/utils/playgamaPlugin` so non-Playgama builds (CG, GD,
           // …) tree-shake the Bridge SDK code out completely. The
           // `bundlePurity.test.ts` Playgama check enforces this.
-          /use[\\/]ads[\\/]PlaygamaProvider\.ts$/
+          /use[\\/]ads[\\/]PlaygamaProvider\.ts$/,
+          // `playgamaBridgeLoader.ts` is the ONE place `@playgama/bridge`
+          // enters the module graph, behind an `import.meta.env`-gated
+          // dynamic import. Same obfuscator-vs-dynamic-import constraint:
+          // the `stringArray` transform would rewrite the bare specifier
+          // into a lookup Vite can no longer resolve. The loader is ~30
+          // lines, which is exactly why the import lives there rather than
+          // in the 450-line plugin — only this file loses obfuscation.
+          /utils[\\/]playgamaBridgeLoader\.ts$/
         ],
         // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
         // The previous profile enabled every aggressive transform the
@@ -172,9 +179,9 @@ export default defineConfig(({ mode, command }) => {
 
   // YouTube Playables is a distribution CHANNEL layered on the Playgama
   // build, not a platform of its own — see `.env.youtube.local`. The Bridge's
-  // `youtube` adapter is what talks to YouTube's ytgame SDK, so the game
-  // never carries a `game_api/v1` tag of its own.
+  // `youtube` adapter is what talks to YouTube's ytgame SDK.
   const isYouTube = env.VITE_APP_YOUTUBE === 'true'
+  const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
 
   // Strip the CrazyGames SDK <script> tag from index.html for non-CrazyGames builds
@@ -192,74 +199,30 @@ export default defineConfig(({ mode, command }) => {
     })
   }
 
-  // ─── Playgama Bridge wiring ─────────────────────────────────────────
-  // Mirrors the strip-crazygames-sdk pattern: the Bridge `<script>` tag
-  // is in index.html as a sibling of the CG tag and we strip it for
-  // every non-Playgama build so other portals don't pay the SDK fetch.
-  const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
-  if (!isPlaygama) {
+  // ─── YouTube Playables SDK tag ──────────────────────────────────────────
+  //
+  // Mirrors strip-crazygames-sdk. Only the YouTube channel build keeps it,
+  // and there it is load-bearing rather than cosmetic: the Playgama Bridge's
+  // `youtube` adapter waits for `window.ytgame` with a 100ms poll that has NO
+  // timeout, so a Playables build without this tag hangs inside
+  // `bridge.initialize()` forever. Every other portal strips it so nobody
+  // pays for a third-party request they cannot use.
+  //
+  // NOTE: there is no longer a Playgama Bridge <script> tag to strip. v2 is
+  // imported from the `@playgama/bridge` npm package (see
+  // `src/utils/playgamaBridgeLoader.ts`) and bundled into the build, because
+  // the CDN build fetches per-platform adapter chunks at runtime and posts to
+  // `api.playgama.com` — neither of which YouTube permits.
+  if (!isYouTube) {
     plugins.push({
-      name: 'strip-playgama-sdk',
+      name: 'strip-youtube-sdk',
       transformIndexHtml(html: string) {
         return html.replace(
-          /<!--\s*Load Playgama Bridge before game code\s*-->\s*<script[^>]*bridge\.playgama\.com[^>]*><\/script>\s*/,
+          /<!--[^]*?YouTube Playables SDK[^]*?-->\s*<script[^>]*youtube\.com\/game_api[^>]*><\/script>\s*/,
           ''
         )
       }
     })
-  }
-
-  // ─── YouTube channel: where does the Bridge come from? ──────────────────
-  //
-  // YouTube Playables forbids external server calls, and Playgama's own
-  // YouTube requirements repeat it ("your game must not make external calls,
-  // all assets bundled"). Every other Playgama build loads the Bridge from
-  // `<script src="https://bridge.playgama.com/v1/stable/playgama-bridge.js">`,
-  // which is exactly such a call.
-  //
-  // Self-hosting that file does NOT fix it. The CDN build is a webpack bundle
-  // with `publicPath = "https://bridge.playgama.com/v1/stable/"`, so it fetches
-  // its per-platform adapter chunks from the CDN at runtime, and it posts to
-  // `api.playgama.com/api/events/v3/bridge/analytics` — which YouTube calls out
-  // by name ("not contain any external calls, including built-in analytics").
-  // Playgama's documented route for a self-contained build is the npm package
-  // (`npm i @playgama/bridge`, v2) instead of the CDN tag.
-  //
-  // That migration is a decision about the Playgama integration as a whole, so
-  // it is opt-in rather than assumed: set `VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true`
-  // once `public/js/playgama-bridge.js` is a genuinely self-contained build.
-  // Until then a YouTube build keeps the CDN tag and says so at build time.
-  if (isYouTube) {
-    const vendored = resolve(dirname(fileURLToPath(import.meta.url)), 'public/js/playgama-bridge.js')
-    const wantsLocal = env.VITE_APP_PLAYGAMA_BRIDGE_LOCAL === 'true'
-    if (wantsLocal && !existsSync(vendored)) {
-      throw new Error(
-        '[build] VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true but public/js/playgama-bridge.js '
-        + 'is missing. Run `pnpm fetch:playgama-bridge` (and read its warning about '
-        + 'runtime adapter fetches before shipping it).'
-      )
-    }
-    if (wantsLocal) {
-      plugins.push({
-        name: 'bundle-playgama-sdk',
-        transformIndexHtml(html: string) {
-          return html.replace(
-            /<script[^>]*src="https:\/\/bridge\.playgama\.com\/[^"]*"[^>]*><\/script>/,
-            '<script src="/js/playgama-bridge.js"></script>'
-          )
-        }
-      })
-    } else {
-      console.warn(
-        [
-          '--- ⚠️  YouTube build keeps the Playgama Bridge CDN tag ---',
-          '    bridge.playgama.com is an external request, which YouTube Playables',
-          '    prohibits. This is fine if Playgama repackages the bundle for YouTube',
-          '    on their side; if they do not, migrate to the @playgama/bridge npm',
-          '    package and set VITE_APP_PLAYGAMA_BRIDGE_LOCAL=true.'
-        ].join('\n')
-      )
-    }
   }
 
   // Emit `dist/playgama-bridge-config.json` ONLY for `pnpm build:playgama`.
@@ -374,6 +337,10 @@ export default defineConfig(({ mode, command }) => {
             if (/node_modules[\/](@vue|vue|vue-router|vue-i18n|@intlify)[\/]/.test(id)) {
               return 'vendor-vue'
             }
+            // The Bridge npm package is ~286 KB on its own. Pin it next to the
+            // plugin that loads it so the split is deterministic and the chunk
+            // name says what is actually inside.
+            if (isPlaygama && id.includes('@playgama/bridge')) return 'playgama-bridge'
             if (isPlaygama && id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
             if (isGameDistribution && id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
           }
