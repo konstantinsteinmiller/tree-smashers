@@ -32,6 +32,15 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/save/setup.ts'],
+    // Vitest's 5s default is a cold-transform budget, not a logic budget, and
+    // the resolver specs blow through it under full parallel load: they call
+    // `vi.resetModules()` and re-import `resolveAdProvider` / `useAds` per
+    // case, and those pull the whole statically-imported provider chain (one
+    // per platform, and the matrix keeps growing). They pass in ~3s standalone
+    // and timed out at 5s in a full run the moment Poki was added — a flaky
+    // failure that looks exactly like a real one. Raised deliberately rather
+    // than papered over per-file.
+    testTimeout: 20_000,
     // tests/e2e runs under Playwright + a real Vite dev server (Node env,
     // not jsdom). Excluded from the default suite so `pnpm test` stays
     // fast; run them with `pnpm test:e2e`.

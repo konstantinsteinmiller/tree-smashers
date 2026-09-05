@@ -32,6 +32,13 @@ export default defineConfig({
     // Browser launch + Vite server boot can easily exceed the default
     // 5s timeout per test on a cold cache.
     testTimeout: 90_000,
-    hookTimeout: 90_000
+    hookTimeout: 90_000,
+    // Run the e2e files ONE AT A TIME. Each owns a Vite server on a fixed port,
+    // its own Chromium, and (for the Poki/YouTube specs) a full production
+    // build in a child process — so in parallel they contend for CPU and for
+    // ports, and a suite that passes standalone times out in a full run. That
+    // failure is indistinguishable from a real one, which makes it worse than
+    // the wall-clock cost of serialising.
+    fileParallelism: false
   }
 })

@@ -614,10 +614,18 @@ const cycleRewardMul = (cycle: number) => 1 + cycle * 0.35
 
 // ── Mid-game reward trim ──────────────────────────────────────────────────
 // Stages 20–100 run on trimmed win rewards so the player keeps bumping
-// into "I need ~100 more coins" moments roughly every few stages — exactly
-// the pressure point where a rewarded video (+100) or the 10-min chest
-// (+100) unlocks the next upgrade tier. Bosses get a softer trim so their
-// milestone payouts still feel like a reward spike.
+// into "I need a bit more" moments roughly every few stages — exactly the
+// pressure point where a rewarded video or the 10-min chest unlocks the next
+// upgrade tier. Bosses get a softer trim so their milestone payouts still feel
+// like a reward spike.
+//
+// This note used to say "+100" for both offers, and that stopped being true
+// long before anyone noticed: they paid a FLAT 125 / 100 while `upgradeCost`
+// grows quadratically past level 10, so an ad went from ~0.9 of an upgrade at
+// stage 5 to ~0.09 at stage 99 and the pressure point it was supposed to
+// relieve simply stopped existing. Both offers are now derived from the
+// current stage's loss reward (`useStageRewards.ts`), which holds them at
+// roughly 0.75–1.4 upgrades all the way out.
 const MID_TRIM_START = 20
 const MID_TRIM_END = 100
 const MID_TRIM_REG = 0.55

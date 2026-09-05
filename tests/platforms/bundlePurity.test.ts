@@ -219,6 +219,28 @@ describe('CrazyGames build — bundle purity', () => {
     expect(inlined, `@playgama/bridge inlined into: ${inlined.join(', ')}`).toEqual([])
   })
 
+  it('does NOT contain the PokiSDK URL ANYWHERE — not just the hot path', () => {
+    // Stronger than the other checks on purpose. Poki is kept out by a
+    // `resolve.alias` STUB SWAP in vite.config.ts, not by tree-shaking, because
+    // the obfuscator's `stringArray` pass hoists string literals into its
+    // indirection table BEFORE esbuild folds `import.meta.env.VITE_APP_POKI` to
+    // `false` — so an env-gated `if` alone leaves the SDK URL in the bundle.
+    // `resolveAdProvider` statically imports every provider and
+    // `useGameplayLifecycle` statically imports the bracket functions, so both
+    // Poki modules are in every build's graph regardless of flags.
+    //
+    // A foreign portal's host string in a shipped bundle is also exactly what
+    // strict moderators reject ("service storage URL detected"), so assert on
+    // EVERY chunk rather than only the ones the player downloads first.
+    const leaks = [...chunkContents.entries()]
+      .filter(([, content]) => /game-cdn\.poki\.com|PokiSDK/.test(content))
+      .map(([name]) => name)
+    expect(
+      leaks,
+      `Poki SDK identifiers leaked into the CrazyGames build: ${leaks.join(', ')}`
+    ).toEqual([])
+  })
+
   it('does NOT bundle Wavedash SDK code in any hot-path chunk', () => {
     // `@wvdsh/sdk-js` is the Wavedash NPM package; the runtime relies on
     // `window.WavedashJS` injected by Wavedash's iframe wrapper, so

@@ -7,9 +7,12 @@ import { describe, expect, it } from 'vitest'
 import { ALL_PLATFORMS, activePlatform, activeCapabilities } from '@/platforms'
 
 describe('platform registry', () => {
-  it('contains all 8 platforms', () => {
+  it('contains all 9 platforms', () => {
     const ids = ALL_PLATFORMS.map(p => p.id).sort()
-    expect(ids).toEqual(['crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'playgama', 'wavedash', 'y8'])
+    expect(ids).toEqual([
+      'crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'playgama',
+      'poki', 'wavedash', 'y8'
+    ])
   })
 
   it('every platform has the required descriptor shape', () => {

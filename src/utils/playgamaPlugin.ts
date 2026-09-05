@@ -348,6 +348,15 @@ export const playgamaPlugin = (): Promise<void> => {
       sdk = bridge
       isPlaygamaSdkActive.value = true
       playgamaDetectedId.value = bridge.platform?.id ?? null
+      // Mirror onto `window` for `bootDiagnostics`. That module is in every
+      // build's entry graph, so it must not import this one — see the rules
+      // at the top of `bootDiagnostics.ts`. One assignment here is the whole
+      // price of having "which portal did the Bridge think it was on?" in the
+      // diagnostic snapshot.
+      try {
+        ;(window as any).__playgamaPlatformId = playgamaDetectedId.value
+      } catch { /* non-fatal */
+      }
       console.info(
         '[playgama] Bridge v%s initialized — platform.id: %s',
         bridge.version,

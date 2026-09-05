@@ -19,8 +19,52 @@ const allFlagsOff = {
   isGameDistribution: false,
   isY8: false,
   isGamePix: false,
-  isPlaygama: false
+  isPlaygama: false,
+  isPoki: false
 }
+
+describe('Poki — flag-only, and deliberately ungated by hostname', () => {
+  // The Poki build has to run in the Inspector (inspector.poki.dev), in P4D
+  // Preview AND on the production *.poki-gdn.com origin. A hostname gate
+  // would fail QA before the game ever reached a player, so the point of
+  // these cases is that NO host is special.
+  const hosts = [
+    'inspector.poki.dev',
+    'example.poki-gdn.com',
+    'poki.com',
+    'some-unrelated-host.example'
+  ]
+
+  for (const hostname of hosts) {
+    it(`allowedToShowOnPoki is true on ${hostname}`, () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isPoki: true },
+        hostname,
+        glitchLicenseStatus: 'ok'
+      })
+      expect(c.allowedToShowOnPoki).toBe(true)
+    })
+  }
+
+  it('isPoki sets isNotPlatformBuild = false', () => {
+    const c = resolveCapabilities({
+      flags: { ...allFlagsOff, isPoki: true },
+      hostname: 'poki.com',
+      glitchLicenseStatus: 'ok'
+    })
+    expect(c.isNotPlatformBuild).toBe(false)
+    expect(c.plattformText).toBe('poki.com')
+  })
+
+  it('a non-Poki build does not get the Poki gate for free', () => {
+    const c = resolveCapabilities({
+      flags: { ...allFlagsOff, isCrazyWeb: true },
+      hostname: 'poki.com',
+      glitchLicenseStatus: 'ok'
+    })
+    expect(c.allowedToShowOnPoki).toBe(false)
+  })
+})
 
 describe('resolveCapabilities', () => {
   describe('isNotPlatformBuild', () => {

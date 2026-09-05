@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { displayDiamondReward } from '@/use/useCurrency'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
@@ -49,6 +50,10 @@ const MULTIPLIER_DEFS: { label: string; multiplier: number; color: string; count
 
 /** Diamonds granted by the jackpot segment. */
 const DIAMOND_JACKPOT = 5
+
+/** Currency + amount the jackpot segment should DISPLAY. Diamonds on a
+ *  normal build; coins at the diamond rate on a single-currency one. */
+const jackpotDisplay = displayDiamondReward(DIAMOND_JACKPOT)
 // Weight tuned so the jackpot is ~0.25% of the wheel (total weight ≈ 105) —
 // it occupies a visible slice but practically never lands.
 const DIAMOND_JACKPOT_WEIGHT = 0.26
@@ -84,9 +89,15 @@ const buildSegments = (): Segment[] => {
   }
 
   // Ultra-rare diamond jackpot (replaces one former 0.5x slot).
+  //
+  // On a single-currency build (Poki) it pays coins at the diamond rate —
+  // 5 diamonds becomes 15 000 coins, which reads as a jackpot against a
+  // campaign that pays 100–3 500 per stage. `addDiamonds` performs the
+  // conversion, so the segment keeps its diamond-denominated `result` and
+  // only the LABEL and the drawn icon change.
   segments.push({
     kind: 'diamonds',
-    label: String(DIAMOND_JACKPOT),
+    label: String(jackpotDisplay.amount),
     color: '#0e7490',
     result: { type: 'diamonds', diamonds: DIAMOND_JACKPOT },
     weight: DIAMOND_JACKPOT_WEIGHT
@@ -317,8 +328,14 @@ const drawWheel = (rotation: number) => {
         ctx.drawImage(img, radius * 0.5 - imgSize / 2, -imgSize / 2, imgSize, imgSize)
       }
     } else {
-      if (seg.kind === 'diamonds') drawDiamondIcon(ctx, radius * 0.72, 0, 8 * k)
-      else drawCoinIcon(ctx, radius * 0.72, 0, 8 * k)
+      // The jackpot segment keeps `kind: 'diamonds'` (that is what the result
+      // handler and `addDiamonds` key off); only the drawn icon follows the
+      // DISPLAY currency, which is coins on a single-currency build.
+      if (seg.kind === 'diamonds' && jackpotDisplay.currency === 'diamonds') {
+        drawDiamondIcon(ctx, radius * 0.72, 0, 8 * k)
+      } else {
+        drawCoinIcon(ctx, radius * 0.72, 0, 8 * k)
+      }
       ctx.fillStyle = '#fff'
       ctx.font = `bold ${Math.max(10, Math.round(13 * k))}px sans-serif`
       ctx.textAlign = 'center'

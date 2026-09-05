@@ -29,6 +29,7 @@ import {
   isY8,
   isGamePix,
   isPlaygama,
+  isPoki,
   isNative,
   showMediatorAds
 } from '@/use/useUser'
@@ -42,7 +43,10 @@ import {
 } from '@/use/useRewardedIntro'
 
 const provider: AdProvider = resolveAdProvider({
-  flags: { isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama },
+  flags: {
+    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
+    isPlaygama, isPoki
+  },
   showMediatorAds,
   isNative
 })
@@ -126,7 +130,14 @@ export const showRewardedAd = async (reward: RewardedIntroReward | null = null):
   return granted
 }
 
-export const showMidgameAd = (): Promise<void> => provider.showMidgameAd()
+/**
+ * @param onImpression optional, and only meaningful for a provider that sets
+ *   `managesMidgameAudio` (Poki). It fires on the real-ad edge — the one
+ *   moment a portal without a pause signal gives the game to duck its audio —
+ *   and never fires on a no-fill, so an unfilled break leaves the music alone.
+ */
+export const showMidgameAd = (onImpression?: () => void): Promise<void> =>
+  provider.showMidgameAd(onImpression)
 
 const useAds = () => ({
   adProviderName,

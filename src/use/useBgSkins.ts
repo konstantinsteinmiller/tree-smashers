@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
+import { isSingleCurrency, diamondsToCoins } from '@/use/useCurrency'
 import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Background skins ────────────────────────────────────────────────────────
@@ -151,12 +152,30 @@ const buyBgSkinWithCoins = (id: string): boolean => {
   return true
 }
 
-/** Buy + auto-equip with diamonds. Returns false if already owned or unaffordable. */
+/**
+ * Buy + auto-equip with diamonds. Returns false if already owned or
+ * unaffordable.
+ *
+ * On a single-currency build the price is charged in COINS at the diamond
+ * rate, and affordability is checked against the coin balance — otherwise
+ * the check would read a diamond balance that is permanently 0 there and
+ * every purchase would refuse.
+ *
+ * Defensive rather than load-bearing today: Poki also runs with
+ * `VITE_APP_FEATURE_BG_SKINS=false`, so this path is unreachable on the
+ * only single-currency build that exists. It is written anyway because the
+ * failure mode if the flag is ever flipped is silent — a shop whose buttons
+ * simply never work.
+ */
 const buyBgSkinWithDiamonds = (id: string): boolean => {
   const def = getBgSkin(id)
   if (def.tier === 0 || isBgSkinOwned(id)) return false
-  const { diamonds, addDiamonds } = useSpinnerConfig()
-  if (diamonds.value < def.diamondCost) return false
+  const { coins, diamonds, addDiamonds } = useSpinnerConfig()
+  const balance = isSingleCurrency ? coins.value : diamonds.value
+  const price = isSingleCurrency ? diamondsToCoins(def.diamondCost) : def.diamondCost
+  if (balance < price) return false
+  // `addDiamonds` performs the conversion itself, so it always takes the
+  // diamond-denominated amount.
   addDiamonds(-def.diamondCost)
   grantBgSkin(id)
   selectBgSkin(id)

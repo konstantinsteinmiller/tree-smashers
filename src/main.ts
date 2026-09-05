@@ -25,13 +25,15 @@ import useUser, {
   isGameDistribution,
   isY8,
   isGamePix,
-  isPlaygama
+  isPlaygama,
+  isPoki
 } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
 import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
 import { installSaveStatus } from '@/use/useSaveStatus'
 import { bootstrapVConsoleFromUrl, setVConsoleMounter } from '@/use/useVConsole'
+import { installBootDiagnostics } from '@/utils/bootDiagnostics'
 
 // ─── Build-config self-check ──────────────────────────────────────────────
 //
@@ -58,6 +60,14 @@ const looksLikeCrazyGamesPortal = (): boolean => {
 }
 
 const bootstrap = async () => {
+  // FIRST thing in bootstrap. Prints the `[diag] boot` banner (build flags,
+  // base, href + the host-appended fragment, storage-shim state, framing) and
+  // arms window-level `error` / `unhandledrejection` taps, so a rejection
+  // thrown out of any `await` below is loud instead of leaving a finished
+  // splash sitting over nothing. Also installs `window.__chaosDebug()` for a
+  // full snapshot on demand — the one expression to ask portal QA to run.
+  installBootDiagnostics(router)
+
   // vConsole is mounted on demand via either:
   //   • the StageBadge chord (N taps in 60s) — see `useVConsole.ts`
   //   • a URL query/hash flag (`?vconsole=1` or `#vconsole`)
@@ -142,7 +152,8 @@ const bootstrap = async () => {
   // unit-testable in isolation. Adding a platform = add an arm there,
   // not edit this file.
   const strategy = await resolveSaveStrategy({
-    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix, isPlaygama
+    isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
+    isPlaygama, isPoki
   })
 
   // CrazyGames cloud-only mode: gameplay state and our save bookkeeping
@@ -324,6 +335,28 @@ const bootstrap = async () => {
     )
   }
 
+  // ─── Poki ───────────────────────────────────────────────────────────────
+  //
+  // PARALLEL init, deliberately not awaited. Poki has no cloud-save API, so
+  // nothing in `PokiStrategy.hydrate()` waits on it, and `getLanguage()` is
+  // implemented in the 5.5 KB loader shim — readable synchronously, long
+  // before the ~325 KB ad core lands. Not awaiting is the point rather than
+  // an optimisation: Poki measures conversion-to-play on the first
+  // `gameplayStart()`, so boot latency is revenue.
+  let pkLocale: string | null = null
+  if (import.meta.env.VITE_APP_POKI === 'true') {
+    const { pokiPlugin, readPokiLanguage, pokiCaptureError } = await import('@/utils/pokiPlugin')
+    pkLocale = readPokiLanguage()
+    void pokiPlugin()
+
+    // Feeds P4D's 24-hour Error Scanner. Registered here so the window-level
+    // handlers cover the whole boot path; the Vue-level one is attached at
+    // `createApp` below, because Vue swallows render / lifecycle errors
+    // before they ever reach `window.onerror`.
+    window.addEventListener('error', (e) => pokiCaptureError(e.error ?? e.message))
+    window.addEventListener('unhandledrejection', (e) => pokiCaptureError(e.reason))
+  }
+
   // ─── Portal locale ─────────────────────────────────────────────────────
   //
   // Both CrazyGames and Playgama tell us which language the player picked on
@@ -361,7 +394,7 @@ const bootstrap = async () => {
   // report anything, so a simple coalesce is unambiguous. `||` rather than
   // `??` on purpose: an empty string is as meaningless as null here, and
   // `crazyLocale` is derived from a `split()` that can produce one.
-  const rawPortalLocale = cgLocale || pgLocale
+  const rawPortalLocale = cgLocale || pgLocale || pkLocale
   const portalLocale =
     rawPortalLocale && LANGUAGES.includes(rawPortalLocale) ? rawPortalLocale : null
 
@@ -485,6 +518,11 @@ const bootstrap = async () => {
   ;(window as any).__i18n = i18n
 
   const app = createApp(App)
+
+  if (import.meta.env.VITE_APP_POKI === 'true') {
+    const { pokiCaptureError } = await import('@/utils/pokiPlugin')
+    app.config.errorHandler = (err) => pokiCaptureError(err)
+  }
 
   app.use(router)
   app.use(i18n)

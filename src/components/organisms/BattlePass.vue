@@ -5,6 +5,7 @@ import FModal from '@/components/molecules/FModal.vue'
 import FIconButton from '@/components/atoms/FIconButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
+import { displayDiamondReward } from '@/use/useCurrency'
 import useBattlePass, {
   BP_TOTAL_STAGES,
   BP_XP_PER_STAGE,
@@ -56,6 +57,11 @@ const {
 } = usePvpStats()
 
 const { canShowPvP } = usePVP()
+
+// What the battle-pass diamond tier pays and shows. On a single-currency
+// build (Poki) that is coins at the diamond rate; `addDiamonds` already
+// converts the grant, so this only keeps the card honest.
+const diamondTier = computed(() => displayDiamondReward(BP_DIAMOND_AMOUNT))
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -433,10 +439,16 @@ const onStripPointerUp = (e: PointerEvent) => {
             //- Stage number
             div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") S{{ card.stage }}
 
-            //- Reward icon
-            template(v-if="card.isDiamond")
+            //- Reward icon. On a single-currency build the diamond tier
+            //- pays coins, so it has to LOOK like coins — see useCurrency.
+            template(v-if="card.isDiamond && diamondTier.currency === 'diamonds'")
               IconDiamond(
                 class="w-5 h-5 sm:w-6 sm:h-6 my-0.5"
+                :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
+              )
+            template(v-else-if="card.isDiamond")
+              IconCoin(
+                class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 my-0.5"
                 :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
               )
             template(v-else-if="card.isSkin && bpSkinForStage(card.stage)")
@@ -462,11 +474,12 @@ const onStripPointerUp = (e: PointerEvent) => {
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
 
-            //- Diamond amount (diamond stages)
-            div.text-cyan-300.font-black.game-text.leading-tight(
+            //- Diamond amount (diamond stages). `diamondTier` carries both
+            //- the currency and the already-converted amount.
+            div.font-black.game-text.leading-tight(
               v-if="card.isDiamond"
-              class="text-[0.7rem] sm:text-xs"
-            ) +{{ BP_DIAMOND_AMOUNT }}
+              :class="[diamondTier.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-[0.7rem] sm:text-xs']"
+            ) +{{ diamondTier.amount }}
             //- Coin amount (coin stages + skin stages with an empty pool)
             div.text-yellow-400.font-black.game-text.leading-tight(
               v-else-if="!card.isSkin || !bpSkinForStage(card.stage)"

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
+import IconCoin from '@/components/icons/IconCoin.vue'
+import { computed } from 'vue'
+import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
 
 defineProps<{
   /** When true, today's diamond is still up for grabs — the icon pulses
@@ -17,6 +20,17 @@ const { t } = useI18n()
 const rootStyle = {
   top: 'calc(52px + 64px + 14px + env(safe-area-inset-top, 0px))'
 }
+
+// The daily challenge pays exactly one diamond (`addDiamonds(1)` in
+// SpinnerArena). On a single-currency build that is coins, and this string is
+// the button's accessible name — so it is the one place a Poki player would
+// otherwise be told about a currency their game does not have.
+const dailyReward = displayDiamondReward(1)
+const challengeLabel = computed(() =>
+  isSingleCurrency
+    ? t('challenge.startCoins', { count: dailyReward.amount })
+    : t('challenge.start')
+)
 </script>
 
 <template lang="pug">
@@ -27,8 +41,8 @@ const rootStyle = {
     class="left-3"
     :class="{ 'challenge-icon--ready': rewardAvailable }"
     :style="rootStyle"
-    :aria-label="t('challenge.start')"
-    :title="t('challenge.start')"
+    :aria-label="challengeLabel"
+    :title="challengeLabel"
     @click="emit('start')"
   )
     //- Pulsing flame aura (behind everything)
@@ -48,11 +62,13 @@ const rootStyle = {
           stroke="url(#challengeFlame)"
         )
       //- Diamond core
-      IconDiamond.challenge-icon__gem.relative(class="w-6 h-6 sm:w-7 sm:h-7")
+      IconDiamond.challenge-icon__gem.relative(v-if="!isSingleCurrency" class="w-6 h-6 sm:w-7 sm:h-7")
+      IconCoin.challenge-icon__gem.relative(v-else class="w-6 h-6 sm:w-7 sm:h-7 text-yellow-300")
 
     //- Reward spark — only while today's diamond is unclaimed
     span.challenge-icon__spark(v-if="rewardAvailable" aria-hidden="true")
-      IconDiamond(class="w-3.5 h-3.5")
+      IconDiamond(v-if="!isSingleCurrency" class="w-3.5 h-3.5")
+      IconCoin(v-else class="w-3.5 h-3.5 text-yellow-300")
 </template>
 
 <style scoped lang="sass">
@@ -153,25 +169,33 @@ const rootStyle = {
 en:
   challenge:
     start: "Daily Challenge — win to earn a diamond!"
+    startCoins: "Daily Challenge — win to earn {count} coins!"
 de:
   challenge:
     start: "Tägliche Herausforderung — gewinne einen Diamanten!"
+    startCoins: "Tägliche Herausforderung — gewinne {count} Münzen!"
 fr:
   challenge:
     start: "Défi quotidien — gagne un diamant !"
+    startCoins: "Défi quotidien — gagne {count} pièces !"
 es:
   challenge:
     start: "Desafío diario: ¡gana un diamante!"
+    startCoins: "Desafío diario: ¡gana {count} monedas!"
 jp:
   challenge:
     start: "デイリーチャレンジ — 勝ってダイヤを獲得！"
+    startCoins: "デイリーチャレンジ — 勝って{count}コイン獲得！"
 kr:
   challenge:
     start: "일일 도전 — 이기고 다이아몬드를 받으세요!"
+    startCoins: "일일 도전 — 이기고 코인 {count}개를 받으세요!"
 zh:
   challenge:
     start: "每日挑战——获胜赢取钻石！"
+    startCoins: "每日挑战——获胜赢取{count}金币！"
 ru:
   challenge:
     start: "Ежедневный вызов — победи и получи алмаз!"
+    startCoins: "Ежедневный вызов — победи и получи {count} монет!"
 </i18n>

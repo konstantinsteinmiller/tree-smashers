@@ -32,7 +32,8 @@
 //   2. isCrazyWeb        → CrazyGamesStrategy
 //   3. isGameDistribution → GameDistributionStrategy (fallback to LocalStorageStrategy)
 //   4. isPlaygama        → PlaygamaStrategy (fallback to LocalStorageStrategy)
-//   5. else              → LocalStorageStrategy
+//   5. isPoki            → PokiStrategy (local-only)
+//   6. else              → LocalStorageStrategy
 
 import type { SaveStrategy } from '@/utils/save/types'
 import type { PlatformFlags } from './capabilities'
@@ -67,6 +68,20 @@ export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveSt
       const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
       return new LocalStorageStrategy()
     }
+  }
+  if (import.meta.env.VITE_APP_POKI === 'true') {
+    // Poki has NO cloud-save API. Its wrapper mirrors the iframe's whole
+    // localStorage + IndexedDB across devices for logged-in players, with no
+    // game code involved — so the strategy is local-only. It gets its own
+    // class rather than reusing LocalStorageStrategy so
+    // `SaveManager.strategyName` reports `poki` during Poki QA.
+    //
+    // Constraints that live in SaveManager rather than there: < 1 MB gzipped
+    // or the cloud sync silently switches off for that player; never a
+    // `poki_` key prefix (SDK-reserved); try/catch every access (incognito
+    // can have a zero quota, and Poki traffic includes it).
+    const { PokiStrategy } = await import('@/utils/save/PokiStrategy')
+    return new PokiStrategy()
   }
   const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
   return new LocalStorageStrategy()

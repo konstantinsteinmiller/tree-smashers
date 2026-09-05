@@ -3,12 +3,21 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
+import { displayDiamondReward } from '@/use/useCurrency'
+import { rewardedAdCoins } from '@/use/useStageRewards'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import { isNative } from '@/use/useUser'
 
 interface Props {
-  /** How many coins the player gets after watching the ad (coins variant). */
+  /**
+   * How many coins the player gets after watching the ad (coins variant).
+   *
+   * Optional. Left unset — which is how the arena mounts it — the payout
+   * scales with the campaign via `rewardedAdCoins` instead of sitting at a
+   * flat amount that the stage curve outgrows. Pass a number only for a
+   * placement whose value genuinely is fixed.
+   */
   coins?: number
   /** Reward currency. 'coins' (default, arena) or 'diamond' (BG-skin/IAP shop). */
   reward?: 'coins' | 'diamond'
@@ -17,10 +26,20 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  coins: 125,
+  coins: undefined,
   reward: 'coins',
   diamonds: 1
 })
+
+/**
+ * What this button actually pays and prints.
+ *
+ * The flat 125 that used to live here was tuned against stage 3 (3.6x its
+ * loss reward) and never scaled, so by stage ~50 the button offered LESS than
+ * losing the fight the player was already in. `rewardedAdCoins` re-derives it
+ * from the current stage; see `useStageRewards.ts`.
+ */
+const coinPayout = computed(() => props.coins ?? rewardedAdCoins.value)
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -29,6 +48,13 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { addCoins, addDiamonds } = useSpinnerConfig()
+
+// What the diamond variant actually pays and shows. On a single-currency
+// build (Poki) that is coins at the diamond rate — the grant itself is
+// converted inside `addDiamonds`, so this only has to keep the LABEL
+// honest. A button advertising a currency the player never sees is the
+// exact mismatch Poki's monetization review looks for.
+const diamondPayout = computed(() => displayDiamondReward(props.diamonds))
 const rootEl = ref<HTMLElement | null>(null)
 
 // ─── 30-second post-tap cooldown ────────────────────────────────────────────
@@ -70,8 +96,8 @@ const triggerAdReward = async () => {
   // messaging" requirement pass — see useRewardedIntro.ts.
   const ok = await showRewardedAd(
     props.reward === 'diamond'
-      ? { kind: 'diamonds', amount: props.diamonds }
-      : { kind: 'coins', amount: props.coins }
+      ? { kind: 'diamonds', amount: diamondPayout.value.amount }
+      : { kind: 'coins', amount: coinPayout.value }
   )
   if (ok) {
     grantReward()
@@ -87,7 +113,7 @@ const grantReward = () => {
     addDiamonds(props.diamonds)
     if (rootEl.value) emit('diamonds-awarded', rootEl.value)
   } else {
-    addCoins(props.coins)
+    addCoins(coinPayout.value)
     if (rootEl.value) emit('coins-awarded', rootEl.value)
   }
 }
@@ -107,10 +133,11 @@ const grantReward = () => {
       )
         div.flex.items-center.gap-1
           template(v-if="reward === 'diamond'")
-            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ diamonds }}
-            IconDiamond.inline(class="w-4 h-4")
+            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ diamondPayout.amount }}
+            IconDiamond.inline(v-if="diamondPayout.currency === 'diamonds'" class="w-4 h-4")
+            IconCoin.inline(v-else class="w-4 h-4")
           template(v-else)
-            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coins }}
+            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coinPayout }}
             IconCoin.inline(class="w-4 h-4 text-yellow-300")
         //- Ad disclosure. Google Play's Families policy rejects ads and ad
         //- offers that "aren't clearly distinguishable from your app's

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { chestSmallCoins, chestBigCoins } from '@/use/useStageRewards'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSounds from '@/use/useSound.ts'
@@ -24,21 +25,27 @@ const { addCoins } = useSpinnerConfig()
 // One chest, two collectable thresholds keyed off the time since the last
 // collection:
 //
-//   T=0 .. T=3min   → cooldown        (not collectable; shows 3-min countdown)
-//   T=3min .. T=10min → small ready   (collectable for 25 coins; shows 7-min countdown)
-//   T=10min+        → big ready       (collectable for 100 coins; "READY")
+//   T=0 .. T=3min     → cooldown      (not collectable; shows 3-min countdown)
+//   T=3min .. T=10min → small ready   (collectable; shows 7-min countdown)
+//   T=10min+          → big ready     ("READY")
 //
 // On any collect the chest goes back to T=0.
 //
-// Players can either snipe the small reward as soon as it lights up
-// (~25 coins / 3 min ≈ 8.3 coins/min) or wait the full 10 min for the
-// 4× payout (100 / 10 = 10 coins/min). Patience is slightly better, so
-// the chest doesn't punish skip-clicking but mildly rewards waiting.
+// Players can either snipe the small reward as soon as it lights up or wait
+// the full 10 min for the 4× payout. Per minute that is 0.25x vs 0.30x of a
+// stage-loss reward, so patience is slightly better: the chest doesn't punish
+// skip-clicking but mildly rewards waiting.
+//
+// THE AMOUNTS SCALE WITH THE CAMPAIGN. They used to be flat 25 / 100, which
+// were themselves ~0.7x / ~2.9x the stage-3 loss reward — i.e. already
+// stage-anchored, just never scaled. By stage 50 a ten-minute wait paid less
+// than half of what losing a single battle did, and the chest stopped being a
+// reason to come back. `useStageRewards` re-derives both from the current
+// stage at 0.75x / 3x, preserving the 4:1 ratio and flooring at the old
+// values so the early game is unchanged.
 
 const SMALL_READY_AT_MS = 3 * 60 * 1000   // 3 min
 const BIG_READY_AT_MS = 10 * 60 * 1000    // 10 min
-const SMALL_REWARD = 25
-const BIG_REWARD = 100
 
 // `spinner_chest_last_collected_at` is a NEW key (the previous component
 // stored a future-`chestReadyAt` timestamp under different names). Using
@@ -67,9 +74,12 @@ const phase = computed<Phase>(() => {
 
 const isReady = computed(() => phase.value !== 'cooldown')
 
-/** Reward the player gets if they tap right now. 25 during the small
- *  window, 100 after the chest reaches its 10-min mark. */
-const currentReward = computed(() => (phase.value === 'big' ? BIG_REWARD : SMALL_REWARD))
+/** Reward the player gets if they tap right now — the small amount during
+ *  the 3-minute window, the big one once the chest reaches its 10-minute
+ *  mark. Both scale with the current stage; see `useStageRewards`. */
+const currentReward = computed(() =>
+  phase.value === 'big' ? chestBigCoins.value : chestSmallCoins.value
+)
 
 /** ms remaining to display in the timer label.
  *  - cooldown phase: time until small reward unlocks (3-min countdown).
@@ -166,8 +176,8 @@ const collectChest = () => {
         src="/images/icons/chest_128x128.webp"
         :style="isReady ? { filter: `drop-shadow(0 0 8px ${auraColor})` } : undefined"
       )
-      //- Circular cooldown overlay — only during the pre-25 cooldown phase.
-      //- During the small (25c) → big (100c) window we show the running
+      //- Circular cooldown overlay — only during the pre-small cooldown phase.
+      //- During the small → big window we show the running
       //- 7-min countdown via the timer label below; the ring would
       //- otherwise be misleading (chest is already collectable).
       //-
@@ -207,15 +217,20 @@ const collectChest = () => {
         //- (`<IconCoin class="text-yellow-300">`) so reward labels read
         //- as the same visual currency across the HUD.
         span.font-black.text-yellow-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
-          span.game-text +25
+          span.game-text +{{ chestSmallCoins }}
           IconCoin(class="w-4 h-4")
         span.game-text.text-white.font-bold(class="text-[0.6rem] sm:text-[0.75rem] opacity-80") {{ timeDisplay }}
       template(v-else)
-        //- Big-reward state — chest aura + amber `+100` is signal
+        //- Big-reward state — chest aura + the amber amount is signal
         //- enough; the older "READY" suffix duplicated the meaning of
         //- the pulsing icon and made the label feel cluttered.
+        //-
+        //- The amounts are BOUND, not literal. They used to be hardcoded
+        //- `+25` / `+100` here while `currentReward` (the value actually
+        //- granted) lived in the script — so scaling the payout silently
+        //- left the label lying about it.
         span.font-black.text-amber-400.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
-          span.game-text +100
+          span.game-text +{{ chestBigCoins }}
           IconCoin(class="w-4 h-4")
 </template>
 

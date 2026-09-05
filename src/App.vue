@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { mobileCheck } from '@/utils/function'
@@ -28,17 +28,34 @@ import {
   isGamePix,
   isPlaygama,
   isYouTube,
+  isPoki,
   isNative,
   orientation
 } from '@/use/useUser'
 import { glitchLicenseStatus } from '@/use/useGlitchLicense'
 import { resolveCapabilities } from '@/platforms/capabilities'
+import { logFirstFrameState } from '@/utils/bootDiagnostics'
 
 const { t } = useI18n()
 const { initMusic, pauseMusic, continueMusic } = useMusic()
 useExtensionGuard()
 const { resourceCache, areAllAssetsLoaded } = useAssets()
 useCrazyMuteSync()
+
+// ─── First-playable-frame diagnostic ──────────────────────────────────────
+//
+// Fires on the same edge that tells the portal `game_ready`, and on EVERY
+// build — the `[diag] boot` banner in `main.ts` is printed before the router
+// has resolved anything, so on its own it cannot distinguish "the view
+// rendered" from "the view rendered nothing".
+//
+// `route.matched: 0` in this line is the exact signature of the YouTube
+// Playables black screen: splash finished, SDK checklist green, RouterView
+// empty. See `bootDiagnostics.ts`.
+const appRouter = useRouter()
+watch(areAllAssetsLoaded, (ready) => {
+  if (ready) logFirstFrameState(appRouter)
+}, { immediate: true })
 
 // Playgama wiring. The two registration points need synchronous
 // access to plugin symbols, so we import them statically. On every
@@ -101,6 +118,41 @@ if (isPlaygama) {
     if (!ready) return
     playgamaGameLoadingStop()
   }, { immediate: true })
+}
+
+// Poki wiring. Static import for the same reason as the Playgama block
+// above; `isPoki` is an env literal so Rollup DCEs the whole `if` on other
+// builds, and `resolve.alias` swaps the module for a no-op stub there so the
+// PokiSDK URL never enters their bundles at all.
+import { pokiGameLoadingFinished, isPokiAdShowing } from '@/utils/pokiPlugin'
+
+if (isPoki) {
+  // ─── The one strictly-required SDK call ──────────────────────────────
+  // Same splash-resolved edge that drives Playgama's `game_ready`. The
+  // plugin guards repeat firings.
+  watch(areAllAssetsLoaded, (ready) => {
+    if (!ready) return
+    pokiGameLoadingFinished()
+  }, { immediate: true })
+
+  // ─── Ad pause + audio ────────────────────────────────────────────────
+  //
+  // Poki publishes NO pause signal and NO audio-mute signal — unlike the
+  // Playgama Bridge, whose PAUSE_STATE_CHANGED already folds ad state in.
+  // The only edge the platform gives us is `commercialBreak`'s /
+  // `rewardedBreak`'s `onStart`, which fires ONLY when a video genuinely
+  // opens — so an unfilled break leaves the music and the result-screen
+  // stinger untouched, which is exactly what we want.
+  //
+  // This watcher is the SINGLE owner of that translation: the plugin only
+  // publishes the fact. Driving `setGamePaused` from in there as well would
+  // give the gate two release points and let a resume land while the ad is
+  // still on screen.
+  watch(isPokiAdShowing, (showing) => {
+    setGamePaused(showing)
+    if (showing) pauseMusic()
+    else continueMusic()
+  })
 }
 
 initMusic()
@@ -196,7 +248,7 @@ const hostname = window.location.hostname
 const parentOrigin = window.location.ancestorOrigins?.[0] ?? document.referrer ?? ''
 const platformFlags = {
   isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
-  isPlaygama
+  isPlaygama, isPoki
 }
 const capabilities = computed(() => resolveCapabilities({
   flags: platformFlags,
@@ -214,6 +266,7 @@ const isGameShowAllowed = computed(() =>
   capabilities.value.allowedToShowOnY8 ||
   capabilities.value.allowedToShowOnGamePix ||
   capabilities.value.allowedToShowOnPlaygama ||
+  capabilities.value.allowedToShowOnPoki ||
   hostname.includes('localhost')
 )
 const isGlitchDenied = computed(() => capabilities.value.isGlitchDenied)

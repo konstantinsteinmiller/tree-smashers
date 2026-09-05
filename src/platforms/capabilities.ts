@@ -20,6 +20,7 @@ export interface PlatformFlags {
   isY8: boolean
   isGamePix: boolean
   isPlaygama: boolean
+  isPoki: boolean
 }
 
 export type GlitchLicenseStatus = 'pending' | 'ok' | 'denied'
@@ -55,6 +56,13 @@ export interface ResolvedCapabilities {
    *  runtime URL gating ("the game does not include any technical means of
    *  limiting its operation due to the URL it is opened from"). */
   allowedToShowOnPlaygama: boolean
+  /** Poki is flag-only too, and for a sharper reason than the others: the
+   *  bundle has to run in the Poki Inspector (`inspector.poki.dev`) and in
+   *  P4D Preview as well as on the production `*.poki-gdn.com` origin, so a
+   *  hostname gate would fail QA before the game ever reached a player.
+   *  There is deliberately no `isPokiUrl()` helper either — a foreign
+   *  hostname literal in the shared bundle is pure liability. */
+  allowedToShowOnPoki: boolean
   /** True when Glitch was selected but their license API rejected the player. */
   isGlitchDenied: boolean
   /** True when the build targets a platform AND the license check has settled.
@@ -113,7 +121,7 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   const isNotPlatformBuild =
     !flags.isCrazyWeb && !flags.isWaveDash && !flags.isItch && !flags.isGlitch
     && !flags.isGameDistribution && !flags.isY8 && !flags.isGamePix
-    && !flags.isPlaygama
+    && !flags.isPlaygama && !flags.isPoki
 
   const allowedToShowOnCrazyGames =
     (flags.isCrazyWeb && isCrazyGamesUrl(hostname)) || isNotPlatformBuild
@@ -143,10 +151,14 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
   // the build runs wherever the iframe ends up embedded.
   const allowedToShowOnPlaygama = flags.isPlaygama || isNotPlatformBuild
 
+  // Poki: NO hostname check — the build has to run in the Inspector and in
+  // P4D Preview, not only on the production `*.poki-gdn.com` origin.
+  const allowedToShowOnPoki = flags.isPoki || isNotPlatformBuild
+
   const anyPlatform =
     flags.isCrazyWeb || flags.isWaveDash || flags.isItch || flags.isGlitch
     || flags.isGameDistribution || flags.isY8 || flags.isGamePix
-    || flags.isPlaygama
+    || flags.isPlaygama || flags.isPoki
   const showOnlyAvailableText = anyPlatform && glitchLicenseStatus !== 'pending'
 
   const plattformText = flags.isWaveDash
@@ -165,7 +177,9 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
                 ? 'gamepix.com'
                 : flags.isPlaygama
                   ? 'playgama.com'
-                  : ''
+                  : flags.isPoki
+                    ? 'poki.com'
+                    : ''
 
   return {
     isNotPlatformBuild,
@@ -177,6 +191,7 @@ export const resolveCapabilities = (input: CapabilitiesInput): ResolvedCapabilit
     allowedToShowOnY8,
     allowedToShowOnGamePix,
     allowedToShowOnPlaygama,
+    allowedToShowOnPoki,
     isGlitchDenied,
     showOnlyAvailableText,
     plattformText

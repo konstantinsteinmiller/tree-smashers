@@ -46,11 +46,9 @@ import PvPLobbyModal from '@/components/organisms/PvPLobbyModal.vue'
 import usePVP from '@/use/usePVP'
 import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
 import useLeaderboard, { type LeaderboardEntry } from '@/use/useLeaderboard'
-import {
-  startGameplay,
-  stopGameplay,
-  triggerHappytime
-} from '@/use/useCrazyGames'
+import { triggerHappytime } from '@/use/useCrazyGames'
+import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
+import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
 import { isRewardedReady, isInterstitialReady, showRewardedAd, showMidgameAd } from '@/use/useAds'
 import useBottomSafe from '@/use/useBottomSafe'
 import { getSelectedSkin, modelImgPath } from '@/use/useModels'
@@ -327,6 +325,12 @@ const rouletteMultiplier = ref(1)
 const rouletteSkinResult = ref<RouletteResult | null>(null)
 // Diamonds won on the ultra-rare roulette jackpot (0 = not a diamond outcome).
 const rouletteDiamonds = ref(0)
+
+// Presentation for the two diamond payouts this view renders. Both keep
+// their diamond-denominated source values (the grant path converts); these
+// only decide what the reward screen SAYS.
+const rouletteJackpot = computed(() => displayDiamondReward(rouletteDiamonds.value))
+const dailyBonus = displayDiamondReward(1)
 const pendingBossReward = ref(false)
 const showRouletteReward = ref(false)
 const rouletteRewardReady = ref(false) // tap-to-continue unlocked
@@ -385,10 +389,17 @@ const isBattleActive = computed(() =>
 // below can pause the SDK signal while the player is reading the prompt.
 const surrenderModalOpen = ref(false)
 
-// CrazyGames considers the player "in gameplay" only while the physics loop
-// is actually advancing the match — i.e. one of the live battle phases AND
-// no blocking modal (reward, roulette reward, skin chest, surrender prompt)
-// is on top. The watcher below mirrors this into `startGameplay`/`stopGameplay`.
+// "In gameplay" means the physics loop is actually advancing the match — one
+// of the live battle phases AND no blocking modal (reward, roulette reward,
+// skin chest, surrender prompt) on top. The watcher below publishes it to
+// every portal through `syncGameplayLifecycle`.
+//
+// This used to call `startGameplay`/`stopGameplay` straight from
+// `@/use/useCrazyGames`, so CrazyGames got the signal and nobody else did —
+// including Playgama, whose wrappers were written and never called. Portals
+// with per-platform rules about this edge (Poki forbids a `gameplayStart()`
+// that no player asked for) enforce them inside their own plugin; this
+// watcher's job is to report the honest state of the game.
 const isGameplayActive = computed(() =>
   [
     'meteor_intro',
@@ -406,8 +417,7 @@ const isGameplayActive = computed(() =>
 )
 
 watch(isGameplayActive, (active) => {
-  if (active) startGameplay()
-  else stopGameplay()
+  syncGameplayLifecycle(active)
 }, { immediate: true })
 
 // Live stats for the blade HUD — always show all blades (even dead ones)
@@ -568,9 +578,20 @@ const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
   }
 }
 
-/** Fire a diamond explosion from any source element toward the HUD diamond row. */
+/**
+ * Fire a diamond explosion from any source element toward the HUD diamond row.
+ *
+ * On a single-currency build the payout IS coins, so the burst has to be coins
+ * flying to the coin row — a diamond VFX landing on a row that does not exist
+ * would be the one place the collapsed economy leaks visually.
+ */
 const fireDiamondExplosion = (sourceEl: HTMLElement | null) => {
-  if (sourceEl && coinBadgeDiamondEl.value) {
+  if (!sourceEl) return
+  if (isSingleCurrency) {
+    fireCoinExplosion(sourceEl)
+    return
+  }
+  if (coinBadgeDiamondEl.value) {
     spawnCoinExplosion({ sourceEl, targetEl: coinBadgeDiamondEl.value, variant: 'diamond', count: 14 })
   }
 }
@@ -1296,10 +1317,11 @@ onMounted(() => {
   updateSpeedBoost()
   speedBoostIntervalId = window.setInterval(updateSpeedBoost, 1000)
 
-  // CrazyGames `gameplayStart` / `gameplayStop` are driven reactively by
-  // the `isGameplayActive` watcher above (battle phase + no blocking modal).
-  // `stopGameplay()` in onUnmounted below remains as a defensive cleanup
-  // for the case the player navigates away mid-match.
+  // The gameplay bracket is driven reactively by the `isGameplayActive`
+  // watcher above (battle phase + no blocking modal) and fanned out to every
+  // portal by `syncGameplayLifecycle`. `stopGameplayLifecycle()` in
+  // onUnmounted below remains as a defensive close for the case the player
+  // navigates away mid-match.
 })
 
 onUnmounted(() => {
@@ -1319,7 +1341,7 @@ onUnmounted(() => {
   // Always leave the arena at normal speed so other views aren't affected
   simSpeed.value = 1
 
-  stopGameplay()
+  stopGameplayLifecycle()
 
   setOnLocalLaunch(null)
   // Clean up PvP if active
@@ -1646,10 +1668,15 @@ onUnmounted(() => {
             div.flex.items-center.gap-3(v-if="dailyCoinReward > 0" ref="rewardDailyCoinRef")
               IconCoin(class="w-8 h-8 text-yellow-300")
               span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ dailyCoinReward }}
-            //- Diamond (first win of the day only)
+            //- Daily bonus, first win of the day only. Diamonds normally;
+            //- coins at the diamond rate on a single-currency build (Poki
+            //- allows exactly one currency) — see useCurrency.
             div.flex.items-center.gap-3(v-if="dailyDiamondEarned" ref="rewardDiamondRef")
-              IconDiamond(class="w-8 h-8")
-              span.font-black.game-text.text-cyan-300(class="text-2xl sm:text-4xl") +1
+              IconDiamond(v-if="dailyBonus.currency === 'diamonds'" class="w-8 h-8")
+              IconCoin(v-else class="w-8 h-8 text-yellow-300")
+              span.font-black.game-text(
+                :class="[dailyBonus.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-2xl sm:text-4xl']"
+              ) +{{ dailyBonus.amount }}
             div.font-bold.game-text.text-cyan-200(
               v-else
               class="text-xs sm:text-sm opacity-80"
@@ -1698,13 +1725,18 @@ onUnmounted(() => {
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
       div.flex.flex-col.items-center.gap-6.roulette-reward-enter
-        //- Diamond jackpot (ultra-rare)
+        //- Jackpot (ultra-rare). Denominated in whichever currency the build
+        //- actually pays — `addDiamonds` did the conversion already.
         template(v-if="rouletteDiamonds > 0")
           div.roulette-reward-glow.flex.flex-col.items-center.gap-2
-            IconDiamond(class="w-20 h-20 sm:w-28 sm:h-28")
+            IconDiamond(v-if="rouletteJackpot.currency === 'diamonds'" class="w-20 h-20 sm:w-28 sm:h-28")
+            IconCoin(v-else class="w-20 h-20 sm:w-28 sm:h-28 text-yellow-300")
           div.flex.items-center.gap-3(ref="rouletteRewardDiamondRef")
-            IconDiamond(class="w-8 h-8")
-            span.text-cyan-300.font-black.game-text(class="text-3xl sm:text-5xl") +{{ rouletteDiamonds }}
+            IconDiamond(v-if="rouletteJackpot.currency === 'diamonds'" class="w-8 h-8")
+            IconCoin(v-else class="w-8 h-8 text-yellow-300")
+            span.font-black.game-text(
+              :class="[rouletteJackpot.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-3xl sm:text-5xl']"
+            ) +{{ rouletteJackpot.amount }}
         //- Skin reward
         template(v-else-if="rouletteSkinResult?.skin")
           div.roulette-reward-glow.flex.flex-col.items-center.gap-3

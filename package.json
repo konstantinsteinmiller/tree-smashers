@@ -16,6 +16,7 @@
     "build:y8": "vite build --mode y8 --base=./ && cd dist && tar -a -cf ../chaos-arena-y8.zip * && cd .. && move chaos-arena-y8.zip dist\\",
     "build:gamepix": "vite build --mode gamepix --base=./ && cd dist && tar -a -cf ../chaos-arena-gamepix.zip * && cd .. && move chaos-arena-gamepix.zip dist\\",
     "build:playgama": "vite build --mode playgama --base=./ && cd dist && tar -a -cf ../chaos-arena-playgama.zip * && cd .. && move chaos-arena-playgama.zip dist\\",
+    "build:poki": "vite build --mode poki --base=./ && cd dist && tar -a -cf ../chaos-arena-poki.zip * && cd .. && move chaos-arena-poki.zip dist\\",
     "build:youtube": "vite build --mode youtube --base=./ && cd dist && tar -a -cf ../chaos-arena-youtube.zip * && cd .. && move chaos-arena-youtube.zip dist\\",
     "build-github-main": "VITE_APP_PVP_ENABLED=true vite build --base=/chaos-arena/ --outDir=dist",
     "build-github-develop": "vite build --base=/chaos-arena/develop/ --outDir=dist/develop",

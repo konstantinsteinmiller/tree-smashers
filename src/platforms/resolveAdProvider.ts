@@ -28,13 +28,22 @@
 //   2. isGameDistribution      → GameDistribution provider
 //   3. isPlaygama              → Playgama Bridge provider
 //   4. showMediatorAds + isNative → AdMob (direct, no mediation)
-//   5. else                    → Noop (UI hidden, calls inert)
+//   5. isPoki                  → Poki provider
+//   6. else                    → Noop (UI hidden, calls inert)
+//
+// The Poki import is static like the rest, and on a non-Poki build
+// `resolve.alias` swaps it for `PokiProvider.stub.ts`. That alias is NOT
+// belt-and-braces: this file statically imports every provider, so each
+// provider's function body lands in every bundle — and the obfuscator's
+// `stringArray` pass hoists string literals BEFORE esbuild folds the env
+// comparison, so the PokiSDK URL survives dead-code elimination without it.
 
 import { createCrazyGamesProvider } from '@/use/ads/CrazyGamesProvider'
 import { createGameDistributionProvider } from '@/use/ads/GameDistributionProvider'
 import { createAdMobProvider } from '@/use/ads/AdMobProvider'
 import { createNoopProvider } from '@/use/ads/NoopProvider'
 import { createPlaygamaProvider } from '@/use/ads/PlaygamaProvider'
+import { createPokiProvider } from '@/use/ads/PokiProvider'
 import type { AdProvider } from '@/use/ads/types'
 import type { PlatformFlags } from './capabilities'
 
@@ -52,6 +61,7 @@ export const resolveAdProvider = (input: AdResolverInput): AdProvider => {
   if (import.meta.env.VITE_APP_CRAZY_WEB === 'true') return createCrazyGamesProvider()
   if (import.meta.env.VITE_APP_GAME_DISTRIBUTION === 'true') return createGameDistributionProvider()
   if (import.meta.env.VITE_APP_PLAYGAMA === 'true') return createPlaygamaProvider()
+  if (import.meta.env.VITE_APP_POKI === 'true') return createPokiProvider()
   if (import.meta.env.VITE_APP_NATIVE === 'true' && input.showMediatorAds && input.isNative) {
     return createAdMobProvider()
   }

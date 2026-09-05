@@ -16,10 +16,29 @@ const allOff: PlatformFlags = {
   isGameDistribution: false,
   isY8: false,
   isGamePix: false,
-  isPlaygama: false
+  isPlaygama: false,
+  isPoki: false
 }
 
-const ALL_ENVS = ['VITE_APP_CRAZY_WEB', 'VITE_APP_GAME_DISTRIBUTION', 'VITE_APP_PLAYGAMA', 'VITE_APP_NATIVE'] as const
+// EVERY platform flag has to be listed, not just the ones this file sets.
+// Vitest runs all specs in one process and `vi.stubEnv` writes through to
+// `process.env`, so a flag another suite stubbed (e.g. `VITE_APP_POKI` in
+// `resolveSaveStrategy.test.ts`) is still set when this one runs and silently
+// hijacks the resolver — the arms take the FIRST match. That produced a failure
+// here that passed standalone and only appeared in a full run.
+const ALL_ENVS = [
+  'VITE_APP_CRAZY_WEB',
+  'VITE_APP_GAME_DISTRIBUTION',
+  'VITE_APP_PLAYGAMA',
+  'VITE_APP_POKI',
+  'VITE_APP_YOUTUBE',
+  'VITE_APP_GLITCH',
+  'VITE_APP_GAMEPIX',
+  'VITE_APP_Y8',
+  'VITE_APP_WAVEDASH',
+  'VITE_APP_ITCH',
+  'VITE_APP_NATIVE'
+] as const
 
 const clearEnv = () => {
   for (const k of ALL_ENVS) vi.stubEnv(k, '')

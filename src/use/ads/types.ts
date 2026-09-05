@@ -60,7 +60,23 @@ export interface AdProvider {
    * honest path — explain, don't reward.
    */
   readonly isAdsBlocked: Ref<boolean>
+  /**
+   * True when the provider handles the ad-audio guarantee itself, on the
+   * real-ad edge, rather than the caller muting up front.
+   *
+   * Poki is the reason this exists. `commercialBreak(onStart)` invokes
+   * `onStart` ONLY when a video ad genuinely opens — a no-fill resolves the
+   * promise without ever calling it. Muting before the request would cut the
+   * win/lose stinger for an ad the player never saw, on every unfilled break.
+   * Providers that pause via their portal's own signal (CrazyGames'
+   * `adStarted`, the Playgama Bridge's PAUSE_STATE_CHANGED) leave this unset.
+   */
+  readonly managesMidgameAudio?: boolean
   init: () => Promise<void>
   showRewardedAd: () => Promise<boolean>
-  showMidgameAd: () => Promise<void>
+  /**
+   * @param onImpression invoked only if a video ad actually opens. Providers
+   *   that set `managesMidgameAudio` fire it on that edge; the rest ignore it.
+   */
+  showMidgameAd: (onImpression?: () => void) => Promise<void>
 }

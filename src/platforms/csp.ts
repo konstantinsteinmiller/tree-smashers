@@ -149,6 +149,23 @@ export const buildCsp = (env: Record<string, string>): string => {
   // Same call the Poki build makes, for the same reason.
   if (env.VITE_APP_YOUTUBE === 'true') return ''
 
+  // ─── Poki: no policy either, and this one is monetization-fatal ─────────
+  //
+  // Poki applies a PER-GAME allowlist server-side (P4D → Settings → CSP) and
+  // injects its own ad stack into our iframe — Google Publisher Tag, IMA,
+  // Amazon TAM and a prebid waterfall across `securepubads.g.doubleclick.net`,
+  // `imasdk.googleapis.com`, `prebid.adnxs.com`, `aax.amazon-adsystem.com`,
+  // `onetag-sys.com` and more. A meta tag of ours blocks that entire waterfall
+  // and NOTHING surfaces: the game runs, `commercialBreak()` resolves, no ad
+  // ever plays, and the build simply earns nothing.
+  //
+  // Whitelisting the list would be the wrong fix — it rotates as Poki changes
+  // partners. Note also what is deliberately NOT in BASE_HOSTS: no
+  // `game-cdn.poki.com`. The Poki build emits no tag at all, so such an entry
+  // would do nothing except leak a foreign hostname into every OTHER
+  // platform's bundle.
+  if (env.VITE_APP_POKI === 'true') return ''
+
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
   const isGlitch = env.VITE_APP_GLITCH === 'true'
   const isCrazyWeb = env.VITE_APP_CRAZY_WEB === 'true'

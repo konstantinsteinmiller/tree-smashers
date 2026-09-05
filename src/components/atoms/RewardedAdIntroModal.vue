@@ -23,6 +23,7 @@
 // Kid-safe wording throughout: chaos-arena declares a child-directed
 // audience (ages 6+), so no urgency language, no dark patterns, no
 // "LAST CHANCE" framing.
+import { isSingleCurrency } from '@/use/useCurrency'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -46,7 +47,15 @@ const rewardText = computed(() => {
     case 'coins':
       return t('rewardedIntro.rewardCoins', { count })
     case 'diamonds':
-      return t('rewardedIntro.rewardDiamonds', { count })
+      // On a single-currency build the payout is coins, so the intro has to
+      // say coins — naming a currency the player cannot see would fail the
+      // "clear reward messaging" requirement this modal exists to satisfy.
+      // `displayDiamondReward` has already converted the amount upstream, so
+      // this only picks the wording; no new translation keys are needed
+      // because `rewardCoins` ships in every locale already.
+      return isSingleCurrency
+        ? t('rewardedIntro.rewardCoins', { count })
+        : t('rewardedIntro.rewardDiamonds', { count })
     case 'speed':
       return t('rewardedIntro.rewardSpeed')
     case 'respin':

@@ -9,6 +9,7 @@ import type {
   SpinnerStats
 } from '@/types/spinner'
 import { COINS_KEY, DIAMONDS_KEY } from '@/keys'
+import { isSingleCurrency, diamondsToCoins } from '@/use/useCurrency'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
 
@@ -196,8 +197,31 @@ const addCoins = (amount: number) => {
 }
 
 /** Grant (or, with a negative amount, spend) premium diamonds. Clamped at 0
- *  so a spend can never drive the balance negative. */
+ *  so a spend can never drive the balance negative.
+ *
+ *  ON SINGLE-CURRENCY BUILDS THIS PAYS COINS INSTEAD. Poki's monetization
+ *  policy allows exactly one currency, so the diamond balance is never
+ *  touched there and every grant — daily challenge, battle-pass tier,
+ *  roulette jackpot, rewarded-ad payout, dev cheat — converts at
+ *  `DIAMOND_COIN_VALUE`. Routing it here rather than at the five call
+ *  sites is what makes the collapse total: a placement added later gets
+ *  the conversion without knowing the rule exists.
+ *
+ *  Spends (negative amounts) convert too, so a diamond-priced item stays
+ *  buyable at its coin-equivalent price. The only such item today is a
+ *  background skin, and `useBgSkins` checks affordability against the
+ *  right balance before calling this — see `buyBgSkinWithDiamonds`. */
 const addDiamonds = (amount: number) => {
+  if (isSingleCurrency) {
+    // Clamp here, not in `addCoins`. This function's contract is "a spend can
+    // never drive the balance negative", and that has to hold whichever
+    // currency is backing it — but `addCoins` is also the normal coin-spend
+    // path (`buyBgSkinWithCoins` and friends check affordability first), and
+    // silently clamping THAT would hide a real bug rather than prevent one.
+    const delta = diamondsToCoins(amount)
+    addCoins(delta < 0 ? Math.max(delta, -coins.value) : delta)
+    return
+  }
   diamonds.value = Math.max(0, diamonds.value + amount)
   localStorage.setItem(DIAMONDS_KEY, diamonds.value.toString())
 }

@@ -38,7 +38,8 @@ export default defineConfig(({ mode, command }) => {
     'VITE_APP_GAME_DISTRIBUTION',
     'VITE_APP_Y8',
     'VITE_APP_GAMEPIX',
-    'VITE_APP_PLAYGAMA'
+    'VITE_APP_PLAYGAMA',
+    'VITE_APP_POKI'
   ]
   const activeFlags = PLATFORM_FLAGS.filter(f => env[f] === 'true')
   if (activeFlags.length > 1) {
@@ -182,7 +183,29 @@ export default defineConfig(({ mode, command }) => {
   // `youtube` adapter is what talks to YouTube's ytgame SDK.
   const isYouTube = env.VITE_APP_YOUTUBE === 'true'
   const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
+  const isPoki = env.VITE_APP_POKI === 'true'
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
+
+  // Strip the Poki SDK <script> tag from index.html for non-Poki builds. Poki
+  // is the only portal in the matrix whose SDK host must NOT appear anywhere
+  // else — see the `resolve.alias` stub swap below for the other half.
+  if (!isPoki) {
+    plugins.push({
+      name: 'strip-poki-sdk',
+      transformIndexHtml(html: string) {
+        return html.replace(
+          // The comment body is `(?:(?!-->)[\s\S])*?` rather than `[^]*?` on
+          // purpose: a plain lazy wildcard can start matching at an EARLIER
+          // comment and swallow every tag in between. That is not theoretical
+          // — it deleted the YouTube SDK tag and the storage-shim tag from this
+          // build until it was fixed. The comment prefix is optional so the
+          // strip still works if it is ever reworded away.
+          /(?:<!--(?:(?!-->)[\s\S])*?-->\s*)?<script[^>]*game-cdn\.poki\.com[^>]*><\/script>\s*/,
+          ''
+        )
+      }
+    })
+  }
 
   // Strip the CrazyGames SDK <script> tag from index.html for non-CrazyGames builds
   // so it doesn't block or error on other platforms (e.g. Wavedash).
@@ -218,7 +241,9 @@ export default defineConfig(({ mode, command }) => {
       name: 'strip-youtube-sdk',
       transformIndexHtml(html: string) {
         return html.replace(
-          /<!--[^]*?YouTube Playables SDK[^]*?-->\s*<script[^>]*youtube\.com\/game_api[^>]*><\/script>\s*/,
+          // Same confined-comment form as the Poki stripper below — see the
+          // note there for what a bare `[^]*?` costs.
+          /(?:<!--(?:(?!-->)[\s\S])*?-->\s*)?<script[^>]*youtube\.com\/game_api[^>]*><\/script>\s*/,
           ''
         )
       }
@@ -278,6 +303,50 @@ export default defineConfig(({ mode, command }) => {
     ],
     resolve: {
       alias: {
+        // ─── Poki stub swap — REQUIRED, not belt-and-braces ────────────
+        //
+        // On a non-Poki build both modules resolve to no-op stubs, so the
+        // PokiSDK URL never enters the bundle at all.
+        //
+        // The obvious reasoning — "every Poki call is behind
+        // `import.meta.env.VITE_APP_POKI === 'true'`, esbuild folds it to
+        // false, Rollup drops the import" — is WRONG in this repo, because
+        // we run `vite-plugin-javascript-obfuscator`. Its `stringArray` pass
+        // hoists string literals into an indirection table BEFORE esbuild
+        // folds the env comparison, so the SDK URL survives dead-code
+        // elimination even though the code around it is eliminated. In the
+        // project this pattern came from, `game-cdn.poki.com` was measured
+        // sitting in the CrazyGames entry chunk after a by-the-book
+        // env-gated integration.
+        //
+        // It compounds: `resolveAdProvider` statically imports EVERY
+        // provider, and `useGameplayLifecycle` statically imports the
+        // bracket functions, so both modules are in every build's graph
+        // regardless of flags.
+        //
+        // Aliasing replaces the module before bundling and leaves a valid
+        // one behind — unlike deleting the emitted chunk, which 404s
+        // whatever still imports it. Verify with:
+        //   pnpm build:crazy-web && grep -rl "game-cdn.poki.com" dist/
+        // which must print nothing. MUST come before the '@' catch-alls.
+        ...(env.VITE_APP_POKI === 'true' ? {} : {
+          '@/use/ads/PokiProvider': fileURLToPath(new URL('./src/use/ads/PokiProvider.stub.ts', import.meta.url)),
+          '@/utils/pokiPlugin': fileURLToPath(new URL('./src/utils/pokiPlugin.stub.ts', import.meta.url))
+        }),
+        // The mirror image, and only on Poki. The GD plugin is reached solely
+        // through dead-branch dynamic imports, but Rollup still emits its chunk
+        // — carrying `html5.api.gamedistribution.com`. Poki's requirement #6 is
+        // explicit: "No third-party ads. Only the PokiSDK may serve
+        // advertising. Strip every other ad SDK from the Poki build."
+        ...(env.VITE_APP_POKI === 'true' ? {
+          '@/utils/gameDistributionPlugin': fileURLToPath(new URL('./src/utils/gameDistributionPlugin.stub.ts', import.meta.url)),
+          // Poki forbids in-app purchases. `VITE_APP_FEATURE_BG_SKINS=false`
+          // already makes the shop unreachable, but it was still BUNDLED — its
+          // real-money price strings ($1.29 / $1.99 / $9.99) sat in the shipped
+          // SpinnerArena chunk, and "unreachable" is not an argument you get to
+          // make to a reviewer who grepped the bundle.
+          '@/components/organisms/InAppPurchaseShop.vue': fileURLToPath(new URL('./src/components/organisms/InAppPurchaseShop.stub.vue', import.meta.url))
+        } : {}),
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@/': fileURLToPath(new URL('./src/', import.meta.url)),
         '#': fileURLToPath(new URL('./src/assets', import.meta.url))
@@ -341,6 +410,7 @@ export default defineConfig(({ mode, command }) => {
             // plugin that loads it so the split is deterministic and the chunk
             // name says what is actually inside.
             if (isPlaygama && id.includes('@playgama/bridge')) return 'playgama-bridge'
+            if (isPoki && id.includes('utils/pokiPlugin')) return 'plugin-poki'
             if (isPlaygama && id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
             if (isGameDistribution && id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
           }

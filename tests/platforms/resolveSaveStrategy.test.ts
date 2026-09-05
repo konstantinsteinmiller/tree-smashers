@@ -19,14 +19,23 @@ const allOff: PlatformFlags = {
   isGameDistribution: false,
   isY8: false,
   isGamePix: false,
-  isPlaygama: false
+  isPlaygama: false,
+  isPoki: false
 }
 
+// Same rule as `resolveAdProvider.test.ts`: list EVERY platform flag, because
+// `vi.stubEnv` writes through to `process.env` and leaks across spec files.
 const ALL_PLATFORM_ENVS = [
   'VITE_APP_CRAZY_WEB',
   'VITE_APP_GAME_DISTRIBUTION',
   'VITE_APP_GLITCH',
-  'VITE_APP_PLAYGAMA'
+  'VITE_APP_PLAYGAMA',
+  'VITE_APP_POKI',
+  'VITE_APP_YOUTUBE',
+  'VITE_APP_GAMEPIX',
+  'VITE_APP_Y8',
+  'VITE_APP_WAVEDASH',
+  'VITE_APP_ITCH'
 ] as const
 
 const clearEnv = () => {
@@ -86,6 +95,18 @@ describe('resolveSaveStrategy', () => {
     const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isPlaygama: true })
     expect(['playgama', 'localStorage']).toContain(strategy.name)
+  })
+
+  it('returns PokiStrategy when isPoki env is set', async () => {
+    // Local-only by design — Poki's wrapper mirrors the iframe's whole
+    // localStorage + IndexedDB itself. Its own class rather than
+    // LocalStorageStrategy so `SaveManager.strategyName` reports `poki`
+    // during Poki QA.
+    vi.stubEnv('VITE_APP_POKI', 'true')
+    const resolveSaveStrategy = await loadResolver()
+    const strategy = await resolveSaveStrategy({ ...allOff, isPoki: true })
+    expect(strategy.name).toBe('poki')
+    expect(strategy.hydrateState).toBe('success-with-data')
   })
 
   it('returns GlitchStrategy or LocalStorageStrategy fallback when isGlitch env is set', async () => {

@@ -26,6 +26,7 @@ export const isGameDistribution = import.meta.env.VITE_APP_GAME_DISTRIBUTION ===
 export const isY8 = import.meta.env.VITE_APP_Y8 === 'true'
 export const isGamePix = import.meta.env.VITE_APP_GAMEPIX === 'true'
 export const isPlaygama = import.meta.env.VITE_APP_PLAYGAMA === 'true'
+export const isPoki = import.meta.env.VITE_APP_POKI === 'true'
 // ─── Distribution channel, NOT a platform ──────────────────────────────────
 // chaos-arena reaches YouTube Playables THROUGH Playgama: the build is a
 // normal Playgama build (`VITE_APP_PLAYGAMA=true`, Bridge, PlaygamaStrategy,
