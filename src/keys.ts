@@ -19,3 +19,32 @@ export const COINS_KEY = 'spinner_coins'
 export const DIAMONDS_KEY = 'spinner_diamonds'
 export const UPGRADES_KEY = 'spinner_upgrades'
 export const SKINS_KEY = 'spinner_owned_skins'
+
+// ─── Global leaderboard ─────────────────────────────────────────────────────
+//
+// All `spinner_`-prefixed, so they ride the cloud save: the same player on a
+// second device must keep the SAME leaderboard row rather than opening a second
+// one, and `POSTED_NAME_KEY` / `SUBMITTED_STAGE_KEY` travelling with them is
+// what stops device B re-posting a score device A already posted.
+//
+// The board CACHE is deliberately not here — it is `chaosarena_board_cache`,
+// outside `SaveMergePolicy.PAYLOAD_PREFIXES`, because it is ~6 kB of public
+// data identical for every player and has no business in anyone's cloud blob.
+
+/** The player's stable leaderboard id. Also mirrored to a standalone
+ *  `chaosarena_uid` key OUTSIDE this prefix — see `usePlayerIdentity` for why a
+ *  cloud hydrate must not be able to erase it. */
+export const PLAYER_ID_KEY = 'spinner_player_id'
+/** Tier 1 name: chosen by the player. Highest precedence, never overwritten. */
+export const PLAYER_NAME_KEY = 'spinner_player_name'
+/** Tier 2: the last name a platform SDK gave us (CrazyGames), REMEMBERED so an
+ *  offline session does not flip the row back to a generated name. */
+export const SDK_NAME_KEY = 'spinner_sdk_name'
+/** Tier 3: the generated name, minted once and kept. */
+export const ANON_NAME_KEY = 'spinner_anon_name'
+/** The name the row currently carries on the server. A mismatch is what
+ *  triggers the one relabel POST. */
+export const POSTED_NAME_KEY = 'spinner_posted_name'
+/** The best stage the server has ACCEPTED. The whole write rule is
+ *  `stage > this`, so it may only be set after a confirmed 200. */
+export const SUBMITTED_STAGE_KEY = 'spinner_submitted_stage'

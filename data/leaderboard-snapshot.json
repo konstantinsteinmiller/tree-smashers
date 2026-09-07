@@ -1,0 +1,78 @@
+{
+  "source": "https://leaderboard-chaos-arena.rodent-race.workers.dev",
+  "fetchedAt": 1788816355510,
+  "updatedAt": 1788816355457,
+  "total": 8,
+  "entries": [
+    {
+      "rank": 1,
+      "name": "_N3XuS_",
+      "score": 42,
+      "power": 36
+    },
+    {
+      "rank": 2,
+      "name": "_NExus_",
+      "score": 16,
+      "power": 19
+    },
+    {
+      "rank": 3,
+      "name": "JJ_Jonas",
+      "score": 8,
+      "power": 0
+    },
+    {
+      "rank": 4,
+      "name": "Talon847783",
+      "score": 4,
+      "power": 2
+    },
+    {
+      "rank": 5,
+      "name": "Striker393931",
+      "score": 2,
+      "power": 0
+    },
+    {
+      "rank": 5,
+      "name": "Rogue404630",
+      "score": 2,
+      "power": 0
+    },
+    {
+      "rank": 5,
+      "name": "Striker472186",
+      "score": 2,
+      "power": 0
+    },
+    {
+      "rank": 5,
+      "name": "Ripper470401",
+      "score": 2,
+      "power": 0
+    }
+  ],
+  "dist": [
+    [
+      42,
+      1
+    ],
+    [
+      16,
+      1
+    ],
+    [
+      8,
+      1
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      2,
+      4
+    ]
+  ]
+}

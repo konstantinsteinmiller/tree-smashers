@@ -70,3 +70,7 @@ __screenshots__/
 
 # iOS xcframeworks downloaded by tauri-plugin-levelplay/build.rs
 /src-tauri/plugins/tauri-plugin-levelplay/ios/Frameworks/
+
+# Perf harness output (the harness in perf/ is committed, its artifacts are not)
+perf/shot-*.png
+perf/last-trace-summary.json

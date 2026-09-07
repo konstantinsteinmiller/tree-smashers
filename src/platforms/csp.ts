@@ -121,6 +121,29 @@ const CONNECT_BASE_EXTRA: ReadonlyArray<string> = [
   'https://*.getpantry.cloud'
 ]
 
+/**
+ * The leaderboard Worker's ORIGIN, or `null` when this build has none.
+ *
+ * ORIGIN ONLY, never the configured URL. `VITE_LEADERBOARD_URL` may carry a
+ * path, and a CSP source WITH a path is a path-prefix match —
+ * `https://host/api` would refuse `https://host/api2/top` and silently narrow
+ * the policy in a way that only ever shows up as a blocked request on someone
+ * else's phone.
+ *
+ * `new URL()` throws on anything malformed, and a typo'd env var must not take
+ * the build down: a missing origin costs a leaderboard, a thrown build costs a
+ * release. Poki needs nothing from here — that build ships no CSP tag at all,
+ * and its `VITE_LEADERBOARD_URL` is empty anyway.
+ */
+const leaderboardOrigin = (raw: string | undefined): string | null => {
+  if (!raw) return null
+  try {
+    return new URL(raw).origin
+  } catch {
+    return null
+  }
+}
+
 const CSP_DIRECTIVES = [
   'default-src', 'script-src', 'style-src', 'img-src',
   'connect-src', 'frame-src', 'media-src', 'font-src'
@@ -200,6 +223,8 @@ export const buildCsp = (env: Record<string, string>): string => {
     'img-src': isAdWaterfall ? ['data:', 'https:', 'blob:'] : ['data:'],
     'connect-src': [
       ...CONNECT_BASE_EXTRA,
+      // The global leaderboard Worker, when this build talks to one.
+      ...[leaderboardOrigin(env.VITE_LEADERBOARD_URL)].filter((o): o is string => o !== null),
       // Ad-waterfall partner analytics / ad telemetry beacons (GD, Playgama).
       ...(isAdWaterfall ? ['https:', 'wss:'] : [])
     ],

@@ -34,6 +34,7 @@ import { drawLightningBolt } from '@/utils/lightning'
 import { matchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
+import { FX } from '@/use/useQuality'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
@@ -303,20 +304,117 @@ const saveLastGameResult = (result: GameResult) => {
 
 type AuraCtx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
+// ─── Cached aura sprites ─────────────────────────────────────────
+//
+// Every aura in the game is a radial gradient whose colour stops all scale by
+// one `pulse` factor and whose outermost stop is fully transparent. That makes
+// `drawImage(spriteBakedAtPulse1)` with `globalAlpha = pulse` algebraically
+// the same composite as rebuilding the gradient with pulse-scaled stops
+// — identical source alpha per pixel, identical source-over result — while
+// collapsing a per-blade, per-frame `createRadialGradient` plus a large
+// translucent gradient fill into a single blit.
+//
+// Gradient FILLS, not gradient construction, are what cost: ablating every
+// `createRadialGradient`/`createLinearGradient` to a flat colour took the
+// stage-1 arena from 28.5 fps to a pinned 60 at 4x CPU throttle.
+//
+// Baked once at a canonical radius and scaled on draw — the gradients are
+// smooth, so the bilinear resample is indistinguishable from the analytic
+// gradient at every size the game uses. Module-scoped (not per composable
+// instance) so a remounted arena reuses the bake.
+const AURA_SPRITE_R = 128
+const auraSprites = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+
+const auraSprite = (
+  key: string,
+  innerStopRatio: number,
+  stops: [number, string][]
+): HTMLCanvasElement | OffscreenCanvas => {
+  const cached = auraSprites.get(key)
+  if (cached) return cached
+  const size = AURA_SPRITE_R * 2
+  let sprite: HTMLCanvasElement | OffscreenCanvas
+  if (typeof OffscreenCanvas !== 'undefined') {
+    sprite = new OffscreenCanvas(size, size)
+  } else {
+    const el = document.createElement('canvas')
+    el.width = size
+    el.height = size
+    sprite = el
+  }
+  const c = sprite.getContext('2d') as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D
+    | null
+  if (c) {
+    const g = c.createRadialGradient(
+      AURA_SPRITE_R, AURA_SPRITE_R, AURA_SPRITE_R * innerStopRatio,
+      AURA_SPRITE_R, AURA_SPRITE_R, AURA_SPRITE_R
+    )
+    for (const [offset, colour] of stops) g.addColorStop(offset, colour)
+    c.fillStyle = g
+    c.beginPath()
+    c.arc(AURA_SPRITE_R, AURA_SPRITE_R, AURA_SPRITE_R, 0, Math.PI * 2)
+    c.fill()
+  }
+  auraSprites.set(key, sprite)
+  return sprite
+}
+
+const drawAuraSprite = (
+  ctx: AuraCtx,
+  sprite: HTMLCanvasElement | OffscreenCanvas,
+  x: number,
+  y: number,
+  radius: number,
+  alpha: number
+) => {
+  if (alpha <= 0.004) return
+  const prev = ctx.globalAlpha
+  ctx.globalAlpha = prev * alpha
+  ctx.drawImage(sprite as CanvasImageSource, x - radius, y - radius, radius * 2, radius * 2)
+  ctx.globalAlpha = prev
+}
+
+const LEECH_AURA_STOPS: [number, string][] = [
+  [0, 'rgba(100, 255, 100, 0.4)'],
+  [0.5, 'rgba(0, 180, 0, 0.2)'],
+  [1, 'rgba(0, 100, 0, 0)']
+]
+const BOSS_AURA_STOPS: [number, string][] = [
+  [0, 'rgba(255, 80, 20, 0.8)'],
+  [0.3, 'rgba(255, 40, 10, 0.5)'],
+  [0.6, 'rgba(180, 20, 5, 0.3)'],
+  [1, 'rgba(120, 10, 0, 0)']
+]
+const TORNADO_GLOW_STOPS: [number, string][] = [
+  [0, 'rgba(180,220,255,0.5)'],
+  [0.5, 'rgba(120,180,240,0.2)'],
+  [1, 'rgba(80,140,220,0)']
+]
+const SANDSTORM_HAZE_STOPS: [number, string][] = [
+  [0, 'rgba(220,180,100,0.45)'],
+  [0.5, 'rgba(190,150,80,0.18)'],
+  [1, 'rgba(160,120,60,0)']
+]
+const THUNDER_GLOW_STOPS: [number, string][] = [
+  [0, 'rgba(150,200,255,0.4)'],
+  [1, 'rgba(100,150,255,0)']
+]
+
 const renderTornadoAura = (ctx: AuraCtx, R: number, now: number): void => {
   // 1. Outer radial glow — swirling color gradient
   const glowAngle = now * 0.002
-  ctx.save()
-  ctx.globalAlpha = 0.12 + 0.04 * Math.sin(now * 0.003)
-  const grd = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 2.2)
-  grd.addColorStop(0, 'rgba(180,220,255,0.5)')
-  grd.addColorStop(0.5, 'rgba(120,180,240,0.2)')
-  grd.addColorStop(1, 'rgba(80,140,220,0)')
-  ctx.fillStyle = grd
-  ctx.beginPath()
-  ctx.arc(0, 0, R * 2.2, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
+  drawAuraSprite(
+    ctx, auraSprite('tornadoGlow', 0.2 / 2.2, TORNADO_GLOW_STOPS),
+    0, 0, R * 2.2, 0.12 + 0.04 * Math.sin(now * 0.003)
+  )
+
+  // Layers 2-4 are the expensive half of this aura: ~90 stroked spiral
+  // segments, 6 stroked ellipses and 10 filled arcs, per tornado blade, per
+  // frame. On the low tier the glow above carries the skin's identity and the
+  // rest is dropped.
+  if (FX.low) return
 
   // 2. Spiral wind trails — 3 interleaved arms rotating at different speeds
   for (let arm = 0; arm < 3; arm++) {
@@ -383,17 +481,15 @@ const renderTornadoAura = (ctx: AuraCtx, R: number, now: number): void => {
 const renderSandstormAura = (ctx: AuraCtx, R: number, now: number): void => {
   // 1. Warm radial haze — dusty golden glow
   const hazeAngle = now * 0.0015
-  ctx.save()
-  ctx.globalAlpha = 0.10 + 0.04 * Math.sin(now * 0.004)
-  const haze = ctx.createRadialGradient(0, 0, R * 0.3, 0, 0, R * 2.0)
-  haze.addColorStop(0, 'rgba(220,180,100,0.45)')
-  haze.addColorStop(0.5, 'rgba(190,150,80,0.18)')
-  haze.addColorStop(1, 'rgba(160,120,60,0)')
-  ctx.fillStyle = haze
-  ctx.beginPath()
-  ctx.arc(0, 0, R * 2.0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
+  drawAuraSprite(
+    ctx, auraSprite('sandHaze', 0.3 / 2.0, SANDSTORM_HAZE_STOPS),
+    0, 0, R * 2.0, 0.10 + 0.04 * Math.sin(now * 0.004)
+  )
+
+  // As with the tornado aura, the haze alone reads as "sandstorm"; the ~100
+  // stroked stream segments, 16 orbiting grains and 5 dust puffs below are
+  // the part a weak rasteriser cannot afford.
+  if (FX.low) return
 
   // 2. Spiral sand streams — 4 arms rotating with slight wobble
   for (let arm = 0; arm < 4; arm++) {
@@ -735,6 +831,68 @@ export const useSpinnerGame = () => {
     return bgSkinGradient.grad
   }
 
+  // ─── Cached background layer ───────────────────────────────────
+  //
+  // The background is a full-viewport fill and it does not change within a
+  // match, but the default skin fills it from a REPEATING PATTERN, which the
+  // rasteriser has to sample with modulo addressing for every one of the
+  // ~380k pixels, every frame. Pre-tiling it once into a buffer turns that
+  // into a straight opaque blit of the same pixels.
+  //
+  // Rebuilt only when the skin, the canvas size, or the load state of the
+  // tile image changes — the load state is in the key because the first
+  // frames are painted before the tile has decoded, and the buffer baked from
+  // the '#0d1117' fallback must not stick around once the artwork arrives.
+  let bgBuffer: HTMLCanvasElement | OffscreenCanvas | null = null
+  let bgBufferKey: string | null = null
+
+  const bgImageReady = (): boolean => {
+    const skin = selectedBgSkin.value
+    if (skin.id === DEFAULT_BG_SKIN_ID) {
+      return bgTileImage.complete && bgTileImage.naturalWidth > 0
+    }
+    if (skin.img) {
+      const img = bgSkinImages.get(skin.id)
+      return !!img && img.complete && img.naturalWidth > 0
+    }
+    return true
+  }
+
+  const drawBackground = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number
+  ) => {
+    const key = `${selectedBgSkin.value.id}:${w}x${h}:${bgImageReady() ? 'r' : 'p'}`
+    if (bgBufferKey !== key || !bgBuffer) {
+      let buf: HTMLCanvasElement | OffscreenCanvas
+      if (typeof OffscreenCanvas !== 'undefined') {
+        buf = new OffscreenCanvas(Math.max(1, w), Math.max(1, h))
+      } else {
+        const el = document.createElement('canvas')
+        el.width = Math.max(1, w)
+        el.height = Math.max(1, h)
+        buf = el
+      }
+      const bctx = buf.getContext('2d') as
+        | CanvasRenderingContext2D
+        | OffscreenCanvasRenderingContext2D
+        | null
+      if (!bctx) {
+        // No buffer context (memory pressure, exotic browser) — fall back to
+        // the direct fill rather than leaving the frame unpainted.
+        ctx.fillStyle = resolveBgFill(ctx, w, h)
+        ctx.fillRect(0, 0, w, h)
+        return
+      }
+      bctx.fillStyle = resolveBgFill(bctx as CanvasRenderingContext2D, w, h)
+      bctx.fillRect(0, 0, w, h)
+      bgBuffer = buf
+      bgBufferKey = key
+    }
+    ctx.drawImage(bgBuffer as CanvasImageSource, 0, 0)
+  }
+
   // ── Spark VFX ───────────────────────────────────────────────────────────
   const sparkImage = preloadImage(prependBaseUrl('images/vfx/big-spark_1280x256.webp'))
   const activeSparks: SpritesheetAnimation[] = []
@@ -781,8 +939,9 @@ export const useSpinnerGame = () => {
   }
 
   const MAX_ACTIVE_VFX = isFirefox ? 2 : 10
+  const maxActiveVfx = (): number => (FX.low ? 2 : MAX_ACTIVE_VFX)
   const spawnShockBolt = (wallX: number, wallY: number, bladeX: number, bladeY: number) => {
-    if (activeShockBolts.length >= MAX_ACTIVE_VFX) return
+    if (activeShockBolts.length >= maxActiveVfx()) return
     // Extend endpoint slightly past the blade center along the incoming
     // direction so the bolt visually pierces into the core rather than
     // clipping at the rim.
@@ -878,6 +1037,11 @@ export const useSpinnerGame = () => {
   }
 
   const TRAIL_DURATION = 700
+  // Low tier keeps a visibly shorter tail: fewer retained points means fewer
+  // stroked segments AND less translucent fill area, which is what the
+  // rasteriser actually charges for.
+  const TRAIL_DURATION_LOW = 420
+  const trailDuration = (): number => (FX.low ? TRAIL_DURATION_LOW : TRAIL_DURATION)
   const trails = new Map<number, TrailData>()
 
   const updateTrails = (blades: SpinnerState[], now: number) => {
@@ -899,8 +1063,9 @@ export const useSpinnerGame = () => {
       pts.push({ x: blade.x, y: blade.y, speed: spd, time: now })
 
       // Prune expired points (batch splice instead of repeated shift)
+      const maxAge = trailDuration()
       let pruneCount = 0
-      while (pruneCount < pts.length && now - pts[pruneCount]!.time > TRAIL_DURATION) {
+      while (pruneCount < pts.length && now - pts[pruneCount]!.time > maxAge) {
         pruneCount++
       }
       if (pruneCount > 0) pts.splice(0, pruneCount)
@@ -975,7 +1140,7 @@ export const useSpinnerGame = () => {
       // Emit 1-2 cloud particles per frame when moving
       const count = spd > 3 ? 2 : 1
       for (let i = 0; i < count; i++) {
-        if (cloudParticles.length >= 120) break
+        if (cloudParticles.length >= (FX.low ? 40 : 120)) break
         const angle = Math.random() * Math.PI * 2
         const drift = 0.2 + Math.random() * 0.3
         const maxLife = 400 + Math.random() * 300
@@ -1016,7 +1181,7 @@ export const useSpinnerGame = () => {
       if (blade.hp <= 0) continue
       const spd = speed(blade)
       if ((blade.config.modelId !== 'boulder' && blade.config.modelId !== 'diamond') || spd < 1.0) continue
-      if (groundDecals.length >= 80) break
+      if (groundDecals.length >= (FX.low ? 25 : 80)) break
       groundDecals.push({
         x: blade.x, y: blade.y,
         size: blade.radius * (0.6 + spd * 0.04),
@@ -1038,7 +1203,7 @@ export const useSpinnerGame = () => {
       if (spd < 0.5) continue
       const count = spd > 3 ? 3 : spd > 1.5 ? 2 : 1
       for (let i = 0; i < count; i++) {
-        if (sandGrains.length >= 150) break
+        if (sandGrains.length >= (FX.low ? 50 : 150)) break
         const angle = Math.random() * Math.PI * 2
         const drift = 0.15 + Math.random() * 0.25
         const maxLife = 350 + Math.random() * 250
@@ -1280,7 +1445,7 @@ export const useSpinnerGame = () => {
 
       // Crit: dark orange pulsating aura
       if (dn.isCrit) {
-        if (!isFirefox) {
+        if (!isFirefox && !FX.low) {
           const auraRadius = 8 + critPulse * 6
           ctx.shadowColor = '#cc6600'
           ctx.shadowBlur = auraRadius
@@ -3408,10 +3573,9 @@ export const useSpinnerGame = () => {
     const scale = fitSize / (ARENA_RADIUS * 2 + ARENA_PADDING)
 
     // Background = currently-equipped bg skin (tile pattern, artwork, or
-    // gradient placeholder). Resolved fresh each frame so equipping a new
-    // skin in the modal applies immediately.
-    ctx.fillStyle = resolveBgFill(ctx, canvasWidth, canvasHeight)
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+    // gradient placeholder), blitted from a buffer that is keyed on the skin
+    // id, so equipping a new skin in the modal still applies immediately.
+    drawBackground(ctx, canvasWidth, canvasHeight)
 
     ctx.save()
     ctx.translate(centerX, centerY)
@@ -3460,7 +3624,7 @@ export const useSpinnerGame = () => {
     // Shock-wall lightning bolts
     for (const bolt of activeShockBolts) {
       const t = bolt.life / bolt.maxLife
-      drawLightningBolt(ctx, bolt.x0, bolt.y0, bolt.x1, bolt.y1, isFirefox ? {
+      drawLightningBolt(ctx, bolt.x0, bolt.y0, bolt.x1, bolt.y1, (isFirefox || FX.low) ? {
         jitter: 8,
         segments: 4,
         branchChance: 0.2,
@@ -3594,15 +3758,28 @@ export const useSpinnerGame = () => {
     joystickCenter.value = { x: jcX, y: jcY }
   }
 
-  // Renders the joystick into a dedicated overlay canvas that sits above
+  // Whether the overlay canvas currently holds any pixels.
+  //
+  // The joystick renders into a dedicated full-screen canvas that sits above
   // the HUD in DOM order, so the bottom-left stat card no longer covers it.
+  // That layer is empty for every frame the joystick is not up — which, on the
+  // default drag-to-aim control scheme, is every frame of the match. Clearing
+  // it unconditionally dirtied and recomposited a full-viewport layer once per
+  // frame to produce nothing.
+  let joystickOverlayPainted = false
+
   const renderJoystickOverlay = (
     ctx: CanvasRenderingContext2D,
     canvasWidth: number,
     canvasHeight: number
   ) => {
+    const wantsJoystick = isJoystickVisible.value && phase.value === 'player_turn'
+    // Nothing on screen and nothing to draw — leave the layer untouched so the
+    // compositor can keep reusing last frame's (empty) tile.
+    if (!wantsJoystick && !joystickOverlayPainted) return
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    if (!isJoystickVisible.value || phase.value !== 'player_turn') return
+    joystickOverlayPainted = wantsJoystick
+    if (!wantsJoystick) return
     const centerX = canvasWidth / 2
     const centerY = canvasHeight / 2
     const fitSize = Math.min(canvasWidth, canvasHeight)
@@ -3621,9 +3798,18 @@ export const useSpinnerGame = () => {
     { widthBase: 3, widthSpeed: 3, alphaScale: 0.35 }, // mid body
     { widthBase: 1, widthSpeed: 1.5, alphaScale: 0.7 }  // inner core
   ]
+  // One pass instead of three. The two wide layers are pure fill area — a
+  // 6px and a 3px translucent stroke retraced over the whole tail, every
+  // blade, every frame — so collapsing them into a single mid-width stroke
+  // removes two thirds of the trail's cost and most of its overdraw.
+  const TRAIL_LAYERS_LOW = [
+    { widthBase: 2.5, widthSpeed: 2, alphaScale: 0.6 }
+  ]
 
   const renderTrails = (ctx: CanvasRenderingContext2D) => {
     const now = performance.now()
+    const layers = FX.low ? TRAIL_LAYERS_LOW : TRAIL_LAYERS
+    const maxAge = trailDuration()
 
     // Team colors: player = blue, npc = red
     const TEAM_COLOR = { player: [80, 160, 255], npc: [255, 80, 80] } as const
@@ -3653,7 +3839,7 @@ export const useSpinnerGame = () => {
           const [cr, cg, cb] = FD_COLORS[c]!
           const laneOffset = (c - (FD_COLORS.length - 1) / 2) * stripWidth
 
-          for (const layer of TRAIL_LAYERS) {
+          for (const layer of layers) {
             ctx.lineCap = 'round'
             ctx.lineJoin = 'round'
             ctx.lineWidth = layer.widthBase * 0.6 + layer.widthSpeed * 0.4
@@ -3666,7 +3852,7 @@ export const useSpinnerGame = () => {
               const pMid = pts[mid]!
               const tMid = timeSpan > 0 ? (pMid.time - oldestTime) / timeSpan : 1
               const ageMid = now - pMid.time
-              const ageFadeMid = Math.max(0, 1 - ageMid / TRAIL_DURATION)
+              const ageFadeMid = Math.max(0, 1 - ageMid / maxAge)
               const alphaMid = ageFadeMid * layer.alphaScale
               if (alphaMid <= 0.01) continue
 
@@ -3692,7 +3878,7 @@ export const useSpinnerGame = () => {
           }
         }
       } else {
-        for (const layer of TRAIL_LAYERS) {
+        for (const layer of layers) {
           ctx.lineCap = 'round'
           ctx.lineJoin = 'round'
           ctx.lineWidth = isRainbow
@@ -3709,7 +3895,7 @@ export const useSpinnerGame = () => {
             const pMid = pts[mid]!
             const tMid = timeSpan > 0 ? (pMid.time - oldestTime) / timeSpan : 1
             const ageMid = now - pMid.time
-            const ageFadeMid = Math.max(0, 1 - ageMid / TRAIL_DURATION)
+            const ageFadeMid = Math.max(0, 1 - ageMid / maxAge)
             const alphaMid = ageFadeMid * layer.alphaScale
             if (alphaMid <= 0.01) continue
 
@@ -4039,7 +4225,7 @@ export const useSpinnerGame = () => {
         ? `rgba(255, 140, 220, ${rimAlpha * idlePulse})`
         : `rgba(180, 240, 255, ${rimAlpha * idlePulse})`
       ctx.lineWidth = 1.5
-      if (!isFirefox) {
+      if (!isFirefox && !FX.low) {
         ctx.shadowColor = isShock ? '#ff66cc' : '#8fdfff'
         ctx.shadowBlur = 6 + hit * 10
       }
@@ -4558,18 +4744,12 @@ export const useSpinnerGame = () => {
       const now = performance.now()
       // Refresh bolt geometry every 100ms for crackling effect
       const boltSeed = Math.floor(now / 100)
-      const boltCount = isFirefox ? 1 : 5
+      const boltCount = (isFirefox || FX.low) ? 1 : 5
       // Ambient electric glow
-      ctx.save()
-      ctx.globalAlpha = 0.15 + 0.1 * Math.sin(now * 0.008)
-      const glow = ctx.createRadialGradient(blade.x, blade.y, blade.radius * 0.3, blade.x, blade.y, blade.radius * 2)
-      glow.addColorStop(0, 'rgba(150,200,255,0.4)')
-      glow.addColorStop(1, 'rgba(100,150,255,0)')
-      ctx.fillStyle = glow
-      ctx.beginPath()
-      ctx.arc(blade.x, blade.y, blade.radius * 2, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.restore()
+      drawAuraSprite(
+        ctx, auraSprite('thunderGlow', 0.15, THUNDER_GLOW_STOPS),
+        blade.x, blade.y, blade.radius * 2, 0.15 + 0.1 * Math.sin(now * 0.008)
+      )
       // 5 big branching lightning bolts, ~72° apart with slight jitter
       for (let i = 0; i < boltCount; i++) {
         const baseAngle = (i / boltCount) * Math.PI * 2
@@ -4578,7 +4758,7 @@ export const useSpinnerGame = () => {
         const len = blade.radius * (1.4 + ((boltSeed * 3 + i * 41) % 100) * 0.012)
         const ex = blade.x + Math.cos(angle) * len
         const ey = blade.y + Math.sin(angle) * len
-        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, isFirefox ? {
+        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, (isFirefox || FX.low) ? {
           jitter: 6,
           segments: 4,
           branchChance: 0.2,
@@ -4603,14 +4783,14 @@ export const useSpinnerGame = () => {
         })
       }
       // Smaller arcs filling the gaps between big bolts
-      const smallBoltCount = isFirefox ? 1 : 5
+      const smallBoltCount = (isFirefox || FX.low) ? 1 : 5
       const smallSeed = Math.floor(now / 130)
       for (let i = 0; i < smallBoltCount; i++) {
         const angle = ((smallSeed * 11 + i * 73 + 34) % 360) * Math.PI / 180
         const len = blade.radius * (0.85 + ((smallSeed * 5 + i * 29) % 100) * 0.005)
         const ex = blade.x + Math.cos(angle) * len
         const ey = blade.y + Math.sin(angle) * len
-        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, isFirefox ? {
+        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, (isFirefox || FX.low) ? {
           jitter: 4,
           segments: 3,
           branchChance: 0,
@@ -4657,35 +4837,16 @@ export const useSpinnerGame = () => {
       const now = performance.now()
       const pulse = 0.4 + 0.3 * Math.sin(now * 0.004)
       const auraR = blade.radius * 1.6
-      const grad = ctx.createRadialGradient(
-        blade.x, blade.y, blade.radius * 0.3,
-        blade.x, blade.y, auraR
-      )
-      grad.addColorStop(0, `rgba(100, 255, 100, ${0.4 * pulse})`)
-      grad.addColorStop(0.5, `rgba(0, 180, 0, ${0.2 * pulse})`)
-      grad.addColorStop(1, 'rgba(0, 100, 0, 0)')
-      ctx.fillStyle = grad
-      ctx.beginPath()
-      ctx.arc(blade.x, blade.y, auraR, 0, Math.PI * 2)
-      ctx.fill()
+      drawAuraSprite(ctx, auraSprite('leech', 0.1875, LEECH_AURA_STOPS),
+        blade.x, blade.y, auraR, pulse)
     }
 
     if (blade.isBoss) {
       // Boss: large fiery pulsating aura
       const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.003)
       const auraRadius = blade.radius * 2.2
-      const grad = ctx.createRadialGradient(
-        blade.x, blade.y, blade.radius * 0.4,
-        blade.x, blade.y, auraRadius
-      )
-      grad.addColorStop(0, `rgba(255, 80, 20, ${0.8 * pulse})`)
-      grad.addColorStop(0.3, `rgba(255, 40, 10, ${0.5 * pulse})`)
-      grad.addColorStop(0.6, `rgba(180, 20, 5, ${0.3 * pulse})`)
-      grad.addColorStop(1, 'rgba(120, 10, 0, 0)')
-      ctx.fillStyle = grad
-      ctx.beginPath()
-      ctx.arc(blade.x, blade.y, auraRadius, 0, Math.PI * 2)
-      ctx.fill()
+      drawAuraSprite(ctx, auraSprite('boss', 0.4 / 2.2, BOSS_AURA_STOPS),
+        blade.x, blade.y, auraRadius, pulse)
       return
     }
 
@@ -4694,31 +4855,34 @@ export const useSpinnerGame = () => {
       ? 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(performance.now() * 0.004))
       : 0.5
     const auraRadius = blade.radius * 1.8 + 4
-    const grad = ctx.createRadialGradient(
-      blade.x, blade.y, blade.radius * 0.3,
-      blade.x, blade.y, auraRadius
-    )
-
-    // Adjust aura brightness per arena so ownership stays readable on
+    // Aura brightness is nudged per arena so ownership stays readable on
     // floors whose hue overlaps the aura colour.
     const at = arenaType.value
-    if (isPlayer) {
-      // Blue aura — brighten on blue-tinted floors (ice, default)
-      const bright = (at === 'ice' || at === 'default') ? 1 : 0
-      grad.addColorStop(0, `rgba(${80 + bright * 40}, ${170 + bright * 40}, 255, ${0.55 * pulse})`)
-      grad.addColorStop(0.5, `rgba(${50 + bright * 30}, ${120 + bright * 30}, 240, ${0.3 * pulse})`)
-      grad.addColorStop(1, `rgba(${40 + bright * 20}, ${100 + bright * 20}, 220, 0)`)
-    } else {
-      // Red aura — brighten on red/warm-tinted floors (boss, lava, shock)
-      const bright = (at === 'boss' || at === 'lava' || at === 'shock') ? 1 : 0
-      grad.addColorStop(0, `rgba(255, ${80 + bright * 50}, ${80 + bright * 50}, ${0.75 * pulse})`)
-      grad.addColorStop(0.5, `rgba(240, ${55 + bright * 40}, ${55 + bright * 40}, ${0.45 * pulse})`)
-      grad.addColorStop(1, `rgba(220, ${40 + bright * 30}, ${40 + bright * 30}, 0)`)
-    }
-    ctx.fillStyle = grad
-    ctx.beginPath()
-    ctx.arc(blade.x, blade.y, auraRadius, 0, Math.PI * 2)
-    ctx.fill()
+    const bright = isPlayer
+      ? ((at === 'ice' || at === 'default') ? 1 : 0)
+      : ((at === 'boss' || at === 'lava' || at === 'shock') ? 1 : 0)
+
+    // `blade.radius * 0.3 / auraRadius` is *almost* constant (0.149-0.157
+    // across every blade size in the game) but not exactly, so it gets
+    // quantised into 0.005-wide buckets folded into the cache key. At a 60px
+    // aura the worst-case inner-stop shift is 0.15px.
+    const innerRatio = Math.round((blade.radius * 0.3 / auraRadius) * 200) / 200
+    const key = `${isPlayer ? 'p' : 'n'}${bright}_${innerRatio}`
+    const stops: [number, string][] = isPlayer
+      ? [
+        // Blue aura — brighter on blue-tinted floors (ice, default)
+        [0, `rgba(${80 + bright * 40}, ${170 + bright * 40}, 255, 0.55)`],
+        [0.5, `rgba(${50 + bright * 30}, ${120 + bright * 30}, 240, 0.3)`],
+        [1, `rgba(${40 + bright * 20}, ${100 + bright * 20}, 220, 0)`]
+      ]
+      : [
+        // Red aura — brighter on red/warm-tinted floors (boss, lava, shock)
+        [0, `rgba(255, ${80 + bright * 50}, ${80 + bright * 50}, 0.75)`],
+        [0.5, `rgba(240, ${55 + bright * 40}, ${55 + bright * 40}, 0.45)`],
+        [1, `rgba(220, ${40 + bright * 30}, ${40 + bright * 30}, 0)`]
+      ]
+    drawAuraSprite(ctx, auraSprite(key, innerRatio, stops),
+      blade.x, blade.y, auraRadius, pulse)
   }
 
   const renderBlade = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
@@ -4881,7 +5045,7 @@ export const useSpinnerGame = () => {
   const renderSelectionGlow = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
     ctx.strokeStyle = '#ffdd00'
     ctx.lineWidth = 2
-    if (!isFirefox) {
+    if (!isFirefox && !FX.low) {
       ctx.shadowColor = '#ffdd00'
       ctx.shadowBlur = 12
     }

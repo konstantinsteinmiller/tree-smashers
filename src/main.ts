@@ -15,7 +15,8 @@ import {
   isSupportedLocale
 } from '@/i18n'
 import { LANGUAGES } from '@/utils/enums'
-import { initCrazyGames, crazyLocale, startLoading } from '@/use/useCrazyGames'
+import { initCrazyGames, crazyLocale, crazyPlayerName, startLoading } from '@/use/useCrazyGames'
+import { setSdkNameSource } from '@/use/usePlayerIdentity'
 import { initAds } from '@/use/useAds'
 import useUser, {
   isCrazyWeb,
@@ -125,6 +126,13 @@ const bootstrap = async () => {
 
   // Platform SDK init — must happen before App loads.
   if (isCrazyWeb) {
+    // Where the leaderboard's tier-2 display name comes from. PUSHED IN, never
+    // imported by `usePlayerIdentity`: a lazy `await import('@/use/useCrazyGames')`
+    // over there would be resolved by Vite at TRANSFORM time, so the module
+    // could not compile in a project without that exact file — and the
+    // try/catch around it, which only ever catches at runtime, would look like
+    // protection while providing none.
+    setSdkNameSource(() => crazyPlayerName.value)
     await initCrazyGames()
     // Explicit `loadingStart` immediately after SDK init. The SDK
     // technically auto-enters the "loading" state on init, but CG QA's

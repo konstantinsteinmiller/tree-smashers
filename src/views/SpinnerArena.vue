@@ -17,6 +17,7 @@ import type { TipId } from '@/use/useTips'
 import TipBadge from '@/components/atoms/TipBadge.vue'
 import { useHint } from '@/use/useHint'
 import { useScreenshake } from '@/use/useScreenshake'
+import { noteRenderFrame, setQualityMonitoring } from '@/use/useQuality'
 import type { SpinnerConfig } from '@/types/spinner'
 import useUser, { isMobileLandscape, isMobilePortrait, isDailyChallengeEnabled } from '@/use/useUser'
 import IconCoin from '@/components/icons/IconCoin.vue'
@@ -45,7 +46,10 @@ import PvPButton from '@/components/organisms/PvPButton.vue'
 import PvPLobbyModal from '@/components/organisms/PvPLobbyModal.vue'
 import usePVP from '@/use/usePVP'
 import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
-import useLeaderboard, { type LeaderboardEntry } from '@/use/useLeaderboard'
+import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/useLeaderboard'
+import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
+import RankBadge from '@/components/atoms/RankBadge.vue'
+import { leaderboardEnabled, reportRun } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
 import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
@@ -130,6 +134,55 @@ const {
   returnToLobby: pvpReturnToLobby,
   leavePvP
 } = usePVP()
+
+// ─── Global leaderboard ──────────────────────────────────────
+//
+// The board's SCORE is the deepest campaign stage ever reached — a lifetime
+// best that only ever grows, which is what `useLiveLeaderboard`'s "post only on
+// a personal record" write rule is built on. `playerMaxStage` is the persisted
+// high-water mark; `currentStageId` can briefly be ahead of it in the frame
+// between `advanceStage()` and `recordPlayerStage()`, so take the larger.
+const leaderboardModalOpen: Ref<boolean> = ref(false)
+const bestStage = computed(() => Math.max(currentStageId.value, playerMaxStage.value))
+
+/** The board's tie-break column: summed upgrade levels across the whole
+ *  roster. Monotonic (upgrades never refund) and it is what actually separates
+ *  two players sitting on the same stage. */
+const teamPower = computed(() => {
+  const { tops, bottoms } = playerUpgrades.value
+  let sum = 0
+  for (const level of Object.values(tops)) if (Number.isFinite(level)) sum += level
+  for (const level of Object.values(bottoms)) if (Number.isFinite(level)) sum += level
+  return sum
+})
+
+/**
+ * Post the result, fire-and-forget.
+ *
+ * `void`, NEVER awaited: the board is a decoration on a game that works without
+ * it, and awaiting would put a captive-portal wifi login page between the
+ * player and their rewards for the full 6 s timeout. Called once the result
+ * overlay is already on screen, from BOTH overlays a battle can end on — the
+ * ordinary reward screen and the boss-roulette reward — because a boss win
+ * never reaches the first one.
+ *
+ * WHY THESE ARE THROTTLED CALLS, NOT RUN-END ONES. In this game a battle result
+ * is a "clear": a win advances the campaign by exactly one stage, so a player
+ * on a good session sets a personal record on nearly every screen. Posting each
+ * one would be a write per stage — the quota trap `reportRun`'s
+ * `WRITE_MIN_GAP_MS` exists to close. It coalesces instead of dropping: every
+ * post carries the CURRENT best, so a skipped one loses nothing and the next
+ * carries the higher number. Nothing is lost across a quit either, because the
+ * posted-score pointer is persisted and the next session picks it up.
+ *
+ * A LOSS is the closest thing here to the end of a run — the climb stalled — so
+ * it flushes whatever the throttle is still holding. That costs nothing: a loss
+ * can never raise the best, so `force` only lifts the gap on a write that an
+ * earlier win had already made due.
+ */
+const reportLeaderboardRun = () => {
+  void reportRun(bestStage.value, teamPower.value, { force: gameResult.value === 'lose' })
+}
 
 const pvpModalOpen: Ref<boolean> = ref(false)
 const pvpMode: Ref<boolean> = ref(false)
@@ -416,8 +469,22 @@ const isGameplayActive = computed(() =>
   && !surrenderModalOpen.value
 )
 
+// A build that deliberately paints below the auto-downgrade threshold (see
+// FPS_CAP further down) would make every device read as "too slow" — detection
+// measures the rate we CHOSE to draw at, so it only means anything above the
+// threshold. Read here rather than from FPS_CAP because this watcher runs
+// immediately, before that constant is initialised.
+const qualityDetectionAllowed = (() => {
+  const cap = Number(import.meta.env.VITE_APP_FPS_CAP) || 0
+  return cap === 0 || cap > 30
+})()
+
 watch(isGameplayActive, (active) => {
   syncGameplayLifecycle(active)
+  // Only frames drawn during an actual fight may decide the render-quality
+  // tier. Menus, reward screens and the roulette have a completely different
+  // (much cheaper) frame cost and would wash the measurement out.
+  setQualityMonitoring(active && qualityDetectionAllowed)
 }, { immediate: true })
 
 // Live stats for the blade HUD — always show all blades (even dead ones)
@@ -866,6 +933,10 @@ const onRouletteResult = (result: RouletteResult) => {
   // Show celebration overlay with VFX
   rouletteRewardReady.value = false
   showRouletteReward.value = true
+  // A boss win NEVER reaches the ordinary reward overlay — it detours through
+  // the roulette — so the board has to be posted from here too. Missing this
+  // branch would under-report exactly the runs that advance a player furthest.
+  reportLeaderboardRun()
   playSound('happy')
   spawnMeteorShower(60, 40, 50) // warm star burst
   // Signal a "happy moment" to the CrazyGames SDK alongside the reward VFX —
@@ -906,6 +977,8 @@ watch(cheatRouletteSignal, () => {
 
 // Coin explosion VFX when the reward overlay appears
 watch(showReward, async (show) => {
+  // Ad first, overlay up, THEN the board — see `reportLeaderboardRun`.
+  if (show) reportLeaderboardRun()
   // Always tear down any prior cycle when the overlay state changes — both
   // closing the overlay and opening a new battle's overlay need to start
   // fresh.
@@ -1167,6 +1240,11 @@ const renderLoop = (now = 0) => {
   }
 
   render(ctx, canvasWidth.value, canvasHeight.value, showHint.value, currentStageId.value)
+
+  // Feed the adaptive-quality detector. Placed after the draw and inside the
+  // "we actually painted" branch, so hidden-tab and off-screen frames (which
+  // return above) never look like a frame-rate collapse.
+  noteRenderFrame(now)
 
   // Joystick draws to a separate overlay canvas that sits above the HUD,
   // so the bottom-left stat card no longer covers it.
@@ -1618,6 +1696,18 @@ onUnmounted(() => {
             v-if="currentStageId >= 5 && !ghostMode && !showConfigSpotlight"
             @fight="onGhostFight"
           )
+          //- Global leaderboard. Gated on `leaderboardEnabled`, NOT on whether
+          //- this build talks to the Worker — a Poki/YouTube build has no
+          //- endpoint but still ships a real baked board, and a build with
+          //- neither must lose the button entirely rather than open an empty
+          //- modal.
+          FIconButton(
+            v-if="leaderboardEnabled && !ghostMode && !pvpMode && !showConfigSpotlight"
+            type="secondary"
+            size="md"
+            :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
+            @click="leaderboardModalOpen = true"
+          )
           FIconButton(
             v-if="hasFirstWin || currentStageId >= 2"
             type="secondary"
@@ -1686,6 +1776,12 @@ onUnmounted(() => {
           div.flex.items-center.gap-3(ref="rewardCoinRef")
             IconCoin(class="w-8 h-8 text-yellow-300")
             span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
+          //- "#1130 of 2345" — where this player stands globally. Shown on the
+          //- win AND the lose screen: it is the one number on the overlay that
+          //- is not about this battle, and after a loss it is the reason to
+          //- try the stage again. Renders NOTHING when there is no honest
+          //- answer, so no empty plaque and no permanent spinner.
+          RankBadge(:score="bestStage")
         //- Player tip — kept in the flex column so it always renders
         //- BELOW the reward (no chance of covering it) and ABOVE the
         //- tap-to-continue prompt (which is absolutely docked to the
@@ -1775,6 +1871,14 @@ onUnmounted(() => {
           ) {{ t('skinChest.acquired', { name: t(`skins.${skinChestReward.modelId}`) }) }}
 
     //- Options Modal
+    //- Fetches on OPEN, not on mount — most sessions never open it, and
+    //- reopening after a failure IS the retry button.
+    LeaderboardModal(
+      v-if="leaderboardEnabled"
+      v-model="leaderboardModalOpen"
+      :score="bestStage"
+    )
+
     OptionsModal(
       :is-open="showOptions"
       @close="showOptions = false"

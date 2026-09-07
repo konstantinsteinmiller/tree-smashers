@@ -1,0 +1,24 @@
+name = "leaderboard-chaos-arena"
+main = "src/index.ts"
+# Pinned deliberately. This game's Worker lives on its OWN Cloudflare account,
+# separate from the one survivalist uses, so D1's per-account free-tier limits
+# are not shared. Wrangler caches the "selected account" in
+# ~/.wrangler/cache/wrangler-account.json INDEPENDENTLY of the OAuth token, so
+# a `wrangler login` as a different user leaves the old account id in place and
+# every call then authenticates as one account while addressing another —
+# which surfaces as `Authentication error [code: 10000]`, not as anything that
+# mentions accounts. Naming it here makes the target explicit and immune to
+# that cache. An account id is not a secret; it is in every dashboard URL.
+account_id = "7c5ee6a28676c02440e38e4f3e7bbb15"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "leaderboard-chaos-arena"
+database_id = "fa4850bf-c91c-4ca7-b0ca-3a5a168a8759"
+
+[vars]
+# Empty = allow any origin. Every portal build serves the game from a different
+# origin and a sandboxed iframe sends `null`, so an allowlist is opt-in.
+ALLOWED_ORIGINS = ""
+# SCORE_SECRET is deliberately NOT here — `wrangler secret put SCORE_SECRET`.

@@ -256,7 +256,15 @@ const saveCgSubmittedStage = (stage: number) => {
 
 const npcEntries: Ref<LeaderboardEntry[]> = ref(loadEntries())
 const lastUpdatedAt: Ref<number> = ref(loadLastUpdate())
-const playerMaxStage: Ref<number> = ref(loadPlayerMaxStage())
+/**
+ * The deepest campaign stage this player has ever reached.
+ *
+ * Exported because it is the GLOBAL leaderboard's score (see
+ * `useLiveLeaderboard`): a lifetime best that only ever grows, which is exactly
+ * what that board's "post only on a personal record" write rule requires. The
+ * fake/NPC board below is a separate, purely local thing.
+ */
+export const playerMaxStage: Ref<number> = ref(loadPlayerMaxStage())
 const cgSubmittedStage: Ref<number> = ref(loadCgSubmittedStage())
 const newcomerWindow: Ref<NewcomerWindow> = ref(loadNewcomerWindow())
 

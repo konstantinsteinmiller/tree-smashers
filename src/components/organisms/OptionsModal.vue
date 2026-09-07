@@ -12,6 +12,7 @@ import { DIFFICULTY, LANGUAGES } from '@/utils/enums' // Import LANGUAGES
 import { prependBaseUrl } from '@/utils/function'
 import { stopGameplay } from '@/use/useCrazyGames'
 import resetAllProgress from '@/use/useResetProgress'
+import { qualityPreference, qualityTier, setQualityPreference } from '@/use/useQuality'
 
 const props = defineProps<{
   isOpen: boolean
@@ -98,6 +99,19 @@ const tabs = computed(() => {
   }
 )
 
+// Graphics quality. 'auto' lets the arena's frame-time detector pick the tier
+// on this device; the explicit options are an escape hatch for a player who
+// wants the cheap look on a device that technically passes, or the full look
+// on one that technically fails.
+const qualityOptions = computed(() => [
+  {
+    value: 'auto',
+    label: `${t('qualityAuto')} (${t(qualityTier.value === 'low' ? 'qualityLow' : 'qualityHigh')})`
+  },
+  { value: 'high', label: t('qualityHigh') },
+  { value: 'low', label: t('qualityLow') }
+])
+
 // Map the string array to the Option interface for FSelect
 const languagesList = computed(() => {
   return LANGUAGES.map(locale => ({
@@ -139,6 +153,17 @@ const languagesList = computed(() => {
             :model-value="userLanguage"
             @update:model-value="setSettingValue('language', $event)"
           )
+
+        //- Graphics quality. Device-local (never synced) — a phone's verdict
+        //- must not follow the player onto their desktop.
+        div(class="z-[9] flex flex-col gap-2 scale-90 sm:scale-100")
+          FSelect(
+            :label="t('graphicsQuality')"
+            :options="qualityOptions"
+            :model-value="qualityPreference"
+            @update:model-value="setQualityPreference($event)"
+          )
+          span.game-text(class="text-[0.7rem] md:text-[0.85rem] text-slate-400 text-center px-2") {{ t('graphicsQualityNote') }}
 
         hr(class="border-slate-600 my-1 md:my-2 pt-0")
 
