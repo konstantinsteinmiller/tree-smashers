@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  leaderboardEnabled, leaderboardFailed, playerTotal, rankFor
+  leaderboardFailed, leaderboardVisible, playerTotal, rankFor
 } from '@/use/useLiveLeaderboard'
 
 /**
@@ -58,7 +58,11 @@ const { t } = useI18n()
  * hash sign. (Costs an hour the first time.)
  */
 const label = computed<string>(() => {
-  if (!leaderboardEnabled) return ''
+  // `leaderboardVisible`, not `leaderboardEnabled`: on a platform with accounts
+  // a signed-out player has no board and therefore no placing to be shown on
+  // the result screen. Reactive, so signing in mid-session brings the pill back
+  // without a reload.
+  if (!leaderboardVisible.value) return ''
   const rank = rankFor(props.score)
   if (rank > 0) return `#${rank}`
   // `0` is the only non-answer `rankFor` has, and it means "nothing honest to

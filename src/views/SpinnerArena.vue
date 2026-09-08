@@ -49,7 +49,7 @@ import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
 import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/useLeaderboard'
 import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
 import RankBadge from '@/components/atoms/RankBadge.vue'
-import { leaderboardEnabled, reportRun } from '@/use/useLiveLeaderboard'
+import { leaderboardVisible, reportRun } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
 import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
@@ -1178,8 +1178,11 @@ const startDailyChallenge = () => {
   dailyCoinReward.value = 0
   coinsAwarded.value = false
   // No bouncers, no power-ups, never a boss arena — the variety comes from the
-  // random shape + ability roster. The shape is the 9th initGame arg.
-  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape)
+  // random shape + ability roster. The shape is the 9th initGame arg; the 10th
+  // marks this as a daily match, which is what lets the virtual joystick tell
+  // "against an inscribed wall with room to spare" from "against the screen
+  // edge" (see `isJoystickVisible`).
+  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape, true)
 }
 
 const onOpenConfig = () => {
@@ -1696,13 +1699,14 @@ onUnmounted(() => {
             v-if="currentStageId >= 5 && !ghostMode && !showConfigSpotlight"
             @fight="onGhostFight"
           )
-          //- Global leaderboard. Gated on `leaderboardEnabled`, NOT on whether
+          //- Global leaderboard. Gated on `leaderboardVisible`, NOT on whether
           //- this build talks to the Worker — a Poki/YouTube build has no
           //- endpoint but still ships a real baked board, and a build with
           //- neither must lose the button entirely rather than open an empty
-          //- modal.
+          //- modal. On CrazyGames the same flag also hides the button from a
+          //- signed-out guest, per QA: guests get no board at all.
           FIconButton(
-            v-if="leaderboardEnabled && !ghostMode && !pvpMode && !showConfigSpotlight"
+            v-if="leaderboardVisible && !ghostMode && !pvpMode && !showConfigSpotlight"
             type="secondary"
             size="md"
             :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
@@ -1874,7 +1878,7 @@ onUnmounted(() => {
     //- Fetches on OPEN, not on mount — most sessions never open it, and
     //- reopening after a failure IS the retry button.
     LeaderboardModal(
-      v-if="leaderboardEnabled"
+      v-if="leaderboardVisible"
       v-model="leaderboardModalOpen"
       :score="bestStage"
     )

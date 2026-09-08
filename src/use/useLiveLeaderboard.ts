@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, shallowRef, type ComputedRef, type Ref } from 'vue'
 import { getState, setState } from '@/use/persistedState'
 import { POSTED_NAME_KEY, SUBMITTED_STAGE_KEY } from '@/keys'
 import { resolveIdentity, type PlayerIdentity } from '@/use/usePlayerIdentity'
@@ -64,6 +64,87 @@ const LIVE: boolean = ENDPOINT.length > 0
  * switches off together and `rankFor` returns 0, which hides the cell.
  */
 export const leaderboardEnabled: boolean = LIVE || boardSnapshot !== null
+
+// ─── The account gate ───────────────────────────────────────────────────────
+//
+// GUESTS AND ACCOUNTS MUST NOT SHARE A BOARD. The row is keyed by a per-device
+// id and labelled with whatever name the session can resolve, so one player who
+// plays as a guest and then signs in posts twice under one id: the row survives
+// and is RELABELLED, and from the outside that is a leaderboard entry that
+// silently changed its name. Play as a guest on a second device and it is two
+// rows for one person. CrazyGames QA rejected the build for exactly this:
+//
+//   "a guest can enter the leaderboard with a random name, then after logging
+//    in, that entry changes to the account username. This can eventually create
+//    duplicate or disappearing entries when switching between guest and
+//    logged-in states. To keep things simple and avoid these issues, please
+//    disable the leaderboard for guest players and only submit scores when the
+//    player is logged in."
+//
+// So on a platform that HAS accounts, the whole feature — the button, the
+// modal, the result-screen rank, and every write — waits for a signed-in
+// player.
+//
+// THE GATE IS OPT-IN, AND THAT IS THE IMPORTANT PART. Most portals this game
+// ships to expose no account concept whatsoever (Poki, GamePix, Playgama,
+// itch, GameDistribution, Y8, GameMonetize…). Gating on "logged in" everywhere
+// would delete the leaderboard from every one of those builds, because nobody
+// can ever sign in. `null` therefore means "this platform has no accounts, the
+// question does not apply" and is NOT the same as "signed out".
+//
+// Injected rather than imported, for the reason spelled out over
+// `setSdkNameSource`: a lazy `import('@/use/useCrazyGames')` in here is
+// resolved by Vite at TRANSFORM time, so this module would refuse to build in
+// any project without that exact file — and it would drag the CG SDK into the
+// entry graph of every OTHER platform's bundle on the way.
+
+/** A `shallowRef` rather than a plain `let`: `leaderboardAuthorized` is a
+ *  computed, and a gate installed after its first evaluation has to invalidate
+ *  it. Assigning a module-scoped variable would not, and the leaderboard would
+ *  stay visible to the guest it was just told to hide from. */
+const authGate = shallowRef<(() => boolean) | null>(null)
+
+/**
+ * Install the "is a real account signed in?" source, or `null` for a platform
+ * with no accounts (the default, and the state every non-CG build stays in).
+ *
+ * The getter is called from inside a computed, so reading a `ref` in it is what
+ * makes sign-in and sign-out propagate on their own:
+ *
+ *     setLeaderboardAuthGate(() => isCrazyLoggedIn.value)
+ */
+export const setLeaderboardAuthGate = (gate: (() => boolean) | null): void => {
+  authGate.value = gate
+}
+
+/**
+ * May this session see and touch the board?
+ *
+ * True when no gate is installed (no account concept — the common case), or
+ * when the installed gate says a player is signed in.
+ */
+export const leaderboardAuthorized: ComputedRef<boolean> = computed(() => {
+  const gate = authGate.value
+  if (gate === null) return true
+  try {
+    return gate() === true
+  } catch {
+    // A throwing gate is a broken SDK, not an authorisation. Fail CLOSED: the
+    // failure this whole gate exists to prevent is a guest reaching the board.
+    return false
+  }
+})
+
+/**
+ * What every UI entry point binds to — the HUD button, the modal, the rank chip.
+ *
+ * `leaderboardEnabled` answers "does this build have a board at all" and is a
+ * build-time constant; this answers "may the player in front of us have it",
+ * and changes the moment they sign in or out.
+ */
+export const leaderboardVisible: ComputedRef<boolean> = computed(
+  () => leaderboardEnabled && leaderboardAuthorized.value
+)
 
 /**
  * 6 s, matching the worker's own budget note.
@@ -311,6 +392,10 @@ seedOfflineBoard()
  * one edge-cached GET.
  */
 export const ensureBoard = async (): Promise<void> => {
+  // A guest is never shown the board, so never spend a request fetching one
+  // for them. Not a security boundary — `/top` is public and unauthenticated —
+  // just the quota rule applied to a player who cannot see the result.
+  if (!leaderboardAuthorized.value) return
   // `fetched`, not `board.value !== null` — the offline ladder has usually
   // already put a board on screen, and testing the value would mean a device
   // with a cache never refreshed it again.
@@ -359,6 +444,11 @@ export const ensureBoard = async (): Promise<void> => {
  */
 export const submitScore = async (score: number, power: number): Promise<boolean> => {
   if (!LIVE) return false
+  // Belt and braces. `reportRun` already refuses on behalf of a guest, but this
+  // is the function that actually writes a name to a public board, and the
+  // guest/account mixing it would cause is not repairable from the client
+  // afterwards — so it refuses on its own account too.
+  if (!leaderboardAuthorized.value) return false
   pending.value = true
   try {
     const { id, name } = await identity()
@@ -445,6 +535,15 @@ export const reportRun = async (
   // snapshot, which no run can change, so this is the one entry point that stays
   // switched off where `leaderboardEnabled` is true.
   if (!LIVE) return
+  // A GUEST'S RUN IS NEVER REPORTED. Not throttled, not queued, not banked for
+  // a later sign-in — the run simply does not reach the board, which is the
+  // only version of this that cannot end in a relabelled or duplicated row.
+  //
+  // Note what is deliberately NOT done here: the guest's local `posted` /
+  // `POSTED_NAME_KEY` bookkeeping is left exactly as it is. A player who signs
+  // in later then posts their real best on the next record, under one id and
+  // one name, instead of replaying a guest history that was never on the board.
+  if (!leaderboardAuthorized.value) return
   try {
     // Both numbers come off the save blob, which a cloud restore can hand back
     // anything for, and the worker rejects a non-integer outright.

@@ -1,8 +1,8 @@
 {
   "source": "https://leaderboard-chaos-arena.rodent-race.workers.dev",
-  "fetchedAt": 1788816355510,
-  "updatedAt": 1788816355457,
-  "total": 8,
+  "fetchedAt": 1788875261938,
+  "updatedAt": 1788875261835,
+  "total": 11,
   "entries": [
     {
       "rank": 1,
@@ -18,37 +18,55 @@
     },
     {
       "rank": 3,
+      "name": "Sunsauruss",
+      "score": 10,
+      "power": 19
+    },
+    {
+      "rank": 4,
       "name": "JJ_Jonas",
       "score": 8,
       "power": 0
     },
     {
-      "rank": 4,
+      "rank": 5,
       "name": "Talon847783",
       "score": 4,
       "power": 2
     },
     {
-      "rank": 5,
+      "rank": 6,
       "name": "Striker393931",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 5,
+      "rank": 6,
       "name": "Rogue404630",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 5,
+      "rank": 6,
       "name": "Striker472186",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 5,
+      "rank": 6,
       "name": "Ripper470401",
+      "score": 2,
+      "power": 0
+    },
+    {
+      "rank": 6,
+      "name": "Blazer640361",
+      "score": 2,
+      "power": 0
+    },
+    {
+      "rank": 6,
+      "name": "Rogue767531",
       "score": 2,
       "power": 0
     }
@@ -63,6 +81,10 @@
       1
     ],
     [
+      10,
+      1
+    ],
+    [
       8,
       1
     ],
@@ -72,7 +94,7 @@
     ],
     [
       2,
-      4
+      6
     ]
   ]
 }

@@ -61,6 +61,31 @@ export const isSdkMuted = ref<boolean | null>(null)
 export const crazyPlayerName = ref<string | null>(null)
 
 /**
+ * Reactive: true while a real CrazyGames ACCOUNT is signed in on this session.
+ *
+ * Distinct from `crazyPlayerName !== null` in the one direction that matters:
+ * the name is REMEMBERED across sessions by `usePlayerIdentity` (so an offline
+ * session doesn't relabel the player's row), while this is the live answer to
+ * "is there an account behind the game right now". Gating a leaderboard on the
+ * remembered name would let a signed-out guest keep posting under the account's
+ * handle, which is the exact mixing CG QA rejected the build for.
+ *
+ * Stays `false` on every non-CG build and in any CG environment where user
+ * accounts aren't available at all — see `leaderboardAuthorized` in
+ * `useLiveLeaderboard`, which treats "no account concept" and "signed out"
+ * differently.
+ */
+export const isCrazyLoggedIn = ref(false)
+
+/**
+ * Whether this environment can offer accounts AT ALL (`sdk.user
+ * .isUserAccountAvailable`). False on an embed where CG has disabled the user
+ * module, in which case nobody can ever sign in and an account-gated feature
+ * has to hide rather than sit there waiting for a login that cannot happen.
+ */
+export const crazyAccountsAvailable = ref(false)
+
+/**
  * Reactive: true once we've detected that the player's browser is blocking
  * CrazyGames ad requests (uBlock, AdGuard, Brave Shields, etc.). Two
  * sources feed this:
@@ -133,6 +158,7 @@ export const initCrazyGames = async (): Promise<void> => {
 
   await captureSdkProfile()
   registerMuteListener()
+  registerAuthListener()
   probeAdBlocker()
 }
 
@@ -153,6 +179,46 @@ export const createCrazyGamesSaveStrategy = (): SaveStrategy =>
   })
 
 // ─── Profile / settings capture ───────────────────────────────────────────
+
+/**
+ * Fold one `user` object (or `null`) from the SDK into the reactive auth state.
+ *
+ * Shared by the initial `getUser()` read and by the auth listener, so a sign-in
+ * that happens mid-session lands in exactly the same state a sign-in that
+ * happened before boot would have.
+ *
+ * On sign-OUT the display name is cleared as well. Leaving it would strand the
+ * account's handle on a now-anonymous session, and `usePlayerIdentity` would
+ * happily keep labelling rows with it.
+ */
+const adoptCrazyUser = (u: unknown): void => {
+  const name = typeof (u as { username?: unknown })?.username === 'string'
+    ? (u as { username: string }).username.trim()
+    : ''
+  isCrazyLoggedIn.value = !!u
+  crazyPlayerName.value = name || null
+}
+
+/**
+ * Subscribe to sign-in / sign-out while the game is running.
+ *
+ * CG's account prompt is part of the PORTAL chrome, not the game — a player can
+ * sign in from the surrounding page at any moment without the iframe reloading.
+ * Without this listener the game would hold whatever auth state happened to be
+ * true at boot forever, and a player who signed in mid-session would keep
+ * seeing the leaderboard hidden until they reloaded.
+ */
+const registerAuthListener = (): void => {
+  const add = sdk?.user?.addAuthListener
+  if (typeof add !== 'function') return
+  try {
+    add.call(sdk.user, (u: unknown) => {
+      adoptCrazyUser(u)
+    })
+  } catch (e) {
+    console.warn('[crazygames] addAuthListener failed', e)
+  }
+}
 
 /**
  * Best-effort read of mute state, player identity, and locale from the SDK.
@@ -176,13 +242,23 @@ const captureSdkProfile = async (): Promise<void> => {
     console.warn('[crazygames] read settings.muteAudio failed', e)
   }
 
+  // Whether accounts exist in this environment at all. A property on the SDK,
+  // not a call — read defensively because older shims don't define it, and an
+  // undefined there must read as "no accounts" rather than crash the profile
+  // capture and take the locale read down with it.
+  try {
+    crazyAccountsAvailable.value = sdk?.user?.isUserAccountAvailable === true
+  } catch (e) {
+    console.warn('[crazygames] isUserAccountAvailable read failed', e)
+  }
+
   // Player display name. `sdk.user.getUser()` resolves to `null` for
   // anonymous sessions, so we only fill the ref when a real username comes
-  // back.
+  // back — but `isCrazyLoggedIn` is set either way, because "signed out" is a
+  // state the leaderboard gate has to be able to see.
   try {
     const u = await sdk?.user?.getUser?.()
-    const name = typeof u?.username === 'string' ? u.username.trim() : ''
-    if (name) crazyPlayerName.value = name
+    adoptCrazyUser(u)
   } catch (e) {
     console.warn('[crazygames] getUser failed', e)
   }
@@ -554,6 +630,34 @@ export const showMidgameAd = (): Promise<void> => {
 // ramping +1 at a time so a manipulated save can't teleport up the board —
 // lives in `useLeaderboard` next to the rest of the player-progress state.
 
+/**
+ * ─── OFF UNTIL CRAZYGAMES CONFIRMS THE LEADERBOARD ──────────────────────────
+ *
+ * CG leaderboards are an INVITE-ONLY feature. A build that calls
+ * `SDK.user.submitScore` without being provisioned for one still logs the call,
+ * and QA reads that in the console as a game shipping an unapproved feature —
+ * which is what this build was sent back for:
+ *
+ *   "the CrazyGames Leaderboard is currently an invite-only feature, so please
+ *    reach out to dom@crazygames.com for leaderboard confirmation. In the
+ *    meantime, until we get that confirmation for the CrazyGames leaderboard,
+ *    please remove it for now."
+ *
+ * So the whole submission path is switched off here rather than deleted: the
+ * encryption helper, the +1 anti-cheat ramp in `useLeaderboard` and the ramp's
+ * cloud-synced pointer are all still correct and still tested, and turning the
+ * feature back on once dom@crazygames.com confirms is this one line.
+ *
+ * FLIP THIS ONLY ALONGSIDE a provisioned `VITE_APP_CRAZY_GAMES_LEADERBOARD_KEY`
+ * — the key and the invite are issued together, and one without the other is
+ * the same rejected state in a different disguise.
+ */
+// Annotated `boolean` rather than left to infer the literal `false`: without it
+// TypeScript narrows the constant and marks the entire rest of `submitCgScore`
+// as unreachable, so the code this switch exists to PRESERVE stops being
+// type-checked at all.
+const CG_LEADERBOARD_SUBMIT_ENABLED: boolean = false
+
 const LEADERBOARD_ENCRYPTION_KEY = import.meta.env.VITE_APP_CRAZY_GAMES_LEADERBOARD_KEY as string | undefined
 
 /**
@@ -590,6 +694,12 @@ const encryptScore = async (score: number, encryptionKey: string): Promise<strin
  * let you cross-check calls against the CG developer-portal logs.
  */
 export const submitCgScore = async (score: number): Promise<boolean> => {
+  // Invite-only feature, not confirmed for this game yet. Returns `false` like
+  // every other "didn't submit" branch, so the ramp in `useLeaderboard` leaves
+  // its pointer alone and the backlog is still there to drain on the day CG
+  // switches the leaderboard on. Silent on purpose — the console line QA
+  // objected to was the whole finding.
+  if (!CG_LEADERBOARD_SUBMIT_ENABLED) return false
   if (!sdk || !isSdkActive.value) {
     if (isDebug.value) console.info('[cg-leaderboard] skip — SDK inactive', { score })
     return false

@@ -705,6 +705,24 @@ export const useSpinnerGame = () => {
     Math.min(dragMagnitude.value * wallProximityMultiplier() / MAX_PULL_DISTANCE, 1)
   )
 
+  // ── Viewport metrics ─────────────────────────────────────────────────────
+  //
+  // The canvas size the renderer last drew with. `render` is the only writer,
+  // and it only assigns when the dimensions actually CHANGE — the joystick
+  // rule below is a computed that reads this, and a fresh object per frame
+  // would invalidate it sixty times a second to produce the same answer.
+  const canvasMetrics = ref<{ w: number; h: number }>({ w: 0, h: 0 })
+
+  const noteCanvasMetrics = (w: number, h: number): void => {
+    const cur = canvasMetrics.value
+    if (cur.w !== w || cur.h !== h) canvasMetrics.value = { w, h }
+  }
+
+  /** Is the current match a daily challenge? Set by `initGame`; the only thing
+   *  that reads it is the joystick rule, which needs to know because the daily
+   *  challenge is the one mode that stages fights in a non-circular arena. */
+  const isDailyMatch: Ref<boolean> = ref(false)
+
   // ── Virtual Joystick ─────────────────────────────────────────────────────
   // Shown as a helper when the selected blade is near any arena edge so the
   // player can aim + launch without fighting the screen boundary.
@@ -714,12 +732,114 @@ export const useSpinnerGame = () => {
   const JOYSTICK_CANCEL_RADIUS = 8     // smaller cancel zone than blade drag
   const JOYSTICK_MAX_PULL = 28         // max knob displacement = full force
 
+  /**
+   * The least outward room a player could ever need for a full-force shot.
+   *
+   * `MAX_PULL_DISTANCE` is the pull `releaseDrag` wants for 100% force, and
+   * `wallProximityMultiplier` shortens it by up to `WALL_BOOST_MAX` as a blade
+   * approaches the wall — precisely because a blade at the wall has less screen
+   * to drag into. At full boost that is the shortest pull the game ever asks
+   * for, so a blade with at least this much room in front of it is, by the
+   * game's own reckoning, not fighting the screen boundary.
+   *
+   * NOT the pull THIS blade would need (`MAX_PULL_DISTANCE /
+   * wallProximityMultiplier()`), and the difference is the whole point. That
+   * multiplier is keyed on distance from centre over ARENA_RADIUS — the same
+   * circle assumption the threshold above makes — so in a daily arena a blade
+   * jammed against an inscribed wall reads as barely off-centre and is granted
+   * almost no boost. Holding it to a near-full-length pull would keep the
+   * joystick exactly where QA said it did not belong. Using the boosted floor
+   * instead means a blade with 84 units of room and a 94-unit ideal pull loses
+   * the helper: it can still throw a ~90% shot, which is a player choosing a
+   * slightly softer launch, not a player fighting the edge of the screen.
+   */
+  const JOYSTICK_MIN_DRAG_ROOM = MAX_PULL_DISTANCE / WALL_BOOST_MAX
+
+  /**
+   * Half-extents of the VISIBLE game area, in game units.
+   *
+   * The camera frames `2R + padding` across the SHORTER canvas axis, so that
+   * axis shows barely anything outside the arena (202.5 against a radius of
+   * 200) while the longer one can show hundreds of units of slack. That
+   * asymmetry is the whole reason a blade "at the edge" sometimes has room to
+   * drag into and sometimes does not.
+   *
+   * `null` before the first frame has been drawn, i.e. before anything is known
+   * about the viewport.
+   */
+  const visibleHalfExtents = computed<{ hx: number; hy: number } | null>(() => {
+    const { w, h } = canvasMetrics.value
+    const fit = Math.min(w, h)
+    if (fit <= 0) return null
+    const scale = fit / (ARENA_RADIUS * 2 + ARENA_PADDING)
+    return { hx: w / (2 * scale), hy: h / (2 * scale) }
+  })
+
+  /**
+   * How far the player can drag OUTWARD from the blade before the pointer runs
+   * off the visible area, in game units.
+   *
+   * Outward, because the launch is a slingshot (`releaseDrag` negates the drag
+   * vector): to fire a blade back INTO the arena — the shot that matters when
+   * it is sitting against a wall — the player has to pull away from the centre,
+   * straight at the nearest screen edge. That single direction is the one the
+   * viewport can refuse, so it is the one worth measuring.
+   *
+   * Returns 0 when the viewport is not known yet, which reads as "no room" and
+   * keeps the joystick — the safe direction to be wrong in.
+   */
+  const outwardDragRoom = (bx: number, by: number, dist: number): number => {
+    const ext = visibleHalfExtents.value
+    if (!ext || dist < 1e-6) return 0
+    const nx = bx / dist
+    const ny = by / dist
+    // Ray/rectangle intersection, axis by axis. A component of ~0 never reaches
+    // that pair of edges at all, so it constrains nothing.
+    let t = Infinity
+    if (nx > 1e-6) t = Math.min(t, (ext.hx - bx) / nx)
+    else if (nx < -1e-6) t = Math.min(t, (-ext.hx - bx) / nx)
+    if (ny > 1e-6) t = Math.min(t, (ext.hy - by) / ny)
+    else if (ny < -1e-6) t = Math.min(t, (-ext.hy - by) / ny)
+    return Number.isFinite(t) ? Math.max(0, t) : 0
+  }
+
   const isJoystickVisible = computed(() => {
     if (phase.value !== 'player_turn') return false
     const blade = selectedBlade.value
     if (!blade) return false
     const dist = Math.sqrt(blade.x * blade.x + blade.y * blade.y)
-    return dist / ARENA_RADIUS >= JOYSTICK_EDGE_THRESHOLD
+    if (dist / ARENA_RADIUS < JOYSTICK_EDGE_THRESHOLD) return false
+
+    // ── Daily challenge: is the blade actually boxed in? ──────────────────
+    //
+    // The test above measures the blade against the BOUNDING CIRCLE, and in the
+    // campaign that is the arena — a blade at 0.9R really is against the wall
+    // with the screen edge right behind it.
+    //
+    // The daily challenge is the one mode that fights a non-circular arena, and
+    // every shape in `arenaShapes` is INSCRIBED in that bounding circle: an
+    // oval only reaches 0.72R vertically, a rounded rect 0.70R, a diamond's
+    // edges 0.71R. The camera still frames the full circle, so a blade parked
+    // against one of those walls trips the 0.55 threshold while sitting tens of
+    // game units clear of the screen — plenty of room to aim and launch the
+    // ordinary way. The joystick popped up anyway, which is what CG QA reported
+    // as stray mobile controls in the Daily Challenge.
+    //
+    // So in daily matches the threshold is not the last word: the blade also has
+    // to actually be boxed in, measured against the screen rather than against
+    // a circle the arena does not use.
+    //
+    // The bar is JOYSTICK_MIN_DRAG_ROOM — see there for why it is the pull the
+    // game demands of a blade pinned against a wall, and not the longer pull
+    // this particular blade would need.
+    //
+    // Deliberately subtractive: this can only ever HIDE a joystick the old rule
+    // would have shown, never show one it would not, and it is scoped to daily
+    // so campaign, ghost and PvP matches behave exactly as before.
+    if (isDailyMatch.value && outwardDragRoom(blade.x, blade.y, dist) >= JOYSTICK_MIN_DRAG_ROOM) {
+      return false
+    }
+    return true
   })
 
   // Joystick center position (game-space) — placed below-left of the arena
@@ -1822,9 +1942,13 @@ export const useSpinnerGame = () => {
     enablePowerups = false,
     powerupIntervalMs: [number, number] = [POWERUP_DEFAULT_INTERVAL_MIN_MS, POWERUP_DEFAULT_INTERVAL_MAX_MS],
     pvp: { enabled: boolean; myTurnFirst: boolean } | null = null,
-    shape: ArenaShape = 'circle'
+    shape: ArenaShape = 'circle',
+    /** Daily challenge match. Only the joystick rule reads it — see
+     *  `isJoystickVisible` for why that mode alone needs the distinction. */
+    daily = false
   ) => {
     pvpMode.value = !!pvp?.enabled
+    isDailyMatch.value = daily
     // Set the arena shape BEFORE spawns so spawn/bouncer/power-up placement can
     // clamp to the active boundary geometry.
     arenaShape.value = shape
@@ -3567,6 +3691,7 @@ export const useSpinnerGame = () => {
     showHintAnim = false,
     currentStageId = 1
   ) => {
+    noteCanvasMetrics(canvasWidth, canvasHeight)
     const centerX = canvasWidth / 2
     const centerY = canvasHeight / 2
     const fitSize = Math.min(canvasWidth, canvasHeight)
@@ -3773,6 +3898,11 @@ export const useSpinnerGame = () => {
     canvasWidth: number,
     canvasHeight: number
   ) => {
+    // Noted here as well as in `render` so this layer is self-sufficient: it is
+    // the one that both measures the viewport and decides whether the joystick
+    // is needed, and reading `isJoystickVisible` against the PREVIOUS frame's
+    // dimensions would show a stale answer for a frame after every resize.
+    noteCanvasMetrics(canvasWidth, canvasHeight)
     const wantsJoystick = isJoystickVisible.value && phase.value === 'player_turn'
     // Nothing on screen and nothing to draw — leave the layer untouched so the
     // compositor can keep reusing last frame's (empty) tile.

@@ -15,7 +15,9 @@ import {
   isSupportedLocale
 } from '@/i18n'
 import { LANGUAGES } from '@/utils/enums'
-import { initCrazyGames, crazyLocale, crazyPlayerName, startLoading } from '@/use/useCrazyGames'
+import {
+  initCrazyGames, crazyLocale, crazyPlayerName, isCrazyLoggedIn, startLoading
+} from '@/use/useCrazyGames'
 import { setSdkNameSource } from '@/use/usePlayerIdentity'
 import { initAds } from '@/use/useAds'
 import useUser, {
@@ -133,6 +135,25 @@ const bootstrap = async () => {
     // try/catch around it, which only ever catches at runtime, would look like
     // protection while providing none.
     setSdkNameSource(() => crazyPlayerName.value)
+    // CrazyGames is the ONLY platform this game ships to that has real player
+    // accounts, so it is the only one that installs an auth gate. Every other
+    // build leaves it unset, which means "no account concept" and keeps the
+    // leaderboard fully available — see `setLeaderboardAuthGate`.
+    //
+    // Installed BEFORE `initCrazyGames()` on purpose: the gate has to be in
+    // place for the window between module evaluation and SDK init, or a result
+    // screen that renders inside it would offer a guest the board it is meant
+    // to be hidden from. `isCrazyLoggedIn` starts false, so that window is
+    // closed rather than open.
+    //
+    // Imported dynamically, and AWAITED. A static import here would drag the
+    // leaderboard module — and the ~6 kB board snapshot baked into it — out of
+    // the lazy route chunk it lives in and into the entry bundle of EVERY
+    // build, which is bytes CG counts against cold-launch load size. Awaiting
+    // keeps the ordering guarantee above; the module is on the arena's critical
+    // path anyway, so this costs no extra round trip in practice.
+    const { setLeaderboardAuthGate } = await import('@/use/useLiveLeaderboard')
+    setLeaderboardAuthGate(() => isCrazyLoggedIn.value)
     await initCrazyGames()
     // Explicit `loadingStart` immediately after SDK init. The SDK
     // technically auto-enters the "loading" state on init, but CG QA's
