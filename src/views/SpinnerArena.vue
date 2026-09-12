@@ -9,7 +9,15 @@ import SpinnerConfigModal from '@/components/organisms/SpinnerConfigModal.vue'
 import OptionsModal from '@/components/organisms/OptionsModal.vue'
 import CombatLog from '@/components/organisms/CombatLog.vue'
 import useSounds, { useMusic } from '@/use/useSound'
-import useSpinnerGame, { ARENA_RADIUS, BLADE_RADIUS, simSpeed, countdownText } from '@/use/useSpinnerGame'
+import useSpinnerGame, {
+  ARENA_RADIUS,
+  BLADE_RADIUS,
+  MAX_PULL_DISTANCE,
+  simSpeed,
+  countdownText
+} from '@/use/useSpinnerGame'
+import { seedMatchRng } from '@/use/useDeterministicRng'
+import { STAGE_KEY } from '@/keys'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin, getStageById } from '@/use/useSpinnerCampaign'
 import useTips from '@/use/useTips'
@@ -87,6 +95,7 @@ const {
   isJoystickVisible,
   isJoystickDragging,
   renderJoystickOverlay,
+  startPhysics,
   stopPhysics,
   disposePhysics,
   render,
@@ -1260,6 +1269,9 @@ const renderLoop = (now = 0) => {
 }
 
 let canvasObserver: IntersectionObserver | null = null
+/** Removes `window.__chaos` on unmount. Always null in a production build —
+ *  the seam that sets it is dev-only (see onMounted). */
+let disposePreviewSeam: (() => void) | null = null
 
 const onViewportChange = () => {
   updateCanvasSize()
@@ -1291,6 +1303,51 @@ onMounted(() => {
       { threshold: [0, 0.01] }
     )
     canvasObserver.observe(canvasRef.value)
+  }
+
+  // ── Preview-recorder scripting seam (`window.__chaos`) ──────────────────
+  //
+  // DEV ONLY, and dynamically imported so it is not merely unreachable in a
+  // portal build but absent from it: Vite replaces `import.meta.env.DEV`
+  // with the literal `false`, Rollup drops the branch, and the dynamic
+  // import inside it goes with it. A static import would ship the module to
+  // every portal even though nothing there can call it.
+  //
+  // See `tools/preview-video/` — this is what the gameplay clips are driven
+  // through.
+  if (import.meta.env.DEV) {
+    import('@/utils/previewSeam')
+      .then(({ installPreviewSeam }) => {
+        disposePreviewSeam = installPreviewSeam({
+          phase,
+          gameResult,
+          playerBlades,
+          npcBlades,
+          currentStageId,
+          stageReinitSignal,
+          arenaRadius: ARENA_RADIUS,
+          maxPullDistance: MAX_PULL_DISTANCE,
+          beginDrag,
+          updateDrag,
+          releaseDrag,
+          beginBattle,
+          reinit: () => {
+            initGame(
+              playerTeamWithUpgrades(),
+              stageNpcTeam(),
+              !hasFirstWin.value,
+              currentStage.value.arenaType,
+              currentStage.value.bouncers ?? 0,
+              currentStageId.value >= 2
+            )
+          },
+          seedRng: seedMatchRng,
+          startPhysics,
+          stopPhysics,
+          stageKey: STAGE_KEY
+        })
+      })
+      .catch((e) => console.warn('[preview] seam install failed:', e))
   }
 
   recordPlayerStage(currentStageId.value)
@@ -1417,6 +1474,12 @@ onUnmounted(() => {
     canvasObserver.disconnect()
     canvasObserver = null
   }
+  // Drop `window.__chaos` so a hot-reload remount never leaves the recorder
+  // holding a seam bound to a torn-down instance's refs.
+  if (disposePreviewSeam) {
+    disposePreviewSeam()
+    disposePreviewSeam = null
+  }
   if (speedBoostIntervalId !== null) clearInterval(speedBoostIntervalId)
   clearTipCycle()
   // Always leave the arena at normal speed so other views aren't affected
@@ -1448,7 +1511,7 @@ onUnmounted(() => {
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerCancel"
-      class="block touch-none"
+      class="game-canvas block touch-none"
       :style="shakeStyle"
     )
     //- Joystick overlay — sits above the HUD so the stat card never covers

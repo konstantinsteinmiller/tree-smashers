@@ -74,3 +74,6 @@ __screenshots__/
 # Perf harness output (the harness in perf/ is committed, its artifacts are not)
 perf/shot-*.png
 perf/last-trace-summary.json
+
+# Generated gameplay clips — build artifacts, tens of MB each (tools/preview-video)
+/preview-videos/

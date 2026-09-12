@@ -1,8 +1,8 @@
 {
   "source": "https://leaderboard-chaos-arena.rodent-race.workers.dev",
-  "fetchedAt": 1788875261938,
-  "updatedAt": 1788875261835,
-  "total": 11,
+  "fetchedAt": 1789174463224,
+  "updatedAt": 1789174200337,
+  "total": 21,
   "entries": [
     {
       "rank": 1,
@@ -12,60 +12,120 @@
     },
     {
       "rank": 2,
+      "name": "Ripper767908",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Cyclone438021",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Ripper438135",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Ripper691550",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Striker451009",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Talon552540",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 2,
+      "name": "Spinner197447",
+      "score": 18,
+      "power": 55
+    },
+    {
+      "rank": 9,
+      "name": "Cyclone899666",
+      "score": 17,
+      "power": 55
+    },
+    {
+      "rank": 9,
+      "name": "Havoc532294",
+      "score": 17,
+      "power": 55
+    },
+    {
+      "rank": 9,
+      "name": "Blazer291050",
+      "score": 17,
+      "power": 55
+    },
+    {
+      "rank": 12,
       "name": "_NExus_",
       "score": 16,
       "power": 19
     },
     {
-      "rank": 3,
+      "rank": 13,
       "name": "Sunsauruss",
       "score": 10,
       "power": 19
     },
     {
-      "rank": 4,
+      "rank": 14,
       "name": "JJ_Jonas",
       "score": 8,
       "power": 0
     },
     {
-      "rank": 5,
+      "rank": 15,
       "name": "Talon847783",
       "score": 4,
       "power": 2
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Striker393931",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Rogue404630",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Striker472186",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Ripper470401",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Blazer640361",
       "score": 2,
       "power": 0
     },
     {
-      "rank": 6,
+      "rank": 16,
       "name": "Rogue767531",
       "score": 2,
       "power": 0
@@ -75,6 +135,14 @@
     [
       42,
       1
+    ],
+    [
+      18,
+      7
+    ],
+    [
+      17,
+      3
     ],
     [
       16,

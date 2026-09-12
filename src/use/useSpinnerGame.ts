@@ -26,6 +26,7 @@ import type { TopPartId } from '@/types/spinner'
 import { isDebug } from '@/use/useMatch.ts'
 import { isMobileLandscape, isMobilePortrait, userDifficulty } from '@/use/useUser.ts'
 import { DIFFICULTY } from '@/utils/enums'
+import { CLEAN_FEED, CLEAN_HP_RINGS } from '@/utils/cleanFeed'
 import { useScreenshake } from '@/use/useScreenshake'
 import useSounds from '@/use/useSound'
 import { prependBaseUrl } from '@/utils/function.ts'
@@ -3774,16 +3775,29 @@ export const useSpinnerGame = () => {
       })
     }
 
-    // Floating damage numbers
-    renderDamageNumbers(ctx)
-    renderPowerupFloats(ctx)
+    // Floating damage numbers.
+    //
+    // The digits themselves are already gone in a clean feed (the recorder
+    // no-ops fillText), but the crit burst behind them is drawn with fills
+    // and would survive as a naked flourish with no number in it. Skip the
+    // whole layer instead — the hit reads from the blade's own flash.
+    if (!CLEAN_FEED) {
+      renderDamageNumbers(ctx)
+      renderPowerupFloats(ctx)
+    }
 
-    // Selection highlight
-    if (phase.value === 'player_turn' && selectedBlade.value && !isDragging.value) {
+    // Selection highlight — a control affordance ("this blade is armed"),
+    // not gameplay, so it goes in a clean feed.
+    if (!CLEAN_FEED && phase.value === 'player_turn' && selectedBlade.value && !isDragging.value) {
       renderSelectionGlow(ctx, selectedBlade.value)
     }
 
-    // Drag indicator
+    // Drag indicator — the slingshot pull-back and its aim line.
+    //
+    // DELIBERATELY KEPT in a clean feed. This is not interface reporting on
+    // the game, it is the player's shot being aimed: it shows intent, it is
+    // the only thing on screen between two collisions, and a preview clip
+    // without it is a video of blades moving for no visible reason.
     if (isDragging.value && selectedBlade.value && phase.value === 'player_turn') {
       renderDragIndicator(ctx, selectedBlade.value)
     }
@@ -3828,12 +3842,16 @@ export const useSpinnerGame = () => {
       }
     }
 
-    // Hint animation
-    renderHintAnimation(ctx, showHintAnim)
+    // Hint animation and the early-game tutorial arrows. Both are teaching
+    // aids aimed at the player holding the device — pure interface, and the
+    // arrows in particular read as a watermark on a silent clip.
+    if (!CLEAN_FEED) {
+      renderHintAnimation(ctx, showHintAnim)
 
-    // Early-game tutorial arrows orbiting the player's spinners — gated
-    // on `currentStageId <= 11` and a 1s grace from the start of player_turn.
-    renderTutorialArrows(ctx, currentStageId)
+      // Early-game tutorial arrows orbiting the player's spinners — gated
+      // on `currentStageId <= 11` and a 1s grace from the start of player_turn.
+      renderTutorialArrows(ctx, currentStageId)
+    }
 
     // Joystick position is updated here so drag hit-testing stays in sync
     // with the visible knob, but the actual drawing happens on a separate
@@ -4947,7 +4965,11 @@ export const useSpinnerGame = () => {
     }
 
     // ── Stat-switch boss phase indicator ───────────────────────────────
-    if (blade.statSwitchPhase) {
+    // The recorder's fillText gate already erases this label, but gating it
+    // here too keeps `?clean=1` self-sufficient: the flag means "no
+    // interface" on its own, not "no interface as long as the recorder is
+    // also suppressing canvas text".
+    if (blade.statSwitchPhase && !CLEAN_FEED) {
       const now = performance.now()
       const pulse = 0.6 + 0.4 * Math.sin(now * 0.005)
       const isAtk = blade.statSwitchPhase === 'attack'
@@ -5071,7 +5093,13 @@ export const useSpinnerGame = () => {
       ctx.globalAlpha = 1
     }
 
-    renderHealthRing(ctx, x, y, hp, maxHp, radius, isPlayer)
+    // The HP ring is a health BAR plus a digit — the clearest "counter" on
+    // screen, and the one thing a "no UI, no counters" spec is certain to
+    // mean. `?clean=1&rings=1` puts it back for a looser spec without
+    // touching the code or re-cutting a scenario (see `utils/cleanFeed.ts`).
+    if (!CLEAN_FEED || CLEAN_HP_RINGS) {
+      renderHealthRing(ctx, x, y, hp, maxHp, radius, isPlayer)
+    }
 
     if (needsAlpha) ctx.restore()
   }

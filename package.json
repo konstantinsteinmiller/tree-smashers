@@ -28,6 +28,7 @@
     "format": "prettier --write --experimental-cli src",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "preview:video": "node tools/preview-video/record.mjs",
     "leaderboard:snapshot": "node scripts/leaderboard-snapshot.mjs",
     "leaderboard:seed": "node scripts/generate-leaderboard-seed.mjs",
     "visualize-bundle": "npx vite-bundle-visualizer",
@@ -73,6 +74,11 @@
       "package.json"
     ]
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "ffmpeg-static"
+    ]
+  },
   "dependencies": {
     "@playgama/bridge": "^2.1.0",
     "@tauri-apps/api": "^2.10.1",
@@ -103,6 +109,7 @@
     "electron": "^41.1.0",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
+    "ffmpeg-static": "^5.3.0",
     "jsdom": "^28.1.0",
     "npm-run-all2": "^8.0.4",
     "playwright": "^1.59.1",
