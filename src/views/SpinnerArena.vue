@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { saveDataVersion } from '@/use/useSaveStatus'
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FIconButton from '@/components/atoms/FIconButton.vue'
@@ -592,6 +593,17 @@ const SPEED_BOOST_KEY = 'spinner_2x_expires_at'
 const SPEED_BOOST_DURATION_MS = 3 * 60 * 1000
 
 const speedBoostExpiresAt: Ref<number> = ref(parseInt(localStorage.getItem(SPEED_BOOST_KEY) || '0', 10))
+
+// This view owns two persisted refs of its own — the first-config
+// spotlight flag and the 2x boost expiry — so it needs the same
+// save-data re-read every composable does: for a recovered cloud
+// hydrate, and for the full-progress reset, which wipes both keys
+// without reloading the page (see useResetProgress).
+watch(saveDataVersion, () => {
+  hasOpenedConfig.value = localStorage.getItem(CONFIG_OPENED_KEY) === '1'
+  speedBoostExpiresAt.value = parseInt(localStorage.getItem(SPEED_BOOST_KEY) || '0', 10)
+})
+
 const speedNow: Ref<number> = ref(Date.now())
 
 const is2xAvailable = computed(() => speedNow.value < speedBoostExpiresAt.value)

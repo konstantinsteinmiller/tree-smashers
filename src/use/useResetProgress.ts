@@ -3,25 +3,46 @@
 // Several players asked for a way to start over from stage 1 — usually
 // because they feel they mis-spent coins on the wrong upgrades and want a
 // clean slate. This wipes every gameplay-progress key the game persists
-// (campaign stage, coins, diamonds, upgrade unlocks, daily challenge, battle
-// pass, leaderboard, PvP stats, chest timers, tips, counters, …) while
-// PRESERVING:
-//   • settings — sound / music volume, language, difficulty
+// (campaign stage, coins, diamonds, upgrade unlocks, daily challenge, daily
+// login rewards, battle pass, leaderboard, PvP stats, chest timers, tips,
+// counters, …) while PRESERVING:
+//   • settings — sound / music volume, language, difficulty, quality
 //   • purchases — owned blade skins + owned background skins, and the
 //     equipped loadout / selections tied to them
 //
-// It is a KEEP-LIST sweep over the `spinner_`-prefixed keys rather than an
-// explicit delete-list: any future progress key is wiped automatically
-// without having to be registered here, and only the small, stable set of
+// It is a KEEP-LIST sweep over the persisted keys rather than an explicit
+// delete-list: any future progress key is wiped automatically without
+// having to be registered here, and only the small, stable set of
 // settings/purchase keys below is protected. This mirrors keys.ts's stance
 // that these literal strings are a load-bearing contract with the player.
 //
+// ── Two things this used to get wrong ──────────────────────────────────────
+//
+// 1. It enumerated `localStorage.length` / `localStorage.key(i)`. Those are
+//    pass-through on the SaveManager's storage Proxy, so on a CLOUD-ONLY
+//    build (`persistToRaw: false` — CrazyGames) they walk a raw store that
+//    BlobStorage deliberately scrubbed at construction. The walk found zero
+//    keys, removed nothing, and so never called the patched `removeItem`
+//    that forwards deletions to the strategy: the cloud blob kept the whole
+//    save and the next hydrate restored it. `SaveManager.savedKeys()` is
+//    the enumeration that sees the in-memory payload, and we union it with
+//    the raw walk so mirrored builds (and a manager-less boot) still work.
+//
+// 2. It finished with `window.location.reload()` to get the composables to
+//    re-read their keys. A reload on a portal build is a full SDK re-init
+//    (and on CG a second cloud hydrate that races the flush we just
+//    issued). Instead we bump `saveDataVersion` — the same signal a
+//    successful cloud re-hydrate raises — and every composable that holds
+//    localStorage-backed refs re-reads in place, so the wipe is visible on
+//    the menu the instant the dialog closes.
+//
 // Removals go through the SaveManager-patched `localStorage.removeItem`, so
 // on cloud-save builds (CrazyGames / Playgama) each deletion is forwarded to
-// the strategy and mirrored into the cloud blob. We await a flush before
-// reloading so the next boot's hydrate can't resurrect the deleted keys from
-// the cloud. The reload lets every composable re-read fresh defaults from
-// localStorage instead of us having to reset each in-memory ref by hand.
+// the strategy and mirrored into the cloud blob. We flush afterwards so the
+// deletions leave the device rather than sitting in the strategy's debounce.
+
+import { refreshSaveBackedState } from '@/use/useSaveStatus'
+import { requestStageReinit } from '@/use/useSpinnerCampaign'
 
 /** Keys that must SURVIVE a progress reset (settings + purchased content). */
 const KEEP_KEYS = new Set<string>([
@@ -36,39 +57,73 @@ const KEEP_KEYS = new Set<string>([
   'spinner_skin_picker_opened',
   'spinner_player_team',
   'spinner_bg_skins_owned',
-  'spinner_bg_skin_selected'
+  'spinner_bg_skin_selected',
+  // Anti-farm gates, not progress. Same rationale as
+  // `useRewardedThrottle`'s `__save_internal__` key: a player must not be
+  // able to buy back a rewarded-ad cooldown by resetting, and the reset is
+  // now instant (no reload), which would make that a one-tap loop.
+  'spinner_ad_button_ready_at'
 ])
 
 /**
- * Wipe all gameplay progress and reload. Preserves settings + purchases
- * (see KEEP_KEYS). Resolves right before the reload is triggered; callers
- * generally don't need to await it, but doing so guarantees the cloud flush
- * has been requested before navigation.
+ * Payload prefixes the sweep owns. Deliberately NOT `SaveMergePolicy`'s
+ * full list: `ca_*` is ad pacing (`ca_battles_since_ad`,
+ * `ca_first_midgame_ad_shown`), which is a portal-facing frequency cap
+ * rather than player progress and must not be re-armed by a reset.
+ */
+const RESET_PREFIX = 'spinner_'
+
+/**
+ * Every key the reset should delete — the union of what the SaveManager
+ * holds in memory (the only surface that has anything on a cloud-only
+ * build) and what is sitting in raw localStorage (mirrored builds, plus
+ * the case where no manager was installed at all).
+ */
+const collectProgressKeys = (): string[] => {
+  const found = new Set<string>()
+
+  const sm = (window as unknown as {
+    __saveManager?: { savedKeys?: () => string[] }
+  }).__saveManager
+  try {
+    for (const key of sm?.savedKeys?.() ?? []) found.add(key)
+  } catch (e) {
+    console.warn('[reset] savedKeys() threw', e)
+  }
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key) found.add(key)
+  }
+
+  return [...found].filter(k => k.startsWith(RESET_PREFIX) && !KEEP_KEYS.has(k))
+}
+
+/**
+ * Wipe all gameplay progress. Preserves settings + purchases (see
+ * KEEP_KEYS). Takes effect immediately — no reload — and resolves once the
+ * cloud flush has been attempted.
  */
 export const resetAllProgress = async (): Promise<void> => {
   try {
-    const toRemove: string[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (!key) continue
-      if (key.startsWith('spinner_') && !KEEP_KEYS.has(key)) toRemove.push(key)
-    }
     // Collected first, then removed, so mutating the store mid-iteration
-    // can't skip keys (removeItem shifts the index order).
-    for (const key of toRemove) localStorage.removeItem(key)
+    // can't skip keys (removeItem shifts the raw index order).
+    for (const key of collectProgressKeys()) localStorage.removeItem(key)
 
-    // Push the deletions to the cloud blob before reloading (no-op on
-    // local-only builds). Best-effort — a failed/slow flush must not block
-    // the reset, so we don't let it throw past here.
+    // Re-read BEFORE the awaited flush: the player sees stage 1 / 0 coins /
+    // no upgrades the moment the dialog closes, rather than after a cloud
+    // round-trip they have no reason to wait on.
+    refreshSaveBackedState()
+    requestStageReinit()
+
+    // Push the deletions to the cloud blob (no-op on local-only builds).
+    // Best-effort — a failed/slow flush must not surface as a failed reset,
+    // the local wipe has already happened.
     const sm = (window as unknown as { __saveManager?: { flush?: () => Promise<void> } }).__saveManager
-    if (sm?.flush) {
-      await sm.flush().catch(() => {
-      })
-    }
+    await sm?.flush?.().catch(() => {
+    })
   } catch (e) {
     console.warn('[reset] progress reset failed', e)
-  } finally {
-    window.location.reload()
   }
 }
 

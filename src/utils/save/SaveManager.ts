@@ -88,6 +88,24 @@ export class SaveManager {
     }
   }
 
+  /**
+   * Every persisted gameplay key the manager currently holds, whether or
+   * not it is also mirrored into raw localStorage.
+   *
+   * Callers that need to enumerate the save — the full-progress reset is
+   * the only one today — MUST use this instead of walking
+   * `localStorage.length` / `localStorage.key(i)`. Those two are
+   * pass-through on the storage Proxy (they have to be: `length` and
+   * `key()` are data/`Storage.prototype` members we don't intercept), so
+   * on a cloud-only build (`persistToRaw: false`, i.e. CrazyGames) they
+   * enumerate a raw store that BlobStorage deliberately scrubbed — the
+   * walk finds nothing, removes nothing, and the cloud blob is never
+   * told anything was deleted.
+   */
+  savedKeys(): string[] {
+    return this.blob.keys()
+  }
+
   /** Companion to setRemoteOnly for explicit removals. */
   removeRemoteOnly(key: string): void {
     if (isInternalKey(key)) return

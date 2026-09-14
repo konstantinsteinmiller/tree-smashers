@@ -50,15 +50,27 @@ const currentTab = ref('general')
 
 // Full-progress reset (stages / coins / upgrades / etc.) — gated behind a
 // safety-question modal because it is irreversible. Settings and purchased
-// skins survive; see useResetProgress. `resetAllProgress()` wipes the keys,
-// flushes to the cloud, then reloads the page — so `isResetting` stays true
-// until navigation and keeps the button from being double-fired.
+// skins survive; see useResetProgress.
+//
+// `resetAllProgress()` wipes the keys and refreshes every save-backed ref
+// in place, so the menu behind this modal is already showing stage 1 by
+// the time the await resolves — no reload. The await itself is the cloud
+// flush, which is why we close only afterwards: on a portal build that is
+// the round-trip that makes the reset stick on the remote, and the player
+// should not be able to start a battle on top of an in-flight delete.
+// `isResetting` gates re-entry for that window.
 const showResetConfirm = ref(false)
 const isResetting = ref(false)
 const confirmReset = async () => {
   if (isResetting.value) return
   isResetting.value = true
-  await resetAllProgress()
+  try {
+    await resetAllProgress()
+  } finally {
+    isResetting.value = false
+    showResetConfirm.value = false
+    emit('close')
+  }
 }
 
 watch(userLanguage, async (newValue: string) => {

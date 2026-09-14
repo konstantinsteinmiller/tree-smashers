@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { chestSmallCoins, chestBigCoins } from '@/use/useStageRewards'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { saveDataVersion } from '@/use/useSaveStatus'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSounds from '@/use/useSound.ts'
 import { spawnCoinExplosion } from '@/use/useCoinExplosion'
@@ -61,6 +62,12 @@ const loadStoredAt = (): number => parseInt(localStorage.getItem(STORAGE_KEY) ||
 
 const lastCollectedAt = ref(loadStoredAt())
 const tickNow = ref(Date.now())
+
+// Re-read on a save-data bump — a recovered cloud hydrate, or the
+// full-progress reset wiping the key (see useResetProgress).
+watch(saveDataVersion, () => {
+  lastCollectedAt.value = loadStoredAt()
+})
 let tickIntervalId: number | null = null
 
 const elapsedMs = computed(() => Math.max(0, tickNow.value - lastCollectedAt.value))

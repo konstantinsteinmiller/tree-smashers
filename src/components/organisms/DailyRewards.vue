@@ -16,6 +16,7 @@ import {
 import type { TopPartId } from '@/types/spinner'
 import useSounds from '@/use/useSound.ts'
 import { stopGameplay } from '@/use/useCrazyGames'
+import { saveDataVersion } from '@/use/useSaveStatus'
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -111,6 +112,15 @@ watch(isModalOpen, (open) => {
 // ever advertise the same skin. Ephemeral — refreshed each time the modal
 // opens so the preview always reflects the latest ownership state.
 const offeredSkins = ref<Record<number, SpinnerModelId | null>>({})
+
+// Re-read on a save-data bump — a recovered cloud hydrate, or the
+// full-progress reset wiping the key (see useResetProgress). Without
+// this the component keeps the streak it read at mount and the player
+// still sees "day 5 collected" after resetting.
+watch(saveDataVersion, () => {
+  state.value = loadState()
+  offeredSkins.value = {}
+})
 
 const shuffled = <T, >(arr: T[]): T[] => {
   const a = [...arr]

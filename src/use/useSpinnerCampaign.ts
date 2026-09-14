@@ -1015,6 +1015,20 @@ export const loadCheatStage = (stage: Stage | null) => {
   stageReinitSignal.value++
 }
 
+/**
+ * Kick any active arena view to rebuild its game loop against whatever
+ * `currentStage` now resolves to, WITHOUT touching the cheat override.
+ *
+ * Used by the full-progress reset: the saveDataVersion bump gets
+ * `currentStageId` / `playerUpgrades` back to their defaults, but the
+ * arena is still holding the blades and enemy team it built from the old
+ * stage — the player would be looking at a stage-30 boss with stage-1
+ * stats until the next battle ended.
+ */
+export const requestStageReinit = () => {
+  stageReinitSignal.value++
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 const useSpinnerCampaign = () => ({

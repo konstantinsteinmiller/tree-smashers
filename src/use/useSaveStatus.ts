@@ -56,6 +56,20 @@ export const installSaveStatus = (m: SaveManager): void => {
   })
 }
 
+/**
+ * Force every composable that watches `saveDataVersion` to re-read its
+ * localStorage-backed refs, without a hydrate having happened.
+ *
+ * The full-progress reset (`useResetProgress`) is the caller: it deletes
+ * the keys in place and needs the in-memory refs to fall back to their
+ * defaults immediately. That is exactly the refresh a recovered cloud
+ * hydrate triggers, so it reuses the same signal rather than introducing
+ * a second one every composable would also have to subscribe to.
+ */
+export const refreshSaveBackedState = (): void => {
+  saveDataVersion.value++
+}
+
 export const retrySync = async (): Promise<void> => {
   if (!manager || retryInFlight.value) return
   retryInFlight.value = true
