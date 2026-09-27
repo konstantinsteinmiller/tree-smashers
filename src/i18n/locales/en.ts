@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': 'Stage',
   'bossStage': 'Boss Stage',
+  'stageN': 'Stage {n}',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': 'Win it all back!',
+    'skipAria': 'Skip intro'
+  },
+  'bossPeek': {
+    'nextBoss': 'Next boss · Stage {n}',
+    'stagesAway': '{n} stages away',
+    'nextUp': 'Next stage!',
+    'portraitAlt': 'Next boss: {name}'
+  },
   'you': 'YOU',
   'prev': 'Prev',
   'next': 'Next',
@@ -311,7 +324,31 @@ export default {
     'golden-eagle': 'Golden Eagle',
     'diamond': 'Diamond',
     'tsunami': 'Tsunami',
-    'sandstorm': 'Sandstorm'
+    'sandstorm': 'Sandstorm',
+    'cheetah': 'Cheetah',
+    'jester': 'Jester',
+    'ninja': 'Ninja',
+    'pirate': 'Pirate',
+    'porcupine': 'Porcupine',
+    'lionfish': 'Lionfish',
+    'morningstar': 'Morning Star',
+    'cactus': 'Cactus',
+    'kraken': 'Kraken',
+    'taiko': 'Taiko',
+    'toadstool': 'Toadstool',
+    'full-moon': 'Full Moon',
+    'monarch': 'Monarch',
+    'pyramid': 'Pyramid',
+    'compass': 'Compass',
+    'checkmate': 'Checkmate',
+    'armadillo': 'Armadillo',
+    'anvil': 'Anvil',
+    'mammoth': 'Mammoth',
+    'deep-diver': 'Deep Diver',
+    'narwhal': 'Narwhal',
+    'stag-beetle': 'Stag Beetle',
+    'drill': 'Drill',
+    'lancer': 'Lancer'
   },
   'skinChest': {
     'acquired': '{name} Acquired!'
@@ -322,5 +359,173 @@ export default {
     'teleporterShock': 'Tip: Have you tried the Teleporter skin? It phases through walls and won\'t get shocked by the arena borders!',
     'starSpeedy': 'Tip: A Star top combined with a Speedy bottom makes a really strong glass cannon build!',
     'arenaWall': 'Tip: Are your spinners too close to the enemies? Try launching over an arena wall — the first wall bump actually speeds you up!'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': 'Congratulations!',
+      'demoCampaignFinished': 'You have finished the demo campaign! If you like the game I would like to get some constructive feedback on what you like and what not. The full version will be released soon.',
+      'campaignFinished': 'You have finished the campaign! Congratulations! You are a worthy card tactician! But have you collected every card yet? Only the best trading card collectors achieve this ultimate goal!',
+      'cardsFinished': 'Congratulations! You have collected every card. You are the greatest card collector of all time!'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': 'Couldn\'t show ad',
+        'body': 'We tried to show you a video so you could earn your reward, but something on your browser is blocking ads.',
+        'allowHost': 'Please allow ads on {host} (or pause your ad-blocker for this game) and try again.',
+        'gotIt': 'Got it'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': 'Loading taking too long? Try disabling your ad blocker and refresh.'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': 'Advertisement',
+        'title': 'Watch a video ad?',
+        'body': 'Watch a short video ad to earn your reward.',
+        'bodyReward': 'Watch a short video ad to earn {reward}.',
+        'closeable': 'You can close the ad after a few seconds. Closing it early means no reward.',
+        'rewardCoins': '{count} coins',
+        'rewardDiamonds': '{count} diamonds',
+        'rewardSpeed': '2x battle speed',
+        'rewardRespin': 'another spin',
+        'watch': 'Watch ad',
+        'decline': 'No thanks'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': 'Cloud save restored',
+        'restoredBonus': '+{n} bonus coins for the recovery',
+        'tap': 'tap',
+        'offlineTitle': 'Cloud sync paused',
+        'offlineBody': 'Playing offline. Your progress is saved here.',
+        'retry': 'Retry',
+        'dismiss': 'Dismiss'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': 'Change background'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': 'Backgrounds',
+        'equipped': 'On',
+        'equippedShort': 'Equipped',
+        'select': 'Select',
+        'needDiamonds': 'Need more diamonds?',
+        'buy': 'Buy',
+        'skins': {
+          'classic': 'Classic',
+          'aurora': 'Spinner Blades',
+          'fidget': 'Fidget',
+          'ember': 'Brainrot Desaturated',
+          'nebula': 'Brainrot',
+          'circuit': 'Techno Magical',
+          'cosmos': 'Steampunk',
+          'prism': 'K-Pop'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': 'Battle Pass',
+      'complete': 'COMPLETE',
+      'max': 'MAX',
+      'battlePassComplete': 'Battle Pass complete — nice work!',
+      'rewardsReady': 'You have {n} reward(s) ready to collect!',
+      'xpHint': 'Win campaign fights for +50xp, leaderboard fights for +25xp. Losses give +12xp.',
+      'honorTrack': 'Honor Track',
+      'honorAbbr': 'HP',
+      'honorInfo': 'Win PvP battles to earn Honor Points (HP). Fair-game (Level 1) wins give 100 HP. 3 wins unlock 1 skin. Beat stronger opponents for bonus HP!',
+      'seasonReset': 'Season resets in {n} day(s) — collect your rewards!'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': 'Daily Challenge — win to earn a diamond!',
+        'startCoins': 'Daily Challenge — win to earn {count} coins!'
+      }
+    },
+    'CombatLog': {
+      'title': 'Combat Log',
+      'short': 'Log',
+      'aria': 'Open combat log',
+      'hint': 'For strategists · last {n} hits, newest first',
+      'empty': 'No combat yet — the log fills in as blades clash.',
+      'line': '{attacker} deals {dmg} damage to {target}',
+      'enemy': 'Enemy {type}',
+      'spinner': 'Spinner {n} {type}',
+      'whoEnemy': 'Enemy',
+      'whoSpinner': 'Spinner {n}',
+      'crit': 'Critical strike',
+      'speedFavors': 'speed favors {name}',
+      'types': {
+        'star': 'Star Blade',
+        'triangle': 'Spiky',
+        'round': 'Round Guard',
+        'quadratic': 'Quad Core',
+        'cushioned': 'Soft Shell',
+        'piercer': 'Tank Piercer'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': 'Daily Rewards',
+      'comeBackTomorrow': 'Come back tomorrow for your next reward!',
+      'collectTodaysReward': 'Collect today\'s reward! Don\'t miss a day or progress resets.',
+      'collectCta': 'Collect',
+      'dayShort': 'D{n}'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': 'Leaderboard',
+      'yourRank': 'Your Rank',
+      'jumpToMe': 'Jump to me',
+      'maxStage': 'Max Stage',
+      'alreadyFoughtToday': 'Already fought today — comes back tomorrow',
+      'fightAsGhost': 'Fight as ghost battle'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': 'Get Diamonds',
+        'subtitle': 'Diamonds unlock backgrounds and (soon) powerful skills.',
+        'popular': 'Popular',
+        'bestValue': 'Best value',
+        'note': 'Purchases support the game. Secure checkout.'
+      }
+    },
+    'OptionsModal': {
+      'options': 'Options',
+      'general': 'General',
+      'difficulty': 'Difficulty',
+      'audio': 'Audio',
+      'language': 'Language',
+      'showRulesModal': 'Show Match Rules before game',
+      'resetCampaign': 'Reset Game Progress',
+      'reset': 'Reset',
+      'sureResetCampaign': 'This permanently deletes all your progress — every stage, all your coins and every upgrade. This can\'t be undone.',
+      'resetKeepsNote': 'Your music, language and difficulty settings and all purchased skins are kept.',
+      'cancel': 'Cancel',
+      'audioSettingsPlaceholder': 'Audio Settings coming soon...',
+      'easy': 'Novice',
+      'medium': 'Squire',
+      'hard': 'Master',
+      'close': 'Save & Close',
+      'soundEffects': 'Sound Effects',
+      'music': 'Music'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': 'Blade',
+      'topBlade': 'Top Blade',
+      'bottomPart': 'Bottom Part',
+      'statsLabel': 'Stats',
+      'selectSkin': 'Select Skin',
+      'purchaseMoreSkins': 'Purchase more skins',
+      'equipped': 'EQUIPPED',
+      'selectButton': 'SELECT',
+      'hintSelectCards': 'Tap a card to select your spinner blade configuration. Tap the upgrade button to upgrade it.',
+      'hintPlusIcon': 'The + icon at the top of each top-blade card opens that part\'s skin shop (e.g. Tank Piercer skin shop) where you can acquire new skins.'
+    }
   }
 }

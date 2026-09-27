@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa Jefe',
+  'stageN': 'Etapa {n}',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': '¡Recupéralo todo!',
+    'skipAria': 'Saltar la intro'
+  },
+  'bossPeek': {
+    'nextBoss': 'Próximo jefe · Etapa {n}',
+    'stagesAway': 'Faltan {n} etapas',
+    'nextUp': '¡Siguiente etapa!',
+    'portraitAlt': 'Próximo jefe: {name}'
+  },
   'you': 'TÚ',
   'prev': 'Ant.',
   'next': 'Sig.',
@@ -311,19 +324,31 @@ export default {
     'golden-eagle': 'Águila Dorada',
     'diamond': 'Diamante',
     'tsunami': 'Tsunami',
-    'sandstorm': 'Sandstorm'
-  },
-  'rule': {
-    'high': 'Alto',
-    'low': 'Bajo',
-    'same': 'Igual',
-    'plus': 'Suma',
-    'combo': 'Combo',
-    'open': 'Abierto',
-    'one': 'Una',
-    'all': 'Todas',
-    'conquered': 'Conquistado',
-    'random': 'Aleatorio'
+    'sandstorm': 'Sandstorm',
+    'cheetah': 'Guepardo',
+    'jester': 'Bufón',
+    'ninja': 'Ninja',
+    'pirate': 'Pirata',
+    'porcupine': 'Puercoespín',
+    'lionfish': 'Pez León',
+    'morningstar': 'Lucero del Alba',
+    'cactus': 'Cactus',
+    'kraken': 'Kraken',
+    'taiko': 'Taiko',
+    'toadstool': 'Amanita',
+    'full-moon': 'Luna Llena',
+    'monarch': 'Monarca',
+    'pyramid': 'Pirámide',
+    'compass': 'Brújula',
+    'checkmate': 'Jaque Mate',
+    'armadillo': 'Armadillo',
+    'anvil': 'Yunque',
+    'mammoth': 'Mamut',
+    'deep-diver': 'Buzo',
+    'narwhal': 'Narval',
+    'stag-beetle': 'Ciervo Volante',
+    'drill': 'Taladro',
+    'lancer': 'Lancero'
   },
   'skinChest': {
     'acquired': '¡{name} conseguido!'
@@ -334,5 +359,173 @@ export default {
     'teleporterShock': 'Consejo: ¿Has probado la skin Teletransportadora? ¡Atraviesa paredes y no recibe descargas en los bordes de la arena!',
     'starSpeedy': 'Consejo: ¡Una pieza superior Estrella con una pieza inferior Veloz forma un build de cañón de cristal muy fuerte!',
     'arenaWall': 'Consejo: ¿Tus spinners están demasiado cerca de los enemigos? Prueba a lanzar por encima de una pared de la arena — ¡el primer rebote contra la pared te da un empujón de velocidad!'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': '¡Felicitaciones!',
+      'demoCampaignFinished': '¡Has terminado la campaña de demostración! Si te gusta el juego, me gustaría recibir comentarios constructivos. La versión completa se lanzará pronto.',
+      'campaignFinished': '¡Has terminado la campaña! ¡Felicitaciones! ¡Eres un digno táctico de cartas! ¿Pero ya has coleccionado todas las cartas? ¡Solo los mejores coleccionistas logran este objetivo final!',
+      'cardsFinished': '¡Felicitaciones! Has coleccionado todas las cartas. ¡Eres el mejor coleccionista de cartas de todos los tiempos!'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': 'No se pudo mostrar el anuncio',
+        'body': 'Queríamos mostrarte un vídeo para que consiguieras tu recompensa, pero algo en tu navegador está bloqueando los anuncios.',
+        'allowHost': 'Permite los anuncios en {host} (o pausa tu bloqueador para este juego) e inténtalo de nuevo.',
+        'gotIt': 'Entendido'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': '¿La carga tarda demasiado? Desactiva tu bloqueador de anuncios y recarga la página.'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': 'Publicidad',
+        'title': '¿Ver un anuncio en vídeo?',
+        'body': 'Mira un breve anuncio en vídeo para conseguir tu recompensa.',
+        'bodyReward': 'Mira un breve anuncio en vídeo para conseguir {reward}.',
+        'closeable': 'Puedes cerrar el anuncio después de unos segundos. Si lo cierras antes, no hay recompensa.',
+        'rewardCoins': '{count} monedas',
+        'rewardDiamonds': '{count} diamantes',
+        'rewardSpeed': 'velocidad de combate x2',
+        'rewardRespin': 'otro giro',
+        'watch': 'Ver anuncio',
+        'decline': 'No, gracias'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': 'Partida en la nube restaurada',
+        'restoredBonus': '+{n} monedas de bonificación por la recuperación',
+        'tap': 'toca',
+        'offlineTitle': 'Sincronización en la nube en pausa',
+        'offlineBody': 'Estás jugando sin conexión. Tu progreso se guarda aquí.',
+        'retry': 'Reintentar',
+        'dismiss': 'Cerrar'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': 'Cambiar fondo'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': 'Fondos',
+        'equipped': 'Activo',
+        'equippedShort': 'Equipado',
+        'select': 'Elegir',
+        'needDiamonds': '¿Necesitas diamantes?',
+        'buy': 'Comprar',
+        'skins': {
+          'classic': 'Clásico',
+          'aurora': 'Cuchillas Giratorias',
+          'fidget': 'Fidget',
+          'ember': 'Brainrot Desaturado',
+          'nebula': 'Brainrot',
+          'circuit': 'Tecno-Mágico',
+          'cosmos': 'Steampunk',
+          'prism': 'K-Pop'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': 'Pase de Batalla',
+      'complete': 'COMPLETO',
+      'max': 'MÁX',
+      'battlePassComplete': '¡Pase de Batalla completado — buen trabajo!',
+      'rewardsReady': '¡Tienes {n} recompensa(s) para reclamar!',
+      'xpHint': 'Gana combates de campaña para +50xp, de clasificación +25xp. Derrotas: +12xp.',
+      'honorTrack': 'Pista de Honor',
+      'honorAbbr': 'PH',
+      'honorInfo': 'Gana combates PvP para obtener Puntos de Honor (PH). Combate justo (Nivel 1) da 100 PH. 3 victorias desbloquean 1 skin. ¡Vence a rivales más fuertes para PH extra!',
+      'seasonReset': '¡La temporada se reinicia en {n} día(s) — reclama tus recompensas!'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': 'Desafío diario: ¡gana un diamante!',
+        'startCoins': 'Desafío diario: ¡gana {count} monedas!'
+      }
+    },
+    'CombatLog': {
+      'title': 'Registro de combate',
+      'short': 'Registro',
+      'aria': 'Abrir registro de combate',
+      'hint': 'Para estrategas · últimos {n} golpes, más recientes primero',
+      'empty': 'Aún no hay combate — el registro se llena cuando las cuchillas chocan.',
+      'line': '{attacker} inflige {dmg} de daño a {target}',
+      'enemy': 'Enemigo {type}',
+      'spinner': 'Peonza {n} {type}',
+      'whoEnemy': 'Enemigo',
+      'whoSpinner': 'Peonza {n}',
+      'crit': 'Golpe crítico',
+      'speedFavors': 'la velocidad favorece a {name}',
+      'types': {
+        'star': 'Cuchilla estelar',
+        'triangle': 'Espinoso',
+        'round': 'Guardia redonda',
+        'quadratic': 'Núcleo cuádruple',
+        'cushioned': 'Coraza blanda',
+        'piercer': 'Perforador'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': 'Recompensas diarias',
+      'comeBackTomorrow': '¡Vuelve mañana por tu próxima recompensa!',
+      'collectTodaysReward': '¡Reclama la recompensa de hoy! No te pierdas un día o el progreso se reinicia.',
+      'collectCta': 'Reclamar',
+      'dayShort': 'D{n}'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': 'Clasificación',
+      'yourRank': 'Tu rango',
+      'jumpToMe': 'Ir a mí',
+      'maxStage': 'Etapa máx.',
+      'alreadyFoughtToday': 'Ya combatiste hoy — vuelve mañana',
+      'fightAsGhost': 'Luchar como combate fantasma'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': 'Conseguir diamantes',
+        'subtitle': 'Los diamantes desbloquean fondos y (pronto) habilidades poderosas.',
+        'popular': 'Popular',
+        'bestValue': 'Mejor valor',
+        'note': 'Las compras apoyan el juego. Pago seguro.'
+      }
+    },
+    'OptionsModal': {
+      'options': 'Opciones',
+      'general': 'General',
+      'difficulty': 'Dificultad',
+      'audio': 'Audio',
+      'language': 'Idioma',
+      'showRulesModal': 'Mostrar reglas antes del juego',
+      'resetCampaign': 'Reiniciar progreso del juego',
+      'reset': 'Reiniciar',
+      'sureResetCampaign': 'Esto elimina permanentemente todo tu progreso: cada nivel, todas tus monedas y todas las mejoras. No se puede deshacer.',
+      'resetKeepsNote': 'Se conservan tus ajustes de música, idioma y dificultad, y todas las skins compradas.',
+      'cancel': 'Cancelar',
+      'audioSettingsPlaceholder': 'Ajustes de audio próximamente...',
+      'easy': 'Novicio',
+      'medium': 'Escudero',
+      'hard': 'Maestro',
+      'close': 'Guardar y Cerrar',
+      'soundEffects': 'Efectos de Sonido',
+      'music': 'Música'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': 'Peonza',
+      'topBlade': 'Parte superior',
+      'bottomPart': 'Parte inferior',
+      'statsLabel': 'Estadísticas',
+      'selectSkin': 'Elegir skin',
+      'purchaseMoreSkins': 'Comprar más skins',
+      'equipped': 'EQUIPADO',
+      'selectButton': 'ELEGIR',
+      'hintSelectCards': 'Toca una tarjeta para elegir la configuración de tu peonza. Toca el botón de mejora para mejorarla.',
+      'hintPlusIcon': 'El + en la parte superior de cada tarjeta abre la tienda de skins de esa parte superior (p. ej. Perforador) donde puedes adquirir nuevas skins.'
+    }
   }
 }

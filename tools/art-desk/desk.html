@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Art Desk</title>
+  <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23ff00ff'/%3E%3Cpath d='M4 12 8 3l4 9z' fill='%2316171b'/%3E%3C/svg%3E">
+  <style>
+      :root {
+          --bg: #16171b;
+          --panel: #1d1f24;
+          --panel2: #24262c;
+          --line: #33363e;
+          --text: #e6e6ea;
+          --dim: #9a9ca6;
+          --faint: #6c6f7a;
+          --accent: #7c9cff;
+          --ok: #52c98a;
+          --warn: #e8b04a;
+          --bad: #ef6a6a;
+          --todo: #b58cff;
+          --check: repeating-conic-gradient(#2b2d33 0 25%, #222328 0 50%) 0 0 / 16px 16px;
+      }
+
+      * {
+          box-sizing: border-box;
+      }
+
+      html, body {
+          height: 100%;
+          margin: 0;
+      }
+
+      body {
+          background: var(--bg);
+          color: var(--text);
+          font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+          display: grid;
+          grid-template-rows: auto 1fr;
+          overflow: hidden;
+      }
+
+      button, input, select {
+          font: inherit;
+          color: inherit;
+      }
+
+      button {
+          background: var(--panel2);
+          border: 1px solid var(--line);
+          border-radius: 6px;
+          padding: 5px 10px;
+          cursor: pointer;
+          white-space: nowrap;
+      }
+
+      button:hover:not(:disabled) {
+          border-color: var(--accent);
+      }
+
+      button:disabled {
+          opacity: .45;
+          cursor: default;
+      }
+
+      button.primary {
+          background: #34457e;
+          border-color: #4b62b3;
+      }
+
+      button.go {
+          background: #28543d;
+          border-color: #3a7a58;
+      }
+
+      button.stop {
+          background: #5a2a2a;
+          border-color: #8a3d3d;
+      }
+
+      kbd {
+          font: 11px ui-monospace, monospace;
+          background: #2c2e35;
+          border: 1px solid var(--line);
+          border-bottom-width: 2px;
+          border-radius: 4px;
+          padding: 0 4px;
+          color: var(--dim);
+      }
+
+      input[type=search], input[type=number], select {
+          background: var(--panel2);
+          border: 1px solid var(--line);
+          border-radius: 6px;
+          padding: 5px 8px;
+      }
+
+      input[type=number] {
+          width: 64px;
+      }
+
+      header {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px 14px;
+          padding: 10px 14px;
+          border-bottom: 1px solid var(--line);
+          background: var(--panel);
+      }
+
+      header h1 {
+          font-size: 15px;
+          margin: 0;
+          white-space: nowrap;
+      }
+
+      header h1 small {
+          color: var(--dim);
+          font-weight: 400;
+          margin-left: 6px;
+      }
+
+      #q {
+          width: min(360px, 60vw);
+      }
+
+      .chips {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+      }
+
+      .chip {
+          border-radius: 999px;
+          padding: 3px 11px;
+      }
+
+      .chip.on {
+          background: #34457e;
+          border-color: #4b62b3;
+      }
+
+      .chip b {
+          font-weight: 600;
+          margin-left: 4px;
+          color: var(--dim);
+      }
+
+      .chip.on b {
+          color: var(--text);
+      }
+
+      label.tog {
+          display: inline-flex;
+          gap: 5px;
+          align-items: center;
+          color: var(--dim);
+          cursor: pointer;
+          white-space: nowrap;
+      }
+
+      .spacer {
+          flex: 1;
+      }
+
+      .hint {
+          color: var(--faint);
+          font-size: 12px;
+      }
+
+      main {
+          display: grid;
+          grid-template-columns: minmax(300px, 380px) 1fr minmax(290px, 340px);
+          min-height: 0;
+      }
+
+      #list {
+          overflow-y: auto;
+          border-right: 1px solid var(--line);
+      }
+
+      .item {
+          display: grid;
+          grid-template-columns: 72px 1fr;
+          gap: 10px;
+          padding: 8px 12px;
+          border-bottom: 1px solid #24262b;
+          cursor: pointer;
+      }
+
+      .item:hover {
+          background: #1c1e23;
+      }
+
+      .item.sel {
+          background: #232a3f;
+          box-shadow: inset 3px 0 0 var(--accent);
+      }
+
+      .item .th {
+          width: 72px;
+          height: 54px;
+          background: var(--check);
+          border-radius: 4px;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+      }
+
+      .item .th img {
+          max-width: 100%;
+          max-height: 100%;
+      }
+
+      .item .th.none {
+          color: var(--faint);
+          font-size: 10px;
+          text-align: center;
+      }
+
+      .item .t {
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+
+      .item .s {
+          color: var(--dim);
+          font-size: 12px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+
+      .item .row {
+          display: flex;
+          gap: 6px;
+          align-items: center;
+          margin-top: 2px;
+          flex-wrap: wrap;
+      }
+
+      .badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          padding: 0 7px;
+          border-radius: 999px;
+          border: 1px solid var(--line);
+          color: var(--dim);
+          white-space: nowrap;
+      }
+
+      .m-todo {
+          color: var(--todo);
+          border-color: #5b4585;
+      }
+
+      .m-repaint {
+          color: var(--bad);
+          border-color: #7a3a3a;
+      }
+
+      .m-unsliced {
+          color: var(--warn);
+          border-color: #7a6030;
+      }
+
+      .m-done {
+          color: var(--ok);
+          border-color: #2f6e4c;
+      }
+
+      .badge.q {
+          color: var(--accent);
+          border-color: #3e4f86;
+      }
+
+      .badge.busy {
+          color: #fff;
+          background: #3e4f86;
+          border-color: #5a6fc0;
+      }
+
+      .badge.warn {
+          color: var(--warn);
+          border-color: #7a6030;
+      }
+
+      .empty {
+          padding: 30px 16px;
+          color: var(--dim);
+          text-align: center;
+      }
+
+      #detail {
+          overflow-y: auto;
+          padding: 16px 18px 40px;
+          min-width: 0;
+      }
+
+      #detail h2 {
+          margin: 0 0 4px;
+          font-size: 18px;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+      }
+
+      .meta {
+          color: var(--dim);
+          font-size: 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px 12px;
+      }
+
+      .meta code {
+          color: var(--text);
+          font: 12px ui-monospace, monospace;
+      }
+
+      .alert {
+          margin: 10px 0;
+          padding: 8px 10px;
+          border-radius: 6px;
+          background: #3a2f1a;
+          border: 1px solid #7a6030;
+          color: #f0d9a8;
+      }
+
+      .alert.bad {
+          background: #3a1d1d;
+          border-color: #7a3a3a;
+          color: #f3c1c1;
+      }
+
+      .actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin: 14px 0 10px;
+      }
+
+      .actions .sep {
+          width: 1px;
+          background: var(--line);
+          margin: 0 2px;
+      }
+
+      .drop {
+          border: 1.5px dashed var(--line);
+          border-radius: 8px;
+          padding: 10px 12px;
+          color: var(--dim);
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+      }
+
+      .drop.over {
+          border-color: var(--accent);
+          background: #1f2640;
+          color: var(--text);
+      }
+
+      .drop.armed {
+          border-color: #3a7a58;
+      }
+
+      .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--faint);
+          display: inline-block;
+      }
+
+      .dot.live {
+          background: var(--ok);
+          box-shadow: 0 0 0 3px #52c98a33;
+          animation: pulse 1.6s infinite;
+      }
+
+      .dot.run {
+          background: var(--accent);
+          animation: pulse 1.2s infinite;
+      }
+
+      .dot.bad {
+          background: var(--bad);
+      }
+
+      @keyframes pulse {
+          50% {
+              opacity: .35;
+          }
+      }
+
+      .tabs {
+          display: flex;
+          gap: 4px;
+          margin: 16px 0 8px;
+          flex-wrap: wrap;
+      }
+
+      .tabs button {
+          border-radius: 6px 6px 0 0;
+      }
+
+      .tabs button.on {
+          background: #34457e;
+          border-color: #4b62b3;
+      }
+
+      .view {
+          background: var(--check);
+          border: 1px solid var(--line);
+          border-radius: 0 8px 8px 8px;
+          padding: 10px;
+          display: grid;
+          gap: 10px;
+      }
+
+      .view.two {
+          grid-template-columns: 1fr 1fr;
+      }
+
+      .view figure {
+          margin: 0;
+          display: grid;
+          gap: 4px;
+          justify-items: center;
+          min-width: 0;
+      }
+
+      .view figcaption {
+          color: var(--dim);
+          font-size: 11px;
+      }
+
+      .view img {
+          max-width: 100%;
+          max-height: 58vh;
+          image-rendering: auto;
+      }
+
+      .view .ph {
+          color: var(--dim);
+          padding: 40px;
+          text-align: center;
+      }
+
+      h3 {
+          font-size: 13px;
+          margin: 20px 0 8px;
+          color: var(--dim);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: .05em;
+      }
+
+      .sprites {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+          gap: 8px;
+      }
+
+      .sprite {
+          background: var(--check);
+          border: 1px solid var(--line);
+          border-radius: 6px;
+          padding: 4px;
+          display: grid;
+          gap: 2px;
+          justify-items: center;
+      }
+
+      .sprite img {
+          width: 72px;
+          height: 72px;
+          object-fit: contain;
+      }
+
+      .sprite.miss {
+          border-style: dashed;
+          opacity: .55;
+      }
+
+      .sprite.miss .box {
+          width: 72px;
+          height: 72px;
+          display: grid;
+          place-items: center;
+          color: var(--faint);
+          font-size: 10px;
+      }
+
+      .sprite span {
+          font-size: 10px;
+          color: var(--dim);
+          text-align: center;
+          line-height: 1.2;
+          word-break: break-word;
+      }
+
+      details.prompt summary {
+          cursor: pointer;
+          color: var(--dim);
+      }
+
+      pre {
+          background: #121317;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          padding: 12px;
+          white-space: pre-wrap;
+          word-break: break-word;
+          font: 12px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+          max-height: 50vh;
+          overflow: auto;
+      }
+
+      aside {
+          border-left: 1px solid var(--line);
+          display: grid;
+          grid-template-rows: auto auto 1fr;
+          min-height: 0;
+          background: var(--panel);
+      }
+
+      aside section {
+          padding: 12px 14px;
+          border-bottom: 1px solid var(--line);
+      }
+
+      aside h4 {
+          margin: 0 0 8px;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      }
+
+      .phase {
+          color: var(--dim);
+          font-size: 12px;
+          margin: 6px 0;
+          min-height: 18px;
+      }
+
+      .btnrow {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin: 6px 0;
+      }
+
+      .qlist {
+          list-style: none;
+          margin: 8px 0 0;
+          padding: 0;
+          max-height: 170px;
+          overflow-y: auto;
+      }
+
+      .qlist li {
+          display: flex;
+          justify-content: space-between;
+          gap: 6px;
+          padding: 3px 0;
+          border-bottom: 1px solid #2a2c32;
+          font-size: 12px;
+      }
+
+      .qlist li.cur {
+          color: var(--accent);
+      }
+
+      .qlist button {
+          padding: 0 6px;
+          font-size: 11px;
+      }
+
+      .settings {
+          display: grid;
+          grid-template-columns: auto auto;
+          gap: 4px 8px;
+          align-items: center;
+          font-size: 12px;
+          color: var(--dim);
+          margin-top: 8px;
+      }
+
+      #log {
+          overflow-y: auto;
+          padding: 8px 12px;
+          font: 11px/1.45 ui-monospace, Consolas, monospace;
+          min-height: 0;
+      }
+
+      #log div {
+          white-space: pre-wrap;
+          word-break: break-word;
+      }
+
+      #log .err {
+          color: #f2a0a0;
+      }
+
+      #log .ok {
+          color: #8fe0b4;
+      }
+
+      #log .stem {
+          color: var(--accent);
+      }
+
+      #log .t {
+          color: var(--faint);
+      }
+
+      .logbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px 0;
+      }
+
+      #toast {
+          position: fixed;
+          left: 50%;
+          bottom: 18px;
+          transform: translateX(-50%);
+          display: grid;
+          gap: 6px;
+          z-index: 9;
+          pointer-events: none;
+      }
+
+      #toast div {
+          background: #2d3350;
+          border: 1px solid #4b62b3;
+          padding: 8px 14px;
+          border-radius: 8px;
+          box-shadow: 0 6px 20px #0008;
+          max-width: 70vw;
+      }
+
+      #toast div.bad {
+          background: #4a2222;
+          border-color: #8a3d3d;
+      }
+
+      @media (max-width: 1200px) {
+          main {
+              grid-template-columns: minmax(260px, 320px) 1fr;
+          }
+
+          aside {
+              grid-column: 1 / -1;
+              border-left: 0;
+              border-top: 1px solid var(--line);
+              max-height: 40vh;
+          }
+
+          body {
+              overflow: auto;
+          }
+      }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Art Desk<small id="project"></small></h1>
+  <input id="q" type="search" placeholder="Search sheets, sprites, ids…   ( / )" autocomplete="off">
+  <div class="chips" id="chips"></div>
+  <select id="doc" title="Prompt document"></select>
+  <label class="tog"><input type="checkbox" id="singles"> singles</label>
+  <span class="spacer"></span>
+  <span class="hint">copy → paste in Gemini → press its download button — the desk does the rest</span>
+  <button id="rescan" title="Re-read everything from disk">↻</button>
+</header>
+<main>
+  <div id="list"></div>
+  <div id="detail">
+    <div class="empty">Pick something on the left.</div>
+  </div>
+  <aside>
+    <section id="gem">
+      <h4><span class="dot" id="gemdot"></span> Gemini queue <span class="spacer"></span><span class="hint"
+                                                                                               id="used"></span></h4>
+      <div class="phase" id="phase">idle</div>
+      <div class="btnrow">
+        <button class="go" id="start">▶ Start</button>
+        <button class="stop" id="stopq">■ Stop</button>
+        <button id="signIn"
+                title="Opens the desk's Chrome profile WITHOUT its automation port, the only way Google lets you sign in. Sign in, then close that window.">
+          Sign in
+        </button>
+        <button id="openGem" title="Open the desk's own Chrome window at Gemini, to watch it work">Gemini window
+        </button>
+      </div>
+      <div class="btnrow">
+        <button id="queueTodo" title="Queue every job in the current list that still needs painting">+ all to paint
+        </button>
+        <button id="clearq">Clear</button>
+      </div>
+      <ul class="qlist" id="qlist"></ul>
+      <details>
+        <summary class="hint">throttle</summary>
+        <div class="settings">
+          <span>gap between generations (s)</span><input type="number" id="s-gap" min="0">
+          <span>+ random jitter up to (s)</span><input type="number" id="s-jit" min="0">
+          <span>generations per day, all projects</span><input type="number" id="s-cap" min="0">
+          <span>re-rolls per job</span><input type="number" id="s-ret" min="0">
+        </div>
+      </details>
+    </section>
+    <div class="logbar"><h4 style="margin:0">Log</h4><label class="tog"><input type="checkbox" id="logSel"> this job
+      only</label></div>
+    <div id="log"></div>
+  </aside>
+</main>
+<div id="toast"></div>
+<script>
+  'use strict'
+  const $ = (s, el = document) => el.querySelector(s)
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    '\'': '&#39;'
+  })[c])
+  const store = {
+    get: (k, d) => {
+      try {
+        const v = localStorage.getItem(`desk.${k}`)
+        return v === null ? d : JSON.parse(v)
+      } catch {
+        return d
+      }
+    }, set: (k, v) => {
+      try {
+        localStorage.setItem(`desk.${k}`, JSON.stringify(v))
+      } catch {
+      }
+    }
+  }
+
+  let S = { jobs: [], armed: null, busy: [], auto: { queue: [] }, log: [], root: '' }
+  let at = Date.now()
+  let sel = store.get('sel', null)
+  let filter = store.get('filter', 'todo')
+  let doc = store.get('doc', '')
+  let showSingles = store.get('singles', false)
+  let tab = store.get('tab', 'ref')
+  let logSel = store.get('logSel', false)
+  const prompts = new Map()
+  let pendingPrompt = null
+
+  const FILTERS = [
+    ['todo', 'To paint', (j) => j.mark === '·' || j.mark === '!'],
+    ['unsliced', 'Not sliced', (j) => j.mark === '?'],
+    ['done', 'Done', (j) => j.mark === '✓'],
+    ['all', 'All', () => true]
+  ]
+  const MARK = {
+    '·': ['m-todo', 'to paint'],
+    '!': ['m-repaint', 'repaint'],
+    '?': ['m-unsliced', 'not sliced'],
+    '✓': ['m-done', 'done']
+  }
+  const file = (rel, v) => `/file?p=${encodeURIComponent(rel)}${v ? `&v=${v}` : ''}`
+  const sheetsRel = () => S.sheetsRel ?? 'art-sheets'
+
+  const api = async (path, opts = {}) => {
+    const r = await fetch(path, { ...opts, headers: { 'x-art-desk': '1', ...(opts.headers ?? {}) } })
+    const data = r.headers.get('content-type')?.includes('json') ? await r.json() : null
+    if (!r.ok) throw new Error(data?.error ?? `${r.status}`)
+    return data
+  }
+  const post = (path, data) => api(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data ?? {})
+  })
+
+  const toast = (msg, bad = false, ms = 3800) => {
+    const d = document.createElement('div')
+    d.textContent = msg
+    if (bad) d.className = 'bad'
+    $('#toast').append(d)
+    setTimeout(() => d.remove(), ms)
+  }
+
+  // ─── the list ───────────────────────────────────────────────────────────────
+  const pool = () => S.jobs.filter((j) => (showSingles ? true : j.kind !== 'single') && (!doc || j.doc === doc))
+  const hay = (j) => (j._hay ??= [j.title, j.stem, j.doc, j.kind, j.state, ...j.cells.flatMap((c) => [c.id, c.label, c.variant, c.target])].join(' ').toLowerCase())
+  const visible = () => {
+    const words = $('#q').value.toLowerCase().split(/\s+/).filter(Boolean)
+    const f = FILTERS.find((x) => x[0] === filter)?.[2] ?? (() => true)
+    return pool().filter((j) => f(j) && words.every((w) => hay(j).includes(w)))
+  }
+  const renderChips = () => {
+    const p = pool()
+    $('#chips').innerHTML = FILTERS.map(([k, label, f]) => `<button class="chip${k === filter ? ' on' : ''}" data-f="${k}">${label}<b>${p.filter(f).length}</b></button>`).join('')
+    const docs = [...new Set(S.jobs.map((j) => j.doc))]
+    $('#doc').innerHTML = `<option value="">all prompt files</option>${docs.map((d) => `<option value="${esc(d)}"${d === doc ? ' selected' : ''}>${esc(d.replace(/^PROMPTS-|\.md$/g, ''))}</option>`).join('')}`
+  }
+  const renderList = () => {
+    const v = visible()
+    if (!v.length) {
+      $('#list').innerHTML = `<div class="empty">${S.jobs.length ? 'Nothing matches.' : 'No PROMPTS-*.md found.'}</div>`
+      return
+    }
+    const q = new Set(S.auto.queue ?? [])
+    $('#list').innerHTML = v.map((j) => {
+      const [cls, word] = MARK[j.mark] ?? ['', j.mark]
+      const busy = S.busy.includes(j.stem) || (S.auto.current === j.stem)
+      return `<div class="item${j.stem === sel ? ' sel' : ''}" data-stem="${esc(j.stem)}">
+      <div class="th${j.ref ? '' : ' none'}">${j.ref ? `<img loading="lazy" src="${file(`${sheetsRel()}/${j.ref}`)}" alt="">` : 'no reference<br>exported'}</div>
+      <div style="min-width:0">
+        <div class="t" title="${esc(j.title)}">${esc(j.title)}</div>
+        <div class="s">${esc(j.stem)}${j.refSize ? ` · ${j.refSize.w}×${j.refSize.h}` : ''}</div>
+        <div class="row"><span class="badge ${cls}">${j.mark} ${word}</span>
+          ${j.cells.length ? `<span class="badge" title="sliced sprites on disk">${j.onDisk}/${j.cells.length}</span>` : ''}
+          ${busy ? '<span class="badge busy">working…</span>' : q.has(j.stem) ? '<span class="badge q">queued</span>' : ''}
+          ${S.armed?.stem === j.stem ? '<span class="badge q">⏺ armed</span>' : ''}
+          ${j.aspectWarning ? '<span class="badge warn" title="' + esc(j.aspectWarning) + '">shape!</span>' : ''}</div>
+      </div></div>`
+    }).join('')
+    $('.item.sel')?.scrollIntoView({ block: 'nearest' })
+  }
+
+  // ─── the detail ─────────────────────────────────────────────────────────────
+  const current = () => S.jobs.find((j) => j.stem === sel)
+  const getPrompt = async (stem) => {
+    if (!prompts.has(stem)) prompts.set(stem, (await api(`/api/job?stem=${encodeURIComponent(stem)}`)).prompt)
+    return prompts.get(stem)
+  }
+  const aspect = (s) => (s ? `${s.w}×${s.h} (${(s.w / s.h).toFixed(2)}:1)` : '—')
+  const renderDetail = async () => {
+    const j = current()
+    if (!j) {
+      $('#detail').innerHTML = '<div class="empty">Pick something on the left.</div>'
+      return
+    }
+    const [cls, word] = MARK[j.mark] ?? ['', j.mark]
+    const armed = S.armed?.stem === j.stem
+    const busy = S.busy.includes(j.stem) || S.auto.current === j.stem
+    const refUrl = j.ref ? file(`${sheetsRel()}/${j.ref}`) : null
+    const keyUrl = j.key ? file(`${sheetsRel()}/${j.key}`) : null
+    const paintUrl = j.painting ? file(`${S.paintedRel}/${j.painting}`, j.paintingRev) : null
+    const fig = (url, cap, drag = false) => (url ? `<figure><img src="${url}" ${drag ? 'draggable="true" data-drag="1" title="Drag me into the Gemini window"' : ''} alt=""><figcaption>${cap}</figcaption></figure>` : `<div class="ph">${cap}</div>`)
+    const views = {
+      ref: fig(refUrl, refUrl ? 'the clean reference — this is what gets attached (drag it, or copy it)' : 'no reference exported yet — run the bench export', true),
+      key: fig(keyUrl, keyUrl ? 'the key sheet: captions for you, never for the painter' : 'no key sheet'),
+      painted: fig(paintUrl, paintUrl ? `painted/${esc(j.painting)} — ${aspect(j.paintingSize)}` : 'nothing painted yet'),
+      both: `${fig(refUrl, 'reference')}${fig(paintUrl, paintUrl ? 'painted' : 'nothing painted yet')}`
+    }
+    const tabBtn = (k, label) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${label}</button>`
+    $('#detail').innerHTML = `
+    <h2>${esc(j.title)} <span class="badge ${cls}">${j.mark} ${word}</span></h2>
+    <div class="meta"><code>${esc(j.stem)}</code><span>${esc(j.doc)}</span><span>reference ${aspect(j.refSize)}</span>${j.rev ? `<span>rev <code>${j.rev}</code></span>` : ''}<span>${esc(j.state)}</span></div>
+    ${j.aspectWarning ? `<div class="alert">The painting's shape does not match the reference: ${esc(j.aspectWarning)}. The slicer will most likely refuse it — repaint, and set the aspect ratio in Gemini if it offers one.</div>` : ''}
+    ${!j.ref ? '<div class="alert bad">This prompt has no reference image on disk yet. Export it first (the bench, or <code>pnpm art:export</code>' + (j.kind === 'single' ? ' <code>-- --singles</code>' : '') + ').</div>' : ''}
+    <div class="actions">
+      <button class="primary" data-act="both" ${j.ref ? '' : 'disabled'} title="Copies the image now, and the prompt the moment you come back to this window  (b)">⧉ Copy image, then prompt</button>
+      <button data-act="img" ${j.ref ? '' : 'disabled'} title="(i)">Copy image</button>
+      <button data-act="prompt" title="(c)">Copy prompt</button>
+      <button data-act="open" title="Open Gemini in a new tab  (o)">↗ Gemini</button>
+      <span class="sep"></span>
+      <button class="go" data-act="paint" ${j.ref && !busy ? '' : 'disabled'} title="Queue it first and start the Gemini queue  (g)">⚡ Paint with Gemini</button>
+      <button data-act="queue" ${j.ref ? '' : 'disabled'} title="(q)">+ Queue</button>
+      ${j.painting ? `<button data-act="slice" ${busy ? 'disabled' : ''} title="Slice and compress the painting that is already in painted/">✂ Slice + compress</button>` : ''}
+    </div>
+    <div class="drop${armed ? ' armed' : ''}" id="drop">
+      <span class="dot${armed ? ' live' : ''}"></span>
+      <span style="flex:1;min-width:220px">${busy ? '<b>Working on it…</b> see the log.' : armed
+      ? `<b>Watching ${esc(S.watchDir ?? 'Downloads')}</b> — press Gemini's download button and the image is filed as <code>${esc(j.stem)}</code>, sliced and compressed.`
+      : 'Drop the returned image here, or paste it (<kbd>Ctrl</kbd>+<kbd>V</kbd>). Copying from this job also watches your Downloads folder for it.'}</span>
+      ${armed ? '<button data-act="latest">Use newest download</button><button data-act="disarm">Stop watching</button>' : `<button data-act="arm" ${j.ref ? '' : 'disabled'}>Watch Downloads</button>`}
+    </div>
+    <div class="tabs">${tabBtn('ref', 'Reference')}${tabBtn('key', 'Key')}${tabBtn('painted', 'Painted')}${tabBtn('both', 'Side by side')}</div>
+    <div class="view${tab === 'both' ? ' two' : ''}">${views[tab] ?? views.ref}</div>
+    ${j.cells.length ? `<h3>Sprites on disk — ${j.onDisk}/${j.cells.length}</h3><div class="sprites">${j.cells.map((c) => `
+      <div class="sprite${c.onDisk ? '' : ' miss'}" title="${esc(c.target)}">
+        ${c.onDisk ? `<img src="${file(`${S.outRel}/${c.target}`, at)}" alt="">` : '<div class="box">not cut</div>'}
+        <span>${esc([c.label, c.variant].filter(Boolean).join(' · ') || c.id)}</span></div>`).join('')}</div>` : ''}
+    <h3>Prompt</h3>
+    <details class="prompt" ${store.get('promptOpen', false) ? 'open' : ''}><summary>${(j.promptChars / 1000).toFixed(1)}k characters — show</summary><pre id="ptext">loading…</pre></details>`
+    const p = await getPrompt(j.stem).catch(() => null)
+    if (current()?.stem === j.stem && $('#ptext')) $('#ptext').textContent = p ?? '(could not load the prompt)'
+  }
+
+  // ─── copying, and the return ────────────────────────────────────────────────
+  const arm = (stem) => post('/api/arm', { stem }).then((r) => {
+    S.armed = r.armed
+    renderList()
+    renderDetail()
+  }).catch((e) => toast(e.message, true))
+  const copyImage = async (j) => {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': fetch(file(`${sheetsRel()}/${j.ref}`)).then((r) => r.blob()) })])
+  }
+  const copyPrompt = async (j) => navigator.clipboard.writeText(await getPrompt(j.stem))
+  const act = async (what) => {
+    const j = current()
+    if (!j) return
+    try {
+      if (what === 'img') {
+        await copyImage(j)
+        toast('Reference image copied — paste it at Gemini')
+        arm(j.stem)
+      }
+      if (what === 'prompt') {
+        await copyPrompt(j)
+        toast('Prompt copied')
+        if (j.ref) arm(j.stem)
+      }
+      if (what === 'both') {
+        pendingPrompt = await getPrompt(j.stem)
+        await copyImage(j)
+        toast('Image copied. Paste it at Gemini, then come back here — the prompt is copied as soon as this window has focus again.', false, 6500)
+        arm(j.stem)
+      }
+      if (what === 'open') window.open(S.geminiUrl, 'gemini')
+      if (what === 'arm') arm(j.stem)
+      if (what === 'disarm') arm(null)
+      if (what === 'latest') {
+        const r = await post('/api/import-latest')
+        toast(`Filing ${r.file.split(/[\\/]/).pop()}…`)
+      }
+      if (what === 'slice') {
+        await post(`/api/slice?stem=${encodeURIComponent(j.stem)}`)
+        toast('Slicing…')
+      }
+      if (what === 'queue') {
+        S.auto = await post('/api/auto', { action: 'enqueue', stems: [j.stem] })
+        renderAuto()
+        renderList()
+        toast('Queued')
+      }
+      if (what === 'paint') {
+        S.auto = await post('/api/auto', { action: 'start', stems: [j.stem], front: true })
+        renderAuto()
+        renderList()
+      }
+    } catch (e) {
+      toast(`${e.message}`, true)
+    }
+  }
+  window.addEventListener('focus', async () => {
+    if (!pendingPrompt) return
+    const text = pendingPrompt
+    pendingPrompt = null
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('Prompt copied — paste it at Gemini and send')
+    } catch {
+      pendingPrompt = text
+    }
+  })
+  const sendReturn = async (blob, source) => {
+    const j = current()
+    if (!j) return toast('Pick the job this image belongs to first', true)
+    try {
+      await api(`/api/return?stem=${encodeURIComponent(j.stem)}&source=${source}`, {
+        method: 'POST',
+        body: blob,
+        headers: { 'content-type': blob.type || 'application/octet-stream' }
+      })
+      toast(`Filing it as ${j.stem}…`)
+    } catch (e) {
+      toast(e.message, true)
+    }
+  }
+  document.addEventListener('paste', (e) => {
+    if (e.target.closest?.('input, textarea')) return
+    const f = [...(e.clipboardData?.files ?? [])].find((x) => x.type.startsWith('image/'))
+    if (f) {
+      e.preventDefault()
+      sendReturn(f, 'paste')
+    }
+  })
+  document.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
+    $('#drop')?.classList.add('over')
+  })
+  document.addEventListener('dragleave', (e) => {
+    if (!e.relatedTarget) $('#drop')?.classList.remove('over')
+  })
+  document.addEventListener('drop', (e) => {
+    $('#drop')?.classList.remove('over')
+    const f = [...(e.dataTransfer?.files ?? [])].find((x) => x.type.startsWith('image/'))
+    if (!f) return
+    e.preventDefault()
+    if (!e.target.closest?.('#detail')) return toast('Drop it on the job on the right — so it is clear which one it is for', true)
+    sendReturn(f, 'drop')
+  })
+  document.addEventListener('dragstart', (e) => {
+    const img = e.target.closest?.('img[data-drag]')
+    const j = current()
+    if (!img || !j?.ref) return
+    // For a drop onto the desktop or another app; a web page gets the image itself.
+    e.dataTransfer.setData('DownloadURL', `image/png:${j.ref.split('/').pop()}:${new URL(img.src, location.href).href}`)
+  })
+
+  // ─── the queue ──────────────────────────────────────────────────────────────
+  const fmtS = (ms) => `${Math.max(0, Math.round(ms / 1000))} s`
+  const renderAuto = () => {
+    const a = S.auto ?? {}
+    $('#gemdot').className = `dot${a.running ? ' run' : a.lastError ? ' bad' : ''}`
+    $('#used').textContent = `${a.usedToday ?? 0}/${a.settings?.dailyCap ?? '?'} today`
+    const phase = a.running
+      ? (a.nextAt ? `next one in ${fmtS(a.nextAt - Date.now())}` : `${a.current ?? ''} — ${a.phase}`)
+      : a.lastError ? `stopped: ${a.lastError}` : `idle${a.queue?.length ? ` — ${a.queue.length} queued, press Start` : ''}`
+    $('#phase').textContent = phase
+    $('#start').disabled = !!a.running || !a.queue?.length
+    $('#stopq').disabled = !a.running
+    $('#qlist').innerHTML = (a.queue ?? []).map((s) => `<li class="${a.running && s === a.current ? 'cur' : ''}"><span>${esc(s)}</span>${a.running && s === a.current ? '<span>▶</span>' : `<button data-deq="${esc(s)}">×</button>`}</li>`).join('')
+    for (const [id, k] of [['#s-gap', 'gapSeconds'], ['#s-jit', 'jitterSeconds'], ['#s-cap', 'dailyCap'], ['#s-ret', 'retries']]) {
+      if (document.activeElement !== $(id)) $(id).value = a.settings?.[k] ?? ''
+    }
+  }
+  setInterval(() => {
+    if (S.auto?.nextAt) renderAuto()
+  }, 1000)
+
+  // ─── the log ────────────────────────────────────────────────────────────────
+  const logLine = (e) => {
+    const d = document.createElement('div')
+    if (e.level === 'err') d.className = 'err'
+    if (e.level === 'ok') d.className = 'ok'
+    d.dataset.stem = e.stem ?? ''
+    const time = new Date(e.t).toTimeString().slice(0, 8)
+    d.innerHTML = `<span class="t">${time}</span> ${e.stem ? `<span class="stem">${esc(e.stem)}</span> ` : ''}${esc(e.line)}`
+    if (logSel && sel && e.stem !== sel) d.hidden = true
+    return d
+  }
+  const addLog = (e) => {
+    const box = $('#log')
+    const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 30
+    box.append(logLine(e))
+    while (box.childElementCount > 600) box.firstElementChild.remove()
+    if (stick) box.scrollTop = box.scrollHeight
+  }
+  const filterLog = () => {
+    for (const d of $('#log').children) d.hidden = logSel && !!sel && d.dataset.stem !== sel
+  }
+
+  // ─── wiring ─────────────────────────────────────────────────────────────────
+  const select = (stem) => {
+    sel = stem
+    store.set('sel', sel)
+    renderList()
+    renderDetail()
+    filterLog()
+  }
+  const load = async (rescan = false) => {
+    const st = await api(`/api/state${rescan ? '?rescan=1' : ''}`)
+    const firstLoad = !S.jobs.length
+    S = { ...S, ...st }
+    at = Date.now()
+    prompts.clear()
+    document.title = `Art Desk — ${st.project}`
+    $('#project').textContent = st.project
+    if (firstLoad) {
+      $('#log').innerHTML = ''
+      st.log.forEach(addLog)
+    }
+    if (!sel || !S.jobs.some((j) => j.stem === sel)) sel = visible()[0]?.stem ?? null
+    renderChips()
+    renderList()
+    renderDetail()
+    renderAuto()
+  }
+  let loadTimer = null
+  const loadSoon = () => {
+    clearTimeout(loadTimer)
+    loadTimer = setTimeout(() => load().catch(() => {
+    }), 250)
+  }
+
+  $('#q').addEventListener('input', () => {
+    renderList()
+  })
+  $('#chips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-f]')
+    if (!b) return
+    filter = b.dataset.f
+    store.set('filter', filter)
+    renderChips()
+    renderList()
+  })
+  $('#doc').addEventListener('change', (e) => {
+    doc = e.target.value
+    store.set('doc', doc)
+    renderChips()
+    renderList()
+  })
+  $('#singles').checked = showSingles
+  $('#singles').addEventListener('change', (e) => {
+    showSingles = e.target.checked
+    store.set('singles', showSingles)
+    renderChips()
+    renderList()
+  })
+  $('#logSel').checked = logSel
+  $('#logSel').addEventListener('change', (e) => {
+    logSel = e.target.checked
+    store.set('logSel', logSel)
+    filterLog()
+  })
+  $('#rescan').addEventListener('click', () => load(true).then(() => toast('Re-read from disk')))
+  $('#list').addEventListener('click', (e) => {
+    const it = e.target.closest('.item')
+    if (it) select(it.dataset.stem)
+  })
+  $('#detail').addEventListener('click', (e) => {
+    const b = e.target.closest('button')
+    if (!b) return
+    if (b.dataset.tab) {
+      tab = b.dataset.tab
+      store.set('tab', tab)
+      renderDetail()
+    }
+    if (b.dataset.act) act(b.dataset.act)
+  })
+  $('#detail').addEventListener('toggle', (e) => {
+    if (e.target.matches('details.prompt')) store.set('promptOpen', e.target.open)
+  }, true)
+  $('#start').addEventListener('click', () => post('/api/auto', { action: 'start' }).then((a) => {
+    S.auto = a
+    renderAuto()
+  }).catch((e) => toast(e.message, true)))
+  $('#stopq').addEventListener('click', () => post('/api/auto', { action: 'stop' }).then((a) => {
+    S.auto = a
+    renderAuto()
+  }))
+  $('#clearq').addEventListener('click', () => post('/api/auto', { action: 'clear' }).then((a) => {
+    S.auto = a
+    renderAuto()
+    renderList()
+  }))
+  $('#queueTodo').addEventListener('click', () => {
+    const stems = visible().filter((j) => (j.mark === '·' || j.mark === '!') && j.ref).map((j) => j.stem)
+    if (!stems.length) return toast('Nothing in the current list needs painting', true)
+    post('/api/auto', { action: 'enqueue', stems }).then((a) => {
+      S.auto = a
+      renderAuto()
+      renderList()
+      toast(`${stems.length} queued`)
+    })
+  })
+  $('#qlist').addEventListener('click', (e) => {
+    const s = e.target.closest('[data-deq]')?.dataset.deq
+    if (s) post('/api/auto', { action: 'dequeue', stems: [s] }).then((a) => {
+      S.auto = a
+      renderAuto()
+      renderList()
+    })
+  })
+  $('#openGem').addEventListener('click', () => post('/api/gemini/open').then((s) => toast(`${s.launched ? 'Opened' : 'Already open:'} the desk's Gemini window.`)).catch((e) => toast(e.message, true, 8000)))
+  $('#signIn').addEventListener('click', () => post('/api/gemini/signin').then(() => toast('Sign in to Google in the window that opened, then CLOSE it. Once is enough for every project.', false, 9000)).catch((e) => toast(e.message, true, 8000)))
+  for (const [id, k] of [['#s-gap', 'gapSeconds'], ['#s-jit', 'jitterSeconds'], ['#s-cap', 'dailyCap'], ['#s-ret', 'retries']]) {
+    $(id).addEventListener('change', (e) => post('/api/auto', {
+      action: 'settings',
+      settings: { [k]: e.target.value }
+    }).then((a) => {
+      S.auto = a
+      renderAuto()
+    }))
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest('input, textarea, select')) {
+      if (e.key === 'Escape') {
+        e.target.blur()
+        if (e.target.id === 'q' && e.target.value) {
+          e.target.value = ''
+          renderList()
+        }
+      }
+      if (e.key === 'Enter' && e.target.id === 'q') {
+        e.target.blur()
+        const v = visible()
+        if (v.length && !v.some((j) => j.stem === sel)) select(v[0].stem)
+      }
+      return
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    const v = visible()
+    const i = v.findIndex((j) => j.stem === sel)
+    const keys = {
+      '/': () => $('#q').focus(),
+      ArrowDown: () => v.length && select(v[Math.min(v.length - 1, i + 1)].stem),
+      j: () => keys.ArrowDown(),
+      ArrowUp: () => v.length && select(v[Math.max(0, i - 1)].stem),
+      k: () => keys.ArrowUp(),
+      c: () => act('prompt'),
+      i: () => act('img'),
+      b: () => act('both'),
+      o: () => act('open'),
+      g: () => act('paint'),
+      q: () => act('queue')
+    }
+    if (keys[e.key]) {
+      e.preventDefault()
+      keys[e.key]()
+    }
+  })
+
+  const es = new EventSource('/api/events')
+  es.addEventListener('jobs', loadSoon)
+  es.addEventListener('log', (e) => addLog(JSON.parse(e.data)))
+  es.addEventListener('auto', (e) => {
+    S.auto = JSON.parse(e.data)
+    renderAuto()
+    renderList()
+  })
+  es.addEventListener('armed', (e) => {
+    S.armed = JSON.parse(e.data)
+    renderList()
+    renderDetail()
+  })
+  es.addEventListener('busy', (e) => {
+    S.busy = JSON.parse(e.data)
+    renderList()
+    renderDetail()
+  })
+  es.addEventListener('result', (e) => {
+    const r = JSON.parse(e.data)
+    toast(r.ok ? `✓ ${r.stem}: ${r.written.length} sprite(s) cut and compressed` : `✗ ${r.stem}: ${r.error}`, !r.ok, 6000)
+  })
+  es.addEventListener('open', () => {
+    if (S.jobs.length) loadSoon()
+  })
+  load().catch((e) => {
+    $('#detail').innerHTML = `<div class="empty">Could not reach the desk server: ${esc(e.message)}</div>`
+  })
+</script>
+</body>
+</html>

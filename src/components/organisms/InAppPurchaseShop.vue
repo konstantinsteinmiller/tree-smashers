@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
@@ -15,7 +15,7 @@ import { isDebug } from '@/use/useMatch'
 defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
-const { t } = useI18n()
+const { t } = useSfcI18n('InAppPurchaseShop')
 const { addDiamonds } = useSpinnerConfig()
 
 interface Pack {
@@ -72,62 +72,3 @@ const purchase = (pack: Pack) => {
       //- Honest note while real IAP isn't wired in production builds.
       div.text-center.text-slate-500(class="text-[0.7rem] sm:text-[0.75rem] mt-1") {{ t('shop.note') }}
 </template>
-
-<i18n lang="yaml">
-en:
-  shop:
-    title: "Get Diamonds"
-    subtitle: "Diamonds unlock backgrounds and (soon) powerful skills."
-    popular: "Popular"
-    bestValue: "Best value"
-    note: "Purchases support the game. Secure checkout."
-de:
-  shop:
-    title: "Diamanten holen"
-    subtitle: "Diamanten schalten Hintergründe und (bald) starke Fähigkeiten frei."
-    popular: "Beliebt"
-    bestValue: "Bester Wert"
-    note: "Käufe unterstützen das Spiel. Sicherer Checkout."
-fr:
-  shop:
-    title: "Obtenir des diamants"
-    subtitle: "Les diamants débloquent des fonds et (bientôt) de puissantes compétences."
-    popular: "Populaire"
-    bestValue: "Meilleure offre"
-    note: "Les achats soutiennent le jeu. Paiement sécurisé."
-es:
-  shop:
-    title: "Conseguir diamantes"
-    subtitle: "Los diamantes desbloquean fondos y (pronto) habilidades poderosas."
-    popular: "Popular"
-    bestValue: "Mejor valor"
-    note: "Las compras apoyan el juego. Pago seguro."
-jp:
-  shop:
-    title: "ダイヤを入手"
-    subtitle: "ダイヤで背景や（近日）強力なスキルを解放。"
-    popular: "人気"
-    bestValue: "お得"
-    note: "購入はゲームを支援します。安全な決済。"
-kr:
-  shop:
-    title: "다이아몬드 얻기"
-    subtitle: "다이아몬드로 배경과 (곧) 강력한 스킬을 잠금 해제하세요."
-    popular: "인기"
-    bestValue: "최고의 가치"
-    note: "구매는 게임을 지원합니다. 안전한 결제."
-zh:
-  shop:
-    title: "获取钻石"
-    subtitle: "钻石可解锁背景以及（即将推出的）强力技能。"
-    popular: "热门"
-    bestValue: "超值"
-    note: "购买可支持游戏。安全结算。"
-ru:
-  shop:
-    title: "Получить алмазы"
-    subtitle: "Алмазы открывают фоны и (скоро) мощные навыки."
-    popular: "Популярно"
-    bestValue: "Выгодно"
-    note: "Покупки поддерживают игру. Безопасная оплата."
-</i18n>

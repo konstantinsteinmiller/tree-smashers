@@ -34,3 +34,35 @@ export const matchRng = (): number => {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296
 }
+
+/**
+ * An INDEPENDENT mulberry32 stream with its own state.
+ *
+ * For systems that must replay identically without touching the shared match
+ * stream above — the first-launch intro cutscene (`introFight.ts`) seeds one of
+ * these, so running it can never shift the RNG sequence of the match that
+ * follows it (or of a PvP peer).
+ */
+export const createRng = (seed: number): (() => number) => {
+  let s = (seed >>> 0) || 1
+  return () => {
+    let t = (s = (s + 0x6d2b79f5) >>> 0)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * Stateless hash of two integers to [0, 1).
+ *
+ * The cutscene's particles are pure functions of (event, particle index, age),
+ * so a frame can be drawn at any time T without a stateful pool — and two
+ * renders of the same T (30 fps vs 144 fps) draw the same sparks.
+ */
+export const hash01 = (a: number, b = 0): number => {
+  let t = (Math.imul(a | 0, 0x9e3779b1) ^ Math.imul((b | 0) + 0x7f4a7c15, 0x85ebca6b)) >>> 0
+  t = Math.imul(t ^ (t >>> 16), 0x7feb352d)
+  t = Math.imul(t ^ (t >>> 15), 0x846ca68b)
+  return ((t ^ (t >>> 16)) >>> 0) / 4294967296
+}

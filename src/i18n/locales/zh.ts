@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': '关卡',
   'bossStage': '首领关卡',
+  'stageN': '第 {n} 关',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': '夺回一切！',
+    'skipAria': '跳过开场动画'
+  },
+  'bossPeek': {
+    'nextBoss': '下个首领 · 第{n}关',
+    'stagesAway': '还有{n}关',
+    'nextUp': '就在下一关！',
+    'portraitAlt': '下个首领：{name}'
+  },
   'you': '你',
   'prev': '上一页',
   'next': '下一页',
@@ -311,7 +324,31 @@ export default {
     'golden-eagle': '金鹰',
     'diamond': '钻石',
     'tsunami': '海啸',
-    'sandstorm': '沙尘暴'
+    'sandstorm': '沙尘暴',
+    'cheetah': '猎豹',
+    'jester': '小丑',
+    'ninja': '忍者',
+    'pirate': '海盗',
+    'porcupine': '豪猪',
+    'lionfish': '狮子鱼',
+    'morningstar': '晨星锤',
+    'cactus': '仙人掌',
+    'kraken': '海怪',
+    'taiko': '太鼓',
+    'toadstool': '毒蘑菇',
+    'full-moon': '满月',
+    'monarch': '帝王蝶',
+    'pyramid': '金字塔',
+    'compass': '罗盘',
+    'checkmate': '将军',
+    'armadillo': '犰狳',
+    'anvil': '铁砧',
+    'mammoth': '猛犸',
+    'deep-diver': '深潜者',
+    'narwhal': '独角鲸',
+    'stag-beetle': '锹甲',
+    'drill': '钻头',
+    'lancer': '枪骑士'
   },
   'skinChest': {
     'acquired': '获得{name}！'
@@ -322,5 +359,173 @@ export default {
     'teleporterShock': '提示：试过传送者皮肤吗？它能穿墙而过，也不会被竞技场边界电到！',
     'starSpeedy': '提示：星型上部零件搭配迅捷下部零件，是一套非常强力的玻璃大炮构筑！',
     'arenaWall': '提示：你的陀螺离敌人太近了吗？试着越过竞技场的墙发射 —— 第一次撞墙其实会给你加速！'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': '恭喜！',
+      'demoCampaignFinished': '你已经完成了试玩版战役！如果你喜欢这个游戏，欢迎提供建议。正式版即将发布。',
+      'campaignFinished': '你已经完成了战役！恭喜！你是一位名副副其实的战术家！但你收集齐所有卡牌了吗？只有最顶尖的收集者才能实现这一终极目标！',
+      'cardsFinished': '恭喜！你已经收集了每一张卡牌。你是史上最伟大的卡牌收藏家！'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': '无法显示广告',
+        'body': '我们想向你展示一段视频，好让你获得奖励，但你浏览器中的某些设置屏蔽了广告。',
+        'allowHost': '请在 {host} 上允许广告（或为本游戏暂停广告拦截器），然后重试。',
+        'gotIt': '知道了'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': '加载时间过长？请尝试关闭广告拦截器后刷新页面。'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': '广告',
+        'title': '观看视频广告？',
+        'body': '观看一段简短的视频广告即可获得奖励。',
+        'bodyReward': '观看一段简短的视频广告即可获得 {reward}。',
+        'closeable': '几秒后就可以关闭广告。提前关闭将无法获得奖励。',
+        'rewardCoins': '{count} 金币',
+        'rewardDiamonds': '{count} 钻石',
+        'rewardSpeed': '2 倍战斗速度',
+        'rewardRespin': '再转一次',
+        'watch': '观看广告',
+        'decline': '不用了'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': '已恢复云端存档',
+        'restoredBonus': '恢复奖励 +{n} 金币',
+        'tap': '点击',
+        'offlineTitle': '云同步已暂停',
+        'offlineBody': '当前为离线游玩，你的进度会保存在本机。',
+        'retry': '重试',
+        'dismiss': '关闭'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': '更换背景'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': '背景',
+        'equipped': '已用',
+        'equippedShort': '已装备',
+        'select': '选择',
+        'needDiamonds': '需要更多钻石？',
+        'buy': '购买',
+        'skins': {
+          'classic': '经典',
+          'aurora': '旋转刀刃',
+          'fidget': '指尖陀螺',
+          'ember': '脑腐（低饱和）',
+          'nebula': '脑腐',
+          'circuit': '科技魔法',
+          'cosmos': '蒸汽朋克',
+          'prism': 'K-Pop'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': '战斗通行证',
+      'complete': '完成',
+      'max': '满级',
+      'battlePassComplete': '战斗通行证已完成 — 干得漂亮！',
+      'rewardsReady': '你有 {n} 个奖励可以领取！',
+      'xpHint': '赢得战役战斗 +50xp，排行榜战斗 +25xp，失败 +12xp。',
+      'honorTrack': '荣誉通道',
+      'honorAbbr': '荣誉点',
+      'honorInfo': '赢得PvP战斗获得荣誉点数(荣誉点)。公平对战（等级1）胜利获得100荣誉点。3胜解锁1个皮肤。击败更强对手获得额外荣誉点！',
+      'seasonReset': '赛季将在{n}天后重置 — 快领取奖励！'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': '每日挑战——获胜赢取钻石！',
+        'startCoins': '每日挑战——获胜赢取{count}金币！'
+      }
+    },
+    'CombatLog': {
+      'title': '战斗记录',
+      'short': '记录',
+      'aria': '打开战斗记录',
+      'hint': '面向策略玩家 · 最近{n}次命中，最新在前',
+      'empty': '暂无战斗 — 刀刃碰撞时会记录到这里。',
+      'line': '{attacker} 对 {target} 造成 {dmg} 点伤害',
+      'enemy': '敌方 {type}',
+      'spinner': '陀螺 {n} {type}',
+      'whoEnemy': '敌方',
+      'whoSpinner': '陀螺 {n}',
+      'crit': '暴击',
+      'speedFavors': '速度更有利于{name}',
+      'types': {
+        'star': '星刃',
+        'triangle': '尖刺',
+        'round': '圆盾',
+        'quadratic': '方核',
+        'cushioned': '软甲',
+        'piercer': '穿甲者'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': '每日奖励',
+      'comeBackTomorrow': '明天回来领取下一个奖励！',
+      'collectTodaysReward': '领取今日奖励！错过一天进度将重置。',
+      'collectCta': '领取',
+      'dayShort': '第{n}天'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': '排行榜',
+      'yourRank': '你的排名',
+      'jumpToMe': '跳转到我',
+      'maxStage': '最高关卡',
+      'alreadyFoughtToday': '今天已经战斗过 — 明天再来',
+      'fightAsGhost': '进行幽灵战斗'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': '获取钻石',
+        'subtitle': '钻石可解锁背景以及（即将推出的）强力技能。',
+        'popular': '热门',
+        'bestValue': '超值',
+        'note': '购买可支持游戏。安全结算。'
+      }
+    },
+    'OptionsModal': {
+      'options': '选项',
+      'general': '常规',
+      'difficulty': '难度',
+      'audio': '音频',
+      'language': '语言',
+      'showRulesModal': '游戏前显示比赛规则',
+      'resetCampaign': '重置游戏进度',
+      'reset': '重置',
+      'sureResetCampaign': '这将永久删除你的所有进度——每个关卡、所有金币和所有升级。此操作无法撤销。',
+      'resetKeepsNote': '你的音乐、语言和难度设置以及所有已购买的皮肤都会保留。',
+      'cancel': '取消',
+      'audioSettingsPlaceholder': '音频设置即将推出...',
+      'easy': '新手',
+      'medium': '侍从',
+      'hard': '大师',
+      'close': '保存并关闭',
+      'soundEffects': '音效',
+      'music': '音乐'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': '陀螺',
+      'topBlade': '上部',
+      'bottomPart': '下部',
+      'statsLabel': '属性',
+      'selectSkin': '选择皮肤',
+      'purchaseMoreSkins': '购买更多皮肤',
+      'equipped': '已装备',
+      'selectButton': '选择',
+      'hintSelectCards': '点击卡片选择你的陀螺配置，点击升级按钮进行升级。',
+      'hintPlusIcon': '上部卡片顶部的「+」图标会打开对应部件的皮肤商店（例如穿甲者皮肤商店），可在此购买新皮肤。'
+    }
   }
 }

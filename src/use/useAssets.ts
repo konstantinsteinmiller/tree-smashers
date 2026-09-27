@@ -1,9 +1,11 @@
 import { ref } from 'vue'
 import { modelImgPath, SPINNER_MODEL_IDS, getSelectedSkin } from '@/use/useModels.ts'
 import useSpinnerConfig from '@/use/useSpinnerConfig.ts'
-import useSpinnerCampaign from '@/use/useSpinnerCampaign.ts'
+import useSpinnerCampaign, { type ArenaType } from '@/use/useSpinnerCampaign.ts'
 import { prependBaseUrl } from '@/utils/function.ts'
 import type { TopPartId } from '@/types/spinner'
+import { FLAME_BURN_SRC } from '@/use/borderFx'
+import { isIntroLikely, INTRO_SKIN_IDS } from '@/use/introGate'
 
 // Shared state so it can be accessed by both the loader and the progress component
 const loadingProgress = ref(0)
@@ -162,6 +164,22 @@ const VFX_ASSETS = [
   'images/vfx/explosion_2080x160.webp'
 ]
 
+// VFX only one arena type ever draws. The deferred tier adds the set for the
+// CURRENT stage's arena; useSpinnerGame.initGame warms it again for an arena
+// reached any other way (next stage, daily challenge, PvP, cheats).
+const ARENA_VFX_ASSETS: Partial<Record<ArenaType, string[]>> = {
+  lava: [FLAME_BURN_SRC]
+}
+
+const currentArenaVfx = (): string[] => {
+  try {
+    const arena = useSpinnerCampaign().currentStage.value?.arenaType
+    return (arena && ARENA_VFX_ASSETS[arena]) || []
+  } catch {
+    return []
+  }
+}
+
 const SOUND_ASSETS = [
   'audio/sfx/clash-1.ogg',
   'audio/sfx/clash-2.ogg',
@@ -222,6 +240,33 @@ const getCriticalSkinIds = (): Set<string> => {
     console.warn('[assets] stage resolve failed, using no stage skins', e)
   }
   return ids
+}
+
+/**
+ * First-launch intro cutscene: its three skins (boss + the two Lv. 30 blues).
+ * Requested the moment the splash-critical tier resolves — first in line, ahead
+ * of the SFX/VFX tier — and never awaited by the splash. Measured on the
+ * production build: putting them IN the splash tier added ~200 ms to the loader
+ * (request queueing on an HTTP/1.1 origin, not bytes — they are ~30 KB
+ * together). The cutscene waits for their decode (capped) before its clock
+ * starts, behind its own fade-from-black, so nothing is ever drawn without
+ * them. Only for a probable first-timer. (The explosion sheet it also uses is
+ * in the deferred VFX tier, needed ~4 s in.)
+ */
+const preloadIntroSkins = (): void => {
+  try {
+    if (!isIntroLikely((k) => localStorage.getItem(k))) return
+  } catch {
+    return // storage blocked — the intro gate will say 'skip' too
+  }
+  for (const id of INTRO_SKIN_IDS) {
+    const src = modelImgPath(id)
+    if (resourceCache.images.has(src)) continue
+    const img = new Image()
+    img.decoding = 'async'
+    img.src = src
+    resourceCache.images.set(src, img)
+  }
 }
 
 type AssetEntry = { src: string; type: 'image' | 'audio' }
@@ -321,6 +366,9 @@ export default () => {
 
     try {
       await runInChunks(criticalAssets, 10, onOne)
+      // The intro's skins go out the instant the splash-critical tier is in —
+      // first in line, ahead of SFX/VFX, but never in the splash's way.
+      preloadIntroSkins()
       areAllAssetsLoaded.value = true
       loadingProgress.value = 100
     } catch (error) {
@@ -349,7 +397,7 @@ export default () => {
       .filter(src => !resourceCache.audioBuffers.has(src))
       .map(src => ({ src, type: 'audio' as const }))
 
-    const vfx: AssetEntry[] = VFX_ASSETS
+    const vfx: AssetEntry[] = [...VFX_ASSETS, ...currentArenaVfx()]
       .map(src => prependBaseUrl(src))
       .filter(src => !resourceCache.images.has(src))
       .map(src => ({ src, type: 'image' as const }))

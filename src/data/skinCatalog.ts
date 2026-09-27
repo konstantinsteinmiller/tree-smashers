@@ -19,20 +19,31 @@ export const SPINNER_MODEL_IDS = [
   'forest-dragon', 'golden-eagle', 'hawk', 'piranha',
   'rainbow', 'reddragon', 'rhino', 'salamaner', 'sandstorm',
   'teleporter', 'thunderstorm', 'tsunami', 'wasp', 'wolf-demon',
-  'boulder', 'diamond'
+  'boulder', 'diamond',
+  // 2026-09 expansion — 4 regular skins per top part (skins-new-designs.md,
+  // art in art/skins/). APPEND-ONLY: never reorder or insert above, see
+  // tests/skinCatalog.newSkins.test.ts.
+  'cheetah', 'jester', 'ninja', 'pirate',
+  'porcupine', 'lionfish', 'morningstar', 'cactus',
+  'kraken', 'taiko', 'toadstool', 'full-moon',
+  'monarch', 'pyramid', 'compass', 'checkmate',
+  'armadillo', 'anvil', 'mammoth', 'deep-diver',
+  'narwhal', 'stag-beetle', 'drill', 'lancer'
 ] as const
 
 export type SpinnerModelId = (typeof SPINNER_MODEL_IDS)[number]
 
 /** Available skins per top part. The first entry per top is the default
- *  (always free / always owned). */
+ *  (always free / always owned). New skins are APPENDED to the end of a
+ *  list — the default and every existing position stay put (existing saves
+ *  keep their default, and persisted reward offers keep resolving). */
 export const SKINS_PER_TOP: Record<TopPartId, SpinnerModelId[]> = {
-  star: ['blades', 'ice', 'wasp', 'reddragon', 'chain', 'axe', 'tornado'],
-  triangle: ['thunder', 'snake', 'phoenix', 'eagle', 'spiky-eagle', 'salamaner', 'thunderstorm'],
-  round: ['nature', 'turtle', 'piranha', 'bear', 'galaxy', 'golden-eagle', 'wolf-demon', 'dark'],
-  quadratic: ['chip', 'mysticaleye', 'bluedragon', 'angelic', 'tsunami', 'prisma', 'forest-dragon', 'rainbow'],
-  cushioned: ['shell', 'shield', 'castle', 'mountain', 'gear', 'sandstorm', 'diamond', 'boulder'],
-  piercer: ['scorpion', 'wulf', 'demon', 'hawk', 'rhino', 'ape', 'teleporter']
+  star: ['blades', 'ice', 'wasp', 'reddragon', 'chain', 'axe', 'tornado', 'cheetah', 'jester', 'ninja', 'pirate'],
+  triangle: ['thunder', 'snake', 'phoenix', 'eagle', 'spiky-eagle', 'salamaner', 'thunderstorm', 'porcupine', 'lionfish', 'morningstar', 'cactus'],
+  round: ['nature', 'turtle', 'piranha', 'bear', 'galaxy', 'golden-eagle', 'wolf-demon', 'dark', 'kraken', 'taiko', 'toadstool', 'full-moon'],
+  quadratic: ['chip', 'mysticaleye', 'bluedragon', 'angelic', 'tsunami', 'prisma', 'forest-dragon', 'rainbow', 'monarch', 'pyramid', 'compass', 'checkmate'],
+  cushioned: ['shell', 'shield', 'castle', 'mountain', 'gear', 'sandstorm', 'diamond', 'boulder', 'armadillo', 'anvil', 'mammoth', 'deep-diver'],
+  piercer: ['scorpion', 'wulf', 'demon', 'hawk', 'rhino', 'ape', 'teleporter', 'narwhal', 'stag-beetle', 'drill', 'lancer']
 }
 
 /** Special skins with unique VFX — cost 1500 coins and are excluded

@@ -1,0 +1,53 @@
+WHAT COMES BACK IS ONE SPINNING-TOP SKIN, CENTRED, ON FLAT MAGENTA.
+One square image, 1024 x 1024 pixels, holding exactly ONE top-down spinning-top skin in the middle.
+· 1 skin. Not 2, not 4 — and not a scene, a poster, a creature or an object on its own: a spinning-top skin.
+
+WHAT THE ATTACHMENTS ARE — every attached image is a FINISHED skin from the same game, attached as a FINISH reference only. Copy their finish — the ink, the shading, the highlights, the level of detail, the hexagonal-badge construction, the flat top-down view, the way the whole skin is one round spinning top — and NEVER their subjects. No skin may show a castle or battlements, rocks or a mountain, or any other subject shown in them.
+
+WHAT IT IS — skins for "Chaos Arena", a spinning-top battle game. A skin is the painted top face of one spinning top as the player sees it from directly above while it spins. Every skin is built the same way, from the centre out:
+(1) a small HEXAGONAL BADGE in the exact centre, holding one simple icon;
+(2) one or two concentric rings around it;
+(3) the themed outer rim, which makes the outline.
+
+THE SKIN — Mammoth: a mammoth-themed spinning top: a thick shaggy rim of long woolly fur, with two ivory tusks curving round INSIDE the rim (they never stick out past the edge), over a ring of heavy leathery hide.
+Colours: auburn and rust-brown wool, ivory tusks, dark grey-brown hide.
+Hexagonal badge: a mammoth head with curled tusks.
+The subject is turned INTO the spinning top — its parts are the top's rim and rings. It is never a whole mammoth lying on top of a plate or a disc.
+
+THE CLASS SILHOUETTE — a "Soft Shell" top, and the outline IS the gameplay: a thick, chunky, blunt rim.
+SOFT SHELL: a circle with a THICK, HEAVY rim — about 40% of the radius — built from big rounded, padded or plated segments. The edge may be chunky and lumpy, but it is closed and blunt: no spikes, no points, nothing thin.
+Every part of the skin is painted in its own colours. There is NO grey plate, base, disc, frame or backing behind or around it: wherever the skin's own parts do not reach, the pixel is magenta.
+
+THE VIEW — straight down the spin axis, like a coin lying flat, seen from exactly above.
+· Round and radial, centred on the badge — NOT an ellipse, NOT tilted. No three-quarter view, no side wall, no underside, no spike or stem underneath, no perspective, no foreshortening.
+· No cast shadow, no ground, no table, no floor, no scenery.
+
+STYLE — polished mobile-game art, exactly like the style references:
+· A bold dark contour around every shape — at its heaviest about 2% of the skin's diameter, the weight of a brush pen, not a technical pen. Hold the picture at thumbnail size: if the outline has thinned to a hairline there, it is several times too thin.
+· Rich, saturated colour with two or three cel-shading steps per shape and a soft light from the top-left; a crisp white highlight painted ON the surface of metal, enamel, horn, shell, glass and anything glossy (a shine band or dot — never a four-pointed sparkle star or twinkle symbol floating over it).
+· Chunky, readable shapes that still read at 64 pixels across, with fine surface texture (fur strokes, wood grain, rivets, scales, stitching) painted inside them.
+· AN OBJECT WITH NO FACE IS NOT AN EXCEPTION. A drum, an anvil or a compass is painted to exactly the same standard as an animal, with the same ink, the same light and the same shine.
+· AVOID — this is exactly how attempts go wrong: flat vector clip-art; pale hairline outlines; photorealism or a plastic 3D render; a perspective or three-quarter view; text, letters, numbers or runes; a soft glow or bloom around the rim; anything see-through or half-transparent; drop shadows.
+
+LAYOUT / SIZE — measured against the image, not judged by eye:
+· Centred exactly in the middle of the image, about 760 px across (74% of the image width). At least 120 px of magenta between the skin and every edge.
+· The bottom-right corner of the image stays empty magenta.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not a skin with solid, flat, pure magenta #FF00FF, edge to edge — treat it as a green screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not purple, not a soft or tinted version of it.
+· NOT transparent (never a grey-and-white checkerboard), NOT white, NOT a gradient, NOT a texture.
+· No card, panel, frame, plate or circle behind a skin: the magenta touches the skin's outline on every side, including the gaps between arms, spikes and points.
+· No glow, halo, drop shadow or vignette on the magenta. Any glow stays INSIDE the skin's own outline.
+· The skins contain no magenta and no hot pink anywhere.
+· The rich palette is for the SKINS. The ground is not part of the painting and is not toned with it: it stays a vivid, eye-hurting #FF00FF.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly one skin, centred, with a thick, chunky, blunt rim.
+· A small hexagonal badge in its exact centre with its icon.
+· Seen from straight above: round and flat, not oval, not tilted.
+· Not one grey plate, disc or backing shape anywhere.
+· Every pixel that is not the skin is flat, vivid #FF00FF.
+· No text, labels, numbers, sparkle stars or watermarks.
+
+OUTPUT: one image, 1024 x 1024 pixels, 1:1 square, PNG. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.

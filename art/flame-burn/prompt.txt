@@ -1,0 +1,66 @@
+WHAT COMES BACK IS A SPRITE SHEET, NOT A PICTURE OF A FIRE.
+One landscape image, 1024 x 768 pixels — 4:3, wider than it is tall — holding 12 SEPARATE small drawings laid out 4 across and 3 down, on exactly the same grid as the LAST attached image (the layout reference), read left to right along the top row, then the middle row, then the bottom row.
+· 12 panels. Not 1, not 9, not 16. Exactly 3 rows of 4 — do not add a row, do not drop one.
+· ONE big painting of a circle of fire filling the canvas is the wrong answer however well it is painted. So is a square canvas. None of it could be used.
+
+THE FIRE IS THE ONLY THING IN THE PICTURE — read this before anything else.
+· Last time this came back as a thick PINK TYRE seen at an angle, with flames burning along its back edge. That is exactly wrong and none of it could be used. There is NO tyre, NO hoop, NO ring, NO torus, NO band, NO disk, NO plate and NO object of any kind under or inside the flames. Nothing is burning ON anything you can see.
+· The flames themselves form the circle. Inside that circle of fire there is only empty flat magenta #FF00FF: the game draws its own spinning top there later and lays this fire over the top's edge.
+· Draw ONLY what the reference draws in each panel: flames, small glowing embers, and in the last panels a small puff of smoke. NO lava pool, NO ground, NO floor, NO shadow, NO scenery, NO spark rays, NO explosion cloud. If it is not in the reference panel, it is not in the picture.
+
+WHAT IT IS: cartoon fire arranged in a closed CIRCLE, seen from straight above — flame tongues standing side by side all the way round an empty round space, like the edge of an invisible disc that has just caught fire. The tongues lick UPWARD, toward the top of the picture: tallest along the top of the circle, medium on the left and right sides, short along the bottom so they never lean into the empty middle. It catches, flares up, flickers, dies down to glowing embers, and ends as a small wisp of smoke. NOTHING else.
+
+READ THE PANELS (numbered left to right, top row first):
+· Panel 1 — it catches: five small separate flames spaced evenly around the circle, with empty magenta between them.
+· Panel 2 — seven flames, bigger, still separate.
+· Panel 3 — the whole circle is alight: short tongues all the way round — top, both sides AND bottom — touching each other.
+· Panel 4 — the flare: the TALLEST flames of the whole sheet, big tongues licking up above the top of the circle, and still flames on the sides and bottom.
+· Panel 5 — still at the peak, every tongue a slightly different shape than in panel 4.
+· Panels 6, 7, 8 — flickering: the same size of circle, flames all the way round, but each tongue sways left or right and trades height with its neighbours. Hold panel 6 against panel 8: if they look alike, the fire will stand still in the game.
+· Panel 9 — dying down: lower, thinner flames all the way round; the first two or three embers lift off above the top.
+· Panel 10 — small flames only, with short glowing orange ember strokes curved along the circle between them, embers rising, and a SMALL dark grey smoke puff just above the top of the circle.
+· Panel 11 — tiny flames almost gone, a few short curved ember strokes along the circle, embers, and a bigger cluster of three smoke puffs higher up.
+· Panel 12 — NO fire at all: only a small wisp of two or three little smoke puffs high up in the panel and two embers. Everything else in panel 12 is empty magenta.
+
+COLOUR — this game's fire, like the first attached image: a hot pale-yellow core, then bright yellow, orange, and a red-orange outer edge; contours in a deep red-brown, not black. Embers are small orange-yellow dots with the same dark contour. Smoke is charcoal grey with lighter grey highlights and a near-black contour. No pink, no magenta, no purple, no blue anywhere in the fire.
+
+THE VIEW — from DIRECTLY ABOVE, flat, exactly like the reference. The circle of fire and the empty space inside it are PERFECT CIRCLES, exactly as wide as they are tall — measure it. An oval, an ellipse, or a hoop tilted away from the viewer is wrong; that is what came back last time. Heat rises toward the TOP of the picture in every panel. No perspective, no 3D, no depth, no thickness, no vanishing point.
+
+ONE FIRE — all 12 panels are the same circle of fire at 12 moments of one burn.
+· The empty middle is the same size and in the same place in every panel. Do not move it, do not re-scale it, do not re-centre it on the flames.
+· The bases of the flames always sit on the edge of that empty circle — the fire hugs it, it does not float away from it.
+· One colour scheme, one ink, one hand in all 12 panels.
+
+STYLE — hand-painted cartoon game effects, like a casual mobile game, matching the first attached image:
+· A bold brush-pen contour around every flame, ember and puff, at its heaviest about 2% of a panel's side (about 5 px on a 256 px panel) — the weight of a brush pen, not a technical pen. Hold the finished picture at thumbnail size: if the outline has thinned to a hairline it is several times too thin.
+· Each tongue is a painted VOLUME of fire: a hot core through the colour ramp to a deep edge, in two or three crisp cel steps, with crisp highlights; tongue tips curl in S-shapes and some split into two points; a few tiny detached flame flecks near the tallest tips.
+· The reference is NOTATION for where things go and how big they are — its flat nested bands, identical tongue shapes and even spacing are never a look to copy. A sheet that comes back as the same flat bands, neatly repainted, is a trace of the placeholder and is unusable.
+· The first attached image is a FINISH reference only: how this game paints fire and smoke. It is never a subject — no panel may copy its explosion cloud, its flame shapes or its layout.
+· AVOID — this is exactly how earlier attempts went wrong: a pink or magenta tyre, hoop or ring under the flames; a tilted oval seen from the side; flames only along the back half of the circle; flat vector clip-art with a hairline outline; photographic fire; a soft glow or bloom; flames painted half-transparent; a spinning top or coin painted into the middle.
+
+LAYOUT AND SIZE — measured against the PANEL, not the paper. Each panel is a 256 x 256 square of the 1024 x 768 image.
+· The empty middle: a circle centred left-to-right in its panel, its centre 60% of the way DOWN the panel, its diameter about 40% of the panel's width; the bases of the flames sit around a circle 56% of the panel's width across. Same in all 12 panels.
+· The tallest flame tips reach up to about 14% below the top edge of the panel and never closer. The side flames stop at least 12% in from the panel's left and right edges. The bottom flames are short and end at least 8% above the panel's bottom edge.
+· Nothing ever touches or crosses a panel edge; every drawing stays inside its own panel with a clear band of magenta between it and the next.
+· Do NOT draw the panel edges: no boxes, borders, gutters, guides or numbers, in any colour, magenta included.
+· Keep the bottom-right corner of the whole image empty: panel 12 holds only its small smoke wisp, in the upper third of its panel.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not fire, ember or smoke — including the empty middle of every circle — with solid, flat, pure magenta #FF00FF. Treat it as a green-screen: one flat chroma-key colour, edge to edge.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a soft or tinted version of it.
+· NOT transparent (a transparency checkerboard gets baked into the artwork). NOT white, cream, black, or any tinted or textured ground.
+· No drop shadow onto the background, no vignette.
+· KEEP ANY GLOW TIGHT: light belongs inside each flame's own outline. A halo or bloom spreading into the magenta cannot be cut out and ships as a pink smear.
+· NOTHING IS EVER SEE-THROUGH. A dying flame SHRINKS and breaks into fewer, smaller pieces — it is never painted half-transparent or ghostly. Smoke is solid grey puffs with a contour, never a translucent haze.
+· The fire contains no magenta or hot pink, and nothing in the picture is painted in shades of magenta, pink or purple — not a tyre, not a shadow, not an outline.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· 4 panels across, 3 down, 12 in all, on the grid of the last attached image.
+· The canvas is landscape 4:3.
+· There is no tyre, hoop, ring or disk anywhere — only flames, embers and smoke.
+· Every circle of fire is a perfect circle seen from above, with flames on all four sides (panels 3-9), and the same empty magenta middle, same size, same place.
+· Panels 1-2 are small separate flames; panel 4 is the tallest; panel 12 has no fire, only a small smoke wisp high up.
+· No drawing touches a panel edge; the bottom-right corner of the image is empty magenta.
+· Every pixel that is not fire, ember or smoke is flat, vivid #FF00FF.
+
+OUTPUT: one image, 1024 x 768 pixels (4:3, landscape). If your tool has an aspect-ratio control, set it to 4:3. PNG. No labels, captions, numbers, borders or watermarks.

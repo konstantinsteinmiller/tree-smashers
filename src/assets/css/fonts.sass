@@ -5,59 +5,184 @@
   font-display: swap
   src: url(./font/angrybirds-regular.ttf) format('truetype')
 
-// ─── Global font stack ──────────────────────────────────────────────────────
+// ─── Playpen Sans — the display face for what `Angry` cannot draw ───────────
 //
-// `Angry` (angrybirds-regular.ttf) is a LATIN-ONLY display face: it carries
-// no Han, Kana or Hangul glyphs. The previous stack was `'Angry', cursive`,
-// which meant every CJK codepoint fell through to the browser's generic
-// `cursive` family — Comic Sans MS on Windows, an unpredictable handwriting
-// face elsewhere — none of which ship CJK coverage either. The browser then
-// had to improvise a last-resort fallback, and on Android WebViews / Linux
-// portal sandboxes that resolves to tofu (□□□) or a badly-hinted serif.
-// Playgama QA reported exactly this as "missing fonts" for Chinese.
+// TypeTogether, SIL OFL 1.1 (licence: ./font/playpen-sans/OFL.txt, shipped
+// next to the files). A bold comic face covering Latin-extended incl.
+// Vietnamese, Cyrillic incl. Kazakh, Greek, and Uzbek ʻ (U+02BB). One weight
+// (800) instanced from the variable font and split per script by
+// `scripts/subset-display-font.mjs` — rerun it rather than editing these
+// files; the unicode-range lines below MUST match its SUBSETS table
+// (`tests/displayFontSubsets.test.ts`).
 //
-// Per-character fallback means Latin/digits still render in `Angry`; only the
-// codepoints Angry lacks walk further down the list. So we name a real CJK
-// face for every platform we ship to BEFORE reaching a generic:
+// Self-hosted: no CDN (Poki forbids external requests; CSP `font-src 'self'`).
+// It costs NOTHING until used: a browser only fetches an @font-face file when
+// an element whose font-family names it renders a character in that file's
+// unicode-range. Only the latin-ext / greek / cyrillic stacks below name it
+// (and the language picker's per-autonym `[data-font-script]`), so en/de/fr…
+// never download a byte of it. A Polish player fetches latin + latin-ext, a
+// Kazakh one latin + cyrillic + cyrillic-ext, and so on.
 //
-//   • PingFang SC / Hiragino Sans GB   — macOS + iOS (Simplified Chinese)
-//   • Microsoft YaHei / SimHei         — Windows (Simplified Chinese)
-//   • Noto Sans CJK SC / Source Han    — Android, ChromeOS, Linux
-//   • WenQuanYi Micro Hei              — older Linux portal sandboxes
-//   • Yu Gothic / Meiryo / Hiragino    — Japanese
-//   • Malgun Gothic / Apple SD Gothic  — Korean
-//
-// Never inline a CJK webfont here: a full Simplified-Chinese subset is
-// 3–8 MB, which would blow the portal download budget many times over.
-// System faces are always present on the target device and cost 0 bytes.
-:root
-  --font-game: 'Angry', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Noto Sans CJK JP', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans CJK KR', 'Segoe UI', system-ui, sans-serif
+// Declared in Google Fonts' order: for overlapping ranges the LAST matching
+// face wins, so plain latin beats latin-ext beats vietnamese.
+=playpen-face($subset, $range)
+  @font-face
+    font-family: 'Playpen Sans'
+    font-style: normal
+    font-weight: 100 900
+    font-display: swap
+    src: url('./font/playpen-sans/playpen-sans-800-#{$subset}.woff2') format('woff2')
+    unicode-range: unquote($range)
 
-// ─── CJK typography corrections ─────────────────────────────────────────────
++playpen-face('cyrillic-ext', 'U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F')
++playpen-face('cyrillic', 'U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116')
++playpen-face('greek', 'U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF')
++playpen-face('vietnamese', 'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB')
++playpen-face('latin-ext', 'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF')
++playpen-face('latin', 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD')
+
+// ─── Font stacks, one per script ────────────────────────────────────────────
 //
-// The arena UI leans hard on `italic`, `uppercase` and tight `tracking-*`.
-// All three are Latin-display idioms that actively damage CJK:
+// `Angry` (angrybirds-regular.ttf) is a LATIN-1-ONLY display face: 224 glyphs,
+// basic Latin + the Western-European accents. It has no Latin Extended-A
+// (ł ś ș ğ ı ő č ā ĉ ə — Polish, Czech, Romanian, Turkish, Hungarian, Latvian,
+// Lithuanian, Esperanto, Azerbaijani, Croatian), no Vietnamese, no Greek, no
+// Cyrillic, and nothing beyond. (Measured from the font's cmap — re-check with
+// the recipe in `src/i18n/TRANSLATION-GUIDE.md` if the face is ever swapped.)
 //
-//   • `italic` — no CJK system face ships a true italic, so the browser
-//     synthesises an oblique by shearing the glyph box. Han glyphs are dense
-//     and square; shearing them smears the strokes and pushes the rightmost
-//     column past the element's bounds. That is the "text overflows UI
-//     bounds" half of the Playgama report.
-//   • negative `letter-spacing` (tracking-tight/tighter) — Latin glyphs have
-//     side bearings to eat into, Han glyphs do not, so the columns collide.
-//   • `text-transform: uppercase` — a no-op for Han/Kana/Hangul but it does
-//     force an extra layout pass on some WebViews.
+// Two failure modes follow, and each script bucket below picks its answer:
 //
-// `<html data-locale>` carries our raw internal locale code and is kept in
-// sync by `applyDocumentLocale()` in `src/i18n/index.ts`. We key off it rather
-// than `lang` because `lang` holds the BCP-47 form (`ja` / `ko` / `zh-Hans`)
-// for screen readers, while our internal codes are `jp` / `kr` / `zh`.
-html[data-locale='zh'], html[data-locale='jp'], html[data-locale='kr']
+//   • TOFU (□□□) — a codepoint no named face covers falls through to a
+//     generic, and on Android WebViews / Linux portal sandboxes the generic can
+//     have no coverage either. Playgama QA reported exactly this as "missing
+//     fonts" for Chinese. Fix: name a REAL system face for every OS we ship to
+//     before any generic.
+//   • RANSOM NOTE — per-character fallback keeps Angry for the letters it has
+//     and borrows the rest from a system face, so "Łódź" renders as four glyphs
+//     from two fonts. For scripts where that happens inside ordinary words
+//     (Latin-ext, and Cyrillic/Greek/Arabic/Indic/Thai strings with digits and
+//     the brand in them) the whole string moves to ONE face instead — Playpen
+//     Sans (above) for Latin-ext / Vietnamese / Greek / Cyrillic, a system face
+//     for Arabic / Indic / Thai.
+//     CJK keeps Angry for Latin + digits: whole CJK words come from one face,
+//     that look already passed Playgama QA, and there is no mixing mid-word.
+//
+// Bytes: every face here except Playpen Sans ships with the OS. Never inline a
+// webfont for coverage — a CJK subset is 3–8 MB. Playpen Sans is the one
+// explicit, lazily-referenced exception (only an element that USES a
+// font-family triggers its download, so a face named only inside some
+// locales' stacks costs nothing to anyone else).
+:root
+  // Latin display face first, then the old CJK safety net — unchanged default.
+  --font-stack-latin: 'Angry', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Noto Sans CJK JP', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans CJK KR', 'Segoe UI', system-ui, sans-serif
+  // Plain system sans: Segoe UI (Windows), SF via system-ui (Apple), Roboto
+  // (Android/ChromeOS), Noto Sans (Linux). All ship a Black/Bold weight.
+  --font-stack-sans: 'Segoe UI', system-ui, -apple-system, Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif
+  // Latin-ext, Vietnamese, Greek, Cyrillic (incl. Kazakh/Ukrainian letters):
+  // the self-hosted display face, the system sans behind it while it loads
+  // (font-display: swap) and for any codepoint it lacks.
+  --font-stack-display-ext: 'Playpen Sans', var(--font-stack-sans)
+  --font-stack-arabic: 'Segoe UI', Tahoma, 'Geeza Pro', 'SF Arabic', 'Noto Sans Arabic', 'Noto Naskh Arabic', 'Noto Naskh Arabic UI', system-ui, sans-serif
+  --font-stack-devanagari: 'Nirmala UI', 'Kohinoor Devanagari', 'Devanagari Sangam MN', 'ITF Devanagari', 'Noto Sans Devanagari', 'Mangal', 'Segoe UI', system-ui, sans-serif
+  --font-stack-thai: 'Leelawadee UI', 'Leelawadee', 'Thonburi', 'Noto Sans Thai', 'Noto Sans Thai UI', Tahoma, 'Segoe UI', system-ui, sans-serif
+  // CJK — the face for the locale's OWN glyph variants first. One shared
+  // stack used to put the Simplified-Chinese faces first, so Japanese kanji
+  // and Traditional hanzi rendered with Simplified-Chinese glyph shapes.
+  --font-stack-cjk-sc: 'Angry', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'Segoe UI', system-ui, sans-serif
+  --font-stack-cjk-tc: 'Angry', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans CJK TC', 'Noto Sans TC', 'Source Han Sans TC', 'Heiti TC', 'PingFang SC', 'Noto Sans CJK SC', 'Segoe UI', system-ui, sans-serif
+  --font-stack-cjk-jp: 'Angry', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Source Han Sans JP', 'Segoe UI', system-ui, sans-serif
+  --font-stack-cjk-kr: 'Angry', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans KR', 'Source Han Sans KR', 'Segoe UI', system-ui, sans-serif
+
+  --font-game: var(--font-stack-latin)
+
+// `<html data-script>` is stamped by `applyDocumentLocale()` in
+// `src/i18n/index.ts` from the language registry (`src/i18n/languages.ts`),
+// at first paint and on every switch. `[data-font-script]` does the same for
+// a single subtree — the language picker renders every autonym in its own
+// script's stack whatever the UI language is. Every element reads
+// `var(--font-game)` (App.vue), so overriding the variable is enough.
+html[data-script='latin'], [data-font-script='latin']
+  --font-game: var(--font-stack-latin)
+
+html[data-script='latin-ext'], html[data-script='greek'], html[data-script='cyrillic'], [data-font-script='latin-ext'], [data-font-script='greek'], [data-font-script='cyrillic']
+  --font-game: var(--font-stack-display-ext)
+
+html[data-script='arabic'], [data-font-script='arabic']
+  --font-game: var(--font-stack-arabic)
+
+html[data-script='devanagari'], [data-font-script='devanagari']
+  --font-game: var(--font-stack-devanagari)
+
+html[data-script='thai'], [data-font-script='thai']
+  --font-game: var(--font-stack-thai)
+
+html[data-script='cjk-sc'], [data-font-script='cjk-sc']
+  --font-game: var(--font-stack-cjk-sc)
+
+html[data-script='cjk-tc'], [data-font-script='cjk-tc']
+  --font-game: var(--font-stack-cjk-tc)
+
+html[data-script='cjk-jp'], [data-font-script='cjk-jp']
+  --font-game: var(--font-stack-cjk-jp)
+
+html[data-script='cjk-kr'], [data-font-script='cjk-kr']
+  --font-game: var(--font-stack-cjk-kr)
+
+// ─── Latin-display corrections, per script bucket ───────────────────────────
+//
+// The arena UI leans hard on `italic`, `uppercase` and `tracking-*`. All three
+// are Latin-display idioms, and they damage other scripts in different ways —
+// three buckets, not two:
+//
+//   • CJK — no CJK system face ships a true italic, so the browser shears the
+//     glyph box: dense Han strokes smear and the rightmost column escapes its
+//     bounds (the "text overflows UI bounds" half of the Playgama report).
+//     Negative tracking collides Han columns (no side bearings to eat);
+//     POSITIVE tracking helps Han legibility, so only negative goes.
+//   • Arabic — cursive JOINED script: ANY letter-spacing, positive or
+//     negative, severs the joins between letters. No true italic either.
+//   • Devanagari / Thai — marks stack above and below the base letter and
+//     conjuncts are shaped as clusters; tracking pulls them apart, and there
+//     is no true italic.
+//
+// `uppercase` is a no-op for all of these (no case), so it is left alone;
+// for cased scripts it is language-aware through `<html lang>` (Turkish and
+// Azerbaijani dotted İ, Greek accent removal), which is why `lang` must carry
+// the real BCP-47 tag.
+html[data-script^='cjk'], html[data-script='arabic'], html[data-script='devanagari'], html[data-script='thai']
   *
     font-style: normal !important
-    font-synthesis: none
 
-  // Only neutralise NEGATIVE tracking — positive tracking (`tracking-wide`,
-  // `tracking-wider`) actually helps Han legibility, so it stays.
+html[data-script^='cjk']
+  *
+    font-synthesis: none
   [class*='tracking-tight']
     letter-spacing: normal !important
+
+// Keep synthetic BOLD available (some Thai/Indic system faces ship a single
+// weight and the UI is mostly font-black); forbid only the fake italic.
+html[data-script='arabic'], html[data-script='devanagari'], html[data-script='thai']
+  *
+    font-synthesis: weight
+
+html[data-script='arabic'], html[data-script='devanagari'], html[data-script='thai']
+  *
+    letter-spacing: normal !important
+
+// ─── Right-to-left (Arabic) ─────────────────────────────────────────────────
+//
+// Deliberately NOT `<html dir="rtl">`. That flips every flex row, `start`
+// margin and the scrollbar side of a UI laid out LTR — and absolutely-placed
+// HUD pieces and the canvas would NOT follow, so the two halves disagree.
+// Instead the layout and the HUD stay exactly as they are, and every box takes
+// its paragraph direction from its own content (`unicode-bidi: plaintext` =
+// the per-element `dir="auto"` rule): a label whose first strong character is
+// Arabic lays out right-to-left — punctuation at the correct end, "250 عملة"
+// in the right order — while a number, a code or a Latin name stays LTR.
+//
+// The one thing this cannot guess: an Arabic sentence that STARTS with a Latin
+// word (the brand, a unit). Translators start such a string with U+200F
+// RIGHT-TO-LEFT MARK; the parity test enforces it (see TRANSLATION-GUIDE.md).
+html[data-dir='rtl']
+  body *
+    unicode-bidi: plaintext

@@ -49,11 +49,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import useAssets from '@/use/useAssets'
 import { stopLoading } from '@/use/useCrazyGames'
 
-const { t } = useI18n()
+const { t } = useSfcI18n('FLogoProgress')
 
 const { loadingProgress, preloadAssets } = useAssets()
 const progress = computed(() => loadingProgress.value)
@@ -240,30 +240,3 @@ div[style*="conic-gradient"]
 .splash-fade-leave-to
   opacity: 0
 </style>
-
-<i18n lang="yaml">
-en:
-  loading:
-    stuckHint: "Loading taking too long? Try disabling your ad blocker and refresh."
-de:
-  loading:
-    stuckHint: "Das Laden dauert zu lange? Deaktiviere deinen Adblocker und lade die Seite neu."
-fr:
-  loading:
-    stuckHint: "Le chargement est trop long ? Désactive ton bloqueur de pub et actualise la page."
-es:
-  loading:
-    stuckHint: "¿La carga tarda demasiado? Desactiva tu bloqueador de anuncios y recarga la página."
-jp:
-  loading:
-    stuckHint: "読み込みに時間がかかっていますか？広告ブロッカーを無効にして再読み込みしてみてください。"
-kr:
-  loading:
-    stuckHint: "로딩이 너무 오래 걸리나요? 광고 차단 프로그램을 끄고 새로고침해 보세요."
-zh:
-  loading:
-    stuckHint: "加载时间过长？请尝试关闭广告拦截器后刷新页面。"
-ru:
-  loading:
-    stuckHint: "Загрузка идёт слишком долго? Отключите блокировщик рекламы и обновите страницу."
-</i18n>

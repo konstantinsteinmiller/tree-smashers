@@ -25,7 +25,7 @@
 // "LAST CHANCE" framing.
 import { isSingleCurrency } from '@/use/useCurrency'
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import {
   acceptRewardedIntro,
   declineRewardedIntro,
@@ -33,7 +33,7 @@ import {
   rewardedIntroReward
 } from '@/use/useRewardedIntro'
 
-const { t } = useI18n()
+const { t } = useSfcI18n('RewardedAdIntroModal')
 
 // The reward text is built by i18n, not by string concatenation: each kind
 // has its own message with `{count}` inside it, so plural forms and word
@@ -104,7 +104,7 @@ const rewardText = computed(() => {
           //- Reward is interpolated INSIDE the i18n message, never concatenated
           //- around it — word order differs per language.
           p.text-base.mb-2(v-if="rewardText" class="text-slate-200")
-            i18n-t(keypath="rewardedIntro.bodyReward" tag="span" scope="parent")
+            i18n-t(keypath="sfc.RewardedAdIntroModal.rewardedIntro.bodyReward" tag="span" scope="global")
               template(#reward)
                 span.font-bold(class="text-amber-300") {{ rewardText }}
           p.text-base.mb-2(v-else class="text-slate-200") {{ t('rewardedIntro.body') }}
@@ -123,110 +123,3 @@ const rewardText = computed(() => {
             @click="declineRewardedIntro"
           ) {{ t('rewardedIntro.decline') }}
 </template>
-
-<i18n lang="yaml">
-en:
-  rewardedIntro:
-    badge: "Advertisement"
-    title: "Watch a video ad?"
-    body: "Watch a short video ad to earn your reward."
-    bodyReward: "Watch a short video ad to earn {reward}."
-    closeable: "You can close the ad after a few seconds. Closing it early means no reward."
-    rewardCoins: "{count} coins"
-    rewardDiamonds: "{count} diamonds"
-    rewardSpeed: "2x battle speed"
-    rewardRespin: "another spin"
-    watch: "Watch ad"
-    decline: "No thanks"
-de:
-  rewardedIntro:
-    badge: "Werbung"
-    title: "Ein Werbevideo ansehen?"
-    body: "Sieh dir ein kurzes Werbevideo an, um deine Belohnung zu erhalten."
-    bodyReward: "Sieh dir ein kurzes Werbevideo an und erhalte {reward}."
-    closeable: "Du kannst die Werbung nach ein paar Sekunden schließen. Wenn du sie früher schließt, gibt es keine Belohnung."
-    rewardCoins: "{count} Münzen"
-    rewardDiamonds: "{count} Diamanten"
-    rewardSpeed: "2x Kampftempo"
-    rewardRespin: "einen weiteren Dreh"
-    watch: "Werbung ansehen"
-    decline: "Nein, danke"
-fr:
-  rewardedIntro:
-    badge: "Publicité"
-    title: "Regarder une pub vidéo ?"
-    body: "Regarde une courte pub vidéo pour obtenir ta récompense."
-    bodyReward: "Regarde une courte pub vidéo pour obtenir {reward}."
-    closeable: "Tu peux fermer la pub après quelques secondes. Si tu la fermes trop tôt, pas de récompense."
-    rewardCoins: "{count} pièces"
-    rewardDiamonds: "{count} diamants"
-    rewardSpeed: "vitesse de combat x2"
-    rewardRespin: "un tour de plus"
-    watch: "Regarder la pub"
-    decline: "Non merci"
-es:
-  rewardedIntro:
-    badge: "Publicidad"
-    title: "¿Ver un anuncio en vídeo?"
-    body: "Mira un breve anuncio en vídeo para conseguir tu recompensa."
-    bodyReward: "Mira un breve anuncio en vídeo para conseguir {reward}."
-    closeable: "Puedes cerrar el anuncio después de unos segundos. Si lo cierras antes, no hay recompensa."
-    rewardCoins: "{count} monedas"
-    rewardDiamonds: "{count} diamantes"
-    rewardSpeed: "velocidad de combate x2"
-    rewardRespin: "otro giro"
-    watch: "Ver anuncio"
-    decline: "No, gracias"
-jp:
-  rewardedIntro:
-    badge: "広告"
-    title: "動画広告を見ますか？"
-    body: "短い動画広告を見ると報酬がもらえます。"
-    bodyReward: "短い動画広告を見ると {reward} がもらえます。"
-    closeable: "広告は数秒後に閉じられます。早く閉じると報酬はもらえません。"
-    rewardCoins: "コイン {count} 枚"
-    rewardDiamonds: "ダイヤ {count} 個"
-    rewardSpeed: "バトル速度2倍"
-    rewardRespin: "もう1回スピン"
-    watch: "広告を見る"
-    decline: "見ない"
-kr:
-  rewardedIntro:
-    badge: "광고"
-    title: "동영상 광고를 볼까요?"
-    body: "짧은 동영상 광고를 보면 보상을 받을 수 있어요."
-    bodyReward: "짧은 동영상 광고를 보면 {reward} 을(를) 받을 수 있어요."
-    closeable: "광고는 몇 초 뒤에 닫을 수 있어요. 먼저 닫으면 보상은 없어요."
-    rewardCoins: "코인 {count}개"
-    rewardDiamonds: "다이아 {count}개"
-    rewardSpeed: "전투 속도 2배"
-    rewardRespin: "한 번 더 돌리기"
-    watch: "광고 보기"
-    decline: "괜찮아요"
-zh:
-  rewardedIntro:
-    badge: "广告"
-    title: "观看视频广告？"
-    body: "观看一段简短的视频广告即可获得奖励。"
-    bodyReward: "观看一段简短的视频广告即可获得 {reward}。"
-    closeable: "几秒后就可以关闭广告。提前关闭将无法获得奖励。"
-    rewardCoins: "{count} 金币"
-    rewardDiamonds: "{count} 钻石"
-    rewardSpeed: "2 倍战斗速度"
-    rewardRespin: "再转一次"
-    watch: "观看广告"
-    decline: "不用了"
-ru:
-  rewardedIntro:
-    badge: "Реклама"
-    title: "Посмотреть видеорекламу?"
-    body: "Посмотри короткую видеорекламу, чтобы получить награду."
-    bodyReward: "Посмотри короткую видеорекламу и получи {reward}."
-    closeable: "Рекламу можно закрыть через несколько секунд. Если закрыть раньше, награды не будет."
-    rewardCoins: "{count} монет"
-    rewardDiamonds: "{count} алмазов"
-    rewardSpeed: "двойная скорость боя"
-    rewardRespin: "ещё один спин"
-    watch: "Смотреть рекламу"
-    decline: "Нет, спасибо"
-</i18n>

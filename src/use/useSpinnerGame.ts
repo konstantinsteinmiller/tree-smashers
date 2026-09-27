@@ -36,6 +36,10 @@ import { matchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
 import { FX } from '@/use/useQuality'
+import {
+  createBorderFx, resetBorderFx, tickBorderFx, triggerBurn, triggerHeal,
+  renderBurns, renderHeals, FLAME_BURN_SRC, BORDER_FX_POOL_SIZE
+} from '@/use/borderFx'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
@@ -1050,6 +1054,26 @@ export const useSpinnerGame = () => {
   const activeShockBolts: ShockBolt[] = []
   let activeClashSounds = 0
 
+  // ── Arena-border contact VFX (lava flame-burn, forest heal pulse) ──────
+  // Pooled state + draw code live in `@/use/borderFx` (unit-tested there).
+  // Caps: low tier / Firefox get fewer concurrent instances, and on low a
+  // burn plays one pass per contact instead of being held alight.
+  const borderFx = createBorderFx()
+  // Dev-only read handle for QA scripts (capture a screenshot while a burn /
+  // heal is actually live). Never runs in a production build — DEV is false
+  // there (verified: `window.__borderFx` is undefined on the built game),
+  // though the obfuscator can leave the dead branch's string in the bundle.
+  if (import.meta.env.DEV) (window as unknown as { __borderFx?: unknown }).__borderFx = borderFx
+  const burnCap = (): number => (FX.low ? 2 : isFirefox ? 3 : BORDER_FX_POOL_SIZE)
+  const healCap = (): number => (FX.low ? 2 : isFirefox ? 3 : BORDER_FX_POOL_SIZE)
+  // The flame strip is only fetched where it can be drawn: warmed by
+  // initGame for a lava arena (and by the deferred preload tier when the
+  // current stage is lava), or on the first burn if the arena was switched
+  // some other way. Same shared HTMLImageElement either way.
+  let flameImg: HTMLImageElement | null = null
+  const flameImage = (): HTMLImageElement =>
+    flameImg ?? (flameImg = getCachedImage(prependBaseUrl(FLAME_BURN_SRC)))
+
   // Drops every live battle VFX layer. Used on surrender / forced
   // game-over so stale shock bolts and sparks don't linger into the
   // reward screen after physics stops ticking.
@@ -1057,6 +1081,7 @@ export const useSpinnerGame = () => {
     activeShockBolts.length = 0
     activeSparks.length = 0
     activeExplosions.length = 0
+    resetBorderFx(borderFx)
   }
 
   const MAX_ACTIVE_VFX = isFirefox ? 2 : 10
@@ -2139,6 +2164,10 @@ export const useSpinnerGame = () => {
     activeSparks.length = 0
     activeExplosions.length = 0
     activeShockBolts.length = 0
+    resetBorderFx(borderFx)
+    // Lava is the only arena that draws the flame strip — fetch it now, while
+    // the meteor intro plays, rather than on the first burn.
+    if (arena === 'lava') flameImage()
     gameOverAt = null
 
     // ── Powerups ──────────────────────────────────────────────────────────
@@ -2852,6 +2881,9 @@ export const useSpinnerGame = () => {
       if (activeShockBolts[i]!.life <= 0) activeShockBolts.splice(i, 1)
     }
 
+    // Lava flame-burns + forest heal pulses (pooled, VFX-rate like sparks)
+    tickBorderFx(borderFx, 16)
+
     // Update floating damage numbers + powerup pickup indicators
     updateDamageNumbers(16)
     updatePowerupFloats(16)
@@ -3009,6 +3041,14 @@ export const useSpinnerGame = () => {
         color: blade.owner === 'player' ? '#ff6666' : '#66aaff',
         isCrit: false
       })
+      // Flame-burn follows the spinner for ~1 s. Never restarts while it
+      // plays: a re-contact holds it on the flicker frames (high tier) or
+      // is ignored until the pass ends (low tier). A lethal touch skips it —
+      // the death explosion owns that moment.
+      if (blade.hp > 0) {
+        flameImage()
+        triggerBurn(borderFx, blade, burnCap(), !FX.low)
+      }
     } else if (arenaType.value === 'forest') {
       const healed = Math.round(Math.min(1, blade.maxHp - blade.hp))
       blade.hp = Math.min(blade.maxHp, blade.hp + 1)
@@ -3021,6 +3061,9 @@ export const useSpinnerGame = () => {
           vx: Math.cos(healAngle) * healSpd, vy: Math.sin(healAngle) * healSpd,
           color: '#44cc66', isCrit: false
         })
+        // Heal pulse only when HP actually went up (same rule as the
+        // number), throttled per spinner inside triggerHeal.
+        triggerHeal(borderFx, blade, healCap())
       }
     } else if (arenaType.value === 'shock') {
       // Shock arena: remove 90% of blade speed on wall contact.
@@ -3433,7 +3476,11 @@ export const useSpinnerGame = () => {
         // Life-leech: attacker heals 30% of damage dealt
         if (a.isLifeLeech) {
           const heal = dmgAtoB * 0.3
+          const hpBefore = a.hp
           a.hp = Math.min(a.maxHp, a.hp + heal)
+          // Same heal pulse as the forest border — only when HP actually
+          // went up (throttled per spinner inside triggerHeal).
+          if (a.hp > hpBefore && a.hp > 0) triggerHeal(borderFx, a, healCap())
           if (Math.round(heal) > 0) {
             const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
             const hs = 0.06 + Math.random() * 0.03
@@ -3456,7 +3503,11 @@ export const useSpinnerGame = () => {
         // Life-leech: attacker heals 30% of damage dealt
         if (b.isLifeLeech) {
           const heal = dmgBtoA * 0.3
+          const hpBefore = b.hp
           b.hp = Math.min(b.maxHp, b.hp + heal)
+          // Same heal pulse as the forest border — only when HP actually
+          // went up (throttled per spinner inside triggerHeal).
+          if (b.hp > hpBefore && b.hp > 0) triggerHeal(borderFx, b, healCap())
           if (Math.round(heal) > 0) {
             const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
             const hs = 0.06 + Math.random() * 0.03
@@ -3736,6 +3787,12 @@ export const useSpinnerGame = () => {
       if (blade.hp <= 0) continue
       renderBlade(ctx, blade)
     }
+
+    // Arena-border contact VFX, over the spinner they follow: the flame ring
+    // licks over the rim (the art keeps the HP digit clear), the heal pulse
+    // rings out from it.
+    renderBurns(ctx, borderFx, flameImg)
+    renderHeals(ctx, borderFx, FX.low)
 
     // Spark VFX
     for (const spark of activeSparks) {

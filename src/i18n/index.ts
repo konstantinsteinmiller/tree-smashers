@@ -1,5 +1,5 @@
 import type { I18n } from 'vue-i18n'
-import { LANGUAGES } from '@/utils/enums'
+import { LANGUAGE_BY_CODE, LANGUAGE_REGISTRY, normalizeLocaleTag, pluralRuleFor } from './languages'
 
 /**
  * Locale loader — lazy, code-split, cache-safe.
@@ -16,6 +16,38 @@ const localeLoaders = import.meta.glob<Record<string, unknown>>(
   { import: 'default' }
 )
 
+/**
+ * Every locale we actually ship: registry order, filtered to the codes that
+ * have a `./locales/<code>.ts` file. The glob's KEYS are known at build time
+ * and cost nothing to read — no locale chunk is fetched to compute this.
+ *
+ * This is the single source of truth behind `LANGUAGES` (`@/utils/enums`
+ * re-exports it): adding a translation is "drop in the file", and a registry
+ * entry without a file simply is not offered yet.
+ */
+export const SHIPPED_LOCALES: string[] = (() => {
+  const files = new Set(
+    Object.keys(localeLoaders).map((p) => p.replace(/^\.\/locales\//, '').replace(/\.ts$/, ''))
+  )
+  return LANGUAGE_REGISTRY.filter((l) => files.has(l.code)).map((l) => l.code)
+})()
+
+/**
+ * Raw portal / browser language tag → a SHIPPED internal code, or null.
+ * Wraps `normalizeLocaleTag` with the shipped set so no caller can forget it.
+ * Handles region + script variants (`pt-BR` / `pt-PT`, `zh-Hant` / `zh-TW` /
+ * `zh-HK`), ISO 639-2 three-letter codes and legacy aliases (`ja` → `jp`).
+ */
+export const toShippedLocale = (raw: string | null | undefined): string | null =>
+  normalizeLocaleTag(raw, SHIPPED_LOCALES)
+
+/**
+ * vue-i18n `pluralRules` for every shipped locale (see `pluralRuleFor`).
+ * Passed to `createI18n` in `main.ts`.
+ */
+export const buildPluralRules = (): Record<string, (choice: number, choicesLength: number) => number> =>
+  Object.fromEntries(SHIPPED_LOCALES.map((code) => [code, pluralRuleFor(LANGUAGE_BY_CODE[code]!.bcp47)]))
+
 /** In-memory cache so repeat `loadLocale` calls don't re-import. */
 const localeCache = new Map<string, Record<string, unknown>>()
 /** Shared in-flight promises so concurrent calls coalesce. */
@@ -24,28 +56,30 @@ const localeInFlight = new Map<string, Promise<Record<string, unknown>>>()
 const pathFor = (code: string) => `./locales/${code}.ts`
 
 export const isSupportedLocale = (code: string | null | undefined): code is string =>
-  !!code && LANGUAGES.includes(code)
-
-/**
- * Our internal locale codes are not all valid BCP-47 tags — the project uses
- * `jp` for Japanese and `kr` for Korean (the correct tags are `ja` / `ko`).
- * `<html lang>` is consumed by screen readers and by the browser's own font
- * fallback / line-breaking machinery, so it has to carry the real tag.
- */
-const BCP47: Record<string, string> = {
-  zh: 'zh-Hans',
-  jp: 'ja',
-  kr: 'ko'
-}
+  !!code && SHIPPED_LOCALES.includes(code)
 
 /**
  * Mirror the active locale onto the document element.
  *
- *   • `lang`        — BCP-47, for a11y + the browser's CJK font/line-break
- *                     heuristics (Han glyph shaping differs between
- *                     zh-Hans / ja / ko and the browser needs the hint).
- *   • `data-locale` — our raw internal code, which the CJK typography
- *                     corrections in `assets/css/fonts.sass` key off.
+ *   • `lang`        — real BCP-47 (`ja` / `ko` / `zh-Hans` / `zh-Hant` for our
+ *                     legacy `jp` / `kr` / `zh` / `zh-TW`). Screen readers use
+ *                     it, and so does the browser: Han glyph variants
+ *                     (zh-Hans / zh-Hant / ja differ), Thai line breaking, and
+ *                     language-sensitive `text-transform: uppercase` (Turkish
+ *                     and Azerbaijani dotted İ, Greek accent removal,
+ *                     Lithuanian) all key off it.
+ *   • `data-locale` — our raw internal code.
+ *   • `data-script` — the font / typography bucket (`latin`, `latin-ext`,
+ *                     `cyrillic`, `greek`, `arabic`, `devanagari`, `thai`,
+ *                     `cjk-sc|tc|jp|kr`). `assets/css/fonts.sass` swaps the
+ *                     `--font-game` stack and the Latin-display corrections
+ *                     (italic, uppercase, tracking) off it.
+ *   • `data-dir`    — `rtl` for Arabic. Deliberately NOT the `dir` attribute:
+ *                     `dir="rtl"` on <html> mirrors every flex row, margin and
+ *                     scrollbar of a layout that was built LTR. We keep the
+ *                     layout and the HUD LTR and let each text box take its
+ *                     own direction from its content instead (see the
+ *                     `data-dir` block in `fonts.sass`).
  *
  * Called from `setI18nLocale` (every runtime switch) and once from `main.ts`
  * for the boot locale, so the very first paint is already correct.
@@ -53,8 +87,11 @@ const BCP47: Record<string, string> = {
 export const applyDocumentLocale = (code: string): void => {
   if (typeof document === 'undefined') return
   const el = document.documentElement
-  el.setAttribute('lang', BCP47[code] ?? code)
+  const info = LANGUAGE_BY_CODE[code]
+  el.setAttribute('lang', info?.bcp47 ?? code)
   el.setAttribute('data-locale', code)
+  el.setAttribute('data-script', info?.script ?? 'latin')
+  el.setAttribute('data-dir', info?.dir ?? 'ltr')
 }
 
 /**
@@ -205,7 +242,8 @@ export const notePortalLanguageChange = (code: string): boolean => {
  *   2. Caller-supplied `preferred` hint — the portal-reported language
  *      (Playgama Bridge `platform.language`, CrazyGames `systemInfo
  *      .locale`). This is the source language for a first-time player.
- *   3. navigator.language short code — no portal, no stored choice.
+ *   3. navigator.languages, first tag we ship (region-aware: `pt-PT`,
+ *      `zh-TW`, `nb-NO` all resolve) — no portal, no stored choice.
  *   4. 'en' fallback.
  *
  * Does not touch sessionStorage (CG QA: NO locally-saved data).
@@ -217,9 +255,12 @@ export const resolveInitialLocale = (preferred?: string | null): string => {
   } catch { /* ignore */
   }
   if (isSupportedLocale(preferred)) return preferred
-  const nav = typeof navigator !== 'undefined'
-    ? navigator.language?.split('-')[0]
-    : undefined
-  if (isSupportedLocale(nav)) return nav
+  if (typeof navigator !== 'undefined') {
+    const tags = navigator.languages?.length ? navigator.languages : [navigator.language]
+    for (const tag of tags) {
+      const nav = toShippedLocale(tag)
+      if (nav) return nav
+    }
+  }
   return 'en'
 }

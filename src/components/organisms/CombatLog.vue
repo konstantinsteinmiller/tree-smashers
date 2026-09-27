@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import {
   combatLogVersion,
@@ -14,7 +14,7 @@ import {
 // scrollable feed of the last 200 hits. Deliberately unobtrusive — this is a
 // strategist tool, not something casual players should notice.
 
-const { t } = useI18n()
+const { t } = useSfcI18n('CombatLog')
 const open = ref(false)
 
 // One human-readable side label, e.g. "Enemy Tank Piercer" / "Spinner 1 Star
@@ -118,166 +118,3 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
   background: rgba(255, 255, 255, 0.04)
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8)
 </style>
-
-<i18n lang="yaml">
-en:
-  title: "Combat Log"
-  short: "Log"
-  aria: "Open combat log"
-  hint: "For strategists · last {n} hits, newest first"
-  empty: "No combat yet — the log fills in as blades clash."
-  line: "{attacker} deals {dmg} damage to {target}"
-  enemy: "Enemy {type}"
-  spinner: "Spinner {n} {type}"
-  whoEnemy: "Enemy"
-  whoSpinner: "Spinner {n}"
-  crit: "Critical strike"
-  speedFavors: "speed favors {name}"
-  types:
-    star: "Star Blade"
-    triangle: "Spiky"
-    round: "Round Guard"
-    quadratic: "Quad Core"
-    cushioned: "Soft Shell"
-    piercer: "Tank Piercer"
-de:
-  title: "Kampfprotokoll"
-  short: "Log"
-  aria: "Kampfprotokoll öffnen"
-  hint: "Für Strategen · letzte {n} Treffer, neueste zuerst"
-  empty: "Noch kein Kampf — das Protokoll füllt sich, sobald die Klingen aufeinandertreffen."
-  line: "{attacker} fügt {target} {dmg} Schaden zu"
-  enemy: "Gegner {type}"
-  spinner: "Spinner {n} {type}"
-  whoEnemy: "Gegner"
-  whoSpinner: "Spinner {n}"
-  crit: "Kritischer Treffer"
-  speedFavors: "Tempo begünstigt {name}"
-  types:
-    star: "Sternklinge"
-    triangle: "Stachel"
-    round: "Rundschutz"
-    quadratic: "Quad-Kern"
-    cushioned: "Weichpanzer"
-    piercer: "Panzerbrecher"
-fr:
-  title: "Journal de combat"
-  short: "Journal"
-  aria: "Ouvrir le journal de combat"
-  hint: "Pour les stratèges · {n} derniers coups, du plus récent"
-  empty: "Pas encore de combat — le journal se remplit au fil des chocs."
-  line: "{attacker} inflige {dmg} dégâts à {target}"
-  enemy: "Ennemi {type}"
-  spinner: "Toupie {n} {type}"
-  whoEnemy: "Ennemi"
-  whoSpinner: "Toupie {n}"
-  crit: "Coup critique"
-  speedFavors: "la vitesse favorise {name}"
-  types:
-    star: "Lame étoile"
-    triangle: "Épineux"
-    round: "Bouclier rond"
-    quadratic: "Noyau carré"
-    cushioned: "Carapace"
-    piercer: "Perce-blindage"
-es:
-  title: "Registro de combate"
-  short: "Registro"
-  aria: "Abrir registro de combate"
-  hint: "Para estrategas · últimos {n} golpes, más recientes primero"
-  empty: "Aún no hay combate — el registro se llena cuando las cuchillas chocan."
-  line: "{attacker} inflige {dmg} de daño a {target}"
-  enemy: "Enemigo {type}"
-  spinner: "Peonza {n} {type}"
-  whoEnemy: "Enemigo"
-  whoSpinner: "Peonza {n}"
-  crit: "Golpe crítico"
-  speedFavors: "la velocidad favorece a {name}"
-  types:
-    star: "Cuchilla estelar"
-    triangle: "Espinoso"
-    round: "Guardia redonda"
-    quadratic: "Núcleo cuádruple"
-    cushioned: "Coraza blanda"
-    piercer: "Perforador"
-jp:
-  title: "戦闘ログ"
-  short: "ログ"
-  aria: "戦闘ログを開く"
-  hint: "戦略家向け · 直近{n}ヒット（新しい順）"
-  empty: "まだ戦闘はありません — ブレードがぶつかると記録されます。"
-  line: "{attacker} が {target} に {dmg} ダメージ"
-  enemy: "敵 {type}"
-  spinner: "スピナー{n} {type}"
-  whoEnemy: "敵"
-  whoSpinner: "スピナー{n}"
-  crit: "クリティカル"
-  speedFavors: "速度は{name}に有利"
-  types:
-    star: "スターブレード"
-    triangle: "スパイキー"
-    round: "ラウンドガード"
-    quadratic: "クアッドコア"
-    cushioned: "ソフトシェル"
-    piercer: "アーマーブレイク"
-kr:
-  title: "전투 로그"
-  short: "로그"
-  aria: "전투 로그 열기"
-  hint: "전략가용 · 최근 {n}회 타격, 최신순"
-  empty: "아직 전투가 없습니다 — 블레이드가 충돌하면 기록됩니다."
-  line: "{attacker}이(가) {target}에게 {dmg} 피해를 입힘"
-  enemy: "적 {type}"
-  spinner: "스피너 {n} {type}"
-  whoEnemy: "적"
-  whoSpinner: "스피너 {n}"
-  crit: "치명타"
-  speedFavors: "속도는 {name}에게 유리"
-  types:
-    star: "스타 블레이드"
-    triangle: "가시"
-    round: "라운드 가드"
-    quadratic: "쿼드 코어"
-    cushioned: "소프트 쉘"
-    piercer: "관통자"
-zh:
-  title: "战斗记录"
-  short: "记录"
-  aria: "打开战斗记录"
-  hint: "面向策略玩家 · 最近{n}次命中，最新在前"
-  empty: "暂无战斗 — 刀刃碰撞时会记录到这里。"
-  line: "{attacker} 对 {target} 造成 {dmg} 点伤害"
-  enemy: "敌方 {type}"
-  spinner: "陀螺 {n} {type}"
-  whoEnemy: "敌方"
-  whoSpinner: "陀螺 {n}"
-  crit: "暴击"
-  speedFavors: "速度更有利于{name}"
-  types:
-    star: "星刃"
-    triangle: "尖刺"
-    round: "圆盾"
-    quadratic: "方核"
-    cushioned: "软甲"
-    piercer: "穿甲者"
-ru:
-  title: "Журнал боя"
-  short: "Лог"
-  aria: "Открыть журнал боя"
-  hint: "Для стратегов · последние {n} ударов, сначала новые"
-  empty: "Боя ещё не было — журнал заполнится, когда клинки столкнутся."
-  line: "{attacker} наносит {dmg} урона по {target}"
-  enemy: "Враг {type}"
-  spinner: "Спиннер {n} {type}"
-  whoEnemy: "Враг"
-  whoSpinner: "Спиннер {n}"
-  crit: "Критический удар"
-  speedFavors: "скорость на стороне {name}"
-  types:
-    star: "Звёздный клинок"
-    triangle: "Шипастый"
-    round: "Круглый щит"
-    quadratic: "Квадро-ядро"
-    cushioned: "Мягкий панцирь"
-    piercer: "Бронебой"
-</i18n>

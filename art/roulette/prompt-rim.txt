@@ -1,0 +1,57 @@
+WHAT COMES BACK IS ONE GOLD RING WITH NOTHING INSIDE IT — NOT A WHEEL.
+One square image, 1024 x 1024 pixels, holding exactly ONE circular rim, centred, laid out exactly like the LAYOUT reference (the LAST attached image): the ring's outer edge touches all four sides of the canvas, and its middle is a large, empty, round opening.
+· ONE ring. Not a whole prize wheel, not a wheel with coloured slices, not a medallion, not a coin, not a clock face, not a shield.
+· A wheel face painted inside the ring is the wrong answer however beautiful it is: the slices, numbers and prizes are drawn by the game underneath this ring, and anything painted in the opening hides them.
+· It is a THIN ring, like the moulding of a round picture frame — not a fat donut. The last attempt came back with the opening only 58% of the canvas width and a wide, dark, shadowed well inside the gold: the band was more than twice too thick, it covered the prizes, and it could not be used however well it was painted.
+
+ATTACHMENTS: the FIRST attached image is a FINISH reference only — it shows how to paint gold (ink, cel steps, glints), never what to paint. The LAST attached image is the LAYOUT reference — it settles the shape, the size and the position of everything.
+
+WHAT IT IS NOT — read this before anything else.
+· Paint ONLY the band the reference shows, and nothing else. The middle of the reference is flat magenta and it stays flat magenta: no slices, no spokes, no dividers, no hub, no centre boss, no gems, no numbers, no symbols in the opening.
+· NO light bulbs, NO lamps, NO sockets, NO studs, rivets or jewels set at regular intervals round the band. Other pieces are mounted on this ring later, separately, and anything repeated at intervals here will not line up with them.
+· NO pointer, flapper, ticker, arrow, crown, bow or ornament at the top — or at any other single place. The ring must look the same at every angle.
+· No stand, no base, no ground, no shadow, no scenery, no text.
+· The reference settles every argument about what belongs.
+
+WHAT IT IS: the outer rim of a premium prize wheel from a colourful cartoon spinning-top battle game — a heavy, polished GOLD ring. From the inside out, following the reference's bands:
+  1. a thin dark inner lip (deep brown-black) where the ring meets the face it frames — ONE even line about 1% of the canvas width, the same at every angle. NOT a recess, well, groove or inner shadow, and never heavier on one side;
+  2. a raised, rounded gold bevel;
+  3. a smooth, plain, polished gold channel running round the middle of the band — left plain on purpose, with no decoration in it;
+  4. a band of fine engraved scroll-work / filigree, one small motif repeated evenly and continuously all the way round;
+  5. a rounded outer bevel finished by a thick dark ink outline.
+NOTHING else.
+
+COLOUR: warm polished gold — highlights near #fff3b8, body #f5c542, mid-shadow #c98a1b, deep shadow #7a4a12, ink line #2b1804. A thin line of deep ruby (#b3122e) inside the engraving is welcome; no other colours.
+
+THE VIEW: dead flat, straight on from the front, the way a clock face is seen square on: a perfect circle, not an ellipse. NO perspective, no tilt, no three-quarter view, no rim thickness shown on one side, no cast shadow.
+
+LIGHT: one soft light from the TOP-LEFT, the same all the way round — the bevels catch bright highlights on the upper left and turn to warm shadow on the lower right. Keep the light shapes crisp (cel steps), never airbrushed.
+
+STYLE — match the FINISH of the finish reference (the FIRST attached image, an ornate gold medallion): hand-painted mobile-game UI, the polish of a premium casual game.
+· A bold, confident DARK contour on the outside and the inside edge of the ring — at its heaviest about 1.2% of the canvas width, the weight of a brush pen, never a hairline. Hold the result at thumbnail size: if the outline has vanished there, it is far too thin.
+· Painted volumes: two or three cel-shading steps per shape and crisp specular glints on the gold. Rich, clean and saturated — never muddy, never photographic, never a 3D render, no airbrush fog, no lens flare, no bloom.
+· The finish reference shows HOW to paint, never WHAT to paint: nothing in the result may be a diamond, crystal, gem pattern or medallion taken from it.
+
+LAYOUT / SIZE — measured, not a composition choice:
+· The ring is a perfect circle centred on the canvas. Its OUTER edge touches all four sides of the canvas.
+· Its INNER opening is a circle exactly 80% of the canvas width across, centred. So the band is only 10% of the canvas width thick, and it is that thick at every angle. A band that is fatter at the bottom, or an opening that is off centre, cannot be used.
+· Measure it along the middle row of the canvas: gold from 0% to 10% of the width, flat magenta from 10% all the way to 90%, gold again from 90% to 100%. The same down the middle column. The layout reference shows exactly this; lay a ruler across it.
+· Everything described above — lip, bevels, channel, filigree, ink — fits INSIDE that 10%. If the details do not fit, make them finer; never make the band wider.
+· Do NOT draw any grid, guide, frame, border or square.
+
+BACKGROUND — read this before anything else. It matters more than the style.
+Fill every pixel that is not the ring itself with solid, flat, pure magenta #FF00FF — BOTH outside the ring (the four corners) AND the whole round opening in the middle. Treat it as a green-screen: one flat chroma-key colour, edge to edge.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not dusty pink, not mauve, not a soft or tinted version of it.
+· NOT transparent (transparency comes back as a painted grey-and-white checkerboard), NOT white, NOT black, NOT dark, NOT a gradient.
+· No glow, halo, sparkle or shadow spilling from the ring onto the magenta, and no vignette. Every glint stays INSIDE the ring's outline.
+· The ring itself contains no magenta or hot pink.
+· The warm gold palette is for the ring. The ground is not part of the painting: it stays a vivid, eye-hurting #FF00FF.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· One ring, a perfect circle, centred, touching all four sides of the canvas.
+· The opening is 80% of the width across — 10% of gold, 80% of magenta, 10% of gold along the middle row — and it is flat #FF00FF right to the middle, with no dark well round its edge.
+· Zero bulbs, lamps, sockets, studs or regular jewels; zero pointer; zero text.
+· The band looks the same at 12, 3, 6 and 9 o'clock.
+· Every pixel that is not gold is flat, vivid #FF00FF — hold it against a pure magenta swatch, not against your memory of one.
+
+OUTPUT: one image, 1024 x 1024 pixels, square (1:1), PNG. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.

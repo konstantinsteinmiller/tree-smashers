@@ -11,11 +11,43 @@ const { coins, diamonds } = useSpinnerConfig()
 const diamondFancySrc = prependBaseUrl('images/icons/diamond-fancy_256x256.webp')
 
 // Exposed so siblings can target the badge for fly-to VFX:
-//   • rootEl       — coin-explosion target (whole badge / coin row)
-//   • diamondRowEl — diamond-explosion target (the diamond row)
+//   • rootEl            — coin-explosion target (whole badge / coin row), and
+//                         the diamond target while the diamond row is hidden
+//   • diamondRowEl      — diamond-explosion target (the diamond row)
+//   • celebrateDiamonds — "+N" diamond pop + badge bump when diamonds land
 const rootEl = ref<HTMLElement | null>(null)
 const diamondRowEl = ref<HTMLElement | null>(null)
-defineExpose({ rootEl, diamondRowEl })
+
+// Built once — a bump allocates nothing.
+const BUMP_KEYFRAMES: Keyframe[] = [
+  { transform: 'scale(1)' },
+  { transform: 'scale(1.14)', offset: 0.35 },
+  { transform: 'scale(1)' }
+]
+const BUMP_TIMING: KeyframeAnimationOptions = { duration: 360, easing: 'ease-out' }
+
+// The pop is teleported to <body> and pinned beside the badge: every diamond
+// reward lands while a reward overlay (z-100, blurred) covers the HUD, so a
+// pop rendered inside the badge would sit under it. `id` re-keys the node so
+// a second landing restarts the animation; amounts that land while a pop is
+// still up are summed.
+const diamondPop = ref<{ id: number, amount: number, left: string, top: string } | null>(null)
+let popSeq = 0
+
+const celebrateDiamonds = (amount: number) => {
+  const el = rootEl.value
+  if (!el || amount <= 0) return
+  if (typeof el.animate === 'function') el.animate(BUMP_KEYFRAMES, BUMP_TIMING)
+  const r = el.getBoundingClientRect()
+  diamondPop.value = {
+    id: ++popSeq,
+    amount: (diamondPop.value?.amount ?? 0) + amount,
+    left: `${r.left}px`,
+    top: `${r.top + r.height / 2}px`
+  }
+}
+
+defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
 </script>
 
 <template lang="pug">
@@ -45,6 +77,26 @@ defineExpose({ rootEl, diamondRowEl })
       //    class="w-7 h-7 sm:w-8 sm:h-8"
       //  )
       //span.game-text.coin-badge__value.coin-badge__value--diamond.justify-self-end {{ diamonds }}
+
+    //- "+N" diamond pop, just left of the badge — same fancy diamond and
+    //- diamond value styling as the (hidden) diamond row. Decorative: the
+    //- reward screen that fired it already states the amount.
+    Teleport(to="body")
+      div.coin-badge-pop.flex.items-center.font-bold(
+        v-if="diamondPop"
+        :key="diamondPop.id"
+        class="gap-0.5 pr-1.5 text-sm sm:text-base"
+        :style="{ left: diamondPop.left, top: diamondPop.top }"
+        aria-hidden="true"
+        @animationend="diamondPop = null"
+      )
+        img.object-contain(
+          :src="diamondFancySrc"
+          alt=""
+          draggable="false"
+          class="w-6 h-6 sm:w-7 sm:h-7"
+        )
+        span.game-text.coin-badge__value.coin-badge__value--diamond +{{ diamondPop.amount }}
 </template>
 
 <style scoped lang="sass">
@@ -84,6 +136,31 @@ defineExpose({ rootEl, diamondRowEl })
   &__value--diamond
     color: #e6f7ff
     text-shadow: 0 1px 0 #000, 0 0 6px rgba(120, 220, 255, 0.75)
+
+// Pinned by its right-centre to the badge's left-centre (left/top come from
+// the badge rect), above the reward overlays' z-100.
+.coin-badge-pop
+  position: fixed
+  z-index: 110
+  pointer-events: none
+  white-space: nowrap
+  animation: coin-badge-pop 1.2s ease-out forwards
+
+@keyframes coin-badge-pop
+  0%
+    opacity: 0
+    transform: translate(-80%, -50%) scale(0.5)
+  18%
+    opacity: 1
+    transform: translate(-100%, -50%) scale(1.2)
+  32%
+    transform: translate(-100%, -50%) scale(1)
+  75%
+    opacity: 1
+    transform: translate(-100%, -80%) scale(1)
+  100%
+    opacity: 0
+    transform: translate(-100%, -110%) scale(1)
 
 @keyframes coin-shine
   0%

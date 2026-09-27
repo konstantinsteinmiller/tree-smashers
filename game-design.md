@@ -336,7 +336,7 @@ div(class="p-1.5 sm:p-2")
 - Fallback: If no unowned skins remain, skin days pay coins instead.
 - Open button: Gold gradient, shows `+{nextReward}` with coin icon, `hint-bounce` CSS class when uncollected.
 - Grid: 7 columns, color-coded (green=claimed, yellow=current, purple=skin, gray=locked).
-- SFC i18n: Uses `<i18n>` block for 8 languages (en, de, fr, es, jp, kr, zh, ru).
+- i18n: component copy under `sfc.DailyRewards` in the locale files (`useSfcI18n`).
 
 ---
 
@@ -366,7 +366,7 @@ div(class="p-1.5 sm:p-2")
 - Horizontal scroll strip of 50 stage cards, auto-scrolls to current stage via `nextTick` + `scrollTo`.
 - Each card: stage number, reward icon (coin or skin preview with halo), coin amount, claim button.
 - Hidden scrollbar: `scrollbar-width: none`.
-- SFC i18n block for 8 languages.
+- i18n: component copy under `sfc.<Component>` in the locale files (`useSfcI18n`).
 
 ---
 
@@ -846,17 +846,9 @@ export default {
 }
 ```
 
-**SFC i18n blocks (per component):**
-
-```vue
-
-<i18n>
-  en:
-    dailyRewards: "Daily Rewards"
-  de:
-    dailyRewards: "Tägliche Belohnungen"
-</i18n>
-```
+**Component copy (no SFC `<i18n>` blocks any more):** it lives in the lazy per-locale files under
+`sfc.<ComponentName>` (e.g. `sfc.DailyRewards.dailyRewards`) and is read with `const { t } = useSfcI18n('DailyRewards')`
+(`src/i18n/sfc.ts`: own key first, then global); `<i18n-t>` takes the full `sfc.…` keypath with `scope="global"`.
 
 **main.ts setup:**
 
@@ -1087,15 +1079,9 @@ When adding translations:
    }
    ```
 
-2. **Component-specific strings** use SFC `<i18n>` blocks (YAML syntax):
-   ```vue
-   <i18n>
-   en:
-     dailyRewards: "Daily Rewards"
-   de:
-     dailyRewards: "Tägliche Belohnungen"
-   </i18n>
-   ```
+2. **Component-specific strings** go in every locale file under `sfc.<ComponentName>` (English first) and are read via
+   `useSfcI18n('<ComponentName>')` — never an SFC `<i18n>` block, which would ship every language in the component
+   chunk.
 
 3. **Always support 8 languages**: en, de, fr, es, jp, kr, zh, ru.
 

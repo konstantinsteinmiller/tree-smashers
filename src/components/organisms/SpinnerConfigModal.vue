@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import type { SpinnerConfig, TopPartId, BottomPartId } from '@/types/spinner'
 import type { TabOption } from '@/components/atoms/FTabs.vue'
@@ -47,7 +47,7 @@ const emit = defineEmits<{
   (e: 'save', team: SpinnerConfig[]): void
 }>()
 
-const { t } = useI18n()
+const { t } = useSfcI18n('SpinnerConfigModal')
 
 // ─── Blade Selector (which blade are we configuring) ───────────────────────
 
@@ -914,8 +914,12 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   .skin-picker-header
     margin-bottom: 0.25rem
 
+  // Six across, not the template's 3/4: since the 2026-09 expansion every top
+  // part has 11-12 skins, and at 4 across the third row fell off the bottom
+  // of a 414 px landscape phone. Six across keeps it to two rows.
   .skin-picker-grid
     gap: 0.3rem
+    grid-template-columns: repeat(6, minmax(0, 1fr))
 
   .skin-card
     padding: 0.15rem
@@ -1047,94 +1051,3 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     margin-top: 0.15rem
     font-size: 0.85rem
 </style>
-
-<i18n>
-en:
-  bladeLabel: "Blade"
-  topBlade: "Top Blade"
-  bottomPart: "Bottom Part"
-  statsLabel: "Stats"
-  selectSkin: "Select Skin"
-  purchaseMoreSkins: "Purchase more skins"
-  equipped: "EQUIPPED"
-  selectButton: "SELECT"
-  hintSelectCards: "Tap a card to select your spinner blade configuration. Tap the upgrade button to upgrade it."
-  hintPlusIcon: "The + icon at the top of each top-blade card opens that part's skin shop (e.g. Tank Piercer skin shop) where you can acquire new skins."
-de:
-  bladeLabel: "Blade"
-  topBlade: "Obere Klinge"
-  bottomPart: "Unterteil"
-  statsLabel: "Werte"
-  selectSkin: "Skin auswählen"
-  purchaseMoreSkins: "Weitere Skins kaufen"
-  equipped: "AUSGERÜSTET"
-  selectButton: "WÄHLEN"
-  hintSelectCards: "Tippe eine Karte an, um deine Spinner-Klingen-Konfiguration zu wählen. Tippe auf den Upgrade-Knopf, um sie zu verbessern."
-  hintPlusIcon: "Das + oben auf jeder oberen Klinge öffnet den Skin-Shop dieses Teils (z. B. Panzerbrecher-Shop), wo du neue Skins kaufen kannst."
-fr:
-  bladeLabel: "Toupie"
-  topBlade: "Partie haute"
-  bottomPart: "Partie basse"
-  statsLabel: "Stats"
-  selectSkin: "Choisir un skin"
-  purchaseMoreSkins: "Acheter plus de skins"
-  equipped: "ÉQUIPÉ"
-  selectButton: "CHOISIR"
-  hintSelectCards: "Touche une carte pour choisir la configuration de ta toupie. Touche le bouton d'amélioration pour l'améliorer."
-  hintPlusIcon: "Le + en haut de chaque carte de partie haute ouvre la boutique de skins correspondante (ex. Perce-blindage), où tu peux acquérir de nouveaux skins."
-es:
-  bladeLabel: "Peonza"
-  topBlade: "Parte superior"
-  bottomPart: "Parte inferior"
-  statsLabel: "Estadísticas"
-  selectSkin: "Elegir skin"
-  purchaseMoreSkins: "Comprar más skins"
-  equipped: "EQUIPADO"
-  selectButton: "ELEGIR"
-  hintSelectCards: "Toca una tarjeta para elegir la configuración de tu peonza. Toca el botón de mejora para mejorarla."
-  hintPlusIcon: "El + en la parte superior de cada tarjeta abre la tienda de skins de esa parte superior (p. ej. Perforador) donde puedes adquirir nuevas skins."
-jp:
-  bladeLabel: "ブレード"
-  topBlade: "アッパー"
-  bottomPart: "ボトム"
-  statsLabel: "ステータス"
-  selectSkin: "スキン選択"
-  purchaseMoreSkins: "スキンを追加購入"
-  equipped: "装備中"
-  selectButton: "選択"
-  hintSelectCards: "カードをタップしてブレード構成を選び、アップグレードボタンで強化しよう。"
-  hintPlusIcon: "アッパー カード上部の「+」をタップすると、そのパーツのスキンショップ（例：アーマーブレイク用）が開き、新スキンを入手できます。"
-kr:
-  bladeLabel: "블레이드"
-  topBlade: "상단 파츠"
-  bottomPart: "하단 파츠"
-  statsLabel: "능력치"
-  selectSkin: "스킨 선택"
-  purchaseMoreSkins: "스킨 추가 구매"
-  equipped: "장착됨"
-  selectButton: "선택"
-  hintSelectCards: "카드를 탭하여 블레이드 구성을 선택하고, 업그레이드 버튼으로 강화하세요."
-  hintPlusIcon: "상단 파츠 카드 위쪽의 '+' 아이콘을 누르면 해당 파츠의 스킨 상점(예: 관통자 상점)이 열려 새 스킨을 구매할 수 있습니다."
-zh:
-  bladeLabel: "陀螺"
-  topBlade: "上部"
-  bottomPart: "下部"
-  statsLabel: "属性"
-  selectSkin: "选择皮肤"
-  purchaseMoreSkins: "购买更多皮肤"
-  equipped: "已装备"
-  selectButton: "选择"
-  hintSelectCards: "点击卡片选择你的陀螺配置，点击升级按钮进行升级。"
-  hintPlusIcon: "上部卡片顶部的「+」图标会打开对应部件的皮肤商店（例如穿甲者皮肤商店），可在此购买新皮肤。"
-ru:
-  bladeLabel: "Волчок"
-  topBlade: "Верхняя часть"
-  bottomPart: "Нижняя часть"
-  statsLabel: "Статы"
-  selectSkin: "Выбрать скин"
-  purchaseMoreSkins: "Купить ещё скины"
-  equipped: "ЭКИПИРОВАНО"
-  selectButton: "ВЫБРАТЬ"
-  hintSelectCards: "Нажми на карточку, чтобы выбрать конфигурацию волчка. Нажми кнопку улучшения, чтобы прокачать её."
-  hintPlusIcon: "Значок «+» сверху каждой карточки верхней части открывает магазин скинов этой детали (например, для Бронебоя), где можно купить новые скины."
-</i18n>

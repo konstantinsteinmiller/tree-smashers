@@ -59,7 +59,7 @@
 // Granting on `'closed'` alone is a certification-graded violation.
 
 import { ref } from 'vue'
-import { LANGUAGES } from '@/utils/enums'
+import { toShippedLocale } from '@/i18n'
 import { loadPlaygamaBridge, type Bridge } from '@/utils/playgamaBridgeLoader'
 
 const INIT_TIMEOUT_MS = 15_000
@@ -157,45 +157,21 @@ export const getPlaygamaBridge = (): Bridge | null => sdk
 //      i18n ONLY, never written to storage. See `main.ts`.
 
 /**
- * BCP-47 / ISO-639 tag → the internal code used by `LANGUAGES`.
+ * Returns an internal locale code that is guaranteed to be SHIPPED, or `null`
+ * when the portal's language is one we do not ship.
  *
- * Script subtags are deliberately collapsed: we only ship a Simplified
- * Chinese bundle, so `zh-Hant` / `zh-TW` / `zh-HK` resolve to `zh` too —
- * Traditional readers get Simplified rather than the English fallback, which
- * is the strictly better outcome and what Playgama QA is checking for.
- */
-const LANGUAGE_ALIASES: Record<string, string> = {
-  ja: 'jp',
-  jpn: 'jp',
-  ko: 'kr',
-  kor: 'kr',
-  zh: 'zh',
-  cmn: 'zh',
-  chi: 'zh',
-  zho: 'zh',
-  eng: 'en',
-  deu: 'de',
-  ger: 'de',
-  spa: 'es',
-  fra: 'fr',
-  fre: 'fr',
-  rus: 'ru'
-}
-
-/**
- * Returns an internal locale code that is guaranteed to be in `LANGUAGES`,
- * or `null` when the portal's language is one we do not ship.
+ * Delegates to the shared normaliser (`src/i18n/languages.ts`), which every
+ * platform's language signal goes through. It keeps region and script
+ * subtags where we ship a variant (`pt-BR` / `pt-PT`, `zh-Hant` / `zh-TW` /
+ * `zh-HK` → Traditional), maps ISO 639-2 and legacy codes (`ja` / `jpn` →
+ * `jp`, `ua` → `uk`), and falls back to the nearest shipped sibling
+ * (Traditional → Simplified) before giving up.
  *
  * Returning `null` (rather than an unsupported code) is load-bearing: every
  * consumer treats a non-null value as "safe to apply", so an unshipped
  * language can never knock the player out of their stored choice.
  */
-export const normalizePlaygamaLanguage = (raw: string): string | null => {
-  const base = raw.toLowerCase().trim().split(/[-_]/)[0]
-  if (!base) return null
-  const code = LANGUAGE_ALIASES[base] ?? base
-  return LANGUAGES.includes(code) ? code : null
-}
+export const normalizePlaygamaLanguage = (raw: string): string | null => toShippedLocale(raw)
 
 // Last raw tag we logged. The poll below runs every 2s, so logging is
 // change-only — otherwise DevTools fills with identical lines and the QA

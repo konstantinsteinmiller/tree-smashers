@@ -25,13 +25,10 @@ export const ELEMENTS = {
 
 export type Element = (typeof ELEMENTS)[keyof typeof ELEMENTS]
 
-export const LANGUAGES: Array<string> = [
-  'en',
-  'de',
-  'es',
-  'fr',
-  'jp',
-  'kr',
-  'ru',
-  'zh'
-]
+/**
+ * Every locale the game ships — derived, not listed: the language registry
+ * (`src/i18n/languages.ts`) filtered to the codes that have a
+ * `src/i18n/locales/<code>.ts` file. Adding a translation file is all it takes
+ * to make a language selectable and detectable.
+ */
+export { SHIPPED_LOCALES as LANGUAGES } from '@/i18n'

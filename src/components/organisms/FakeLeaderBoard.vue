@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import useLeaderboard, { type LeaderboardEntry } from '@/use/useLeaderboard'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
@@ -20,7 +20,7 @@ const {
   canFightGhost
 } = useLeaderboard()
 const { currentStageId } = useSpinnerCampaign()
-const { t } = useI18n()
+const { t } = useSfcI18n('FakeLeaderBoard')
 
 // ─── Modal State ────────────────────────────────────────────────────────────
 
@@ -240,62 +240,3 @@ const indexToRank = (entry: LeaderboardEntry): number =>
   :deep(.model-container)
     transform: scale(90%)
 </style>
-
-<i18n>
-en:
-  leaderboard: "Leaderboard"
-  yourRank: "Your Rank"
-  jumpToMe: "Jump to me"
-  maxStage: "Max Stage"
-  alreadyFoughtToday: "Already fought today — comes back tomorrow"
-  fightAsGhost: "Fight as ghost battle"
-de:
-  leaderboard: "Bestenliste"
-  yourRank: "Dein Rang"
-  jumpToMe: "Zu mir"
-  maxStage: "Max. Etappe"
-  alreadyFoughtToday: "Heute schon gekämpft — kommt morgen wieder"
-  fightAsGhost: "Als Geisterkampf antreten"
-fr:
-  leaderboard: "Classement"
-  yourRank: "Ton rang"
-  jumpToMe: "Aller à moi"
-  maxStage: "Étape max"
-  alreadyFoughtToday: "Déjà combattu aujourd'hui — revient demain"
-  fightAsGhost: "Combattre en duel fantôme"
-es:
-  leaderboard: "Clasificación"
-  yourRank: "Tu rango"
-  jumpToMe: "Ir a mí"
-  maxStage: "Etapa máx."
-  alreadyFoughtToday: "Ya combatiste hoy — vuelve mañana"
-  fightAsGhost: "Luchar como combate fantasma"
-jp:
-  leaderboard: "ランキング"
-  yourRank: "あなたの順位"
-  jumpToMe: "自分へジャンプ"
-  maxStage: "最高ステージ"
-  alreadyFoughtToday: "本日既に対戦済み — 明日また挑戦"
-  fightAsGhost: "ゴーストバトルで戦う"
-kr:
-  leaderboard: "리더보드"
-  yourRank: "내 순위"
-  jumpToMe: "내 위치로"
-  maxStage: "최고 스테이지"
-  alreadyFoughtToday: "오늘은 이미 싸웠습니다 — 내일 다시"
-  fightAsGhost: "고스트 배틀로 싸우기"
-zh:
-  leaderboard: "排行榜"
-  yourRank: "你的排名"
-  jumpToMe: "跳转到我"
-  maxStage: "最高关卡"
-  alreadyFoughtToday: "今天已经战斗过 — 明天再来"
-  fightAsGhost: "进行幽灵战斗"
-ru:
-  leaderboard: "Таблица лидеров"
-  yourRank: "Ваш ранг"
-  jumpToMe: "К себе"
-  maxStage: "Макс. этап"
-  alreadyFoughtToday: "Сегодня уже сражались — приходите завтра"
-  fightAsGhost: "Бой с призраком"
-</i18n>

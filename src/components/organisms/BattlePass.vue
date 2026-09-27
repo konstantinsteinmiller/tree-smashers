@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FIconButton from '@/components/atoms/FIconButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
+import IconBattlePass from '@/components/icons/IconBattlePass.vue'
 import { displayDiamondReward } from '@/use/useCurrency'
 import useBattlePass, {
   BP_TOTAL_STAGES,
@@ -65,10 +66,10 @@ const diamondTier = computed(() => displayDiamondReward(BP_DIAMOND_AMOUNT))
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
-  (e: 'diamonds-awarded', sourceEl: HTMLElement): void
+  (e: 'diamonds-awarded', sourceEl: HTMLElement, amount: number): void
 }>()
 
-const { t } = useI18n()
+const { t } = useSfcI18n('BattlePass')
 
 const isModalOpen = ref(false)
 const bpBtnRef = ref<HTMLElement | null>(null)
@@ -289,7 +290,7 @@ const onClaim = (stage: number) => {
   const res = claimStage(stage, offeredSkins.value[stage])
   if (res) {
     if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
-    if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value)
+    if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value, res.diamonds)
     refreshOfferedSkins()
     refreshHonorOfferedSkins()
   }
@@ -356,6 +357,9 @@ const onStripPointerUp = (e: PointerEvent) => {
   div.battle-pass
     button.group.cursor-pointer.z-10.transition-transform(
       ref="bpBtnRef"
+      type="button"
+      :aria-label="t('battlePass')"
+      :title="t('battlePass')"
       class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-110"
       :class="{ 'hint-bounce': hasUnclaimedReward || (canShowPvP && pendingHonorClaims > 0) }"
       @click="isModalOpen = true"
@@ -365,7 +369,9 @@ const onStripPointerUp = (e: PointerEvent) => {
         div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-3.py-2(
           class="bg-gradient-to-b from-[#5b3bff] to-[#2a1a88] border-[#0f1a30] pt-3 sm:pt-2"
         )
-          span.font-black.game-text.leading-tight.text-white(class="text-[10px] sm:text-xs") BP
+          //- Glyph instead of the English-only "BP" caption; the button's
+          //- aria-label / title carry the translated name.
+          IconBattlePass.text-white(class="w-[18px] h-[18px] sm:w-5 sm:h-5 -my-0.5 drop-shadow-[1px_1px_0_#000]")
           div.flex.items-center(class="gap-0.5")
             span.font-black.game-text.leading-none(
               class="text-[11px] sm:text-sm text-amber-300"
@@ -398,7 +404,7 @@ const onStripPointerUp = (e: PointerEvent) => {
           div.flex.justify-between.items-end
             span.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]")
               template(v-if="isMaxed") {{ t('complete') }}
-              template(v-else) {{ t('stage') }} {{ inProgressStage }}
+              template(v-else) {{ t('stageN', { n: inProgressStage }) }}
             span.text-yellow-400.font-black.game-text(class="text-[0.7rem] sm:text-xs")
               template(v-if="isMaxed") {{ t('max') }}
               template(v-else) {{ Math.floor(currentXp) }}/{{ BP_XP_PER_STAGE }} xp
@@ -628,94 +634,3 @@ const onStripPointerUp = (e: PointerEvent) => {
   filter: blur(4px)
   transform: scale(1.15)
 </style>
-
-<i18n>
-en:
-  battlePass: "Battle Pass"
-  complete: "COMPLETE"
-  max: "MAX"
-  battlePassComplete: "Battle Pass complete — nice work!"
-  rewardsReady: "You have {n} reward(s) ready to collect!"
-  xpHint: "Win campaign fights for +50xp, leaderboard fights for +25xp. Losses give +12xp."
-  honorTrack: "Honor Track"
-  honorAbbr: "HP"
-  honorInfo: "Win PvP battles to earn Honor Points (HP). Fair-game (Level 1) wins give 100 HP. 3 wins unlock 1 skin. Beat stronger opponents for bonus HP!"
-  seasonReset: "Season resets in {n} day(s) — collect your rewards!"
-de:
-  battlePass: "Battle Pass"
-  complete: "ABGESCHLOSSEN"
-  max: "MAX"
-  battlePassComplete: "Battle Pass abgeschlossen — gut gemacht!"
-  rewardsReady: "Du hast {n} Belohnung(en) zum Abholen!"
-  xpHint: "Kampagnenkämpfe gewinnen gibt +50xp, Bestenlisten-Kämpfe +25xp. Niederlagen geben +12xp."
-  honorTrack: "Ehren-Track"
-  honorAbbr: "EP"
-  honorInfo: "Gewinne PvP-Kämpfe für Ehrenpunkte (EP). Fairer Kampf (Level 1) gibt 100 EP. 3 Siege schalten 1 Skin frei. Besiege stärkere Gegner für Bonus-EP!"
-  seasonReset: "Saison endet in {n} Tag(en) — hol dir deine Belohnungen!"
-fr:
-  battlePass: "Battle Pass"
-  complete: "TERMINÉ"
-  max: "MAX"
-  battlePassComplete: "Battle Pass terminé — bien joué !"
-  rewardsReady: "Tu as {n} récompense(s) à récupérer !"
-  xpHint: "Gagne des combats de campagne pour +50xp, classement +25xp. Défaites : +12xp."
-  honorTrack: "Piste d'Honneur"
-  honorAbbr: "PH"
-  honorInfo: "Gagne des combats PvP pour obtenir des Points d'Honneur (PH). Combat équitable (Niveau 1) donne 100 PH. 3 victoires débloquent 1 skin. Bats des adversaires plus forts pour des PH bonus !"
-  seasonReset: "La saison se réinitialise dans {n} jour(s) — récupère tes récompenses !"
-es:
-  battlePass: "Pase de Batalla"
-  complete: "COMPLETO"
-  max: "MÁX"
-  battlePassComplete: "¡Pase de Batalla completado — buen trabajo!"
-  rewardsReady: "¡Tienes {n} recompensa(s) para reclamar!"
-  xpHint: "Gana combates de campaña para +50xp, de clasificación +25xp. Derrotas: +12xp."
-  honorTrack: "Pista de Honor"
-  honorAbbr: "PH"
-  honorInfo: "Gana combates PvP para obtener Puntos de Honor (PH). Combate justo (Nivel 1) da 100 PH. 3 victorias desbloquean 1 skin. ¡Vence a rivales más fuertes para PH extra!"
-  seasonReset: "¡La temporada se reinicia en {n} día(s) — reclama tus recompensas!"
-jp:
-  battlePass: "バトルパス"
-  complete: "完了"
-  max: "MAX"
-  battlePassComplete: "バトルパス達成 — お見事！"
-  rewardsReady: "{n} 個の報酬を受け取れます！"
-  xpHint: "キャンペーン戦勝利で +50xp、ランキング戦で +25xp。敗北でも +12xp。"
-  honorTrack: "名誉トラック"
-  honorAbbr: "名誉P"
-  honorInfo: "PvPバトルに勝利して名誉ポイント(名誉P)を獲得。フェアゲーム（レベル1）勝利で100名誉P。3勝で1スキン解放。強い相手に勝つとボーナス名誉P！"
-  seasonReset: "シーズンリセットまであと{n}日 — 報酬を受け取ろう！"
-kr:
-  battlePass: "배틀 패스"
-  complete: "완료"
-  max: "MAX"
-  battlePassComplete: "배틀 패스 완료 — 멋져요!"
-  rewardsReady: "받을 수 있는 보상이 {n} 개 있습니다!"
-  xpHint: "캠페인 전투 승리 +50xp, 리더보드 전투 +25xp. 패배 시 +12xp."
-  honorTrack: "명예 트랙"
-  honorAbbr: "명예P"
-  honorInfo: "PvP 전투에서 승리하여 명예 포인트(명예P)를 획득하세요. 공정 게임(레벨 1) 승리 시 100 명예P. 3승으로 스킨 1개 해제. 강한 상대를 이기면 보너스 명예P!"
-  seasonReset: "시즌 리셋까지 {n}일 — 보상을 받으세요!"
-zh:
-  battlePass: "战斗通行证"
-  complete: "完成"
-  max: "满级"
-  battlePassComplete: "战斗通行证已完成 — 干得漂亮！"
-  rewardsReady: "你有 {n} 个奖励可以领取！"
-  xpHint: "赢得战役战斗 +50xp，排行榜战斗 +25xp，失败 +12xp。"
-  honorTrack: "荣誉通道"
-  honorAbbr: "荣誉点"
-  honorInfo: "赢得PvP战斗获得荣誉点数(荣誉点)。公平对战（等级1）胜利获得100荣誉点。3胜解锁1个皮肤。击败更强对手获得额外荣誉点！"
-  seasonReset: "赛季将在{n}天后重置 — 快领取奖励！"
-ru:
-  battlePass: "Боевой пропуск"
-  complete: "ЗАВЕРШЕНО"
-  max: "МАКС"
-  battlePassComplete: "Боевой пропуск пройден — отличная работа!"
-  rewardsReady: "У вас {n} награда(ы) к получению!"
-  xpHint: "Побед в кампании +50xp, в таблице лидеров +25xp. Поражения дают +12xp."
-  honorTrack: "Путь Чести"
-  honorAbbr: "ОЧ"
-  honorInfo: "Побеждайте в PvP-боях, чтобы получить Очки Чести (ОЧ). Честный бой (Уровень 1) даёт 100 ОЧ. 3 победы открывают 1 скин. Победа над сильными соперниками даёт бонусные ОЧ!"
-  seasonReset: "Сезон сбросится через {n} дн. — заберите награды!"
-</i18n>

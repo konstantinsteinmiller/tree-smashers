@@ -169,7 +169,7 @@ const stageTheme = computed<StageTheme>(() => {
       div.flex.flex-col.leading-tight
         span.font-black.uppercase.tracking-wider.game-text.text-white(
           class="text-[0.7rem] sm:text-[0.85rem] opacity-90"
-        ) {{ isBoss ? t('bossStage') : t('stage') + ' ' + stageId }}
+        ) {{ isBoss ? t('bossStage') : t('stageN', { n: stageId }) }}
         span.font-bold.italic.game-text(
           :class="stageTheme.accent"
           class="text-[0.75rem] sm:text-xs"

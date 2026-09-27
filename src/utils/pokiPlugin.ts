@@ -196,7 +196,9 @@ export const readPokiLanguage = (): string | null => {
   if (!sdk) return null
   try {
     const raw = sdk.getLanguage?.()
-    const code = typeof raw === 'string' ? raw.trim().toLowerCase().split('-')[0] : ''
+    // Kept whole (`pt-br`, not `pt`): the region picks between our variant
+    // files. `main.ts` maps it onto a shipped locale via `toShippedLocale`.
+    const code = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
     if (code) pokiLocale.value = code
     return code || null
   } catch (e) {

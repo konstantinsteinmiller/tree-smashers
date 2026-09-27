@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import { computed } from 'vue'
@@ -14,7 +14,7 @@ defineProps<{
 
 const emit = defineEmits<{ (e: 'start'): void }>()
 
-const { t } = useI18n()
+const { t } = useSfcI18n('ChallengeIcon')
 
 // Position the icon just under the 64px logo (logo top = 52px + safe-area).
 const rootStyle = {
@@ -164,38 +164,3 @@ const challengeLabel = computed(() =>
     transform: scale(1.1)
     opacity: 1
 </style>
-
-<i18n lang="yaml">
-en:
-  challenge:
-    start: "Daily Challenge — win to earn a diamond!"
-    startCoins: "Daily Challenge — win to earn {count} coins!"
-de:
-  challenge:
-    start: "Tägliche Herausforderung — gewinne einen Diamanten!"
-    startCoins: "Tägliche Herausforderung — gewinne {count} Münzen!"
-fr:
-  challenge:
-    start: "Défi quotidien — gagne un diamant !"
-    startCoins: "Défi quotidien — gagne {count} pièces !"
-es:
-  challenge:
-    start: "Desafío diario: ¡gana un diamante!"
-    startCoins: "Desafío diario: ¡gana {count} monedas!"
-jp:
-  challenge:
-    start: "デイリーチャレンジ — 勝ってダイヤを獲得！"
-    startCoins: "デイリーチャレンジ — 勝って{count}コイン獲得！"
-kr:
-  challenge:
-    start: "일일 도전 — 이기고 다이아몬드를 받으세요!"
-    startCoins: "일일 도전 — 이기고 코인 {count}개를 받으세요!"
-zh:
-  challenge:
-    start: "每日挑战——获胜赢取钻石！"
-    startCoins: "每日挑战——获胜赢取{count}金币！"
-ru:
-  challenge:
-    start: "Ежедневный вызов — победи и получи алмаз!"
-    startCoins: "Ежедневный вызов — победи и получи {count} монет!"
-</i18n>

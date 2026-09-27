@@ -99,8 +99,10 @@ export const crazyAccountsAvailable = ref(false)
 export const isCrazyAdsBlocked = ref(false)
 
 /**
- * Two-letter language code derived from `sdk.user.systemInfo.locale`
- * (e.g. `en` from `en-US`). `null` when the SDK didn't expose one.
+ * The raw language tag from `sdk.user.systemInfo.locale` (e.g. `pt-BR`,
+ * `zh-TW`, `en`). `null` when the SDK didn't expose one. Kept WHOLE — the
+ * region decides between our `pt-BR` / `pt-PT` and `zh` / `zh-TW` files —
+ * and normalised to an internal code by `toShippedLocale` in `main.ts`.
  */
 export const crazyLocale = ref<string | null>(null)
 
@@ -265,8 +267,8 @@ const captureSdkProfile = async (): Promise<void> => {
 
   // Locale. Newer SDK builds expose `systemInfo` as a property; older ones
   // expose a `getSystemInfo()` async accessor. We try the property first and
-  // fall back to the method, then normalize whatever we find to its
-  // language sub-tag (`en-US` → `en`).
+  // fall back to the method. The tag is stored whole (`pt-BR`, not `pt`);
+  // `main.ts` maps it onto a shipped locale.
   try {
     let info: any = sdk?.user?.systemInfo
     if (!info && typeof sdk?.user?.getSystemInfo === 'function') {
@@ -277,8 +279,8 @@ const captureSdkProfile = async (): Promise<void> => {
       info?.userLocale ??
       info?.language ??
       null
-    if (typeof raw === 'string' && raw.length >= 2) {
-      crazyLocale.value = raw.split(/[-_]/)[0]!.toLowerCase()
+    if (typeof raw === 'string' && raw.trim().length >= 2) {
+      crazyLocale.value = raw.trim()
     }
   } catch (e) {
     console.warn('[crazygames] systemInfo locale read failed', e)

@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': '스테이지',
   'bossStage': '보스 스테이지',
+  'stageN': '스테이지 {n}',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': '모든 걸 되찾아라!',
+    'skipAria': '인트로 건너뛰기'
+  },
+  'bossPeek': {
+    'nextBoss': '다음 보스 · 스테이지 {n}',
+    'stagesAway': '{n}스테이지 남음',
+    'nextUp': '다음 스테이지!',
+    'portraitAlt': '다음 보스: {name}'
+  },
   'you': '나',
   'prev': '이전',
   'next': '다음',
@@ -311,7 +324,31 @@ export default {
     'golden-eagle': '황금 독수리',
     'diamond': '다이아몬드',
     'tsunami': '쓰나미',
-    'sandstorm': '모래폭풍'
+    'sandstorm': '모래폭풍',
+    'cheetah': '치타',
+    'jester': '제스터',
+    'ninja': '닌자',
+    'pirate': '파이럿',
+    'porcupine': '포큐파인',
+    'lionfish': '라이언피쉬',
+    'morningstar': '모닝스타',
+    'cactus': '캑터스',
+    'kraken': '크라켄',
+    'taiko': '타이코',
+    'toadstool': '토드스툴',
+    'full-moon': '풀문',
+    'monarch': '모나크',
+    'pyramid': '피라미드',
+    'compass': '컴퍼스',
+    'checkmate': '체크메이트',
+    'armadillo': '아르마딜로',
+    'anvil': '앤빌',
+    'mammoth': '매머드',
+    'deep-diver': '딥 다이버',
+    'narwhal': '나르왈',
+    'stag-beetle': '스태그 비틀',
+    'drill': '드릴',
+    'lancer': '랜서'
   },
   'skinChest': {
     'acquired': '{name} 획득!'
@@ -322,5 +359,173 @@ export default {
     'teleporterShock': '팁: 텔레포터 스킨을 사용해 보셨나요? 벽을 통과하며 아레나 경계에서 감전되지 않습니다!',
     'starSpeedy': '팁: 스타 상부 파츠와 스피디 하부 파츠 조합은 정말 강력한 글래스 캐논 빌드입니다!',
     'arenaWall': '팁: 스피너가 적에게 너무 가까이 있나요? 아레나 벽을 넘겨 발사해 보세요 — 첫 벽 충돌이 실제로 속도를 올려줍니다!'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': '축하합니다!',
+      'demoCampaignFinished': '데모 캠페인을 완료했습니다! 게임이 마음에 드셨다면 피드백을 부탁드립니다. 정식 버전이 곧 출시될 예정입니다.',
+      'campaignFinished': '캠페인을 완료했습니다! 축하합니다! 당신은 진정한 카드 전술가입니다! 하지만 모든 카드를 수집하셨나요? 최고의 카드 수집가들만이 이 궁극의 목표를 달성할 수 있습니다!',
+      'cardsFinished': '축하합니다! 모든 카드를 수집하셨습니다. 당신은 역대 최고의 카드 수집가입니다!'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': '광고를 표시하지 못했습니다',
+        'body': '보상을 받을 수 있도록 동영상을 보여드리려 했지만, 브라우저의 무언가가 광고를 차단하고 있습니다.',
+        'allowHost': '{host} 에서 광고를 허용하거나 이 게임에 대해 광고 차단을 일시 중지한 뒤 다시 시도해 주세요.',
+        'gotIt': '확인'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': '로딩이 너무 오래 걸리나요? 광고 차단 프로그램을 끄고 새로고침해 보세요.'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': '광고',
+        'title': '동영상 광고를 볼까요?',
+        'body': '짧은 동영상 광고를 보면 보상을 받을 수 있어요.',
+        'bodyReward': '짧은 동영상 광고를 보면 {reward} 을(를) 받을 수 있어요.',
+        'closeable': '광고는 몇 초 뒤에 닫을 수 있어요. 먼저 닫으면 보상은 없어요.',
+        'rewardCoins': '코인 {count}개',
+        'rewardDiamonds': '다이아 {count}개',
+        'rewardSpeed': '전투 속도 2배',
+        'rewardRespin': '한 번 더 돌리기',
+        'watch': '광고 보기',
+        'decline': '괜찮아요'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': '클라우드 저장을 복원했습니다',
+        'restoredBonus': '복구 보너스로 +{n} 코인',
+        'tap': '탭',
+        'offlineTitle': '클라우드 동기화 일시 중지',
+        'offlineBody': '오프라인으로 플레이 중입니다. 진행 상황은 여기에 저장됩니다.',
+        'retry': '다시 시도',
+        'dismiss': '닫기'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': '배경 변경'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': '배경',
+        'equipped': '적용',
+        'equippedShort': '장착됨',
+        'select': '선택',
+        'needDiamonds': '다이아몬드가 필요하세요?',
+        'buy': '구매',
+        'skins': {
+          'classic': '클래식',
+          'aurora': '스피너 블레이드',
+          'fidget': '피젯',
+          'ember': '브레인롯 (저채도)',
+          'nebula': '브레인롯',
+          'circuit': '테크노 매지컬',
+          'cosmos': '스팀펑크',
+          'prism': 'K-POP'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': '배틀 패스',
+      'complete': '완료',
+      'max': 'MAX',
+      'battlePassComplete': '배틀 패스 완료 — 멋져요!',
+      'rewardsReady': '받을 수 있는 보상이 {n} 개 있습니다!',
+      'xpHint': '캠페인 전투 승리 +50xp, 리더보드 전투 +25xp. 패배 시 +12xp.',
+      'honorTrack': '명예 트랙',
+      'honorAbbr': '명예P',
+      'honorInfo': 'PvP 전투에서 승리하여 명예 포인트(명예P)를 획득하세요. 공정 게임(레벨 1) 승리 시 100 명예P. 3승으로 스킨 1개 해제. 강한 상대를 이기면 보너스 명예P!',
+      'seasonReset': '시즌 리셋까지 {n}일 — 보상을 받으세요!'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': '일일 도전 — 이기고 다이아몬드를 받으세요!',
+        'startCoins': '일일 도전 — 이기고 코인 {count}개를 받으세요!'
+      }
+    },
+    'CombatLog': {
+      'title': '전투 로그',
+      'short': '로그',
+      'aria': '전투 로그 열기',
+      'hint': '전략가용 · 최근 {n}회 타격, 최신순',
+      'empty': '아직 전투가 없습니다 — 블레이드가 충돌하면 기록됩니다.',
+      'line': '{attacker}이(가) {target}에게 {dmg} 피해를 입힘',
+      'enemy': '적 {type}',
+      'spinner': '스피너 {n} {type}',
+      'whoEnemy': '적',
+      'whoSpinner': '스피너 {n}',
+      'crit': '치명타',
+      'speedFavors': '속도는 {name}에게 유리',
+      'types': {
+        'star': '스타 블레이드',
+        'triangle': '가시',
+        'round': '라운드 가드',
+        'quadratic': '쿼드 코어',
+        'cushioned': '소프트 쉘',
+        'piercer': '관통자'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': '일일 보상',
+      'comeBackTomorrow': '내일 다시 와서 다음 보상을 받으세요!',
+      'collectTodaysReward': '오늘의 보상을 받으세요! 하루라도 놓치면 진행이 초기화됩니다.',
+      'collectCta': '받기',
+      'dayShort': '{n}일차'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': '리더보드',
+      'yourRank': '내 순위',
+      'jumpToMe': '내 위치로',
+      'maxStage': '최고 스테이지',
+      'alreadyFoughtToday': '오늘은 이미 싸웠습니다 — 내일 다시',
+      'fightAsGhost': '고스트 배틀로 싸우기'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': '다이아몬드 얻기',
+        'subtitle': '다이아몬드로 배경과 (곧) 강력한 스킬을 잠금 해제하세요.',
+        'popular': '인기',
+        'bestValue': '최고의 가치',
+        'note': '구매는 게임을 지원합니다. 안전한 결제.'
+      }
+    },
+    'OptionsModal': {
+      'options': '옵션',
+      'general': '일반',
+      'difficulty': '난이도',
+      'audio': '오디오',
+      'language': '언어',
+      'showRulesModal': '경기 전 규칙 표시',
+      'resetCampaign': '게임 진행 상황 초기화',
+      'reset': '초기화',
+      'sureResetCampaign': '모든 진행 상황(전체 스테이지, 모든 코인, 모든 업그레이드)이 영구적으로 삭제됩니다. 되돌릴 수 없습니다.',
+      'resetKeepsNote': '음악, 언어, 난이도 설정과 구매한 모든 스킨은 유지됩니다.',
+      'cancel': '취소',
+      'audioSettingsPlaceholder': '오디오 설정이 곧 추가될 예정입니다...',
+      'easy': '초보',
+      'medium': '종자',
+      'hard': '마스터',
+      'close': '저장 후 닫기',
+      'soundEffects': '음향 효과',
+      'music': '음악'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': '블레이드',
+      'topBlade': '상단 파츠',
+      'bottomPart': '하단 파츠',
+      'statsLabel': '능력치',
+      'selectSkin': '스킨 선택',
+      'purchaseMoreSkins': '스킨 추가 구매',
+      'equipped': '장착됨',
+      'selectButton': '선택',
+      'hintSelectCards': '카드를 탭하여 블레이드 구성을 선택하고, 업그레이드 버튼으로 강화하세요.',
+      'hintPlusIcon': '상단 파츠 카드 위쪽의 \'+\' 아이콘을 누르면 해당 파츠의 스킨 상점(예: 관통자 상점)이 열려 새 스킨을 구매할 수 있습니다.'
+    }
   }
 }

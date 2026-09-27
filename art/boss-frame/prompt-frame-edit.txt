@@ -1,0 +1,17 @@
+EDIT THE LAST ATTACHED IMAGE — do not draw a new picture. Return the SAME frame at the SAME size and in the SAME position, pixel for pixel wherever you are not told to change it.
+One square image, 1024 x 1024 pixels, exactly like the LAST attached image: the same ring (same outer edge, same big round opening, same slim band), the same two horns, the same two bat wings, the same three fangs, the same three red gems, on the same flat magenta ground.
+
+ATTACHMENTS: the FIRST attached image is a FINISH reference only — how this game paints dark iron with glowing red (brush ink, cel steps, glints); nothing in the result may be a demon face, a dragon or a spinning top taken from it. The LAST attached image is the frame to edit.
+
+CHANGE ONLY THESE TWO THINGS:
+  1. THE SKULL on top is a flat placeholder — a round cream head with two red dots and a box for a jaw. Repaint it, in the same place and at the same size, as a real menacing horned SKULL of cracked pale bone (#e3d6b8 shaded #9c8a6a): deep angular eye sockets glowing red, a nasal cavity, a row of teeth, two short curved horns of its own, a bold dark ink outline and two or three cel steps. Its lowest point stays on the band, never in the opening.
+  2. THE CRACKS on the band are flat zigzag lightning bolts. Repaint every one as a real BRANCHING LAVA CRACK running through the black iron — thin, jagged, forking hairlines glowing orange-red (#ff6a1a) with a yellow-white core (#ffd27a), like cooling lava seen through cracked obsidian. No zigzag bolt shapes remain. Keep every crack INSIDE the band.
+Also: the dark brown line on the inside edge of the band stays ONE thin, even ink line — no wide dark well or inner shadow round the opening.
+
+KEEP EVERYTHING ELSE: the band's size and thickness, the round opening (flat magenta, empty, right to the centre), the horns, the wings, the fangs, the gems, the light from the top-left and the brush-ink finish.
+
+BACKGROUND — it matters more than the style. Every pixel that is not the frame stays solid, flat, pure magenta #FF00FF — outside the frame AND inside the whole round opening. EXACTLY #FF00FF: not pink, not transparent, not a checkerboard, not dark. Every glow stays INSIDE its own outline: no red halo, aura or bloom spills onto the magenta. The frame contains no magenta, pink or violet.
+
+BEFORE YOU CALL IT FINISHED: the ring, opening, horns, wings, fangs and gems are exactly where the LAST attached image has them; the skull is a real horned bone skull; not one zigzag bolt remains; zero text; the opening and the ground are flat vivid #FF00FF.
+
+OUTPUT: one image, 1024 x 1024 pixels, square (1:1), PNG. No labels, captions, numbers or watermarks.

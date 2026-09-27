@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick, defineAsyncComponent, h } from 'vue'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -25,6 +25,8 @@ import useTips from '@/use/useTips'
 import type { TipId } from '@/use/useTips'
 import TipBadge from '@/components/atoms/TipBadge.vue'
 import { useHint } from '@/use/useHint'
+import { useDragHintPlacement } from '@/use/useDragHintPlacement'
+import { useFitText } from '@/use/useFitText'
 import { useScreenshake } from '@/use/useScreenshake'
 import { noteRenderFrame, setQualityMonitoring } from '@/use/useQuality'
 import type { SpinnerConfig } from '@/types/spinner'
@@ -58,6 +60,8 @@ import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
 import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/useLeaderboard'
 import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
 import RankBadge from '@/components/atoms/RankBadge.vue'
+import BossPeekBadge from '@/components/atoms/BossPeekBadge.vue'
+import { getBossPeek, battleModeOf, type BossPeek } from '@/use/bossPeek'
 import { leaderboardVisible, reportRun } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
@@ -66,13 +70,48 @@ import { isRewardedReady, isInterstitialReady, showRewardedAd, showMidgameAd } f
 import useBottomSafe from '@/use/useBottomSafe'
 import { getSelectedSkin, modelImgPath } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
-import { spawnCoinExplosion } from '@/use/useCoinExplosion'
+import { spawnCoinExplosion, flyDiamondsToBadge, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
 import useCheats from '@/use/useCheats'
 import { cheatRouletteSignal } from '@/use/useCheats'
 import RouletteWheel from '@/components/organisms/RouletteWheel.vue'
 import type { RouletteResult } from '@/components/organisms/RouletteWheel.vue'
+import { preloadRouletteArt } from '@/use/useRouletteArt'
+import {
+  introPlaying,
+  introRevealArena,
+  armIntro,
+  noteIntroBattleStarted,
+  finishIntro
+} from '@/use/useIntroCutscene'
+import { loadIntroCutscene } from '@/use/introCutsceneLoader'
 
 useCheats()
+
+// ─── First-launch intro cutscene ───────────────────────────────────────────
+// Its own chunk, downloaded only when the gate says PLAY — a returning player
+// never fetches it. See `useIntroCutscene.ts`; the import itself lives in
+// `introCutsceneLoader.ts` (obfuscator-safe).
+//
+// Deliberately NOT prefetched during the loader: measured on the production
+// build, fetching + evaluating the chunk while the splash was up made a
+// first-timer's loader ~250 ms slower (blocking just that request brought it
+// back to a returning player's time). Instead the chunk loads the moment the
+// intro starts, behind a black cover — the cutscene opens with a fade from
+// black anyway, so the hand-off is seamless.
+//
+// If the chunk cannot load (offline, blocked), the intro is skipped rather
+// than left "playing" over an arena whose render loop is parked under it.
+const IntroCutscene = defineAsyncComponent({
+  loader: loadIntroCutscene,
+  loadingComponent: { render: () => h('div', { class: 'fixed inset-0 bg-black z-[90]', 'aria-hidden': 'true' }) },
+  delay: 0,
+  timeout: 10_000,
+  onError: (err, _retry, fail) => {
+    console.warn('[intro] cutscene failed to load — skipping it', err)
+    finishIntro()
+    fail()
+  }
+})
 
 // ─── Game & Config ─────────────────────────────────────────────────────────
 
@@ -349,6 +388,15 @@ watch(phase, (p) => {
   }
 })
 
+// ─── Intro cutscene arming ────────────────────────────────────────────────
+// Once the player has started ANY fight the intro can only get in the way,
+// so a still-undecided gate (cloud save not settled yet) resolves to 'done'.
+watch(phase, (p) => {
+  if (p !== 'idle' && p !== 'tap_to_start') noteIntroBattleStarted()
+})
+const { areAllAssetsLoaded: introAssetsReady } = useAssets()
+const onIntroDone = () => finishIntro()
+
 // PvP disconnect recovery — if opponent disconnects mid-match, stop the fight
 // and return to normal campaign state so the player isn't stuck.
 // Skip if already at game_over or showing rewards — the player needs to
@@ -381,6 +429,12 @@ watch(stageReinitSignal, () => {
 
 const isGameOver = computed(() => phase.value === 'game_over')
 const showReward: Ref<boolean> = ref(false)
+
+// Boss peek — "Next boss · Stage N" teaser on the campaign win screen. Set by
+// the game-over watcher from the stage the battle was FOUGHT on (before
+// `advanceStage()`), so a replayed stage peeks exactly like its first clear.
+// null = no badge; the rule lives in `@/use/bossPeek` (unit-tested).
+const bossPeek: Ref<BossPeek | null> = ref(null)
 
 // ─── Boss Roulette ──────────────────────────────────────────────────────────
 const showRoulette = ref(false)
@@ -650,9 +704,8 @@ const triggerSpeedBoostAd = async () => {
 
 // Reference to the CoinBadge component — TreasureChest reads its `rootEl`
 // for the fly-to-badge VFX target.
-const coinBadgeRef = ref<{ rootEl: HTMLElement | null; diamondRowEl: HTMLElement | null } | null>(null)
+const coinBadgeRef = ref<CurrencyBadgeTargets | null>(null)
 const coinBadgeEl = computed(() => coinBadgeRef.value?.rootEl ?? null)
-const coinBadgeDiamondEl = computed(() => coinBadgeRef.value?.diamondRowEl ?? null)
 const rewardCoinRef = ref<HTMLElement | null>(null)
 const rewardDiamondRef = ref<HTMLElement | null>(null)
 const rewardDailyCoinRef = ref<HTMLElement | null>(null)
@@ -667,21 +720,21 @@ const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
 }
 
 /**
- * Fire a diamond explosion from any source element toward the HUD diamond row.
+ * Fire a diamond explosion from any source element toward the HUD badge's
+ * diamond row — or, while that row is hidden, the badge itself — and pop
+ * "+amount" there on arrival (see `flyDiamondsToBadge`).
  *
  * On a single-currency build the payout IS coins, so the burst has to be coins
  * flying to the coin row — a diamond VFX landing on a row that does not exist
  * would be the one place the collapsed economy leaks visually.
  */
-const fireDiamondExplosion = (sourceEl: HTMLElement | null) => {
+const fireDiamondExplosion = (sourceEl: HTMLElement | null, amount: number) => {
   if (!sourceEl) return
   if (isSingleCurrency) {
     fireCoinExplosion(sourceEl)
     return
   }
-  if (coinBadgeDiamondEl.value) {
-    spawnCoinExplosion({ sourceEl, targetEl: coinBadgeDiamondEl.value, variant: 'diamond', count: 14 })
-  }
+  flyDiamondsToBadge(sourceEl, coinBadgeRef.value, amount)
 }
 
 // ─── Daily Challenge mode ──────────────────────────────────────────────────
@@ -729,6 +782,17 @@ const updateCanvasSize = () => {
 // only depends on viewport metrics, not on which buttons are mounted.
 
 const { bottomGapPx, scheduleBottomMeasure } = useBottomSafe()
+
+// The drag hint measures the stat cards / combat-log pill and lifts itself
+// clear of them (they share its bottom strip; which one it hits depends on
+// the spinner count, the HUD scale and the locale).
+const dragHintRef = ref<HTMLElement | null>(null)
+const { liftPx: dragHintLiftPx } = useDragHintPlacement(dragHintRef, computed(() => phase.value === 'player_turn'))
+
+// The "tap to start" title stays on one line and shrinks to the room between
+// the side HUD columns (ru/uk/ro overflow at 568×320 otherwise).
+const tapStartTitleRef = ref<HTMLElement | null>(null)
+useFitText(tapStartTitleRef, [() => t('spinner.tapToStart')])
 
 // ─── Pointer Event Handlers ────────────────────────────────────────────────
 
@@ -820,6 +884,18 @@ const onPointerCancel = () => {
 
 watch(isGameOver, (over) => {
   if (over && !coinsAwarded.value) {
+    // Decided FIRST, while `currentStageId` is still the stage just played —
+    // every branch below may advance it. Non-campaign modes resolve to null.
+    bossPeek.value = getBossPeek({
+      wonStageId: currentStageId.value,
+      result: gameResult.value,
+      mode: battleModeOf({
+        pvp: pvpMode.value,
+        daily: dailyChallengeMode.value,
+        ghost: ghostMode.value,
+        cheat: !!cheatStage.value
+      })
+    })
     playSound(gameResult.value === 'win' ? 'win' : 'lose')
     if (gameResult.value === 'win') spawnMeteorShower(80, 50, 65)
 
@@ -966,7 +1042,7 @@ const onRouletteResult = (result: RouletteResult) => {
   triggerHappytime()
   // Fire the matching explosion once the overlay renders.
   nextTick(() => {
-    if (rouletteDiamonds.value > 0) fireDiamondExplosion(rouletteRewardDiamondRef.value)
+    if (rouletteDiamonds.value > 0) fireDiamondExplosion(rouletteRewardDiamondRef.value, rouletteDiamonds.value)
     else fireCoinExplosion(rouletteRewardCoinRef.value)
   })
   // Enable "tap to continue" after VFX settles
@@ -988,8 +1064,15 @@ const onRouletteRewardContinue = async () => {
   initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
 }
 
+// The roulette only opens after a BOSS win, so its painted rim/pointer/hub are
+// fetched once the player is on a boss stage — never at boot. Idempotent.
+watch(() => currentStage.value.isBoss, (isBoss) => {
+  if (isBoss) preloadRouletteArt()
+}, { immediate: true })
+
 // Cheat: trigger roulette on demand (same flow as boss win)
 watch(cheatRouletteSignal, () => {
+  preloadRouletteArt()
   rouletteMultiplier.value = 1
   rouletteSkinResult.value = null
   pendingBossReward.value = false // no coins in cheat mode
@@ -1037,11 +1120,11 @@ watch(showReward, async (show) => {
   }
   await nextTick()
   // A daily-challenge win bursts coins (the 75% bonus) and, on the first win of
-  // the day, also bursts a diamond toward the HUD diamond row. Everything else
+  // the day, also bursts a diamond toward the HUD badge. Everything else
   // bursts coins from the standard reward label.
   if (dailyChallengeMode.value) {
     if (dailyCoinReward.value > 0) fireCoinExplosion(rewardDailyCoinRef.value)
-    if (dailyDiamondEarned.value) fireDiamondExplosion(rewardDiamondRef.value)
+    if (dailyDiamondEarned.value) fireDiamondExplosion(rewardDiamondRef.value, dailyBonus.amount)
   } else {
     fireCoinExplosion(rewardCoinRef.value)
   }
@@ -1246,6 +1329,12 @@ const renderLoop = (now = 0) => {
     renderRafId = requestAnimationFrame(renderLoop)
     return
   }
+  // The intro cutscene covers the arena with an opaque canvas until its
+  // handover beat; painting the board underneath would be pure cost.
+  if (introPlaying.value && !introRevealArena.value) {
+    renderRafId = requestAnimationFrame(renderLoop)
+    return
+  }
   if (FRAME_MS > 0 && now - lastFrameTime < FRAME_MS - 0.5) {
     renderRafId = requestAnimationFrame(renderLoop)
     return
@@ -1300,6 +1389,12 @@ onMounted(() => {
 
   initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
   renderRafId = requestAnimationFrame(renderLoop)
+
+  // The stage-1 board exists; the moment the loader is gone the intro gate
+  // may decide (it waits on an unsettled cloud save — see introGate.ts).
+  watch(introAssetsReady, (ready) => {
+    if (ready) armIntro()
+  }, { immediate: true })
 
   // Watch the canvas for being fully off-screen or covered. Once visibility
   // drops to 0 (scrolled out, browser minimized on some platforms, another
@@ -1588,12 +1683,13 @@ onUnmounted(() => {
       div.absolute.flex.items-center.justify-center(class="inset-0 z-[10]")
 
         //- Tap to Start
-        div(
+        div.tap-start(
           v-if="phase === 'tap_to_start'"
           class="text-center pointer-events-auto cursor-pointer"
           @click="beginBattle"
         )
-          div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(
+          div.tap-start-title.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text.whitespace-nowrap(
+            ref="tapStartTitleRef"
             class="text-3xl sm:text-5xl mb-2"
           ) {{ t('spinner.tapToStart') }}
           div.text-white.italic.game-text(class="text-sm sm:text-lg opacity-60")
@@ -1630,12 +1726,20 @@ onUnmounted(() => {
           ) {{ t('pvp.opponentTurn') }}
 
         //- Player turn hint
-        div(
+        //- Capped to the width between the safe areas and allowed to wrap
+        //- (balanced); `dragHintLiftPx` lifts it clear of the stat cards and
+        //- the combat-log pill it would otherwise sit on — measured, see
+        //- useDragHintPlacement.
+        div.drag-hint(
           v-else-if="phase === 'player_turn'"
-          class="absolute text-center"
-          :style="{ bottom: `calc(4rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx}px)` }"
+          ref="dragHintRef"
+          class="absolute text-center pointer-events-none"
+          :style="{\
+            bottom: `calc(4rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx + dragHintLiftPx}px)`,\
+            maxWidth: 'min(28rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem))'\
+          }"
         )
-          div.text-white.italic.game-text(class="text-xs sm:text-sm opacity-50")
+          div.drag-hint-text.text-white.italic.game-text.leading-tight(class="text-xs sm:text-sm opacity-50")
             | {{ t('spinner.dragHint') }}
 
       //- Blade Stats HUD — bottom corners during active battle
@@ -1852,15 +1956,26 @@ onUnmounted(() => {
             ) {{ t('challenge.alreadyClaimed') }}
         //- Campaign / leaderboard rewards
         template(v-else)
-          div.flex.items-center.gap-3(ref="rewardCoinRef")
-            IconCoin(class="w-8 h-8 text-yellow-300")
-            span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
-          //- "#1130 of 2345" — where this player stands globally. Shown on the
-          //- win AND the lose screen: it is the one number on the overlay that
-          //- is not about this battle, and after a loss it is the reason to
-          //- try the stage again. Renders NOTHING when there is no honest
-          //- answer, so no empty plaque and no permanent spinner.
-          RankBadge(:score="bestStage")
+          //- `.reward-meta` and `.reward-meta__stack` are `display: contents`
+          //- (no box: coins, rank and boss peek sit in the column exactly as
+          //- before) EXCEPT on short screens, where they rebalance so the big
+          //- boss portrait fits without scrolling — see the style block.
+          div.reward-meta(:class="{ 'has-peek': bossPeek && gameResult === 'win' }")
+            div.reward-meta__stack
+              div.flex.items-center.gap-3(ref="rewardCoinRef")
+                IconCoin(class="w-8 h-8 text-yellow-300")
+                span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
+              //- "#1130 of 2345" — where this player stands globally. Shown on the
+              //- win AND the lose screen: it is the one number on the overlay that
+              //- is not about this battle, and after a loss it is the reason to
+              //- try the stage again. Renders NOTHING when there is no honest
+              //- answer, so no empty plaque and no permanent spinner.
+              RankBadge(:score="bestStage")
+            //- "Next boss · Stage N" — campaign win screens of the first two
+            //- stages after each boss (and stages 1-2). `bossPeek` is null for
+            //- every other result, so this never shows on a lose screen, a
+            //- ghost fight or a boss's own win (that one is the roulette).
+            BossPeekBadge(v-if="bossPeek && gameResult === 'win'" :peek="bossPeek")
         //- Player tip — kept in the flex column so it always renders
         //- BELOW the reward (no chance of covering it) and ABOVE the
         //- tap-to-continue prompt (which is absolutely docked to the
@@ -1990,6 +2105,9 @@ onUnmounted(() => {
           @click="showEnemySurrender = false"
         ) {{ t('pvp.okay') }}
 
+    //- First-launch intro cutscene — above every HUD element, lazily loaded.
+    IntroCutscene(v-if="introPlaying" @done="onIntroDone")
+
 </template>
 
 <style scoped lang="sass">
@@ -2086,6 +2204,21 @@ onUnmounted(() => {
   100%
     left: 160%
 
+// ── Tap to start ─────────────────────────────────────────────────────────
+// Capped to the room between the side HUD columns (logo / boss badge left,
+// chest / timer right); useFitText shrinks the one-line title into it and
+// the hint below wraps.
+.tap-start
+  max-width: calc(100vw - 10rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+  text-wrap: balance
+
+// ── Drag hint ────────────────────────────────────────────────────────────
+// Long de/fi/lt hints wrap into two even lines instead of one long line and
+// a stranded last word.
+.drag-hint-text
+  text-wrap: balance
+  overflow-wrap: anywhere
+
 // ── Blade Stats HUD ──────────────────────────────────────────────────────
 .blade-stat-card
   background: rgba(0, 0, 0, 0.55)
@@ -2148,6 +2281,15 @@ onUnmounted(() => {
 // alone is ~58px and the tip badge ended up half below the fold. The reward
 // body scrolls, so nothing was unreachable — but a clipped tip badge reads as
 // a broken layout. Trimming the type and the gaps lets the whole column fit.
+//
+// `.reward-meta` (coins + rank stack, then the boss peek) has no box of its
+// own unless the boss peek is up on a short screen: `display: contents` keeps
+// coins, rank pill and boss peek as direct flex items of the column, exactly
+// as before. Declared BEFORE the queries so the layouts below override it.
+.reward-meta,
+.reward-meta__stack
+  display: contents
+
 @media (orientation: landscape) and (max-height: 500px)
   .reward-column
     gap: 0.5rem
@@ -2155,6 +2297,32 @@ onUnmounted(() => {
   .reward-result-text
     font-size: 1.875rem
     line-height: 2.125rem
+
+  // Boss peek up: [coins over rank] beside the big framed portrait. The width
+  // is there, the height is not — stacked, a readable portrait pushed the win
+  // tip below the fold at 568x320 and 740x360.
+  .reward-meta.has-peek
+    display: flex
+    flex-direction: row
+    align-items: center
+    justify-content: center
+    gap: 0.5rem 1rem
+
+    .reward-meta__stack
+      display: flex
+      flex-direction: column
+      align-items: center
+      gap: 0.35rem
+
+// Short portrait phones (≤ 700px tall) with the boss peek up: coins and rank
+// share one line, which pays for most of the big portrait's extra height.
+@media (orientation: portrait) and (max-height: 700px)
+  .reward-meta.has-peek .reward-meta__stack
+    display: flex
+    flex-wrap: wrap
+    align-items: center
+    justify-content: center
+    gap: 0.35rem 0.75rem
 
 // ─── Roulette overlay — viewport-fit ────────────────────────────────────────
 // Shrink the result text and the slot's vertical gap on short-but-not-mobile

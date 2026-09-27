@@ -12,9 +12,10 @@ import {
   notePortalLanguageChange,
   resolveInitialLocale,
   setI18nLocale,
-  isSupportedLocale
+  isSupportedLocale,
+  toShippedLocale,
+  buildPluralRules
 } from '@/i18n'
-import { LANGUAGES } from '@/utils/enums'
 import {
   initCrazyGames, crazyLocale, crazyPlayerName, isCrazyLoggedIn, startLoading
 } from '@/use/useCrazyGames'
@@ -421,11 +422,15 @@ const bootstrap = async () => {
   const cgLocale = crazyLocale.value
   // Whichever portal we are actually running on is the only one that can
   // report anything, so a simple coalesce is unambiguous. `||` rather than
-  // `??` on purpose: an empty string is as meaningless as null here, and
-  // `crazyLocale` is derived from a `split()` that can produce one.
+  // `??` on purpose: an empty string is as meaningless as null here.
+  //
+  // CrazyGames and Poki hand over RAW tags (`pt-BR`, `zh-TW`, `de`); Playgama's
+  // is already normalised by its plugin. `toShippedLocale` maps every one of
+  // them onto a shipped internal code (idempotent on codes) or null — region
+  // and script subtags included, so a Brazilian and a Portuguese player land
+  // in different files, and a Traditional-Chinese player in `zh-TW`.
   const rawPortalLocale = cgLocale || pgLocale || pkLocale
-  const portalLocale =
-    rawPortalLocale && LANGUAGES.includes(rawPortalLocale) ? rawPortalLocale : null
+  const portalLocale = toShippedLocale(rawPortalLocale)
 
   // Did the PLATFORM language change since our last load? If so it outranks a
   // stored in-game choice — that choice is now stale. This is the case
@@ -458,13 +463,18 @@ const bootstrap = async () => {
       ? { [initial]: initialMsgs, en: fallbackMsgs ?? {} }
       : { en: initialMsgs },
     missingWarn: false,
-    fallbackWarn: false
+    fallbackWarn: false,
+    // CLDR-aware `a | b | c` branch selection per language (ru/uk/pl/cs/ar…
+    // have 3–6 categories). No message uses plural branches yet; this keeps
+    // one from silently picking the English branch when it does.
+    pluralRules: buildPluralRules()
   })
 
-  // Stamp `<html lang>` / `<html data-locale>` for the boot locale. `lang`
-  // drives the browser's CJK font-fallback and line-breaking heuristics, and
-  // `data-locale` gates the CJK typography corrections in `fonts.sass` — both
-  // have to be right on the FIRST paint, not just after a runtime switch.
+  // Stamp `<html lang|data-locale|data-script|data-dir>` for the boot locale.
+  // `lang` drives the browser's CJK glyph variants, line breaking and
+  // language-aware uppercasing; `data-script` / `data-dir` select the font
+  // stack, the typography corrections and the RTL text rule in `fonts.sass` —
+  // all have to be right on the FIRST paint, not just after a runtime switch.
   applyDocumentLocale(initial)
 
   // ─── Language authority ────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
-import { resolve, dirname } from 'node:path'
+import { resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -7,7 +7,6 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
-import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import javascriptObfuscator from 'vite-plugin-javascript-obfuscator'
 import { buildCsp } from './src/platforms/csp'
 
@@ -160,6 +159,15 @@ const leaderboardSnapshotPlugin = (live: boolean): Plugin => ({
 })
 
 // https://vite.dev/config/
+/** vue-i18n compile-time feature flags (mirrored in `vitest.config.ts`). */
+const VUE_I18N_FLAGS = {
+  __VUE_I18N_LEGACY_API__: 'false',
+  __VUE_I18N_FULL_INSTALL__: 'true',
+  __INTLIFY_DROP_MESSAGE_COMPILER__: 'false',
+  __INTLIFY_PROD_DEVTOOLS__: 'false',
+  __VUE_I18N_PROD_DEVTOOLS__: 'false'
+}
+
 export default defineConfig(({ mode, command }) => {
   // Load env file based on `mode` in the current working directory.
   // The third parameter '' loads all env vars regardless of VITE_ prefix.
@@ -223,6 +231,21 @@ export default defineConfig(({ mode, command }) => {
   // not a fallback, it is the entire feature.
   plugins.push(leaderboardSnapshotPlugin(!!env.VITE_LEADERBOARD_URL))
 
+  // The self-hosted Playpen Sans subsets (fonts.sass) are OFL 1.1, which asks
+  // for the licence to travel with the font. Nothing imports OFL.txt, so emit
+  // it next to the hashed woff2 files in every build. Never fetched at runtime.
+  plugins.push({
+    name: 'emit-font-licenses',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'assets/playpen-sans-OFL.txt',
+        source: readFileSync(fileURLToPath(new URL('./src/assets/css/font/playpen-sans/OFL.txt', import.meta.url)), 'utf-8')
+      })
+    }
+  } satisfies Plugin)
+
   // Only push the obfuscator if both conditions are met
   if (isProduction && shouldObfuscate) {
     console.log('--- 🛡️  Obfuscating Production Build ---')
@@ -263,7 +286,10 @@ export default defineConfig(({ mode, command }) => {
           // into a lookup Vite can no longer resolve. The loader is ~30
           // lines, which is exactly why the import lives there rather than
           // in the 450-line plugin — only this file loses obfuscation.
-          /utils[\\/]playgamaBridgeLoader\.ts$/
+          /utils[\\/]playgamaBridgeLoader\.ts$/,
+          // The first-launch intro cutscene's lazy chunk: its one dynamic
+          // import lives in this 1-line loader for exactly the same reason.
+          /use[\\/]introCutsceneLoader\.ts$/
         ],
         // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
         // The previous profile enabled every aggressive transform the
@@ -440,21 +466,18 @@ export default defineConfig(({ mode, command }) => {
       port: 5170
     },
     define: {
-      APP_VERSION: JSON.stringify(process.env.npm_package_version)
+      APP_VERSION: JSON.stringify(process.env.npm_package_version),
+      // vue-i18n feature flags. `@intlify/unplugin-vue-i18n` used to set these
+      // while it compiled the SFC `<i18n>` blocks; the blocks are gone (all
+      // component copy lives in the lazy locale files, `src/i18n/sfc.ts`), so
+      // the plugin is too. Composition API only — keeps the legacy API out of
+      // the bundle. The message compiler stays: locale files are plain strings.
+      ...VUE_I18N_FLAGS
     },
     plugins: [
       tailwindcss(),
       vue(),
       // vueDevTools(),
-      VueI18nPlugin({
-        // 1. Tell the plugin where your global translation files are
-        include: resolve(dirname(fileURLToPath(import.meta.url)), './src/locales/**'),
-
-        // 2. This allows you to use YAML in the <i18n> block
-        // The plugin usually detects yaml automatically, but you can force
-        // strict behavior if needed by ensuring the 'yaml' loader is available.
-        defaultSFCLang: 'yaml'
-      }),
       ...plugins
     ],
     resolve: {
@@ -537,6 +560,10 @@ export default defineConfig(({ mode, command }) => {
       // greppable file+line; the maps would only add ~2.4 MB of upload and a
       // complete source disclosure.
       sourcemap: sourcemapEnabled,
+      // Never base64 a webfont into the CSS. The Playpen Sans subsets
+      // (fonts.sass) are fetched only by the locales that use them; inlined,
+      // a small one would ride in every player's first-load stylesheet.
+      assetsInlineLimit: (file: string) => (file.endsWith('.woff2') ? false : undefined),
       rollupOptions: {
         output: {
           // Pin the ACTIVE platform's heavy ad/SDK plugin to its own async

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import BGSkinModal from '@/components/organisms/BGSkinModal.vue'
 import useBgSkins from '@/use/useBgSkins'
 import { prependBaseUrl } from '@/utils/function'
@@ -8,7 +8,7 @@ import { prependBaseUrl } from '@/utils/function'
 // Compact "change background" button — a small framed thumbnail of the
 // currently-equipped bg skin. Opens the (encapsulated) BGSkinModal.
 
-const { t } = useI18n()
+const { t } = useSfcI18n('BGSkinButton')
 const { selectedBgSkin } = useBgSkins()
 const open = ref(false)
 
@@ -78,30 +78,3 @@ const swatchStyle = computed(() => {
   color: rgba(255, 255, 255, 0.92)
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9))
 </style>
-
-<i18n lang="yaml">
-en:
-  bgButton:
-    title: "Change background"
-de:
-  bgButton:
-    title: "Hintergrund ändern"
-fr:
-  bgButton:
-    title: "Changer l'arrière-plan"
-es:
-  bgButton:
-    title: "Cambiar fondo"
-jp:
-  bgButton:
-    title: "背景を変更"
-kr:
-  bgButton:
-    title: "배경 변경"
-zh:
-  bgButton:
-    title: "更换背景"
-ru:
-  bgButton:
-    title: "Сменить фон"
-</i18n>

@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': 'ステージ',
   'bossStage': 'ボスステージ',
+  'stageN': 'ステージ {n}',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': 'すべてを取り戻せ！',
+    'skipAria': 'イントロをスキップ'
+  },
+  'bossPeek': {
+    'nextBoss': '次のボス · ステージ{n}',
+    'stagesAway': 'あと{n}ステージ',
+    'nextUp': '次のステージ！',
+    'portraitAlt': '次のボス：{name}'
+  },
   'you': 'あなた',
   'prev': '前へ',
   'next': '次へ',
@@ -311,7 +324,31 @@ export default {
     'golden-eagle': 'ゴールデンイーグル',
     'diamond': 'ダイヤモンド',
     'tsunami': '津波',
-    'sandstorm': '砂嵐'
+    'sandstorm': '砂嵐',
+    'cheetah': 'チーター',
+    'jester': 'ジェスター',
+    'ninja': 'ニンジャ',
+    'pirate': 'パイレーツ',
+    'porcupine': 'ポーキュパイン',
+    'lionfish': 'ライオンフィッシュ',
+    'morningstar': 'モーニングスター',
+    'cactus': 'カクタス',
+    'kraken': 'クラーケン',
+    'taiko': 'タイコ',
+    'toadstool': 'トードストゥール',
+    'full-moon': 'フルムーン',
+    'monarch': 'モナーク',
+    'pyramid': 'ピラミッド',
+    'compass': 'コンパス',
+    'checkmate': 'チェックメイト',
+    'armadillo': 'アルマジロ',
+    'anvil': 'アンビル',
+    'mammoth': 'マンモス',
+    'deep-diver': 'ディープダイバー',
+    'narwhal': 'ナーワル',
+    'stag-beetle': 'スタッグビートル',
+    'drill': 'ドリル',
+    'lancer': 'ランサー'
   },
   'skinChest': {
     'acquired': '{name}を獲得！'
@@ -322,5 +359,173 @@ export default {
     'teleporterShock': 'ヒント：テレポータースキンを試しましたか？壁をすり抜け、アリーナの境界の電撃も受けません！',
     'starSpeedy': 'ヒント：スター上部パーツとスピーディー下部パーツの組み合わせは、とても強力なグラスキャノンビルドになります！',
     'arenaWall': 'ヒント：スピナーが敵に近すぎませんか？アリーナの壁を越えて発射してみましょう — 最初の壁への接触で実はスピードアップします！'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': 'おめでとうございます！',
+      'demoCampaignFinished': 'デモキャンペーンをクリアしました！ゲームが気に入ったら、フィードバックをお願いします。製品版はまもなくリリースされます。',
+      'campaignFinished': 'キャンペーンをクリアしました！おめでとうございます！あなたは立派なカードタクティシャンです！しかし、すべてのカードをコレクションしましたか？最高のコレクターだけがこの究極の目標を達成できます！',
+      'cardsFinished': 'おめでとうございます！すべてのカードをコレクションしました。あなたは史上最高のカードコレクターです！'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': '広告を表示できませんでした',
+        'body': '報酬を受け取れるように動画を表示しようとしましたが、ブラウザの何かが広告をブロックしています。',
+        'allowHost': '{host} で広告を許可する（またはこのゲームだけ広告ブロックを一時停止する）と、もう一度お試しください。',
+        'gotIt': 'OK'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': '読み込みに時間がかかっていますか？広告ブロッカーを無効にして再読み込みしてみてください。'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': '広告',
+        'title': '動画広告を見ますか？',
+        'body': '短い動画広告を見ると報酬がもらえます。',
+        'bodyReward': '短い動画広告を見ると {reward} がもらえます。',
+        'closeable': '広告は数秒後に閉じられます。早く閉じると報酬はもらえません。',
+        'rewardCoins': 'コイン {count} 枚',
+        'rewardDiamonds': 'ダイヤ {count} 個',
+        'rewardSpeed': 'バトル速度2倍',
+        'rewardRespin': 'もう1回スピン',
+        'watch': '広告を見る',
+        'decline': '見ない'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': 'クラウドセーブを復元しました',
+        'restoredBonus': '復元ボーナスとして +{n} コイン',
+        'tap': 'タップ',
+        'offlineTitle': 'クラウド同期を一時停止中',
+        'offlineBody': 'オフラインでプレイ中です。進行状況はこの端末に保存されます。',
+        'retry': '再試行',
+        'dismiss': '閉じる'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': '背景を変更'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': '背景',
+        'equipped': '適用中',
+        'equippedShort': '装備中',
+        'select': '選択',
+        'needDiamonds': 'ダイヤが足りない？',
+        'buy': '購入',
+        'skins': {
+          'classic': 'クラシック',
+          'aurora': 'スピナーブレード',
+          'fidget': 'フィジェット',
+          'ember': 'ブレインロット（低彩度）',
+          'nebula': 'ブレインロット',
+          'circuit': 'テクノマジカル',
+          'cosmos': 'スチームパンク',
+          'prism': 'K-POP'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': 'バトルパス',
+      'complete': '完了',
+      'max': 'MAX',
+      'battlePassComplete': 'バトルパス達成 — お見事！',
+      'rewardsReady': '{n} 個の報酬を受け取れます！',
+      'xpHint': 'キャンペーン戦勝利で +50xp、ランキング戦で +25xp。敗北でも +12xp。',
+      'honorTrack': '名誉トラック',
+      'honorAbbr': '名誉P',
+      'honorInfo': 'PvPバトルに勝利して名誉ポイント(名誉P)を獲得。フェアゲーム（レベル1）勝利で100名誉P。3勝で1スキン解放。強い相手に勝つとボーナス名誉P！',
+      'seasonReset': 'シーズンリセットまであと{n}日 — 報酬を受け取ろう！'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': 'デイリーチャレンジ — 勝ってダイヤを獲得！',
+        'startCoins': 'デイリーチャレンジ — 勝って{count}コイン獲得！'
+      }
+    },
+    'CombatLog': {
+      'title': '戦闘ログ',
+      'short': 'ログ',
+      'aria': '戦闘ログを開く',
+      'hint': '戦略家向け · 直近{n}ヒット（新しい順）',
+      'empty': 'まだ戦闘はありません — ブレードがぶつかると記録されます。',
+      'line': '{attacker} が {target} に {dmg} ダメージ',
+      'enemy': '敵 {type}',
+      'spinner': 'スピナー{n} {type}',
+      'whoEnemy': '敵',
+      'whoSpinner': 'スピナー{n}',
+      'crit': 'クリティカル',
+      'speedFavors': '速度は{name}に有利',
+      'types': {
+        'star': 'スターブレード',
+        'triangle': 'スパイキー',
+        'round': 'ラウンドガード',
+        'quadratic': 'クアッドコア',
+        'cushioned': 'ソフトシェル',
+        'piercer': 'アーマーブレイク'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': 'デイリー報酬',
+      'comeBackTomorrow': '明日また来て次の報酬を受け取ろう！',
+      'collectTodaysReward': '今日の報酬を受け取ろう！1日でも逃すと進行がリセットされます。',
+      'collectCta': '受け取る',
+      'dayShort': '{n}日目'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': 'ランキング',
+      'yourRank': 'あなたの順位',
+      'jumpToMe': '自分へジャンプ',
+      'maxStage': '最高ステージ',
+      'alreadyFoughtToday': '本日既に対戦済み — 明日また挑戦',
+      'fightAsGhost': 'ゴーストバトルで戦う'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': 'ダイヤを入手',
+        'subtitle': 'ダイヤで背景や（近日）強力なスキルを解放。',
+        'popular': '人気',
+        'bestValue': 'お得',
+        'note': '購入はゲームを支援します。安全な決済。'
+      }
+    },
+    'OptionsModal': {
+      'options': 'オプション',
+      'general': '全般',
+      'difficulty': '難易度',
+      'audio': 'オーディオ',
+      'language': '言語',
+      'showRulesModal': '対戦前にルールを表示する',
+      'resetCampaign': 'ゲームの進行状況をリセット',
+      'reset': 'リセット',
+      'sureResetCampaign': 'すべての進行状況（全ステージ・すべてのコイン・すべてのアップグレード）が完全に削除されます。この操作は元に戻せません。',
+      'resetKeepsNote': '音楽・言語・難易度の設定と、購入したすべてのスキンは保持されます。',
+      'cancel': 'キャンセル',
+      'audioSettingsPlaceholder': 'オーディオ設定は近日公開予定...',
+      'easy': '初級',
+      'medium': '従騎士',
+      'hard': 'マスター',
+      'close': '保存して閉じる',
+      'soundEffects': '効果音',
+      'music': '音楽'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': 'ブレード',
+      'topBlade': 'アッパー',
+      'bottomPart': 'ボトム',
+      'statsLabel': 'ステータス',
+      'selectSkin': 'スキン選択',
+      'purchaseMoreSkins': 'スキンを追加購入',
+      'equipped': '装備中',
+      'selectButton': '選択',
+      'hintSelectCards': 'カードをタップしてブレード構成を選び、アップグレードボタンで強化しよう。',
+      'hintPlusIcon': 'アッパー カード上部の「+」をタップすると、そのパーツのスキンショップ（例：アーマーブレイク用）が開き、新スキンを入手できます。'
+    }
   }
 }

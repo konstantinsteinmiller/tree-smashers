@@ -43,6 +43,8 @@
 
 import { refreshSaveBackedState } from '@/use/useSaveStatus'
 import { requestStageReinit } from '@/use/useSpinnerCampaign'
+import { requestIntroReplay } from '@/use/useIntroCutscene'
+import { INTRO_SEEN_KEY } from '@/use/introGate'
 
 /** Keys that must SURVIVE a progress reset (settings + purchased content). */
 const KEEP_KEYS = new Set<string>([
@@ -109,6 +111,10 @@ export const resetAllProgress = async (): Promise<void> => {
     // Collected first, then removed, so mutating the store mid-iteration
     // can't skip keys (removeItem shifts the raw index order).
     for (const key of collectProgressKeys()) localStorage.removeItem(key)
+    // The first-launch intro's seen-flag is a `spinner_` key, so the sweep
+    // above already took it — named here so that contract is explicit and a
+    // future KEEP-list edit cannot quietly strand it.
+    localStorage.removeItem(INTRO_SEEN_KEY)
 
     // Re-read BEFORE the awaited flush: the player sees stage 1 / 0 coins /
     // no upgrades the moment the dialog closes, rather than after a cloud
@@ -122,6 +128,12 @@ export const resetAllProgress = async (): Promise<void> => {
     const sm = (window as unknown as { __saveManager?: { flush?: () => Promise<void> } }).__saveManager
     await sm?.flush?.().catch(() => {
     })
+
+    // A reset is "start over" — exactly what the intro stages. Replay it now
+    // (the reset no longer reloads the page, so "next launch" could be never).
+    // After the flush, so it starts as the confirm dialog closes rather than
+    // underneath it.
+    requestIntroReplay()
   } catch (e) {
     console.warn('[reset] progress reset failed', e)
   }

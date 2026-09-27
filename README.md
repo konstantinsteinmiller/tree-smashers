@@ -27,7 +27,7 @@ WIP: [playable demo](https://konstantinsteinmiller.github.io/chaos-arena/)
     - [x] start hint timer with placeholder arrow for pull back cta.
 
 - [x] Reward system
-    - [x] wheel spinner for 2x, 1.5x, 1x and 0.5x rewards after rewarded videos
+    - [x] wheel spinner for 3x, 2x, 1x and 0.75x rewards after rewarded videos
 
 - [x] OptionsModal
     - [x] music

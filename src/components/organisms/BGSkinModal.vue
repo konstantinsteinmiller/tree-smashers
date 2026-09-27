@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
@@ -15,7 +15,7 @@ import { watch } from 'vue'
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
-const { t } = useI18n()
+const { t } = useSfcI18n('BGSkinModal')
 const { coins, diamonds } = useSpinnerConfig()
 const {
   bgSkins,
@@ -140,142 +140,3 @@ const swatchStyle = (skin: BgSkinDef) =>
 .bg-skin-card
   background: #1e293b
 </style>
-
-<i18n lang="yaml">
-en:
-  bg:
-    title: "Backgrounds"
-    equipped: "On"
-    equippedShort: "Equipped"
-    select: "Select"
-    needDiamonds: "Need more diamonds?"
-    buy: "Buy"
-    skins:
-      classic: "Classic"
-      aurora: "Spinner Blades"
-      fidget: "Fidget"
-      ember: "Brainrot Desaturated"
-      nebula: "Brainrot"
-      circuit: "Techno Magical"
-      cosmos: "Steampunk"
-      prism: "K-Pop"
-de:
-  bg:
-    title: "Hintergründe"
-    equipped: "An"
-    equippedShort: "Ausgerüstet"
-    select: "Wählen"
-    needDiamonds: "Mehr Diamanten nötig?"
-    buy: "Kaufen"
-    skins:
-      classic: "Klassisch"
-      aurora: "Kreiselklingen"
-      fidget: "Fidget"
-      ember: "Brainrot Entsättigt"
-      nebula: "Brainrot"
-      circuit: "Techno-Magisch"
-      cosmos: "Steampunk"
-      prism: "K-Pop"
-fr:
-  bg:
-    title: "Arrière-plans"
-    equipped: "Actif"
-    equippedShort: "Équipé"
-    select: "Choisir"
-    needDiamonds: "Besoin de diamants ?"
-    buy: "Acheter"
-    skins:
-      classic: "Classique"
-      aurora: "Lames Toupie"
-      fidget: "Fidget"
-      ember: "Brainrot Désaturé"
-      nebula: "Brainrot"
-      circuit: "Techno-Magique"
-      cosmos: "Steampunk"
-      prism: "K-Pop"
-es:
-  bg:
-    title: "Fondos"
-    equipped: "Activo"
-    equippedShort: "Equipado"
-    select: "Elegir"
-    needDiamonds: "¿Necesitas diamantes?"
-    buy: "Comprar"
-    skins:
-      classic: "Clásico"
-      aurora: "Cuchillas Giratorias"
-      fidget: "Fidget"
-      ember: "Brainrot Desaturado"
-      nebula: "Brainrot"
-      circuit: "Tecno-Mágico"
-      cosmos: "Steampunk"
-      prism: "K-Pop"
-jp:
-  bg:
-    title: "背景"
-    equipped: "適用中"
-    equippedShort: "装備中"
-    select: "選択"
-    needDiamonds: "ダイヤが足りない？"
-    buy: "購入"
-    skins:
-      classic: "クラシック"
-      aurora: "スピナーブレード"
-      fidget: "フィジェット"
-      ember: "ブレインロット（低彩度）"
-      nebula: "ブレインロット"
-      circuit: "テクノマジカル"
-      cosmos: "スチームパンク"
-      prism: "K-POP"
-kr:
-  bg:
-    title: "배경"
-    equipped: "적용"
-    equippedShort: "장착됨"
-    select: "선택"
-    needDiamonds: "다이아몬드가 필요하세요?"
-    buy: "구매"
-    skins:
-      classic: "클래식"
-      aurora: "스피너 블레이드"
-      fidget: "피젯"
-      ember: "브레인롯 (저채도)"
-      nebula: "브레인롯"
-      circuit: "테크노 매지컬"
-      cosmos: "스팀펑크"
-      prism: "K-POP"
-zh:
-  bg:
-    title: "背景"
-    equipped: "已用"
-    equippedShort: "已装备"
-    select: "选择"
-    needDiamonds: "需要更多钻石？"
-    buy: "购买"
-    skins:
-      classic: "经典"
-      aurora: "旋转刀刃"
-      fidget: "指尖陀螺"
-      ember: "脑腐（低饱和）"
-      nebula: "脑腐"
-      circuit: "科技魔法"
-      cosmos: "蒸汽朋克"
-      prism: "K-Pop"
-ru:
-  bg:
-    title: "Фоны"
-    equipped: "Вкл"
-    equippedShort: "Экипировано"
-    select: "Выбрать"
-    needDiamonds: "Нужны алмазы?"
-    buy: "Купить"
-    skins:
-      classic: "Классика"
-      aurora: "Клинки-волчки"
-      fidget: "Фиджет"
-      ember: "Брейнрот приглушённый"
-      nebula: "Брейнрот"
-      circuit: "Техно-магия"
-      cosmos: "Стимпанк"
-      prism: "K-Pop"
-</i18n>

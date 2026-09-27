@@ -154,6 +154,19 @@ export default {
   'vs': 'VS',
   'stage': 'Étape',
   'bossStage': 'Étape Boss',
+  'stageN': 'Étape {n}',
+  // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
+  // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
+  'intro': {
+    'reclaim': 'Reprends tout !',
+    'skipAria': 'Passer l\'intro'
+  },
+  'bossPeek': {
+    'nextBoss': 'Prochain boss · Étape {n}',
+    'stagesAway': 'Dans {n} étapes',
+    'nextUp': 'Prochaine étape !',
+    'portraitAlt': 'Prochain boss : {name}'
+  },
   'you': 'TOI',
   'prev': 'Préc.',
   'next': 'Suiv.',
@@ -311,7 +324,31 @@ export default {
     'golden-eagle': 'Aigle Doré',
     'diamond': 'Diamant',
     'tsunami': 'Tsunami',
-    'sandstorm': 'Sandstorm'
+    'sandstorm': 'Sandstorm',
+    'cheetah': 'Guépard',
+    'jester': 'Bouffon',
+    'ninja': 'Ninja',
+    'pirate': 'Pirate',
+    'porcupine': 'Porc-épic',
+    'lionfish': 'Poisson-lion',
+    'morningstar': 'Étoile du Matin',
+    'cactus': 'Cactus',
+    'kraken': 'Kraken',
+    'taiko': 'Taiko',
+    'toadstool': 'Amanite',
+    'full-moon': 'Pleine Lune',
+    'monarch': 'Monarque',
+    'pyramid': 'Pyramide',
+    'compass': 'Boussole',
+    'checkmate': 'Échec et Mat',
+    'armadillo': 'Tatou',
+    'anvil': 'Enclume',
+    'mammoth': 'Mammouth',
+    'deep-diver': 'Scaphandrier',
+    'narwhal': 'Narval',
+    'stag-beetle': 'Lucane',
+    'drill': 'Foreuse',
+    'lancer': 'Lancier'
   },
   'skinChest': {
     'acquired': '{name} obtenu !'
@@ -322,5 +359,173 @@ export default {
     'teleporterShock': 'Astuce : As-tu essayé le skin Téléporteur ? Il traverse les murs et ne se prend pas de choc des bords de l\'arène !',
     'starSpeedy': 'Astuce : Une pièce supérieure Étoile avec une pièce inférieure Rapide forme un build canon de verre redoutable !',
     'arenaWall': 'Astuce : Tes spinners sont trop près des ennemis ? Essaie de lancer par-dessus un mur de l\'arène — le premier rebond contre le mur te donne en fait un boost de vitesse !'
+  },
+  'sfc': {
+    'QuestReward': {
+      'congratulations': 'Félicitations!',
+      'demoCampaignFinished': 'Vous avez terminé la campagne de démo ! Si vous aimez le jeu, j\'aimerais recevoir vos commentaires constructifs. La version complète sortira bientôt.',
+      'campaignFinished': 'Vous avez terminé la campagne ! Félicitations ! Vous êtes un digne tacticien des cartes ! Mais avez-vous déjà collectionné toutes les cartes ? Seuls les meilleurs collectionneurs atteignent cet objectif ultime !',
+      'cardsFinished': 'Félicitations ! Vous avez collectionné toutes les cartes. Vous êtes le plus grand collectionneur de tous les temps !'
+    },
+    'AdsBlockedModal': {
+      'adsBlocked': {
+        'title': 'Impossible d\'afficher la pub',
+        'body': 'Nous voulions te montrer une vidéo pour que tu obtiennes ta récompense, mais quelque chose dans ton navigateur bloque les publicités.',
+        'allowHost': 'Autorise les publicités sur {host} (ou mets ton bloqueur de pub en pause pour ce jeu) puis réessaie.',
+        'gotIt': 'Compris'
+      }
+    },
+    'FLogoProgress': {
+      'loading': {
+        'stuckHint': 'Le chargement est trop long ? Désactive ton bloqueur de pub et actualise la page.'
+      }
+    },
+    'RewardedAdIntroModal': {
+      'rewardedIntro': {
+        'badge': 'Publicité',
+        'title': 'Regarder une pub vidéo ?',
+        'body': 'Regarde une courte pub vidéo pour obtenir ta récompense.',
+        'bodyReward': 'Regarde une courte pub vidéo pour obtenir {reward}.',
+        'closeable': 'Tu peux fermer la pub après quelques secondes. Si tu la fermes trop tôt, pas de récompense.',
+        'rewardCoins': '{count} pièces',
+        'rewardDiamonds': '{count} diamants',
+        'rewardSpeed': 'vitesse de combat x2',
+        'rewardRespin': 'un tour de plus',
+        'watch': 'Regarder la pub',
+        'decline': 'Non merci'
+      }
+    },
+    'SaveStatusBanner': {
+      'save': {
+        'restoredTitle': 'Sauvegarde cloud restaurée',
+        'restoredBonus': '+{n} pièces bonus pour la récupération',
+        'tap': 'toucher',
+        'offlineTitle': 'Synchronisation cloud en pause',
+        'offlineBody': 'Tu joues hors ligne. Ta progression est enregistrée ici.',
+        'retry': 'Réessayer',
+        'dismiss': 'Fermer'
+      }
+    },
+    'BGSkinButton': {
+      'bgButton': {
+        'title': 'Changer l\'arrière-plan'
+      }
+    },
+    'BGSkinModal': {
+      'bg': {
+        'title': 'Arrière-plans',
+        'equipped': 'Actif',
+        'equippedShort': 'Équipé',
+        'select': 'Choisir',
+        'needDiamonds': 'Besoin de diamants ?',
+        'buy': 'Acheter',
+        'skins': {
+          'classic': 'Classique',
+          'aurora': 'Lames Toupie',
+          'fidget': 'Fidget',
+          'ember': 'Brainrot Désaturé',
+          'nebula': 'Brainrot',
+          'circuit': 'Techno-Magique',
+          'cosmos': 'Steampunk',
+          'prism': 'K-Pop'
+        }
+      }
+    },
+    'BattlePass': {
+      'battlePass': 'Battle Pass',
+      'complete': 'TERMINÉ',
+      'max': 'MAX',
+      'battlePassComplete': 'Battle Pass terminé — bien joué !',
+      'rewardsReady': 'Tu as {n} récompense(s) à récupérer !',
+      'xpHint': 'Gagne des combats de campagne pour +50xp, classement +25xp. Défaites : +12xp.',
+      'honorTrack': 'Piste d\'Honneur',
+      'honorAbbr': 'PH',
+      'honorInfo': 'Gagne des combats PvP pour obtenir des Points d\'Honneur (PH). Combat équitable (Niveau 1) donne 100 PH. 3 victoires débloquent 1 skin. Bats des adversaires plus forts pour des PH bonus !',
+      'seasonReset': 'La saison se réinitialise dans {n} jour(s) — récupère tes récompenses !'
+    },
+    'ChallengeIcon': {
+      'challenge': {
+        'start': 'Défi quotidien — gagne un diamant !',
+        'startCoins': 'Défi quotidien — gagne {count} pièces !'
+      }
+    },
+    'CombatLog': {
+      'title': 'Journal de combat',
+      'short': 'Journal',
+      'aria': 'Ouvrir le journal de combat',
+      'hint': 'Pour les stratèges · {n} derniers coups, du plus récent',
+      'empty': 'Pas encore de combat — le journal se remplit au fil des chocs.',
+      'line': '{attacker} inflige {dmg} dégâts à {target}',
+      'enemy': 'Ennemi {type}',
+      'spinner': 'Toupie {n} {type}',
+      'whoEnemy': 'Ennemi',
+      'whoSpinner': 'Toupie {n}',
+      'crit': 'Coup critique',
+      'speedFavors': 'la vitesse favorise {name}',
+      'types': {
+        'star': 'Lame étoile',
+        'triangle': 'Épineux',
+        'round': 'Bouclier rond',
+        'quadratic': 'Noyau carré',
+        'cushioned': 'Carapace',
+        'piercer': 'Perce-blindage'
+      }
+    },
+    'DailyRewards': {
+      'dailyRewards': 'Récompenses quotidiennes',
+      'comeBackTomorrow': 'Reviens demain pour ta prochaine récompense !',
+      'collectTodaysReward': 'Récupère ta récompense du jour ! Ne manque pas un jour ou la progression repart à zéro.',
+      'collectCta': 'Récupérer',
+      'dayShort': 'J{n}'
+    },
+    'FakeLeaderBoard': {
+      'leaderboard': 'Classement',
+      'yourRank': 'Ton rang',
+      'jumpToMe': 'Aller à moi',
+      'maxStage': 'Étape max',
+      'alreadyFoughtToday': 'Déjà combattu aujourd\'hui — revient demain',
+      'fightAsGhost': 'Combattre en duel fantôme'
+    },
+    'InAppPurchaseShop': {
+      'shop': {
+        'title': 'Obtenir des diamants',
+        'subtitle': 'Les diamants débloquent des fonds et (bientôt) de puissantes compétences.',
+        'popular': 'Populaire',
+        'bestValue': 'Meilleure offre',
+        'note': 'Les achats soutiennent le jeu. Paiement sécurisé.'
+      }
+    },
+    'OptionsModal': {
+      'options': 'Options',
+      'general': 'Général',
+      'difficulty': 'Difficulté',
+      'audio': 'Audio',
+      'language': 'Langue',
+      'showRulesModal': 'Afficher les règles avant le match',
+      'resetCampaign': 'Réinitialiser la progression',
+      'reset': 'Réinitialiser',
+      'sureResetCampaign': 'Cela supprime définitivement toute ta progression — chaque niveau, toutes tes pièces et toutes les améliorations. Action irréversible.',
+      'resetKeepsNote': 'Tes réglages de musique, langue et difficulté ainsi que tes skins achetés sont conservés.',
+      'cancel': 'Annuler',
+      'audioSettingsPlaceholder': 'Paramètres audio bientôt disponibles...',
+      'easy': 'Novice',
+      'medium': 'Écuyer',
+      'hard': 'Maître',
+      'close': 'Sauvegarder et Fermer',
+      'soundEffects': 'Effets Sonores',
+      'music': 'Musique'
+    },
+    'SpinnerConfigModal': {
+      'bladeLabel': 'Toupie',
+      'topBlade': 'Partie haute',
+      'bottomPart': 'Partie basse',
+      'statsLabel': 'Stats',
+      'selectSkin': 'Choisir un skin',
+      'purchaseMoreSkins': 'Acheter plus de skins',
+      'equipped': 'ÉQUIPÉ',
+      'selectButton': 'CHOISIR',
+      'hintSelectCards': 'Touche une carte pour choisir la configuration de ta toupie. Touche le bouton d\'amélioration pour l\'améliorer.',
+      'hintPlusIcon': 'Le + en haut de chaque carte de partie haute ouvre la boutique de skins correspondante (ex. Perce-blindage), où tu peux acquérir de nouveaux skins.'
+    }
   }
 }
