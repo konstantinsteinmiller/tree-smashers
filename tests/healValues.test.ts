@@ -1,122 +1,148 @@
 import { describe, it, expect } from 'vitest'
 
 /**
- * These tests verify that every heal-value path in the game produces
- * integer display values (no decimal points in floating damage numbers).
+ * These tests verify that every heal-value path in the game clamps at maxHp
+ * and produces integer display values (no decimal points in floating damage
+ * numbers), shown only when at least 1 HP was actually applied.
  *
  * The formulas below mirror the exact logic in useSpinnerGame.ts for:
  *   1. Forest arena wall-bounce heal
  *   2. Healer-ally contact heal
+ *   2b. Life-leech heal
  *   3. Lava arena wall-bounce damage (included for completeness)
  *   4. spawnDamageNumber (combat damage)
  */
 
-// ─── Forest Arena Heal ─────────────────────────────────────────────────────
-// Formula (useSpinnerGame.ts, bounceOffWalls → forest branch):
-//   const healed = Math.round(Math.min(1, blade.maxHp - blade.hp))
+// ─── Heal display rule (shared by every heal source) ──────────────────────
+// useSpinnerGame.ts `healFx(blade, hpBefore)`: every source first clamps HP at
+// maxHp, then the heal READS (pulse + number) only when the HP actually
+// applied is ≥ 1; the number is the rounded applied amount. Below 1 → 0 (no
+// number, no pulse) although HP still rose. Epsilon absorbs `(x+1)-x` float loss.
 
-function forestHealValue(maxHp: number, currentHp: number): number {
-  return Math.round(Math.min(1, maxHp - currentHp))
+function shownHeal(applied: number): number {
+  return applied < 1 - 1e-9 ? 0 : Math.round(applied)
 }
 
-describe('Forest arena wall-bounce heal value', () => {
-  it('returns 1 when blade is missing at least 1 HP', () => {
-    expect(forestHealValue(100, 90)).toBe(1)
+// ─── Forest Arena Heal ─────────────────────────────────────────────────────
+// bounceOffWalls → forest branch: hp = min(maxHp, hp + 1)
+
+function forestHeal(maxHp: number, currentHp: number): { hp: number; shown: number } {
+  const hp = Math.min(maxHp, currentHp + 1)
+  return { hp, shown: shownHeal(hp - currentHp) }
+}
+
+describe('Forest arena wall-bounce heal', () => {
+  it('shows 1 when blade is missing at least 1 HP', () => {
+    expect(forestHeal(100, 90)).toEqual({ hp: 91, shown: 1 })
   })
 
-  it('returns 0 when blade is at full HP', () => {
-    expect(forestHealValue(100, 100)).toBe(0)
+  it('shows 1 when blade is missing exactly 1 HP', () => {
+    expect(forestHeal(50, 49)).toEqual({ hp: 50, shown: 1 })
   })
 
-  it('returns 1 when blade is missing exactly 1 HP', () => {
-    expect(forestHealValue(50, 49)).toBe(1)
+  it('shows nothing at full HP', () => {
+    expect(forestHeal(100, 100)).toEqual({ hp: 100, shown: 0 })
   })
 
-  it('returns integer when HP gap is fractional (< 1)', () => {
-    // This is the bug case: hp was fractional from combat damage
-    const result = forestHealValue(100, 99.01112)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(1)
+  it.each([99.01112, 99.4, 99.6, 99.98888])('clamps at max and shows nothing when < 1 HP is missing (hp %s)', (hp) => {
+    expect(forestHeal(100, hp)).toEqual({ hp: 100, shown: 0 })
   })
 
-  it('returns integer when HP gap is very small fractional', () => {
-    const result = forestHealValue(100, 99.98888)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(0) // rounds to 0 since 0.01112 < 0.5
+  it('still shows 1 across a float exponent boundary (63.7 → 64.7)', () => {
+    expect(forestHeal(100, 63.7).shown).toBe(1)
   })
 
-  it('returns integer when HP gap is just above 0.5', () => {
-    const result = forestHealValue(100, 99.4)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(1) // 0.6 rounds to 1
-  })
-
-  it('returns integer when HP gap is just below 0.5', () => {
-    const result = forestHealValue(100, 99.6)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(0) // 0.4 rounds to 0
-  })
-
-  it('returns integer with 1 maxHp', () => {
-    const result = forestHealValue(1, 0.3)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(1)
-  })
-
-  it('never returns a value with decimal places across many fractional HPs', () => {
+  it('never exceeds maxHp and always shows 0 or 1 across many fractional HPs', () => {
     for (let i = 0; i < 1000; i++) {
       const maxHp = 10 + Math.random() * 200
       const currentHp = Math.random() * maxHp
-      const result = forestHealValue(maxHp, currentHp)
-      expect(Number.isInteger(result)).toBe(true)
+      const { hp, shown } = forestHeal(maxHp, currentHp)
+      expect(hp).toBeLessThanOrEqual(maxHp)
+      expect([0, 1]).toContain(shown)
     }
   })
 })
 
 // ─── Healer Contact Heal ───────────────────────────────────────────────────
-// Formula (useSpinnerGame.ts, resolveCollision → healer branch):
-//   const healA = Math.round(Math.min(HEALER_CONTACT_HEAL, a.maxHp - a.hp))
+// resolveCollision → healer branch (H3: full heal, NO rounding first):
+//   if (a.hp < a.maxHp) a.hp = Math.min(a.maxHp, a.hp + HEALER_CONTACT_HEAL)
 
 const HEALER_CONTACT_HEAL = 2
 
-function healerHealValue(maxHp: number, currentHp: number): number {
-  return Math.round(Math.min(HEALER_CONTACT_HEAL, maxHp - currentHp))
+function healerHeal(maxHp: number, currentHp: number): { hp: number; shown: number } {
+  if (currentHp >= maxHp) return { hp: currentHp, shown: 0 }
+  const hp = Math.min(maxHp, currentHp + HEALER_CONTACT_HEAL)
+  return { hp, shown: shownHeal(hp - currentHp) }
 }
 
-describe('Healer contact heal value', () => {
-  it('returns 2 when blade is missing more than 2 HP', () => {
-    expect(healerHealValue(100, 90)).toBe(2)
+describe('Healer contact heal', () => {
+  it('shows 2 when blade is missing more than 2 HP', () => {
+    expect(healerHeal(100, 90)).toEqual({ hp: 92, shown: 2 })
   })
 
-  it('returns 0 when blade is at full HP', () => {
-    expect(healerHealValue(100, 100)).toBe(0)
+  it('exactly 2 missing: +2 to max, shows 2', () => {
+    expect(healerHeal(100, 98)).toEqual({ hp: 100, shown: 2 })
   })
 
-  it('returns integer when HP gap is fractional', () => {
-    const result = healerHealValue(100, 98.3)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(2)
+  it('does nothing at full HP', () => {
+    expect(healerHeal(100, 100)).toEqual({ hp: 100, shown: 0 })
   })
 
-  it('returns integer when HP gap is small fractional (< 1)', () => {
-    const result = healerHealValue(100, 99.7)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(0) // 0.3 rounds to 0
+  it('1.6 missing: clamped at max (+1.6), shows 2', () => {
+    expect(healerHeal(100, 98.4)).toEqual({ hp: 100, shown: 2 })
   })
 
-  it('returns integer when HP gap is between 1 and 2 fractional', () => {
-    const result = healerHealValue(100, 98.8)
-    expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(1) // 1.2 rounds to 1
+  it('1.2 missing: full heal clamps at max (+1.2, not a rounded +1), shows 1', () => {
+    expect(healerHeal(100, 98.8)).toEqual({ hp: 100, shown: 1 })
   })
 
-  it('never returns a value with decimal places across many fractional HPs', () => {
+  it('0.6 missing: clamped to max, below 1 applied → shows nothing', () => {
+    expect(healerHeal(100, 99.4)).toEqual({ hp: 100, shown: 0 })
+  })
+
+  it('0.3 missing (< 0.5): still tops up to max silently — no rounding to a 0 heal', () => {
+    expect(healerHeal(100, 99.7)).toEqual({ hp: 100, shown: 0 })
+  })
+
+  it('2.7 missing: +2 unrounded, stays under max, shows 2', () => {
+    const r = healerHeal(100, 97.3)
+    expect(r.hp).toBeCloseTo(99.3, 9)
+    expect(r.shown).toBe(2)
+  })
+
+  it('never exceeds maxHp and shows an integer across many fractional HPs', () => {
     for (let i = 0; i < 1000; i++) {
       const maxHp = 10 + Math.random() * 200
       const currentHp = Math.random() * maxHp
-      const result = healerHealValue(maxHp, currentHp)
-      expect(Number.isInteger(result)).toBe(true)
+      const { hp, shown } = healerHeal(maxHp, currentHp)
+      expect(hp).toBeLessThanOrEqual(maxHp)
+      expect(hp - currentHp).toBeCloseTo(Math.min(HEALER_CONTACT_HEAL, maxHp - currentHp), 9)
+      expect(Number.isInteger(shown)).toBe(true)
     }
+  })
+})
+
+// ─── Life-leech Heal ───────────────────────────────────────────────────────
+// resolveCollision → leech: a.hp = Math.min(a.maxHp, a.hp + dmg * 0.3)
+
+function leechHeal(maxHp: number, currentHp: number, dmg: number): { hp: number; shown: number } {
+  const hp = Math.min(maxHp, currentHp + dmg * 0.3)
+  return { hp, shown: shownHeal(hp - currentHp) }
+}
+
+describe('Life-leech heal', () => {
+  it('shows the rounded applied heal when ≥ 1', () => {
+    expect(leechHeal(100, 50, 10)).toEqual({ hp: 53, shown: 3 })
+    expect(leechHeal(100, 50, 5).shown).toBe(2) // 1.5 → 2
+  })
+
+  it('shows the CLAMPED amount, not the raw 30%', () => {
+    expect(leechHeal(100, 98.5, 20)).toEqual({ hp: 100, shown: 2 }) // 1.5 applied, not 6
+  })
+
+  it('shows nothing when < 1 HP is applied (raw heal small or clamped)', () => {
+    expect(leechHeal(100, 50, 3).shown).toBe(0) // 0.9
+    expect(leechHeal(100, 99.5, 20)).toEqual({ hp: 100, shown: 0 })
   })
 })
 

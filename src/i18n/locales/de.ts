@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astral-Arena',
     'stage_99': 'Omega-Fehdehandschuh',
     'stage_100': 'Der Ewige Chor',
+    'boss_cinder_tyrant': 'Der Aschetyrann',
+    'boss_glacier_warden': 'Der Gletscherwächter',
+    'boss_frostbite_yeti': 'Der Frostbiss-Yeti',
+    'boss_twin_pyres': 'Die Zwillingsfeuer',
+    'boss_blizzard_choir': 'Der Blizzardchor',
+    'boss_shattering_glacier': 'Der Berstende Gletscher',
+    'boss_frostfire_pact': 'Der Frostfeuer-Pakt',
+    'boss_magma_titan': 'Der Magma-Titan',
+    'boss_blizzard_twins': 'Die Blizzard-Zwillinge',
+    'boss_elemental_court': 'Der Hof der Elemente',
     'cheat_boss': 'Cheat-Boss',
     'cheat_ghost': 'Phantomzwilling',
     'cheat_split': 'Zertrümmernder Schwarm',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etappe',
   'bossStage': 'Boss-Etappe',
+  'labBadge': 'LABOR',
   'bossDefeated': 'Boss besiegt',
   'stageN': 'Etappe {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Noch {n} Etappen',
     'nextUp': 'Nächste Etappe!',
     'portraitAlt': 'Nächster Boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Glutnova',
+      'frost': 'Frostfessel',
+      'chill': 'Frostbiss'
+    },
+    'frozenAria': 'Eingefroren – setzt den nächsten Zug aus',
+    'frozenHint': 'Eingefroren! Taut nach diesem Zug auf.',
+    'chillAria': 'Unterkühlt: Tempo −{pct}%',
+    'trophyUnlocked': '{name} freigeschaltet!'
+  },
+  'skills': {
+    'title': 'Fähigkeiten',
+    'slotEmpty': 'Leer',
+    'slotAria': 'Fähigkeitsplatz {n}',
+    'slotChip': 'Platz {n}',
+    'unlockAt': 'Etappe {n}',
+    'teaser': 'Besiege den Boss von Etappe {n}, um Fähigkeiten freizuschalten!',
+    'lockedSkill': 'Wird nach dem Boss von Etappe {n} freigeschaltet',
+    'equip': 'Ausrüsten',
+    'remove': 'Entfernen',
+    'equipped': 'Ausgerüstet',
+    'max': 'MAX',
+    'new': 'NEU',
+    'now': 'Jetzt',
+    'next': 'Nächste',
+    'nextLine': 'Nächste: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Fähigkeiten freigeschaltet!',
+    'newSkillTitle': 'Neue Fähigkeit!',
+    'newSlotTitle': 'Neuer Fähigkeitsplatz!',
+    'bossDrop': 'Besiege diesen Boss, um {name} freizuschalten',
+    'bossDropMystery': 'Besiege diesen Boss, um etwas Neues freizuschalten',
+    'learn': 'Erlernen',
+    'manage': 'Ausrüsten & verbessern',
+    'pickerTitle': 'Fähigkeiten · Platz {n}',
+    'opponentSkills': 'Fähigkeiten des Gegners',
+    'hint': 'Ausgerüstete Fähigkeiten wirken auf beide Spinner. Erlerne und verbessere sie mit Münzen bis Stufe 10.',
+    'learnAria': '{name} für {cost} Münze erlernen | {name} für {cost} Münzen erlernen',
+    'upgradeAria': '{name} für {cost} Münze verbessern | {name} für {cost} Münzen verbessern',
+    'topUpAria': 'Werbung ansehen für {n} Münze | Werbung ansehen für {n} Münzen',
+    'hudAria': '{name}, Stufe {n}',
+    'intro': {
+      'kicker': 'Neue Kraft',
+      'line1': 'Besiege Bosse, um Fähigkeiten freizuschalten.',
+      'line2': 'Erlerne und verbessere sie mit Münzen.',
+      'line3': 'Rüste bis zu 2 aus – beide Spinner nutzen sie.',
+      'line4': 'Im Kampf lösen sie von selbst aus.',
+      'cta': 'Wähle deine Fähigkeit',
+      'demoAria': 'Beispiel: {name} kommt in einen Fähigkeitsplatz. Im Kampf blockt sie die Hälfte eines gegnerischen Treffers und schickt sie zurück.'
+    },
+    'names': {
+      'phase_step': 'Phasenschritt',
+      'guard_shell': 'Schutzschale',
+      'second_wind': 'Zweiter Atem',
+      'lucky_edge': 'Glücksklinge',
+      'homing_rockets': 'Lenkraketen',
+      'opening_salvo': 'Eröffnungssalve',
+      'momentum': 'Schwung',
+      'hazard_ward': 'Gefahrenschutz',
+      'static_charge': 'Statische Ladung',
+      'mirror_plate': 'Spiegelplatte'
+    },
+    'desc': {
+      'phase_step': '{chance}% Chance, durch einen gegnerischen Treffer hindurchzugleiten – kein Schaden. Abklingzeit {cd} s.',
+      'guard_shell': 'Beginnt jeden Kampf mit einem Schild von {pct}% der max. HP. Er fängt Schaden vor den HP ab.',
+      'second_wind': 'Einmal pro Kampf, wenn die HP auf {threshold}% oder weniger fallen: heilt {pct}% der max. HP.',
+      'lucky_edge': '{chance}% Chance, dass ein Treffer zum Glückstreffer mit ×{mult} Schaden wird.',
+      'homing_rockets': 'Alle {n} Zusammenstöße mit Gegnern: Raketen treffen bis zu 3 Gegner mit zusammen {pct}% eines kräftigen Treffers.',
+      'opening_salvo': 'Zu Kampfbeginn verliert jeder Gegner {pct}% seiner max. HP.',
+      'momentum': 'Während deines Starts gibt jeder Wandabpraller oder Treffer +{pct}% Schaden für die nächsten Treffer (max. 3×).',
+      'hazard_ward': 'Lava und Donner-Auren schaden {hazard}% weniger, Stacheln {chip}% weniger; Schockwände lassen dir {shock}% Tempo statt 10%.',
+      'static_charge': '{chance}% Chance, einen Gegner zu schocken, der dich rammt: Er stoppt und setzt seinen nächsten Zug aus.',
+      'mirror_plate': '{chance}% Chance, die Hälfte eines gegnerischen Treffers abzublocken und zurückzuschicken.'
+    }
   },
   'you': 'DU',
   'prev': 'Zurück',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Dreht...',
     'spinAgain': 'Nochmal drehen',
-    'tripleCoinsAria': 'Sieh dir eine Werbung an und erhalte insgesamt {count} Münzen',
+    'tripleCoinsAria': 'Sieh dir eine Werbung an und erhalte insgesamt {count} Münze | Sieh dir eine Werbung an und erhalte insgesamt {count} Münzen',
     'skip': 'Überspringen',
     'youWin': 'DU GEWINNST!',
     'youLose': 'DU VERLIERST!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Einladungscode',
     'copy': 'Kopieren',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Tritt meinem Chaos Arena PvP-Kampf bei!'
+    'shareText': 'Tritt meinem Chaos Arena PvP-Kampf bei!',
+    'versionMismatch': 'Dein Gegner nutzt eine andere Spielversion. Ladet beide die Seite neu und versucht es erneut.'
   },
   'parts': {
     'star': 'Sternklinge',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narwal',
     'stag-beetle': 'Hirschkäfer',
     'drill': 'Bohrer',
-    'lancer': 'Lanzenreiter'
+    'lancer': 'Lanzenreiter',
+    'cinder': 'Glut',
+    'frost-vault': 'Frostgewölbe',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} erhalten!'
+  },
+  'trophySkin': {
+    'label': 'Boss-Trophäe',
+    'hint': 'Gibt es für den Sieg über den Boss, der ihn trägt',
+    'beatStage': 'Schaffe Etappe {n}'
   },
   'tips': {
     'tankyBottom': 'Tipp: Hast du schon ein Tank-Unterteil probiert? Es gibt dir viele HP, um mehr Runden zu überstehen!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Diamanten holen',
-        'subtitle': 'Diamanten schalten Hintergründe und (bald) starke Fähigkeiten frei.',
+        'subtitle': 'Diamanten schalten Hintergründe für deine Arena frei.',
         'popular': 'Beliebt',
         'bestValue': 'Bester Wert',
         'note': 'Käufe unterstützen das Spiel. Sicherer Checkout.'

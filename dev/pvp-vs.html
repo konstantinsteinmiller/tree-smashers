@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--
+  DEV-ONLY preview of the PvP VS card (PvpVsPreview.vue) inside a mock of the
+  PvP deciding_turn window (1200 ms).
+
+    pnpm dev  →  http://localhost:5173/dev/pvp-vs.html
+      ?scene=full     2v2, both sides with 2 skills            [default]
+      ?scene=mixed    1v1, own side 1 skill, opponent none
+      ?scene=levelone 2v2 "level 1" lobby (every skill L1)
+      ?role=guest     view from the guest's side
+      ?low=1          force the FX.low variant
+      ?at=0.6         freeze the card at 60 % of the window (screenshots)
+      ?lang=de        another locale
+      ?loop=1         replay every 2 s
+
+  Vite serves every .html under the root in dev, but a production build only
+  bundles `index.html`, so nothing reachable from here ships.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <base href="/">
+  <title>Chaos Arena — PvP VS card (dev)</title>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/dev/pvpVsPreview.ts"></script>
+</body>
+</html>

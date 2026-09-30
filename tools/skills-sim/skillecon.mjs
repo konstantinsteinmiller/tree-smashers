@@ -2,9 +2,12 @@
 // income model from econ.mjs and spends a fixed share of every coin earned
 // after the unlock on skill upgrades.
 import { PROFILES, incomeAtStage, bpCoinsBy, cumIncome } from './econ.mjs'
+import { CATALOG_SKILL_COST } from './skills.mjs'
 
-// SKILL_COST[L] = price of level L+1: [buy L1, L1→2, …, L9→10] (skills-feature.md §6.1)
-export const SKILL_COST = (process.env.SKILL_COST ?? '150,100,125,150,200,250,300,350,450,575').split(',').map(Number)
+// SKILL_COST[L] = price of level L+1: [buy L1, L1→2, …, L9→10] (skills-feature.md §6.1).
+// Read from src/data/skillCatalog.ts (single source); env SKILL_COST=150,100,…
+// tries another price curve without touching the game.
+export const SKILL_COST = process.env.SKILL_COST ? process.env.SKILL_COST.split(',').map(Number) : [...CATALOG_SKILL_COST]
 export const UPGRADE_COST = SKILL_COST.slice(1)
 export const PER_SKILL = SKILL_COST.reduce((a, b) => a + b, 0)
 // unlock order (boss stage whose win lets the player BUY level 1) — skills-feature.md §6.2

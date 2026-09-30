@@ -37,6 +37,7 @@ import type { AdProvider } from './ads/types'
 import { resolveAdProvider } from '@/platforms/resolveAdProvider'
 import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
 import { isRewardedThrottled, recordRewardedGranted } from '@/use/useRewardedThrottle'
+import { noteRewardedAdCompleted } from '@/use/midgameCadence'
 import {
   requestRewardedIntro,
   requiresRewardedIntro,
@@ -97,6 +98,22 @@ export const dismissAdsBlockedModal = (): void => {
   isAdsBlockedModalShown.value = false
 }
 
+/**
+ * Ads currently in flight through this module (rewarded incl. its intro, and
+ * midgame). Read-only for callers: surfaces that must never open over an ad
+ * (the skills reveal gate in SpinnerArena) check `> 0`. Counted here because
+ * not every provider publishes a pause edge (`isGamePaused`).
+ */
+export const adsInFlight = ref(0)
+const trackAd = async <T>(run: () => Promise<T>): Promise<T> => {
+  adsInFlight.value++
+  try {
+    return await run()
+  } finally {
+    adsInFlight.value = Math.max(0, adsInFlight.value - 1)
+  }
+}
+
 export const initAds = (): Promise<void> => provider.init()
 
 /**
@@ -121,7 +138,10 @@ export const initAds = (): Promise<void> => provider.init()
  *      triggered, so every present and future rewarded placement inherits it.
  *      See `useRewardedIntro.ts`.
  */
-export const showRewardedAd = async (reward: RewardedIntroReward | null = null): Promise<boolean> => {
+export const showRewardedAd = (reward: RewardedIntroReward | null = null): Promise<boolean> =>
+  trackAd(() => showRewardedAdInner(reward))
+
+const showRewardedAdInner = async (reward: RewardedIntroReward | null): Promise<boolean> => {
   // No-rewarded build: never grant (the placements are already hidden via
   // `isRewardedReady`; this only fires if one bypassed it).
   if (!HAS_REWARDED_ADS) return false
@@ -133,6 +153,10 @@ export const showRewardedAd = async (reward: RewardedIntroReward | null = null):
   const granted = await provider.showRewardedAd()
   if (granted) {
     recordRewardedGranted()
+    // A watched-to-the-end rewarded video IS the ad break: restart the
+    // between-battles interstitial cadence so none lands right before the
+    // next battle. Skipped / unfilled / declined never reach this line.
+    noteRewardedAdCompleted()
   } else if (provider.isAdsBlocked.value && !isCrazyWeb) {
     // CrazyGames SDK shows its own ad-blocker dialog; suppress ours to
     // avoid stacking two explainers on top of each other.
@@ -148,7 +172,7 @@ export const showRewardedAd = async (reward: RewardedIntroReward | null = null):
  *   and never fires on a no-fill, so an unfilled break leaves the music alone.
  */
 export const showMidgameAd = (onImpression?: () => void): Promise<void> =>
-  provider.showMidgameAd(onImpression)
+  trackAd(() => provider.showMidgameAd(onImpression))
 
 const useAds = () => ({
   adProviderName,

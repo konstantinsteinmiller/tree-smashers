@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
-import { SKILL_DEFS, SKILL_IDS } from './skills.mjs'
+import { SKILL_DEFS, SKILL_IDS, CATALOG_SKILL_COST } from './skills.mjs'
 import { CARDS, TABLE_COLS, I18N, LOCALES, DESC_PARAMS, L10_LINE } from './content.mjs'
 import { getStageById, lockstepLevel } from './data.mjs'
 import { econLevel, cumIncome, incomeAtStage, PROFILES, bpCoinsBy } from './econ.mjs'
@@ -266,7 +266,7 @@ const levelTable = (id) => {
   const head = `| level | ${lv.map((_, i) => `L${i + 1}`).join(' | ')} |`
   const sep = `|---|${lv.map(() => '---').join('|')}|`
   const rows = cols.map(([k, h, fmt]) => `| ${h} | ${lv.map(p => fmt(typeof k === 'function' ? k(p) : p[k])).join(' | ')} |`)
-  const cost = `| coins to reach this level (L1 = learn) | 150 | 100 | 125 | 150 | 200 | 250 | 300 | 350 | 450 | 575 |`
+  const cost = `| coins to reach this level (L1 = learn) | ${CATALOG_SKILL_COST.join(' | ')} |`
   return [head, sep, ...rows, cost].join('\n')
 }
 let CARDS_MD = ''

@@ -46,5 +46,6 @@ export const useSfcI18n = (ns: string) => {
     const full = prefix + key
     return (composer.t as any)(composer.te(full, 'en') ? full : key, ...args)
   }
-  return { t }
+  // `locale`: the active global locale, for number formatting next to `t`.
+  return { t, locale: composer.locale }
 }

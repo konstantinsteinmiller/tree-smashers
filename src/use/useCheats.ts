@@ -7,12 +7,28 @@ import { arenaType, resetGameStartCount } from '@/use/useSpinnerGame'
 import type { BossAbility } from '@/types/spinner'
 import useSpinnerConfig from '@/use/useSpinnerConfig.ts'
 import { STAGE_KEY } from '@/keys'
+// Skill cheats go through the skills gate (lazy useSkills; inert when off).
+import { SKILLS_BUILD, withSkillsApi } from '@/skills/skillsGate'
 
 const storedCheat = localStorage.getItem('cheat') || 'false'
 const isCheat = ref<boolean>(JSON.parse(storedCheat))
 
 /** Incremented by cheat shortcut — SpinnerArena watches this to open roulette. */
 export const cheatRouletteSignal = ref(0)
+
+/**
+ * Incremented by ctrl+shift+9 — SpinnerArena watches it to open the Boss Lab
+ * (bosses-100-feature.md §11). DEV builds only: the shortcut is not even
+ * registered in a production build, and the arena's Lab modal is a DEV-only
+ * async chunk.
+ */
+export const bossLabSignal = ref(0)
+
+/** The Boss Lab exists in this build (dev) — the cheat gate is on top of it. */
+export const BOSS_LAB_BUILD = import.meta.env.DEV
+
+/** Cheats are on for this browser (`localStorage.cheat = true`). */
+export const cheatsEnabled = (): boolean => isCheat.value === true
 
 
 const useCheats = () => {
@@ -93,6 +109,14 @@ const useCheats = () => {
   const { addCoins, addDiamonds } = useSpinnerConfig()
 
   /**
+   * The skill cheats load useSkills on demand through the skills gate (W1):
+   * a static import would pull the skill catalog into every build through
+   * this composable. On a skills-off build the shortcuts are not registered
+   * at all (the spread below folds away).
+   */
+  const withSkills = withSkillsApi
+
+  /**
    * CHEAT MAPPING
    * Define your shortcuts here.
    * Format: 'ctrl+shift+key' or just 'key'
@@ -151,11 +175,35 @@ const useCheats = () => {
       addDiamonds(10)
       console.warn('[CHEAT] Granted 10 diamonds.')
     },
+    // Skills (skills-feature.md §10.2): a = toggle "own every skill" (not
+    // persisted), y = every unlocked skill to L10 (persisted), o = wipe the
+    // three skill keys.
+    ...(SKILLS_BUILD ? {
+      'ctrl+shift+alt+a': () => withSkills((skills) => {
+        skills.setDevOwnAllSkills(!skills.devOwnAllSkills.value)
+        console.warn(`[CHEAT] Own all skills: ${skills.devOwnAllSkills.value ? 'ON' : 'OFF'}.`)
+      }),
+      'ctrl+shift+alt+y': () => withSkills((skills) => {
+        skills.devMaxAllSkills()
+        console.warn('[CHEAT] Every unlocked skill set to L10.')
+      }),
+      'ctrl+shift+alt+o': () => withSkills((skills) => {
+        skills.devWipeSkills()
+        console.warn('[CHEAT] Skill save wiped.')
+      })
+    } : {}),
     'ctrl+shift+alt+c': clearCheatStage,
     'ctrl+shift+alt+p': () => {
       cheatRouletteSignal.value++
       console.warn('[CHEAT] Roulette triggered.')
     },
+  }
+  // Boss Lab (bosses 100+ test shortcuts) — dev builds only.
+  if (import.meta.env.DEV) {
+    cheatsMap['ctrl+shift+9'] = () => {
+      bossLabSignal.value++
+      console.warn('[CHEAT] Boss Lab opened.')
+    }
   }
 
   /**

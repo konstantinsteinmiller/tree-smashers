@@ -102,6 +102,16 @@ export default {
     'stage_98': '성계 아레나',
     'stage_99': '오메가 건틀릿',
     'stage_100': '영원의 합창단',
+    'boss_cinder_tyrant': '잿더미 폭군',
+    'boss_glacier_warden': '빙하의 수호자',
+    'boss_frostbite_yeti': '동상의 예티',
+    'boss_twin_pyres': '쌍둥이 화염',
+    'boss_blizzard_choir': '눈보라 성가대',
+    'boss_shattering_glacier': '부서지는 빙하',
+    'boss_frostfire_pact': '빙염의 서약',
+    'boss_magma_titan': '마그마 타이탄',
+    'boss_blizzard_twins': '눈보라 쌍둥이',
+    'boss_elemental_court': '원소의 궁정',
     'cheat_boss': '치트 보스',
     'cheat_ghost': '팬텀 트윈',
     'cheat_split': '분쇄의 떼',
@@ -167,6 +177,7 @@ export default {
   'vs': 'VS',
   'stage': '스테이지',
   'bossStage': '보스 스테이지',
+  'labBadge': '랩',
   'bossDefeated': '보스 격파',
   'stageN': '스테이지 {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -180,6 +191,83 @@ export default {
     'stagesAway': '{n}스테이지 남음',
     'nextUp': '다음 스테이지!',
     'portraitAlt': '다음 보스: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': '잔불 노바',
+      'frost': '서리 속박',
+      'chill': '동상'
+    },
+    'frozenAria': '빙결: 다음 턴을 쉽니다',
+    'frozenHint': '빙결! 이번 턴이 끝나면 녹습니다.',
+    'chillAria': '냉기: 속도 −{pct}%',
+    'trophyUnlocked': '{name} 해금!'
+  },
+  'skills': {
+    'title': '스킬',
+    'slotEmpty': '비어 있음',
+    'slotAria': '스킬 슬롯 {n}',
+    'slotChip': '슬롯 {n}',
+    'unlockAt': '스테이지 {n}',
+    'teaser': '스테이지 {n} 보스를 물리치고 스킬을 해금하세요!',
+    'lockedSkill': '스테이지 {n} 보스를 물리치면 해금',
+    'equip': '장착',
+    'remove': '해제',
+    'equipped': '장착됨',
+    'max': 'MAX',
+    'new': 'NEW',
+    'now': '현재',
+    'next': '다음',
+    'nextLine': '다음: {values}',
+    'seconds': '{n}초',
+    'percent': '{n}%',
+    'unlockedTitle': '스킬 해금!',
+    'newSkillTitle': '새 스킬!',
+    'newSlotTitle': '새 스킬 슬롯!',
+    'bossDrop': '이 보스를 물리치면 {name} 해금',
+    'bossDropMystery': '이 보스를 물리치면 새로운 요소 해금',
+    'learn': '습득',
+    'manage': '장착 및 강화',
+    'pickerTitle': '스킬 · 슬롯 {n}',
+    'opponentSkills': '상대 스킬',
+    'hint': '장착한 스킬은 두 스피너 모두에 적용됩니다. 코인으로 습득하고 최대 10레벨까지 강화하세요.',
+    'learnAria': '{cost} 코인으로 {name} 습득',
+    'upgradeAria': '{cost} 코인으로 {name} 강화',
+    'topUpAria': '광고를 보고 {n} 코인 받기',
+    'hudAria': '{name}, 레벨 {n}',
+    'intro': {
+      'kicker': '새로운 힘',
+      'line1': '보스를 물리치고 스킬을 해금하세요.',
+      'line2': '코인으로 습득하고 강화하세요.',
+      'line3': '최대 2개 장착 — 두 스피너가 모두 사용해요.',
+      'line4': '전투 중에는 자동으로 발동해요.',
+      'cta': '스킬 선택하기',
+      'demoAria': '예시: {name}을(를) 스킬 슬롯에 넣습니다. 전투 중 적 공격의 절반을 막고 되돌려 줍니다.'
+    },
+    'names': {
+      'phase_step': '페이즈 스텝',
+      'guard_shell': '가드 셸',
+      'second_wind': '기사회생',
+      'lucky_edge': '럭키 엣지',
+      'homing_rockets': '유도 로켓',
+      'opening_salvo': '개전 포격',
+      'momentum': '모멘텀',
+      'hazard_ward': '위험 방어막',
+      'static_charge': '정전기 충전',
+      'mirror_plate': '미러 플레이트'
+    },
+    'desc': {
+      'phase_step': '{chance}% 확률로 적의 공격을 통과해 피해를 받지 않습니다. 재사용 대기시간 {cd}초.',
+      'guard_shell': '매 전투 시작 시 최대 HP의 {pct}%만큼 보호막을 얻습니다. HP보다 먼저 피해를 흡수합니다.',
+      'second_wind': '전투당 한 번, HP가 {threshold}% 이하로 떨어지면 최대 HP의 {pct}%를 회복합니다.',
+      'lucky_edge': '{chance}% 확률로 공격이 ×{mult} 피해의 행운 치명타가 됩니다.',
+      'homing_rockets': '적과 {n}번 부딪힐 때마다 로켓이 최대 3명의 적에게 강타의 {pct}%만큼 피해를 나누어 줍니다.',
+      'opening_salvo': '전투가 시작되면 모든 적이 최대 HP의 {pct}%를 잃습니다.',
+      'momentum': '발사 중 벽에 튕기거나 적을 맞힐 때마다 다음 공격 피해 +{pct}% (최대 3회).',
+      'hazard_ward': '용암과 번개 오라 피해 -{hazard}%, 가시 피해 -{chip}%. 전기 벽에 닿아도 속도가 10% 대신 {shock}% 남습니다.',
+      'static_charge': '나를 들이받은 적을 {chance}% 확률로 감전시킵니다: 적은 멈추고 다음 턴을 쉽니다.',
+      'mirror_plate': '{chance}% 확률로 적 공격의 절반을 막고 되돌려 줍니다.'
+    }
   },
   'you': '나',
   'prev': '이전',
@@ -256,7 +344,8 @@ export default {
     'inviteCode': '초대 코드',
     'copy': '복사',
     'shareTitle': '카오스 아레나 PvP',
-    'shareText': '카오스 아레나 PvP 배틀에 참가하세요!'
+    'shareText': '카오스 아레나 PvP 배틀에 참가하세요!',
+    'versionMismatch': '상대가 다른 버전의 게임을 사용 중입니다. 두 플레이어 모두 페이지를 새로고침한 뒤 다시 시도하세요.'
   },
   'parts': {
     'star': '스타 블레이드',
@@ -364,10 +453,18 @@ export default {
     'narwhal': '나르왈',
     'stag-beetle': '스태그 비틀',
     'drill': '드릴',
-    'lancer': '랜서'
+    'lancer': '랜서',
+    'cinder': '잿불',
+    'frost-vault': '서리 금고',
+    'yeti': '예티'
   },
   'skinChest': {
     'acquired': '{name} 획득!'
+  },
+  'trophySkin': {
+    'label': '보스 트로피',
+    'hint': '이 스킨을 착용한 보스를 쓰러뜨리면 획득',
+    'beatStage': '스테이지 {n} 클리어'
   },
   'tips': {
     'tankyBottom': '팁: 탱크 하부 파츠를 사용해 보셨나요? 체력이 크게 올라 더 많은 라운드를 버틸 수 있어요!',
@@ -506,7 +603,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': '다이아몬드 얻기',
-        'subtitle': '다이아몬드로 배경과 (곧) 강력한 스킬을 잠금 해제하세요.',
+        'subtitle': '다이아몬드로 아레나 배경을 잠금 해제하세요.',
         'popular': '인기',
         'bestValue': '최고의 가치',
         'note': '구매는 게임을 지원합니다. 안전한 결제.'

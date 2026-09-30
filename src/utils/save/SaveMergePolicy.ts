@@ -14,6 +14,7 @@
 // + totalUpgradeLevels × 150
 // + ownedNormalSkins   × 250
 // + ownedSpecialSkins  × 1500
+// + Σ skill levels     × 150   (learning = one level, like a part level)
 //
 // Conflict policy:
 //   - higher score wins
@@ -23,6 +24,10 @@
 //     gets bonus coins = winner.maxStage × 50 to soften the loss
 
 import { STAGE_KEY, COINS_KEY, UPGRADES_KEY, SKINS_KEY } from '@/keys'
+// Skill levels: flag-boundary modules, folded away on a skills-off build.
+import { SKILLS_BUILD } from '@/skills/skillsGate'
+import { SKILLS_KEY } from '@/skills/skillKeys'
+import { storedSkillLevels } from '@/skills/skillSaveMeta'
 
 /** Where the meta blob is stored in localStorage / on the remote backend.
  *  NOT prefixed with `__save_internal__` — this key needs to round-trip
@@ -154,11 +159,17 @@ export const computeMeta = (
     }
   }
 
+  // Skills (`{"v":1,"lv":{id: level}}`): every stored level scores like a
+  // part level (known ids, each clamped to 0..10). Skills-off builds do not
+  // weigh them at all — and fold this away with the key and the id list.
+  const skillLevels = SKILLS_BUILD ? storedSkillLevels(read.get(SKILLS_KEY)) : 0
+
   const progressScore =
     stage * 500
     + upgradeLevels * 150
     + normalSkins * 250
     + specialSkins * 1500
+    + skillLevels * 150
 
   return { savedAt, progressScore, schemaVersion: SCHEMA_VERSION, maxStage: stage }
 }

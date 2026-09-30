@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
@@ -8,6 +8,7 @@ import { rewardedAdCoins } from '@/use/useStageRewards'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import { isNative } from '@/use/useUser'
+import { useAdButtonCooldown } from '@/use/adButtonCooldown'
 
 interface Props {
   /**
@@ -66,27 +67,11 @@ const rootEl = ref<HTMLElement | null>(null)
 // through the rolling-window budget faster than intended.
 //
 // Persisted in localStorage so the cooldown survives page reloads (an
-// obvious workaround would be to refresh — closing the loophole). The
-// reactive `tickNow` is bumped every second so the computed gates
-// re-evaluate without the parent having to manage a timer.
-const COOLDOWN_MS = 30_000
-const COOLDOWN_KEY = 'spinner_ad_button_ready_at'
-
-const adReadyAt = ref(parseInt(localStorage.getItem(COOLDOWN_KEY) || '0', 10))
-const tickNow = ref(Date.now())
-let tickIntervalId: number | null = null
-
-const cooldownActive = computed(() => tickNow.value < adReadyAt.value)
+// obvious workaround would be to refresh — closing the loophole). A shared
+// clock ticks every second so the gate re-evaluates on its own. The key, the ref and the ticking clock live in `@/use/adButtonCooldown`,
+// shared with the skill picker's coin top-up (one inventory, one cooldown).
+const { cooldownActive, arm: armCooldown } = useAdButtonCooldown()
 const isVisible = computed(() => isRewardedReady.value && !cooldownActive.value)
-
-onMounted(() => {
-  tickIntervalId = window.setInterval(() => {
-    tickNow.value = Date.now()
-  }, 1000)
-})
-onUnmounted(() => {
-  if (tickIntervalId !== null) clearInterval(tickIntervalId)
-})
 
 // Coins are only granted once the rewarded video played all the way
 // through — whichever ad provider the active build selected.
@@ -103,8 +88,7 @@ const triggerAdReward = async () => {
     grantReward()
     // Arm the 30s cooldown ONLY on a successful watch — a no-fill or
     // user-skipped ad shouldn't punish the player by hiding the button.
-    adReadyAt.value = Date.now() + COOLDOWN_MS
-    localStorage.setItem(COOLDOWN_KEY, adReadyAt.value.toString())
+    armCooldown()
   }
 }
 

@@ -17,6 +17,23 @@ import type { SpinnerConfig } from '@/types/spinner'
 import { isSdkActive } from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease, isDebug } from '@/use/useMatch'
 import { seedMatchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
+import type { SkillLoadout } from '@/types/skills'
+import { sanitizePvpLoadout, type SkillSanitizer } from '@/use/loadoutSanitizer'
+import { loadSkillLoadoutSanitizer } from '@/skills/skillsGate'
+
+// Skill loadouts in the ready exchange (§9.1) go through the catalog-aware
+// sanitiser, which only a skills build loads (skills gate). Until it resolves
+// — and forever on a skills-off build — this client sends `skills: []` and
+// ignores whatever skills a peer sends (both sides then fight without them).
+let skillSanitizer: SkillSanitizer | null = null
+const skillSanitizerReady: Promise<void> = loadSkillLoadoutSanitizer()
+  .then((fn) => {
+    skillSanitizer = fn
+  })
+  .catch(() => { /* stays null: no skills exchanged */
+  })
+/** Resolves once the PvP skill sanitiser is in place (tests, lobby). */
+export const whenPvpSkillsReady = (): Promise<void> => skillSanitizerReady
 
 // ─── Feature Gate ──────────────────────────────────────────────────────────
 
@@ -75,9 +92,24 @@ export interface PvPGameConfig {
   levelOne: boolean        // true = all parts forced to level 1
 }
 
+/**
+ * Lockstep wire/simulation protocol version. BUMP IT whenever a change makes
+ * two builds simulate the same launches differently (physics, damage, RNG
+ * draw order, turn rules) or changes a message shape — a peer on another
+ * version would desync silently mid-match. `player-ready` carries it and the
+ * receiver refuses to mark a mismatched peer ready.
+ *
+ * 1 → 2: WP0 determinism (canonical syncKey collision order, star crit on the
+ * match RNG, PvP sim frozen between launches, turn ends when ALL blades rest).
+ * 2 → 3: skills — `player-ready` carries the team's skill loadout and both
+ * clients build `blade.skills` for both sides (skills-feature.md §9.1).
+ */
+export const PVP_PROTOCOL_VERSION = 3
+
 export type PvPMessage =
   | { type: 'game-config'; config: PvPGameConfig }
-  | { type: 'player-ready'; team: SpinnerConfig[] }
+  | { type: 'player-ready'; team: SpinnerConfig[]; skills?: SkillLoadout; proto?: number }
+  | { type: 'proto-mismatch'; proto: number }
   | { type: 'player-unready' }
   | { type: 'game-start'; firstTurn: 'host' | 'guest'; seed: number }
   | { type: 'launch'; bladeIndex: number; ax: number; ay: number }
@@ -129,7 +161,15 @@ const hostReady: Ref<boolean> = ref(false)
 const guestReady: Ref<boolean> = ref(false)
 const hostTeam: Ref<SpinnerConfig[]> = ref([])
 const guestTeam: Ref<SpinnerConfig[]> = ref([])
+/** Sanitised skill loadouts (≤ 2 entries), next to the teams (§9.1). */
+const hostSkills: Ref<SkillLoadout> = ref([])
+const guestSkills: Ref<SkillLoadout> = ref([])
 const remotePlayerName: Ref<string> = ref('')
+
+/** This client's lobby role, readable without instantiating the composable.
+ *  The engine uses it to give each blade a peer-independent `syncKey` when
+ *  the caller does not pass `role` to `initGame`. */
+export const currentPvpRole = (): PvPRole => role.value
 
 // ─── Early Invite Capture ─────────────────────────────────────────────────
 // Extract pvp= param from URL hash at module load time (before any component
@@ -174,6 +214,8 @@ const goBackToLobby = () => {
   guestReady.value = false
   hostTeam.value = []
   guestTeam.value = []
+  hostSkills.value = []
+  guestSkills.value = []
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -233,6 +275,8 @@ const resetState = () => {
   guestReady.value = false
   hostTeam.value = []
   guestTeam.value = []
+  hostSkills.value = []
+  guestSkills.value = []
   remotePlayerName.value = ''
 }
 
@@ -335,6 +379,31 @@ const startExpiryCountdown = () => {
   }, INVITE_EXPIRY_MS)
 }
 
+// ─── Protocol version gate ─────────────────────────────────────────────────
+
+// Global vue-i18n instance main.ts parks on `window.__i18n` (same pattern as
+// useSpinnerGame's `translate`); falls back to the raw key before boot.
+const translate = (key: string): string => {
+  try {
+    const g = (window as unknown as {
+      __i18n?: { global?: { t?: (k: string) => string } }
+    }).__i18n?.global
+    return g?.t ? g.t(key) : key
+  } catch {
+    return key
+  }
+}
+
+/** The peer runs another lockstep protocol: nobody may be ready, and the
+ *  lobby shows why (the error view renders `errorMessage`). */
+const refuseProtocolMismatch = () => {
+  pvpLog('protocol mismatch — refusing ready')
+  hostReady.value = false
+  guestReady.value = false
+  status.value = 'error'
+  errorMessage.value = translate('pvp.versionMismatch')
+}
+
 // ─── Message Handler ───────────────────────────────────────────────────────
 
 const handleMessage = (msg: PvPMessage) => {
@@ -343,16 +412,48 @@ const handleMessage = (msg: PvPMessage) => {
     switch (msg.type) {
       case 'game-config':
         gameConfig.value = msg.config
+        // Mirror the host's updateGameConfig: a config change un-readies
+        // both sides, so every build is re-sent (and re-sanitised) under the
+        // new team size / "level 1" rule — never a stale clamp.
+        hostReady.value = false
+        guestReady.value = false
         break
 
       case 'player-ready':
+        // A peer on another lockstep protocol would desync mid-match:
+        // never mark it ready, tell both players to reload. (A pre-v2
+        // client sends no `proto` at all — also a mismatch.)
+        if (msg.proto !== PVP_PROTOCOL_VERSION) {
+          refuseProtocolMismatch()
+          send({ type: 'proto-mismatch', proto: PVP_PROTOCOL_VERSION })
+          break
+        }
+      {
+        // Never trust the wire: re-check the build against OUR copy of
+        // the lobby config (team size, "level 1" clamp for parts AND
+        // skills). The sender ran the same pure function, so an honest
+        // peer's build comes out unchanged and both clients feed the
+        // engine identical loadouts. No valid spinner → not ready.
+        const clean = sanitizePvpLoadout(msg.team, msg.skills, gameConfig.value, skillSanitizer)
+        if (!clean) {
+          pvpLog('player-ready with no valid team — ignored')
+          break
+        }
         if (role.value === 'host') {
           guestReady.value = true
-          guestTeam.value = msg.team
+          guestTeam.value = clean.team
+          guestSkills.value = clean.skills
         } else {
           hostReady.value = true
-          hostTeam.value = msg.team
+          hostTeam.value = clean.team
+          hostSkills.value = clean.skills
         }
+        }
+        break
+
+      case 'proto-mismatch':
+        // The other side refused OUR ready (it runs another version).
+        if (msg.proto !== PVP_PROTOCOL_VERSION) refuseProtocolMismatch()
         break
 
       case 'player-unready':
@@ -401,6 +502,11 @@ const handleMessage = (msg: PvPMessage) => {
     console.error('[PvP] Error handling message:', e)
   }
 }
+
+/** Feed one decoded peer message through the handler — the DataConnection's
+ *  `data` event is the production caller; tests use it to drive the
+ *  protocol without WebRTC. */
+export const receivePvpMessage = (msg: PvPMessage): void => handleMessage(msg)
 
 // ─── Connection Setup ──────────────────────────────────────────────────────
 
@@ -672,16 +778,22 @@ const usePVP = () => {
     }
   }
 
-  /** Mark local player as ready with their team selection */
-  const setReady = (team: SpinnerConfig[]) => {
+  /** Mark the local player ready with their team + skill loadout. Sanitised
+   *  by the same rules the receiver applies, and the SANITISED copy is what
+   *  this client keeps — so both clients hold identical builds. */
+  const setReady = (team: SpinnerConfig[], skills: SkillLoadout = []) => {
+    const clean = sanitizePvpLoadout(team, skills, gameConfig.value, skillSanitizer)
+    if (!clean) return
     if (role.value === 'host') {
       hostReady.value = true
-      hostTeam.value = team
+      hostTeam.value = clean.team
+      hostSkills.value = clean.skills
     } else {
       guestReady.value = true
-      guestTeam.value = team
+      guestTeam.value = clean.team
+      guestSkills.value = clean.skills
     }
-    send({ type: 'player-ready', team })
+    send({ type: 'player-ready', team: clean.team, skills: clean.skills, proto: PVP_PROTOCOL_VERSION })
   }
 
   /** Unmark local player as ready */
@@ -819,6 +931,8 @@ const usePVP = () => {
     guestReady,
     hostTeam,
     guestTeam,
+    hostSkills,
+    guestSkills,
     remotePlayerName,
     canShowPvP,
     bothReady,

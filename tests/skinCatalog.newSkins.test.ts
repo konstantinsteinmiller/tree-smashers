@@ -12,7 +12,11 @@
 //      NPC pick, leaderboard avatar) before it is painted.
 //   3. Every catalog id has a display name in EVERY locale file.
 //   4. The expansion skins are REGULAR (not SPECIAL_SKINS), so they
-//      join the free reward pools.
+//      join the free reward pools — except the earn-only boss trophies
+//      (TROPHY_SKINS), which no pool may offer (tests/trophySkins.test.ts).
+//   3a. A skin name still in its translation batch (PENDING_TRANSLATION in
+//      tests/i18nParity.allowlist.ts) may be missing from a non-English
+//      locale (vue-i18n falls back to en); English always has it.
 //   5. Offers already shown to an existing save stay valid: every legacy skin
 //      that was offerable is still offerable with the expanded catalog, so the
 //      "keep the persisted offer if still offerable" rule in BattlePass.vue /
@@ -32,10 +36,14 @@ import {
   skinCost,
   isCoinPurchasable,
   getOfferableSkinPool,
+  TROPHY_SKINS,
   type SpinnerModelId
 } from '@/data/skinCatalog'
 import type { TopPartId } from '@/types/spinner'
 import en from '@/i18n/locales/en'
+import { PENDING_TRANSLATION } from './i18nParity.allowlist'
+
+const isPending = (key: string) => PENDING_TRANSLATION.some(p => key.startsWith(p))
 
 const LEGACY_MODEL_IDS = [
   'fire', 'phoenix', 'thunder', 'bluedragon', 'turtle',
@@ -70,6 +78,8 @@ const MODELS_DIR = resolve(__dirname, '..', 'public', 'images', 'models')
 const allCatalogIds = (): SpinnerModelId[] => [...new Set(Object.values(SKINS_PER_TOP).flat())]
 const newIds = (): SpinnerModelId[] =>
   (SPINNER_MODEL_IDS as readonly string[]).filter(id => !LEGACY_MODEL_IDS.includes(id)) as SpinnerModelId[]
+/** New REGULAR skins — the ones that must join the free pools (not the earn-only trophies). */
+const newRegularIds = (): SpinnerModelId[] => newIds().filter(id => !TROPHY_SKINS.has(id))
 
 describe('skin catalog — append-only', () => {
   it('SPINNER_MODEL_IDS starts with the legacy ids in their legacy order', () => {
@@ -114,13 +124,17 @@ describe('skin catalog — nothing ships unpainted or unnamed', () => {
     expect(Object.keys(LOCALES).length, 'locale discovery found too few files').toBeGreaterThanOrEqual(8)
     const enKeys = Object.keys(en.skins).sort()
     for (const [name, loc] of Object.entries(LOCALES)) {
-      expect(Object.keys(loc.skins).sort(), `${name}.skins keys differ from en.skins`).toEqual(enKeys)
+      const keys = Object.keys(loc.skins)
+      // a locale may lack a name still pending translation, never have an extra one
+      expect(keys.filter(k => !(k in en.skins)), `${name}.skins has keys en.skins lacks`).toEqual([])
+      expect(enKeys.filter(k => !keys.includes(k) && !isPending(`skins.${k}`)), `${name}.skins is missing names`).toEqual([])
     }
   })
 
   it('every catalog skin has a display name in every locale', () => {
     for (const id of allCatalogIds()) {
       for (const [name, loc] of Object.entries(LOCALES)) {
+        if (name !== 'en' && isPending(`skins.${id}`) && loc?.skins?.[id] === undefined) continue
         const val = loc?.skins?.[id]
         expect(typeof val, `${name}.skins.${id} missing`).toBe('string')
         expect(val.trim().length, `${name}.skins.${id} empty`).toBeGreaterThan(0)
@@ -131,7 +145,7 @@ describe('skin catalog — nothing ships unpainted or unnamed', () => {
 
 describe('skin catalog — expansion skins are regular and offerable', () => {
   it('new skins are regular (not special): ad-unlock on ad builds, 3x special price otherwise', () => {
-    for (const id of newIds()) {
+    for (const id of newRegularIds()) {
       expect(SPECIAL_SKINS.has(id), `${id} should be a regular skin`).toBe(false)
       expect(skinCost(id)).toBe(SPECIAL_SKIN_COST * 3)
       expect(isCoinPurchasable(id, true), `${id} must not be coin-purchasable on an ad build`).toBe(false)
@@ -141,7 +155,7 @@ describe('skin catalog — expansion skins are regular and offerable', () => {
 
   it('new skins join the free-reward pool for a player who owns none of them', () => {
     const pool = new Set(getOfferableSkinPool(() => false))
-    for (const id of newIds()) expect(pool.has(id), `${id} not offerable`).toBe(true)
+    for (const id of newRegularIds()) expect(pool.has(id), `${id} not offerable`).toBe(true)
   })
 
   it('an offer persisted from the legacy catalog is still offerable (so it is kept, not re-rolled)', () => {

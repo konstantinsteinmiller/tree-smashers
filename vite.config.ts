@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
 import { resolve } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -222,8 +222,69 @@ export default defineConfig(({ mode, command }) => {
     )
   }
 
+  // ─── Build-time FEATURE flags must be spelled out ──────────────────────
+  //
+  // `VITE_APP_FEATURE_SKILLS` gates a whole subsystem at BUNDLE level (the
+  // skills gate, src/skills/skillsGate.ts, compares it to the literal 'true').
+  // A typo ("ture", "1", "yes", " true") would silently ship the wrong
+  // product, so a SET value must be exactly 'true' or 'false'. The base `.env`
+  // sets 'false' and a mode opts in; UNSET is allowed and means off, because
+  // the .env files are git-ignored and CI builds (static.yml, ios-build.yml)
+  // run without them. `VITE_APP_FEATURE_BOSSES100` (the bosses gate,
+  // src/bosses/bosses100Gate.ts) follows the same rule. (The league flag joins
+  // this list with LG-FLAG.)
+  for (const flag of ['VITE_APP_FEATURE_SKILLS', 'VITE_APP_FEATURE_BOSSES100']) {
+    const v = env[flag]
+    if (v !== undefined && v !== '' && v !== 'true' && v !== 'false') {
+      throw new Error(
+        `[build] ${flag} must be exactly "true" or "false" in mode "${mode}" (got ${JSON.stringify(v)}). `
+        + 'Set it in .env (default "false") or .env.<mode>[.local].'
+      )
+    }
+  }
+  const skillsBuild = env.VITE_APP_FEATURE_SKILLS === 'true'
+  const bosses100Build = env.VITE_APP_FEATURE_BOSSES100 === 'true'
+
   // Initialize plugins array
   const plugins = []
+
+  // A skills-off build references none of the skill SFX (their names live in
+  // skills/skillSfx.ts, which such a build does not bundle), but `public/` is
+  // copied wholesale — drop the files from the output so the shipped package
+  // carries no skill asset either (scripts/feature-flag-audit.mjs checks it).
+  if (!skillsBuild) {
+    plugins.push({
+      name: 'strip-skill-sfx',
+      apply: 'build',
+      writeBundle(options) {
+        const dir = resolve(options.dir ?? 'dist', 'audio/sfx')
+        if (!existsSync(dir)) return
+        for (const f of readdirSync(dir)) {
+          if (/^skill-/.test(f)) rmSync(resolve(dir, f), { force: true })
+        }
+      }
+    } satisfies Plugin)
+  }
+
+  // Same for the boss-trait SFX of a bosses100-off build (their names live in
+  // use/bosses/bossTraitSfx.ts, reached only through the bosses gate) and the
+  // new bosses' crests (data/bossArt.ts, read only behind the flag).
+  if (!bosses100Build) {
+    plugins.push({
+      name: 'strip-boss-trait-sfx',
+      apply: 'build',
+      writeBundle(options) {
+        const out = options.dir ?? 'dist'
+        const dir = resolve(out, 'audio/sfx')
+        if (existsSync(dir)) {
+          for (const f of readdirSync(dir)) {
+            if (/^boss-/.test(f)) rmSync(resolve(dir, f), { force: true })
+          }
+        }
+        rmSync(resolve(out, 'images/boss-badges'), { recursive: true, force: true })
+      }
+    } satisfies Plugin)
+  }
 
   // Bake a leaderboard into EVERY build, but not the SAME one. A build with an
   // endpoint gets the real board (as an offline fallback); a build without one
@@ -289,7 +350,22 @@ export default defineConfig(({ mode, command }) => {
           /utils[\\/]playgamaBridgeLoader\.ts$/,
           // The first-launch intro cutscene's lazy chunk: its one dynamic
           // import lives in this 1-line loader for exactly the same reason.
-          /use[\\/]introCutsceneLoader\.ts$/
+          /use[\\/]introCutsceneLoader\.ts$/,
+          // Feature-flag boundaries (skills; the league joins as src/league/
+          // leagueGate.ts). The gate holds the env literal and EVERY dynamic
+          // import of the feature; the boundary modules next to it hold the
+          // feature's strings shared code may name (storage keys, ids). All
+          // of them must stay unobfuscated: the dynamic-import constraint
+          // above, and an obfuscated module can never be tree-shaken (its
+          // string-array bootstrap is a top-level side effect), so a
+          // flag-off build would keep every boundary string.
+          /src[\\/]skills[\\/]/,
+          // Bosses 100+ boundary: the gate, plus the two pure data modules
+          // shared code reads synchronously (the campaign's stage table, the
+          // peek / shop hints). Unobfuscated so a bosses100-off build
+          // tree-shakes every export whose only use folded away.
+          /src[\\/]bosses[\\/]/,
+          /data[\\/]boss(Encounters|Art)\.ts$/
         ],
         // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
         // The previous profile enabled every aggressive transform the
@@ -331,7 +407,38 @@ export default defineConfig(({ mode, command }) => {
           compact: true,
           simplify: true,
           stringArray: true,
-          stringArrayThreshold: 0.6
+          stringArrayThreshold: 0.6,
+          // ─── Strings that must stay literals (batch-3 Q1) ──────────────
+          //
+          // The obfuscator runs after vite:define, so an env comparison
+          // reaches it as `"false" === 'true'`. With stringArrayThreshold
+          // 0.6 each of those literals had a 60% chance of being moved into
+          // the string array, where Rollup can no longer evaluate the
+          // comparison — so whether a flag-gated branch folded was RANDOM
+          // per module and per build, and every unobfuscated twin folded, so
+          // no purity test could see it. Reserving 'true' / 'false' keeps
+          // every comparison foldable.
+          //
+          // The skill ids are reserved for the same reason one level up: the
+          // engine's skill glue is behind the `SKILLS_BUILD` literal and
+          // folds away on a skills-off build — but a string the obfuscator
+          // had already hoisted into the module's string array would stay
+          // behind even though no code reads it any more.
+          reservedStrings: [
+            '^true$', '^false$',
+            '^(phase_step|guard_shell|second_wind|lucky_edge|homing_rockets|opening_salvo|momentum|hazard_ward|static_charge|mirror_plate)$',
+            // ...and the members the engine calls on the skill port (named
+            // in bracket form there, same reason as the trait port below).
+            '^(createBladeSkills|createSkillVfx|drawSkillGlyph|incomingSkill|onEnemyContact|outgoingSkillMul|renderBladeSkillFx|renderSkillLayer|resetSkillVfx|salvoDamage|skillBladeAlpha|skillVfxEvent|teamSalvoPct|tickSkillVfx)$',
+            // Same for the boss-trait glue behind `BOSSES100_BUILD` (event
+            // kinds, trait names, the snowflake glyph) and the members the
+            // engine calls on the trait port — the obfuscator rewrites
+            // `bossPort.renderIceShell(…)` into `bossPort['renderIceShell']`
+            // and would hoist the name into the string array, where it
+            // outlives the folded call on a bosses100-off build.
+            '^(nova|burn|frost_touch|freeze|freeze_crack|thaw|chill|chill_fade|ember|frost|snowflake)$',
+            '^(BOSS_TRAIT_TUNING|EMBER_PERIOD_MS|EMBER_RADIUS_MUL|applyEmberBurn|beginTeamTurnTraits|bossClockHashPart|bossTraitVfxEvent|chillSpeedMul|createBossClock|createBossTraitEventRing|createBossTraitVfx|createTapCrackEvent|createTraitContactResult|createTraitHudRow|drawBossTraitGlyph|emberVictimMask|endTeamTurnTraits|hasBossTraits|hasLivingEmberCarrier|initTraitVictim|isBossTraitGlyph|isFrostLockedFor|novaCharge|onTraitContact|prepareBossTraitVfx|renderBossAura|renderBossTraitLayer|renderChillOverlay|renderEmberCharge|renderIceShell|resetBossClock|resetBossTraitVfx|tickBossClock|tickBossTraitVfx|traitHashPart|writeTraitHud)$'
+          ]
         }
       } as any)
     )
@@ -512,6 +619,15 @@ export default defineConfig(({ mode, command }) => {
           '@/use/ads/PokiProvider': fileURLToPath(new URL('./src/use/ads/PokiProvider.stub.ts', import.meta.url)),
           '@/utils/pokiPlugin': fileURLToPath(new URL('./src/utils/pokiPlugin.stub.ts', import.meta.url))
         }),
+        // Same swap for the Playgama wrapper on every non-Playgama build
+        // (YouTube is a Playgama build and keeps the real one). `App.vue` and
+        // `useGameplayLifecycle` import it statically; the env-gated calls
+        // fold, but the obfuscated module cannot be tree-shaken, so ~5 KB of
+        // dead wrapper shipped in a shared chunk Rollup named after it
+        // (`playgamaPlugin-*.js` on CrazyGames). See playgamaPlugin.stub.ts.
+        ...(env.VITE_APP_PLAYGAMA === 'true' ? {} : {
+          '@/utils/playgamaPlugin': fileURLToPath(new URL('./src/utils/playgamaPlugin.stub.ts', import.meta.url))
+        }),
         // The mirror image, and only on Poki. The GD plugin is reached solely
         // through dead-branch dynamic imports, but Rollup still emits its chunk
         // — carrying `html5.api.gamedistribution.com`. Poki's requirement #6 is
@@ -566,6 +682,14 @@ export default defineConfig(({ mode, command }) => {
       assetsInlineLimit: (file: string) => (file.endsWith('.woff2') ? false : undefined),
       rollupOptions: {
         output: {
+          // Rollup names a shared chunk after one of its modules, and the
+          // portal stubs (`*.stub.ts`, resolve.alias below) keep winning that
+          // pick: CrazyGames' sound / asset / i18n chunk shipped as
+          // `playgamaPlugin.stub-*.js` (before that `playgamaPlugin-*.js`,
+          // `pokiPlugin.stub-*.js`), so crash reports pointed at a portal
+          // SDK the build does not even contain. A neutral name instead.
+          chunkFileNames: (chunk: { name: string }) =>
+            /\.stub$/.test(chunk.name) ? 'assets/shared-[hash].js' : 'assets/[name]-[hash].js',
           // Pin the ACTIVE platform's heavy ad/SDK plugin to its own async
           // chunk. Without this, Rollup's default chunker may merge a small
           // plugin (e.g. playgamaPlugin) into a hot-path chunk

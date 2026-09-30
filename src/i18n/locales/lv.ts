@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astrālā arēna',
     'stage_99': 'Omega izaicinājums',
     'stage_100': 'Mūžīgais koris',
+    'boss_cinder_tyrant': 'Pelnu tirāns',
+    'boss_glacier_warden': 'Ledāja sargs',
+    'boss_frostbite_yeti': 'Salkoduma jeti',
+    'boss_twin_pyres': 'Dvīņu sārti',
+    'boss_blizzard_choir': 'Puteņa koris',
+    'boss_shattering_glacier': 'Plīstošais ledājs',
+    'boss_frostfire_pact': 'Uguns un ledus pakts',
+    'boss_magma_titan': 'Magmas titāns',
+    'boss_blizzard_twins': 'Puteņa dvīņi',
+    'boss_elemental_court': 'Stihiju galms',
     'cheat_boss': 'Krāpnieku boss',
     'cheat_ghost': 'Spoku dvīnis',
     'cheat_split': 'Šķeļošais bars',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Posms',
   'bossStage': 'Bosa posms',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss sakauts',
   'stageN': '{n}. posms',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Atlikušie posmi: {n}',
     'nextUp': 'Nākamais posms!',
     'portraitAlt': 'Nākamais boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Ogļu nova',
+      'frost': 'Ledus važas',
+      'chill': 'Salkodums'
+    },
+    'frozenAria': 'Sasalis: izlaiž nākamo gājienu',
+    'frozenHint': 'Sasalis! Atkusīs pēc šī gājiena.',
+    'chillAria': 'Atdzisis: ātrums −{pct}%',
+    'trophyUnlocked': 'Atbloķēts: {name}!'
+  },
+  'skills': {
+    'title': 'Prasmes',
+    'slotEmpty': 'Tukšs',
+    'slotAria': 'Prasmes vieta {n}',
+    'slotChip': 'Vieta {n}',
+    'unlockAt': 'Posms {n}',
+    'teaser': 'Uzvari {n}. posma bosu, lai atbloķētu prasmes!',
+    'lockedSkill': 'Atbloķējas pēc {n}. posma bosa',
+    'equip': 'Uzlikt',
+    'remove': 'Noņemt',
+    'equipped': 'Uzlikta',
+    'max': 'MAKS',
+    'new': 'JAUNS',
+    'now': 'Tagad',
+    'next': 'Nākamais',
+    'nextLine': 'Nākamais: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Prasmes atbloķētas!',
+    'newSkillTitle': 'Jauna prasme!',
+    'newSlotTitle': 'Jauna prasmes vieta!',
+    'bossDrop': 'Uzvari šo bosu, lai atbloķētu: {name}',
+    'bossDropMystery': 'Uzvari šo bosu, lai atbloķētu ko jaunu',
+    'learn': 'Apgūt',
+    'manage': 'Uzlikt un uzlabot',
+    'pickerTitle': 'Prasmes · vieta {n}',
+    'opponentSkills': 'Pretinieka prasmes',
+    'hint': 'Uzliktās prasmes darbojas abiem vilciņiem. Apgūsti un uzlabo prasmes par monētām līdz 10. līmenim.',
+    'learnAria': 'Apgūt {name} par {cost} monētām | Apgūt {name} par {cost} monētu | Apgūt {name} par {cost} monētām',
+    'upgradeAria': 'Uzlabot {name} par {cost} monētām | Uzlabot {name} par {cost} monētu | Uzlabot {name} par {cost} monētām',
+    'topUpAria': 'Skaties reklāmu un saņem {n} monētas | Skaties reklāmu un saņem {n} monētu | Skaties reklāmu un saņem {n} monētas',
+    'hudAria': '{name}, līmenis {n}',
+    'intro': {
+      'kicker': 'Jauns spēks',
+      'line1': 'Uzvari bosus, lai atbloķētu prasmes.',
+      'line2': 'Apgūsti un uzlabo tās par monētām.',
+      'line3': 'Uzliec līdz 2 — tās izmanto abi vilciņi.',
+      'line4': 'Kaujā tās iedarbojas pašas.',
+      'cta': 'Izvēlies prasmi',
+      'demoAria': 'Piemērs: {name} tiek ielikta prasmes vietā. Kaujā tā bloķē pusi no ienaidnieka trieciena un sūta to atpakaļ.'
+    },
+    'names': {
+      'phase_step': 'Fāzes solis',
+      'guard_shell': 'Sargčaula',
+      'second_wind': 'Otrā elpa',
+      'lucky_edge': 'Veiksmes asmens',
+      'homing_rockets': 'Pašvadāmas raķetes',
+      'opening_salvo': 'Atklāšanas zalve',
+      'momentum': 'Inerce',
+      'hazard_ward': 'Briesmu sargs',
+      'static_charge': 'Statiskais lādiņš',
+      'mirror_plate': 'Spoguļplāksne'
+    },
+    'desc': {
+      'phase_step': '{chance}% iespēja izslīdēt cauri ienaidnieka triecienam bez bojājumiem. Atjaunošanās {cd} s.',
+      'guard_shell': 'Sāc katru kauju ar vairogu {pct}% apmērā no maks. HP. Tas uzņem bojājumus pirms HP.',
+      'second_wind': 'Reizi kaujā, kad HP nokrītas līdz {threshold}% vai mazāk: dziedē {pct}% no maks. HP.',
+      'lucky_edge': '{chance}% iespēja, ka trieciens kļūst par veiksmīgu kritisko triecienu ar ×{mult} bojājumiem.',
+      'homing_rockets': 'Ik pēc {n} sadursmēm ar ienaidniekiem: raķetes trāpa līdz 3 ienaidniekiem par {pct}% no spēcīga trieciena, sadalot.',
+      'opening_salvo': 'Kaujas sākumā katrs ienaidnieks zaudē {pct}% no maks. HP.',
+      'momentum': 'Tava palaiduma laikā katrs atsitiens no sienas vai trieciens dod +{pct}% bojājumu nākamajiem triecieniem (maks. 3).',
+      'hazard_ward': 'Lavas un pērkona auras nodara par {hazard}% mazāk bojājumu, dzeloņi par {chip}% mazāk; šoka sienas atstāj tev {shock}% ātruma, nevis 10%.',
+      'static_charge': '{chance}% iespēja iesist ar strāvu ienaidniekam, kas tevī ietriecas: tas apstājas un izlaiž nākamo gājienu.',
+      'mirror_plate': '{chance}% iespēja bloķēt pusi no ienaidnieka trieciena un sūtīt to atpakaļ.'
+    }
   },
   'you': 'TU',
   'prev': 'Atpakaļ',
@@ -193,7 +281,7 @@ export default {
     'free': 'BEZMAKSAS',
     'spinning': 'Griežas...',
     'spinAgain': 'Griezt vēlreiz',
-    'tripleCoinsAria': 'Noskaties reklāmu un saņem kopā {count} monētas',
+    'tripleCoinsAria': 'Noskaties reklāmu un saņem kopā {count} monētas | Noskaties reklāmu un saņem kopā {count} monētu | Noskaties reklāmu un saņem kopā {count} monētas',
     'skip': 'Izlaist',
     'youWin': 'TU UZVARĒJI!',
     'youLose': 'TU ZAUDĒJI!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Ielūguma kods',
     'copy': 'Kopēt',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Pievienojies manai Chaos Arena PvP kaujai!'
+    'shareText': 'Pievienojies manai Chaos Arena PvP kaujai!',
+    'versionMismatch': 'Tavs pretinieks izmanto citu spēles versiju. Abiem spēlētājiem jāpārlādē lapa un jāmēģina vēlreiz.'
   },
   'parts': {
     'star': 'Zvaigzne',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narvalis',
     'stag-beetle': 'Briežvabole',
     'drill': 'Urbis',
-    'lancer': 'Šķēpnesis'
+    'lancer': 'Šķēpnesis',
+    'cinder': 'Ogle',
+    'frost-vault': 'Sala velve',
+    'yeti': 'Jeti'
   },
   'skinChest': {
     'acquired': 'Iegūts: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Bosa trofeja',
+    'hint': 'Iegūst, uzvarot bosu, kas to valkā',
+    'beatStage': 'Uzvari {n}. posmā'
   },
   'tips': {
     'tankyBottom': 'Padoms: Vai esi izmēģinājis izturīgu apakšdaļu? Tā dod daudz dzīvības, lai tu izturētu vairāk raundu!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Iegūt dimantus',
-        'subtitle': 'Dimanti atbloķē fonus un (drīzumā) spēcīgas prasmes.',
+        'subtitle': 'Dimanti atbloķē fonus tavai arēnai.',
         'popular': 'Populārs',
         'bestValue': 'Izdevīgi',
         'note': 'Pirkumi atbalsta spēli. Droša apmaksa.'

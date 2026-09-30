@@ -163,6 +163,15 @@ What the terms mean in the game:
   `stages.*` values are arena/boss names — translate them as evocative names,
   not literally word by word. **Arena** — the round battlefield; `arenas.*` are
   arena types (Lava, Ice, Forest, Thunder, Shock).
+- **Stage-101+ bosses** — `stages.boss_*` are encounter names shown on the
+  boss intro card and the stage badge; the game appends a Roman numeral on a
+  repeat meeting ("… II"), so write a name that reads well with one. Keep them
+  ≤ 1.4 × English. `bosses.traits.*` are the boss mechanics (Ember Nova = a
+  fire burst, Frost Lock = freezes a spinner for its next turn, Frostbite = a
+  stacking slow); they are only read as a tooltip / screen-reader label.
+  `bosses.frozenHint` is one HUD line under the arena — keep it ≤ 1.3 × English.
+  The trophy skins (`skins.cinder` / `frost-vault` / `yeti`) and `trophySkin.*`
+  are earn-only rewards; "Yeti" may stay as the native word (allowlist it).
 - **Coins** (soft currency) and **diamonds** (premium currency). **Skins** —
   cosmetic looks for a top blade; `skins.*` are their names (creature, element
   or object names — translate them; a name that is a proper noun or is used as
@@ -223,8 +232,11 @@ the result; overflow flags appear in its output and `report.json`.
     - `%` and `$` are plain text.
       The parity test rejects a bare `@` or `|`.
 - **Plurals.** The English copy is written number-neutral ("reward(s)",
-  "{n} stages away"), and **no message uses `a | b` plural branches**. Do the
-  same: rephrase so the number does not need agreement — e.g. "Rewards ready:
+  "{n} stages away"). **Exception:** the coin-count aria labels
+  (`skills.learnAria`, `skills.upgradeAria`, `skills.topUpAria`,
+  `spinner.tripleCoinsAria`) DO use `a | b` branches — English `coin | coins`,
+  and every language one branch per category below (ar may spell out one/two).
+  Everywhere else, rephrase so the number does not need agreement — e.g. "Rewards ready:
   {n}!", "Stages left: {n}", "Season resets in: {n} d". Only if that is
   impossible use branches, one per whole-number CLDR category of your language
   (optionally plus a leading explicit-zero branch); the runtime picks them via

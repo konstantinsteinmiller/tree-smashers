@@ -103,6 +103,16 @@ export default {
     'stage_98': '星界競技場',
     'stage_99': '終極考驗',
     'stage_100': '永恆聖歌隊',
+    'boss_cinder_tyrant': '灰燼暴君',
+    'boss_glacier_warden': '冰河守衛',
+    'boss_frostbite_yeti': '凍傷雪怪',
+    'boss_twin_pyres': '雙生烈焰',
+    'boss_blizzard_choir': '暴雪聖歌隊',
+    'boss_shattering_glacier': '碎裂冰河',
+    'boss_frostfire_pact': '冰火盟約',
+    'boss_magma_titan': '熔岩泰坦',
+    'boss_blizzard_twins': '暴雪雙子',
+    'boss_elemental_court': '元素王庭',
     'cheat_boss': '作弊頭目',
     'cheat_ghost': '幻影雙子',
     'cheat_split': '碎裂蟲群',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': '關卡',
   'bossStage': '頭目關卡',
+  'labBadge': '實驗室',
   'bossDefeated': '擊敗頭目',
   'stageN': '第 {n} 關',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': '還有 {n} 關',
     'nextUp': '就在下一關！',
     'portraitAlt': '下個頭目：{name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': '餘燼新星',
+      'frost': '冰霜禁錮',
+      'chill': '凍傷'
+    },
+    'frozenAria': '冰凍中：跳過下一回合',
+    'frozenHint': '冰凍中！本回合後解凍。',
+    'chillAria': '寒意：速度 −{pct}%',
+    'trophyUnlocked': '{name}已解鎖！'
+  },
+  'skills': {
+    'title': '技能',
+    'slotEmpty': '空',
+    'slotAria': '技能欄位 {n}',
+    'slotChip': '欄位 {n}',
+    'unlockAt': '第 {n} 關',
+    'teaser': '擊敗第 {n} 關頭目即可解鎖技能！',
+    'lockedSkill': '擊敗第 {n} 關頭目後解鎖',
+    'equip': '裝備',
+    'remove': '卸下',
+    'equipped': '已裝備',
+    'max': '滿級',
+    'new': '新',
+    'now': '目前',
+    'next': '下一級',
+    'nextLine': '下一級：{values}',
+    'seconds': '{n} 秒',
+    'percent': '{n}%',
+    'unlockedTitle': '技能已解鎖！',
+    'newSkillTitle': '新技能！',
+    'newSlotTitle': '新技能欄位！',
+    'bossDrop': '擊敗此頭目以解鎖{name}',
+    'bossDropMystery': '擊敗此頭目以解鎖新內容',
+    'learn': '學習',
+    'manage': '裝備與升級',
+    'pickerTitle': '技能 · 欄位 {n}',
+    'opponentSkills': '對手的技能',
+    'hint': '已裝備的技能對兩個陀螺都有效。用金幣學習並升級技能，最高 10 級。',
+    'learnAria': '花費 {cost} 金幣學習{name}',
+    'upgradeAria': '花費 {cost} 金幣升級{name}',
+    'topUpAria': '觀看廣告獲得 {n} 金幣',
+    'hudAria': '{name}，{n} 級',
+    'intro': {
+      'kicker': '新力量',
+      'line1': '擊敗頭目解鎖技能。',
+      'line2': '用金幣學習並升級技能。',
+      'line3': '最多裝備 2 個——兩個陀螺都會使用。',
+      'line4': '戰鬥中會自動觸發。',
+      'cta': '選擇你的技能',
+      'demoAria': '範例：將{name}放入技能欄位。戰鬥中它會擋下敵人攻擊的一半並反彈回去。'
+    },
+    'names': {
+      'phase_step': '相位步',
+      'guard_shell': '守護甲殼',
+      'second_wind': '絕地回生',
+      'lucky_edge': '幸運之刃',
+      'homing_rockets': '追蹤火箭',
+      'opening_salvo': '開場齊射',
+      'momentum': '動量',
+      'hazard_ward': '災害結界',
+      'static_charge': '靜電充能',
+      'mirror_plate': '鏡面裝甲'
+    },
+    'desc': {
+      'phase_step': '{chance}% 機率穿過敵人的攻擊，不受傷害。冷卻 {cd} 秒。',
+      'guard_shell': '每場戰鬥開始時獲得最大生命值 {pct}% 的護盾，優先於生命值吸收傷害。',
+      'second_wind': '每場戰鬥一次：生命值降至 {threshold}% 或以下時，回復最大生命值的 {pct}%。',
+      'lucky_edge': '{chance}% 機率使攻擊成為幸運爆擊，造成 ×{mult} 傷害。',
+      'homing_rockets': '每與敵人碰撞 {n} 次，火箭攻擊最多 3 個敵人，共造成一次重擊 {pct}% 的傷害（平分）。',
+      'opening_salvo': '戰鬥開始時，每個敵人損失最大生命值的 {pct}%。',
+      'momentum': '發射期間，每次撞牆反彈或命中都讓之後的攻擊傷害 +{pct}%（最多 3 層）。',
+      'hazard_ward': '熔岩與雷電光環傷害降低 {hazard}%，尖刺傷害降低 {chip}%；撞到電擊牆後保留 {shock}% 速度（原為 10%）。',
+      'static_charge': '{chance}% 機率電擊撞向你的敵人：它會停下並跳過下一回合。',
+      'mirror_plate': '{chance}% 機率擋下敵人攻擊的一半並反彈回去。'
+    }
   },
   'you': '你',
   'prev': '上一頁',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': '邀請碼',
     'copy': '複製',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': '快來加入我的 Chaos Arena PvP 對戰！'
+    'shareText': '快來加入我的 Chaos Arena PvP 對戰！',
+    'versionMismatch': '對手使用的遊戲版本不同。雙方玩家都需要重新載入頁面後再試一次。'
   },
   'parts': {
     'star': '星刃',
@@ -363,10 +452,18 @@ export default {
     'narwhal': '獨角鯨',
     'stag-beetle': '鍬形蟲',
     'drill': '鑽頭',
-    'lancer': '槍騎兵'
+    'lancer': '槍騎兵',
+    'cinder': '餘燼',
+    'frost-vault': '冰霜穹頂',
+    'yeti': '雪怪'
   },
   'skinChest': {
     'acquired': '獲得{name}！'
+  },
+  'trophySkin': {
+    'label': '頭目戰利品',
+    'hint': '擊敗穿戴此造型的頭目即可獲得',
+    'beatStage': '通過第 {n} 關'
   },
   'tips': {
     'tankyBottom': '提示：試過坦克型下部零件嗎？它能大幅提升血量，讓你撐過更多回合！',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': '取得鑽石',
-        'subtitle': '鑽石可解鎖背景及（即將推出的）強力技能。',
+        'subtitle': '鑽石可解鎖競技場的背景。',
         'popular': '熱門',
         'bestValue': '最划算',
         'note': '購買可支持遊戲開發。安全結帳。'

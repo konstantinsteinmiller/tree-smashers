@@ -4,7 +4,7 @@ import type { SpinnerConfig, TopPartId, BottomPartId, BossAbility } from '@/type
 import { TOP_PARTS, BOTTOM_PARTS } from '@/use/useSpinnerConfig'
 // Source the skin catalogue from the PURE data module (not useModels) so this
 // composable's import graph stays free of the useMatch→useSound→useUser cycle.
-import { SKINS_PER_TOP, type SpinnerModelId } from '@/data/skinCatalog'
+import { offerableSkinsForTop, type SpinnerModelId } from '@/data/skinCatalog'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { NON_CIRCLE_SHAPES, type ArenaShape } from '@/use/arenaShapes'
 import { saveDataVersion } from '@/use/useSaveStatus'
@@ -60,7 +60,7 @@ const randInt = (min: number, max: number) => Math.floor(min + Math.random() * (
 
 /** Random skin valid for the given top part (mirrors useModels.getRandomSkinForTop
  *  but sourced from the pure catalogue to keep this module cycle-free). */
-const randomSkinForTop = (topPartId: TopPartId): SpinnerModelId => rand(SKINS_PER_TOP[topPartId])
+const randomSkinForTop = (topPartId: TopPartId): SpinnerModelId => rand(offerableSkinsForTop(topPartId))
 
 const todayStr = (): string => utcDayKey()
 

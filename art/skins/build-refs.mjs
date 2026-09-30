@@ -5,6 +5,7 @@
  *   node art/skins/build-refs.mjs                 silhouettes + plates
  *   node art/skins/build-refs.mjs --plates-only   only the style/finish plates (what a re-paint needs)
  *   node art/skins/build-refs.mjs --no-plates     only the silhouettes (after editing a tpl in concepts.mjs)
+ *   node art/skins/build-refs.mjs --trophies      only the boss trophy singles (TROPHY_SKINS)
  *
  * Writes, per class, into art/skins/<class>/:
  *   sheet.png          (committed) 1024x1024 2x2 layout reference — four grey class
@@ -31,12 +32,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { crc32, deflateSync } from 'node:zlib'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CLASSES, CLASS_ORDER } from './concepts.mjs'
+import { CLASSES, CLASS_ORDER, TROPHY_SKINS } from './concepts.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..', '..')
 const MODELS = join(ROOT, 'public', 'images', 'models')
 const PLATES_ONLY = process.argv.includes('--plates-only')
+// --trophies: only the boss trophy singles (<cls>/single-<id>.png), nothing else
+const TROPHIES_ONLY = process.argv.includes('--trophies')
 const NO_PLATES = process.argv.includes('--no-plates')
 
 // Runs inside the page. Draws one grey class silhouette centred on (cx, cy).
@@ -63,7 +66,8 @@ const drawTemplate = (ctx, cx, cy, R, tpl) => {
       const x = a * R * Math.sign(ct) * Math.abs(ct) ** (2 / p)
       const y = a * R * Math.sign(st) * Math.abs(st) ** (2 / p)
       const xr = x * Math.cos(rot) - y * Math.sin(rot), yr = x * Math.sin(rot) + y * Math.cos(rot)
-      if (i === 0) c.moveTo(cx + xr, cy + yr) else c.lineTo(cx + xr, cy + yr)
+      if (i === 0) c.moveTo(cx + xr, cy + yr)
+      else c.lineTo(cx + xr, cy + yr)
     }
     c.closePath()
   }
@@ -126,6 +130,18 @@ const drawTemplate = (ctx, cx, cy, R, tpl) => {
         c.moveTo(cx + r * R, cy)
         c.arc(cx, cy, r * R, 0, TAU)
       })
+      // Cinder (trophy): four grate bars in a # across the coal bed.
+      if (tpl.grate) {
+        const k = R * 0.48, e = R * 0.62
+        extra.push((c) => {
+          for (const s of [-1, 1]) {
+            c.moveTo(cx + s * k, cy - e)
+            c.lineTo(cx + s * k, cy + e)
+            c.moveTo(cx - e, cy + s * k)
+            c.lineTo(cx + e, cy + s * k)
+          }
+        })
+      }
       ringR = tpl.rings[0]
       break
     }
@@ -163,6 +179,16 @@ const drawTemplate = (ctx, cx, cy, R, tpl) => {
         }
       }
       if (tpl.checker) extra.push(superellipse(tpl.a * 0.72, tpl.p))
+      // Frost Vault (trophy): four round lobes capping the corners.
+      if (tpl.cornerLobes) {
+        for (let i = 0; i < 4; i++) {
+          const [x, y] = P(R * 0.7, Math.PI / 4 + (i / 4) * TAU)
+          shapes.push((c) => {
+            c.moveTo(x + tpl.cornerLobes * R, y)
+            c.arc(x, y, tpl.cornerLobes * R, 0, TAU)
+          })
+        }
+      }
       ringR = 0.46
       break
     }
@@ -281,7 +307,8 @@ const drawTemplate = (ctx, cx, cy, R, tpl) => {
   for (let i = 0; i < 6; i++) {
     const a = Math.PI / 6 + (i / 6) * TAU
     const p = P(R * 0.23, a)
-    if (i) ctx.lineTo(...p) else ctx.moveTo(...p)
+    if (i) ctx.lineTo(...p)
+    else ctx.moveTo(...p)
   }
   ctx.closePath()
   ctx.fillStyle = HEX
@@ -384,7 +411,20 @@ try {
     }, { b64 }), 'base64')
   }
 
-  for (const cls of CLASS_ORDER) {
+  // Boss trophy skins: a single layout reference each, in their class folder.
+  if (!PLATES_ONLY) {
+    for (const s of TROPHY_SKINS) {
+      writeFileSync(join(HERE, s.cls, `single-${s.id}.png`), await silhouettes([{
+        cx: 512,
+        cy: 512,
+        R: 380,
+        tpl: s.tpl
+      }]))
+    }
+    console.log(`trophies: ${TROPHY_SKINS.length} singles`)
+  }
+
+  for (const cls of TROPHIES_ONLY ? [] : CLASS_ORDER) {
     const def = CLASSES[cls]
     const dir = join(HERE, cls)
     mkdirSync(dir, { recursive: true })

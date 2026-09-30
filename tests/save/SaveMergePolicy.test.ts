@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest'
+// Skills build: skill levels count toward the merge score (the flag-off
+// behaviour is pinned in tests/skillsFlagOff.test.ts).
+import '../helpers/skillsBuild'
+import { SKILLS_KEY } from '@/keys'
 import {
   applyBonusCoins,
   computeMeta,
@@ -105,6 +109,37 @@ describe('SaveMergePolicy.computeMeta', () => {
       [SAVE_KEYS.SKINS]: 'also nope'
     }))
     expect(meta.progressScore).toBe(3 * 500)
+  })
+
+  it('counts every stored skill level at 150 (learning = one level)', () => {
+    const skills = JSON.stringify({ v: 1, lv: { mirror_plate: 3, phase_step: 1, guard_shell: 10 } })
+    const meta = computeMeta(reader({ [SAVE_KEYS.STAGE]: '21', [SKILLS_KEY]: skills }))
+    expect(meta.progressScore).toBe(21 * 500 + 14 * 150)
+  })
+
+  it('a save without skills scores exactly as before', () => {
+    const base = { [SAVE_KEYS.STAGE]: '30', [SAVE_KEYS.UPGRADES]: upgradesJson({ star: 5 }) }
+    expect(computeMeta(reader(base)).progressScore).toBe(30 * 500 + 5 * 150)
+    expect(computeMeta(reader({ ...base, [SKILLS_KEY]: JSON.stringify({ v: 1, lv: {} }) })).progressScore)
+      .toBe(30 * 500 + 5 * 150)
+  })
+
+  it('equal progress with skills beats the same save without them', () => {
+    const base = { [SAVE_KEYS.STAGE]: '30' }
+    const withSkills = computeMeta(reader({
+      ...base,
+      [SKILLS_KEY]: JSON.stringify({ v: 1, lv: { mirror_plate: 1 } })
+    }), '2026-01-01T00:00:00Z')
+    const without = computeMeta(reader(base), '2026-01-02T00:00:00Z')
+    expect(decideMerge(without, withSkills)).toEqual({ kind: 'remote-wins', bonusCoins: 30 * 50 })
+  })
+
+  it('ignores unknown skill ids, junk values and clamps levels to 10', () => {
+    const skills = JSON.stringify({ v: 1, lv: { bogus: 9, mirror_plate: 99, phase_step: -2, guard_shell: 'x' } })
+    expect(computeMeta(reader({ [SAVE_KEYS.STAGE]: '1', [SKILLS_KEY]: skills })).progressScore)
+      .toBe(500 + 10 * 150)
+    expect(computeMeta(reader({ [SAVE_KEYS.STAGE]: '1', [SKILLS_KEY]: '{bad' })).progressScore).toBe(500)
+    expect(computeMeta(reader({ [SAVE_KEYS.STAGE]: '1', [SKILLS_KEY]: 'null' })).progressScore).toBe(500)
   })
 })
 

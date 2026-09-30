@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Asztrálaréna',
     'stage_99': 'Omega-kihívás',
     'stage_100': 'Az örök kórus',
+    'boss_cinder_tyrant': 'A hamuzsarnok',
+    'boss_glacier_warden': 'A gleccserőr',
+    'boss_frostbite_yeti': 'A fagymarta jeti',
+    'boss_twin_pyres': 'Az ikermáglyák',
+    'boss_blizzard_choir': 'A hóviharkórus',
+    'boss_shattering_glacier': 'A széthasadó gleccser',
+    'boss_frostfire_pact': 'A tűz-jég paktum',
+    'boss_magma_titan': 'A magmatitán',
+    'boss_blizzard_twins': 'A hóviharikrek',
+    'boss_elemental_court': 'Az elemek udvara',
     'cheat_boss': 'Csaló boss',
     'cheat_ghost': 'Fantomiker',
     'cheat_split': 'Széthulló raj',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Pálya',
   'bossStage': 'Bosspálya',
+  'labBadge': 'LABOR',
   'bossDefeated': 'Boss legyőzve',
   'stageN': '{n}. pálya',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Még {n} pálya a bossig',
     'nextUp': 'Következő pálya!',
     'portraitAlt': 'Következő boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Parázsnóva',
+      'frost': 'Fagyzár',
+      'chill': 'Fagymarás'
+    },
+    'frozenAria': 'Megfagyott: kihagyja a következő körét',
+    'frozenHint': 'Megfagyott! E kör után kiolvad.',
+    'chillAria': 'Lehűlt: sebesség −{pct}%',
+    'trophyUnlocked': '{name} feloldva!'
+  },
+  'skills': {
+    'title': 'Képességek',
+    'slotEmpty': 'Üres',
+    'slotAria': '{n}. képességhely',
+    'slotChip': '{n}. hely',
+    'unlockAt': '{n}. pálya',
+    'teaser': 'Győzd le a(z) {n}. pálya bossát a képességekért!',
+    'lockedSkill': 'A(z) {n}. pálya bossa után nyílik meg',
+    'equip': 'Felszerel',
+    'remove': 'Levesz',
+    'equipped': 'Felszerelve',
+    'max': 'MAX',
+    'new': 'ÚJ',
+    'now': 'Most',
+    'next': 'Következő',
+    'nextLine': 'Következő: {values}',
+    'seconds': '{n} mp',
+    'percent': '{n}%',
+    'unlockedTitle': 'Képességek feloldva!',
+    'newSkillTitle': 'Új képesség!',
+    'newSlotTitle': 'Új képességhely!',
+    'bossDrop': 'Győzd le ezt a bosst, és megnyílik: {name}',
+    'bossDropMystery': 'Győzd le ezt a bosst valami újért',
+    'learn': 'Megtanul',
+    'manage': 'Felszerel és fejleszt',
+    'pickerTitle': 'Képességek · {n}. hely',
+    'opponentSkills': 'Az ellenfél képességei',
+    'hint': 'A felszerelt képességek mindkét pörgettyűre hatnak. Tanulj és fejlessz képességeket érmékért, egészen a 10. szintig.',
+    'learnAria': '{name} megtanulása {cost} érméért | {name} megtanulása {cost} érméért',
+    'upgradeAria': '{name} fejlesztése {cost} érméért | {name} fejlesztése {cost} érméért',
+    'topUpAria': 'Nézz meg egy reklámot {n} érméért | Nézz meg egy reklámot {n} érméért',
+    'hudAria': '{name}, {n}. szint',
+    'intro': {
+      'kicker': 'Új erő',
+      'line1': 'Győzd le a bossokat a képességekért.',
+      'line2': 'Tanuld meg és fejleszd őket érmékért.',
+      'line3': 'Szerelj fel max. 2-t — mindkét pörgettyű használja.',
+      'line4': 'Csatában maguktól aktiválódnak.',
+      'cta': 'Válassz képességet',
+      'demoAria': 'Példa: {name} egy képességhelyre kerül. Csatában blokkolja az ellenséges találat felét, és visszaküldi.'
+    },
+    'names': {
+      'phase_step': 'Fázislépés',
+      'guard_shell': 'Őrpáncél',
+      'second_wind': 'Második szél',
+      'lucky_edge': 'Szerencsepenge',
+      'homing_rockets': 'Irányított rakéták',
+      'opening_salvo': 'Nyitó sortűz',
+      'momentum': 'Lendület',
+      'hazard_ward': 'Veszélyvédő',
+      'static_charge': 'Statikus töltés',
+      'mirror_plate': 'Tükörlemez'
+    },
+    'desc': {
+      'phase_step': '{chance}% esély, hogy átsuhansz egy ellenséges találaton sebzés nélkül. Újratöltés: {cd} mp.',
+      'guard_shell': 'Minden csatát a max. HP {pct}%-ának megfelelő pajzzsal kezdesz. A sebzést a HP előtt nyeli el.',
+      'second_wind': 'Csatánként egyszer, amikor a HP {threshold}%-ra vagy az alá esik: a max. HP {pct}%-át gyógyítja.',
+      'lucky_edge': '{chance}% esély, hogy a találat ×{mult} sebzésű szerencsés kritikus találattá válik.',
+      'homing_rockets': 'Minden {n}. ütközésnél ellenségekkel: rakéták legfeljebb 3 ellenséget találnak el egy erős találat {pct}%-ával, elosztva.',
+      'opening_salvo': 'A csata kezdetén minden ellenség elveszíti max. HP-ja {pct}%-át.',
+      'momentum': 'Kilövésed közben minden falról pattanás vagy találat +{pct}% sebzést ad a következő találataidhoz (max. 3).',
+      'hazard_ward': 'A láva- és villámaurák {hazard}%-kal, a tüskék {chip}%-kal kevesebbet sebeznek; a sokkfalak 10% helyett {shock}% sebességet hagynak neked.',
+      'static_charge': '{chance}% esély, hogy megrázod az ellenséget, amely beléd rohan: megáll, és kihagyja a következő körét.',
+      'mirror_plate': '{chance}% esély, hogy blokkolod egy ellenséges találat felét, és visszaküldöd.'
+    }
   },
   'you': 'TE',
   'prev': 'Előző',
@@ -193,7 +281,7 @@ export default {
     'free': 'INGYEN',
     'spinning': 'Pörgés...',
     'spinAgain': 'Pörgess újra',
-    'tripleCoinsAria': 'Nézz meg egy hirdetést, és összesen {count} érmét kapsz',
+    'tripleCoinsAria': 'Nézz meg egy hirdetést, és összesen {count} érmét kapsz | Nézz meg egy hirdetést, és összesen {count} érmét kapsz',
     'skip': 'Kihagyás',
     'youWin': 'GYŐZTÉL!',
     'youLose': 'VESZTETTÉL!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Meghívókód',
     'copy': 'Másolás',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Csatlakozz a Chaos Arena PvP-csatámhoz!'
+    'shareText': 'Csatlakozz a Chaos Arena PvP-csatámhoz!',
+    'versionMismatch': 'Az ellenfeled a játék egy másik verzióját használja. Mindkét játékos töltse újra az oldalt, és próbálja újra.'
   },
   'parts': {
     'star': 'Csillagpenge',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narvál',
     'stag-beetle': 'Szarvasbogár',
     'drill': 'Fúró',
-    'lancer': 'Lándzsás'
+    'lancer': 'Lándzsás',
+    'cinder': 'Parázs',
+    'frost-vault': 'Fagyboltozat',
+    'yeti': 'Jeti'
   },
   'skinChest': {
     'acquired': 'Megszerezted: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Bosstrófea',
+    'hint': 'Az ezt viselő boss legyőzéséért jár',
+    'beatStage': 'Nyerd meg a(z) {n}. pályát'
   },
   'tips': {
     'tankyBottom': 'Tipp: Próbáltál már masszív alsó részt? Rengeteg HP-t ad, így több kört is túlélsz!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Gyémántbolt',
-        'subtitle': 'A gyémántok hátteret és (hamarosan) erős képességeket nyitnak meg.',
+        'subtitle': 'A gyémántok háttereket nyitnak meg az arénádhoz.',
         'popular': 'Népszerű',
         'bestValue': 'Legjobb ár',
         'note': 'A vásárlás támogatja a játékot. Biztonságos fizetés.'

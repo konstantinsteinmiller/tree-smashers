@@ -5,8 +5,9 @@
 //   2. Every table has 10 levels; every parameter non-decreasing with level,
 //      except the ones where smaller = stronger (cooldownMs, everyN), which
 //      are non-increasing.
-//   3. Costs: learn 150, sum 2,650 per skill (§6.1), and equal to the sim's
-//      SKILL_COST in tools/skills-sim/skillecon.mjs.
+//   3. Costs: learn 150, sum 2,650 per skill (§6.1). The catalog is the ONLY
+//      price source: the sim reads SKILL_COST from it (skills.mjs
+//      CATALOG_SKILL_COST → skillecon.mjs SKILL_COST) and hardcodes none.
 //   4. Closed-form L10 EV sizes of §3.8 ≤ 1.225 (= √1.5).
 //   5. PARITY with tools/skills-sim/skills.mjs — every skill, level and field.
 //      The ≤ 1.5 balance proof was measured on the sim's tables, so any drift
@@ -42,7 +43,7 @@ import {
 } from '@/data/skillCatalog'
 import * as catalogModule from '@/data/skillCatalog'
 // @ts-ignore — plain ESM from the balance simulator, no .d.ts
-import { SKILL_DEFS, SKILL_IDS as SIM_SKILL_IDS } from '../tools/skills-sim/skills.mjs'
+import { SKILL_DEFS, SKILL_IDS as SIM_SKILL_IDS, CATALOG_SKILL_COST } from '../tools/skills-sim/skills.mjs'
 
 type Row = Record<string, number>
 const rows = (id: SkillId): Row[] => SKILLS[id].levels as unknown as Row[]
@@ -206,10 +207,21 @@ describe('skillCatalog — costs (§6.1)', () => {
     expect(SKILL_TOTAL_COST * SKILL_IDS.length).toBe(26500)
   })
 
-  it('equals the sim default SKILL_COST in skillecon.mjs', () => {
-    const src = readFileSync(resolve(__dirname, '../tools/skills-sim/skillecon.mjs'), 'utf8')
-    const def = src.match(/process\.env\.SKILL_COST \?\? '([\d,]+)'/)?.[1]
-    expect(def?.split(',').map(Number)).toEqual([...SKILL_COST])
+  it('the sim reads SKILL_COST from the catalog (skills.mjs → skillecon.mjs)', () => {
+    expect([...CATALOG_SKILL_COST]).toEqual([...SKILL_COST])
+    // skillecon.mjs is not imported here: its econ.mjs dependency resolves the
+    // repo through the global URL, which is jsdom's under Vitest. Source check.
+    const econ = readFileSync(resolve(__dirname, '../tools/skills-sim/skillecon.mjs'), 'utf8')
+    expect(econ).toMatch(/import \{[^}]*\bCATALOG_SKILL_COST\b[^}]*\} from '\.\/skills\.mjs'/)
+    expect(econ).toMatch(/export const SKILL_COST = [^\n]*\[\.\.\.CATALOG_SKILL_COST\]/)
+  })
+
+  it('no sim script hardcodes the price curve (single source)', () => {
+    const curve = /150\s*[,|]\s*100\s*[,|]\s*125/
+    for (const f of ['skillecon.mjs', 'fill.mjs', 'skills.mjs', 'econ.mjs']) {
+      const src = readFileSync(resolve(__dirname, '../tools/skills-sim', f), 'utf8')
+      expect(curve.test(src), f).toBe(false)
+    }
   })
 
   it('skillCost: 0 → learn, 9 → 575, max/invalid → null', () => {

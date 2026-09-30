@@ -3,6 +3,7 @@ import { displayDiamondReward } from '@/use/useCurrency'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
+import { isEarnOnlySkin } from '@/data/skinCatalog'
 import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resourceCache, getCachedImage } from '@/use/useAssets'
@@ -82,6 +83,8 @@ const getUnownedSkins = (): { topPartId: TopPartId; modelId: SpinnerModelId; isS
     for (const modelId of skins) {
       if (seen.has(modelId)) continue
       seen.add(modelId)
+      // Boss trophies are earn-only: never a wheel segment.
+      if (isEarnOnlySkin(modelId)) continue
       if (!isModelFullyOwned(modelId)) {
         result.push({ topPartId: topPartId as TopPartId, modelId, isSpecial: SPECIAL_SKINS.has(modelId) })
       }

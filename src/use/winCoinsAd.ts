@@ -12,6 +12,12 @@
 //
 // Boss wins never offer it: they end on the boss roulette, which already has
 // its own ad (the "Spin Again" respin) and pays up to 3x plus skins/jackpot.
+// PvP wins never offer it either (product decision) — the PvP result screen
+// shows its purse + honor only.
+// Cheat-stage and Boss Lab wins never offer it either (batch 3, G5): those
+// test fights pay their own fixed coins (labBattle.ts, G1 settlement) and a
+// 3x on top would turn a dev cheat into a coin farm.
+// It stays on campaign, ghost/leaderboard and daily-challenge non-boss wins.
 
 /** The total multiple a completed ad leaves the player with. */
 export const WIN_AD_MULTIPLIER = 3
@@ -33,6 +39,11 @@ export interface WinCoinsAdContext {
   result: 'win' | 'lose' | null | undefined
   /** A campaign win on a boss stage — the roulette path. */
   bossWin: boolean
+  /** A PvP match result screen. */
+  pvp: boolean
+  /** A cheat-stage / Boss Lab fight (the G1 settlement branch). Optional so
+   *  older call sites read as "not a Lab fight". */
+  labWin?: boolean
   /** Coins the win screen granted. */
   baseCoins: number
 }
@@ -40,4 +51,4 @@ export interface WinCoinsAdContext {
 /** Does this result screen carry the 3x button at all? (Readiness is a
  *  separate, per-tap gate: an unready ad disables the button, never hides it.) */
 export const showsWinCoinsAd = (c: WinCoinsAdContext): boolean =>
-  c.adsBuild && c.result === 'win' && !c.bossWin && cleanBase(c.baseCoins) > 0
+  c.adsBuild && c.result === 'win' && !c.bossWin && !c.pvp && !c.labWin && cleanBase(c.baseCoins) > 0

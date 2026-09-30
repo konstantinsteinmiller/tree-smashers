@@ -5,8 +5,10 @@ const hyp = (x, y) => Math.sqrt(x * x + y * y)
 // Rendering, sound, VFX timers and screen shake are dropped; every rule that
 // moves HP or velocity is kept. Single-player clock: gameTime = tick * 1000/60
 // (the fixed-step accumulator runs updatePhysics at 60 Hz, FIXED_STEP_MS).
+// Mirrors the post-WP0 engine: collision pairs in syncKey order, star-top crit
+// and child-emitter angle on the match RNG (here: the seeded physics stream `rng`).
 import { computeStats, getStageById, lockstepLevel } from './data.mjs'
-import { SKILL_DEFS } from './skills.mjs'
+import { SKILL_PARAMS } from './skills.mjs'
 
 // ── constants (useSpinnerGame.ts:63-137, 1103-1130, 1600-1619) ─────────────
 const ARENA_RADIUS = 200
@@ -91,6 +93,21 @@ export const runBattle = (opts) => {
   const player = []
   const npc = []
   const allLive = () => player.concat(npc)
+  // Post-WP0 canonical order (useSpinnerGame.ts bladesBySyncKey / childSyncKey):
+  // player team 0..n-1, enemy team 100+i, children (parent + 1) * 1000 + ordinal.
+  // Collision pairs run in this order, lower key = `a` (anti-draw tie-break and
+  // the star-crit draw order follow it). Rebuilt only when a blade spawns.
+  const childSpawnSeq = new Map()
+  const childSyncKey = (parent) => {
+    const n = childSpawnSeq.get(parent.syncKey) ?? 0
+    childSpawnSeq.set(parent.syncKey, n + 1)
+    return (parent.syncKey + 1) * 1000 + n
+  }
+  let ordered = []
+  const orderedBlades = () => {
+    if (ordered.length !== player.length + npc.length) ordered = allLive().sort((p, q) => p.syncKey - q.syncKey)
+    return ordered
+  }
 
   // statsFor (useSpinnerGame.ts 1636-1690). The shipped code caches per tick;
   // the result only changes with buffs / stat-switch phase, so the sim caches
@@ -136,7 +153,7 @@ export const runBattle = (opts) => {
     return {
       id: nextId++, x, y, vx: 0, vy: 0, ax: 0, ay: 0, accelFramesLeft: 0,
       radius: BLADE_RADIUS * radiusMult, hp, maxHp: hp, wallBounceCount: 0, lastHitTime: 0,
-      config, owner, isBoss, lastShockMs: -1e9
+      config, owner, isBoss, lastShockMs: -1e9, syncKey: -1
     }
   }
 
@@ -163,7 +180,7 @@ export const runBattle = (opts) => {
 
   // ── skills: runtime state lives on the blade (`b.sk`) ────────────────────
   const skillOf = (b, id) => b.skills?.find(s => s.id === id)
-  const P = (id, lvl) => SKILL_DEFS[id].levels[lvl - 1]
+  const P = (id, lvl) => SKILL_PARAMS[id].levels[lvl - 1]
 
   // Central HP-loss path. In the shipped code HP is decremented in three
   // places (applyBladeDamage, lava wall, thunder aura); the spec routes them
@@ -260,6 +277,12 @@ export const runBattle = (opts) => {
     p.y = c.y
   }
   nTeam.forEach((cfg, i) => npc.push(createBlade('npc', positions[i].x, positions[i].y, cfg, !!cfg.isBoss)))
+  player.forEach((b, i) => {
+    b.syncKey = i
+  })
+  npc.forEach((b, i) => {
+    b.syncKey = 100 + i
+  })
 
   const lead = nTeam.find(c => c.bossAbility)?.bossAbility
   if (lead === 'partners' || lead === 'healers') {
@@ -378,6 +401,7 @@ export const runBattle = (opts) => {
     const c = clampInArena(twin.x, twin.y, twin.radius)
     twin.x = c.x
     twin.y = c.y
+    twin.syncKey = childSyncKey(parent)
     ;(parent.owner === 'npc' ? npc : player).push(twin)
   }
 
@@ -404,6 +428,7 @@ export const runBattle = (opts) => {
       const c = clampInArena(ch.x, ch.y, ch.radius, 4)
       ch.x = c.x
       ch.y = c.y
+      ch.syncKey = childSyncKey(parent)
       ;(parent.owner === 'npc' ? npc : player).push(ch)
     }
   }
@@ -847,6 +872,7 @@ export const runBattle = (opts) => {
         ch.groupId = nextGroup++
         ch.vx = Math.cos(ang) * 1.5
         ch.vy = Math.sin(ang) * 1.5
+        ch.syncKey = childSyncKey(em)
         ;(em.owner === 'npc' ? npc : player).push(ch)
       }
     }
@@ -979,10 +1005,12 @@ export const runBattle = (opts) => {
       bounceOffWalls(b)
       bounceOffBouncers(b)
     }
-    for (let i = 0; i < all.length; i++) {
-      for (let k = i + 1; k < all.length; k++) {
-        if (all[i].hp <= 0 || all[k].hp <= 0) continue
-        resolveCollision(all[i], all[k])
+    // All-pairs collision in canonical syncKey order (post-WP0 updatePhysics)
+    const ord = orderedBlades()
+    for (let i = 0; i < ord.length; i++) {
+      for (let k = i + 1; k < ord.length; k++) {
+        if (ord[i].hp <= 0 || ord[k].hp <= 0) continue
+        resolveCollision(ord[i], ord[k])
       }
     }
     // thunder boss aura (2801-2829)

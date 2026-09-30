@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astralna arena',
     'stage_99': 'Izazov Omega',
     'stage_100': 'Vječni zbor',
+    'boss_cinder_tyrant': 'Tiranin pepela',
+    'boss_glacier_warden': 'Čuvar ledenjaka',
+    'boss_frostbite_yeti': 'Ledeni jeti',
+    'boss_twin_pyres': 'Blizanačke lomače',
+    'boss_blizzard_choir': 'Zbor mećave',
+    'boss_shattering_glacier': 'Rasprsnuti ledenjak',
+    'boss_frostfire_pact': 'Pakt vatre i leda',
+    'boss_magma_titan': 'Titan od magme',
+    'boss_blizzard_twins': 'Blizanci mećave',
+    'boss_elemental_court': 'Dvor elemenata',
     'cheat_boss': 'Boss varalica',
     'cheat_ghost': 'Sablasni blizanac',
     'cheat_split': 'Rasprsnuti roj',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa s bossom',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss poražen',
   'stageN': '{n}. etapa',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Preostalo etapa: {n}',
     'nextUp': 'Sljedeća etapa!',
     'portraitAlt': 'Sljedeći boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova žara',
+      'frost': 'Ledeni okov',
+      'chill': 'Smrzotina'
+    },
+    'frozenAria': 'Smrznut: preskače sljedeći potez',
+    'frozenHint': 'Smrznut! Odmrznut će se nakon ovog poteza.',
+    'chillAria': 'Pothlađen: brzina −{pct}%',
+    'trophyUnlocked': 'Otključano: {name}!'
+  },
+  'skills': {
+    'title': 'Vještine',
+    'slotEmpty': 'Prazno',
+    'slotAria': 'Utor vještine {n}',
+    'slotChip': 'Utor {n}',
+    'unlockAt': 'Etapa {n}',
+    'teaser': 'Pobijedi bossa etape {n} i otključaj vještine!',
+    'lockedSkill': 'Otključava se nakon bossa etape {n}',
+    'equip': 'Opremi',
+    'remove': 'Ukloni',
+    'equipped': 'Opremljeno',
+    'max': 'MAKS',
+    'new': 'NOVO',
+    'now': 'Sada',
+    'next': 'Sljedeće',
+    'nextLine': 'Sljedeće: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Vještine otključane!',
+    'newSkillTitle': 'Nova vještina!',
+    'newSlotTitle': 'Novi utor vještine!',
+    'bossDrop': 'Pobijedi ovog bossa i otključaj {name}',
+    'bossDropMystery': 'Pobijedi ovog bossa i otključaj nešto novo',
+    'learn': 'Nauči',
+    'manage': 'Opremi i poboljšaj',
+    'pickerTitle': 'Vještine · utor {n}',
+    'opponentSkills': 'Vještine protivnika',
+    'hint': 'Opremljene vještine djeluju na oba zvrka. Uči i poboljšavaj vještine novčićima do razine 10.',
+    'learnAria': 'Nauči {name} za {cost} novčić | Nauči {name} za {cost} novčića | Nauči {name} za {cost} novčića',
+    'upgradeAria': 'Poboljšaj {name} za {cost} novčić | Poboljšaj {name} za {cost} novčića | Poboljšaj {name} za {cost} novčića',
+    'topUpAria': 'Pogledaj oglas za {n} novčić | Pogledaj oglas za {n} novčića | Pogledaj oglas za {n} novčića',
+    'hudAria': '{name}, razina {n}',
+    'intro': {
+      'kicker': 'Nova moć',
+      'line1': 'Pobjeđuj bossove i otključaj vještine.',
+      'line2': 'Uči ih i poboljšavaj novčićima.',
+      'line3': 'Opremi do 2 — koriste ih oba zvrka.',
+      'line4': 'U borbi se aktiviraju same.',
+      'cta': 'Odaberi vještinu',
+      'demoAria': 'Primjer: {name} ide u utor vještine. U borbi blokira pola neprijateljskog udarca i vraća ga natrag.'
+    },
+    'names': {
+      'phase_step': 'Fazni korak',
+      'guard_shell': 'Zaštitna ljuska',
+      'second_wind': 'Drugi dah',
+      'lucky_edge': 'Sretna oštrica',
+      'homing_rockets': 'Navođene rakete',
+      'opening_salvo': 'Uvodni plotun',
+      'momentum': 'Zamah',
+      'hazard_ward': 'Zaštita od opasnosti',
+      'static_charge': 'Statički naboj',
+      'mirror_plate': 'Zrcalna ploča'
+    },
+    'desc': {
+      'phase_step': '{chance}% šanse da prođeš kroz neprijateljski udarac bez štete. Hlađenje {cd} s.',
+      'guard_shell': 'Započni svaku borbu sa štitom od {pct}% maks. HP-a. Upija štetu prije HP-a.',
+      'second_wind': 'Jednom po borbi, kad HP padne na {threshold}% ili manje: liječi {pct}% maks. HP-a.',
+      'lucky_edge': '{chance}% šanse da udarac postane sretni kritični udarac sa štetom ×{mult}.',
+      'homing_rockets': 'Svakih {n} sudara s neprijateljima: rakete pogađaju do 3 neprijatelja za {pct}% snažnog udarca, podijeljeno.',
+      'opening_salvo': 'Na početku borbe svaki neprijatelj gubi {pct}% svog maks. HP-a.',
+      'momentum': 'Tijekom tvog lansiranja svako odbijanje od zida ili udarac dodaje +{pct}% štete sljedećim udarcima (maks. 3).',
+      'hazard_ward': 'Lava i gromovite aure nanose {hazard}% manje štete, šiljci {chip}% manje; šok-zidovi ostavljaju ti {shock}% brzine umjesto 10%.',
+      'static_charge': '{chance}% šanse da strujom udariš neprijatelja koji se zabije u tebe: zaustavi se i preskoči sljedeći potez.',
+      'mirror_plate': '{chance}% šanse da blokiraš pola neprijateljskog udarca i vratiš ga natrag.'
+    }
   },
   'you': 'TI',
   'prev': 'Natrag',
@@ -193,7 +281,7 @@ export default {
     'free': 'BESPLATNO',
     'spinning': 'Vrti se...',
     'spinAgain': 'Zavrti ponovno',
-    'tripleCoinsAria': 'Pogledaj oglas i dobij ukupno {count} novčića',
+    'tripleCoinsAria': 'Pogledaj oglas i dobij ukupno {count} novčić | Pogledaj oglas i dobij ukupno {count} novčića | Pogledaj oglas i dobij ukupno {count} novčića',
     'skip': 'Preskoči',
     'youWin': 'POBJEDA!',
     'youLose': 'PORAZ!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kod pozivnice',
     'copy': 'Kopiraj',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Pridruži se mojoj PvP bitci u igri Chaos Arena!'
+    'shareText': 'Pridruži se mojoj PvP bitci u igri Chaos Arena!',
+    'versionMismatch': 'Tvoj protivnik koristi drugu verziju igre. Oba igrača trebaju ponovno učitati stranicu i pokušati opet.'
   },
   'parts': {
     'star': 'Zvijezda',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Jelenak',
     'drill': 'Bušilica',
-    'lancer': 'Kopljanik'
+    'lancer': 'Kopljanik',
+    'cinder': 'Pepeo',
+    'frost-vault': 'Ledeni trezor',
+    'yeti': 'Jeti'
   },
   'skinChest': {
     'acquired': 'Osvojeno: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofej bossa',
+    'hint': 'Osvaja se pobjedom nad bossom koji ga nosi',
+    'beatStage': 'Pobijedi {n}. etapu'
   },
   'tips': {
     'tankyBottom': 'Savjet: Probaj izdržljivi donji dio! Daje puno HP-a da preživiš više rundi.',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Nabavi dijamante',
-        'subtitle': 'Dijamanti otključavaju pozadine i (uskoro) moćne vještine.',
+        'subtitle': 'Dijamanti otključavaju pozadine za tvoju arenu.',
         'popular': 'Popularno',
         'bestValue': 'Top ponuda',
         'note': 'Kupnje podržavaju igru. Sigurno plaćanje.'

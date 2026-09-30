@@ -16,7 +16,7 @@ import {
   SKINS_PER_TOP, skinCost,
   modelImgPath, isSkinOwned, purchaseSkinWithCoins, selectSkin, getSelectedSkin,
   hasUnownedSkinsForTop,
-  isAdUnlockSkin, recordSkinAdWatch, settleSkinAdProgress,
+  isAdUnlockSkin, isEarnOnlySkin, recordSkinAdWatch, settleSkinAdProgress,
   markSkinPickerOpened, wasSkinPickerOpened,
   type SpinnerModelId
 } from '@/use/useModels'
@@ -32,6 +32,13 @@ import { isBgSkinsEnabled, isNative } from '@/use/useUser'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import { prependBaseUrl } from '@/utils/function'
 import { stopGameplay } from '@/use/useCrazyGames'
+import FSpeechBubble from '@/components/molecules/FSpeechBubble.vue'
+// Skills section: a lazy handle, null on a skills-off build (skillsGate.ts).
+import { TeamSkillsSectionUi } from '@/skills/skillsGate'
+// Bosses 100+ (bosses gate): pure boundary data, used only behind the literal.
+import { BOSSES100_BUILD } from '@/bosses/bosses100Gate'
+import { fmtFixed } from '@/utils/localeNumber'
+import { trophySkinFirstStage } from '@/data/bossEncounters'
 
 interface Props {
   modelValue: boolean
@@ -50,7 +57,27 @@ const emit = defineEmits<{
   (e: 'save', team: SpinnerConfig[]): void
 }>()
 
-const { t } = useSfcI18n('SpinnerConfigModal')
+const { t, locale } = useSfcI18n('SpinnerConfigModal')
+
+/** Unowned trophy skin card (A2): "Beat stage 110" — the first stage whose
+ *  boss grants it; the plain "Boss trophy" label if no encounter does. */
+const trophyCardText = (modelId: string): string => {
+  const n = BOSSES100_BUILD ? trophySkinFirstStage(modelId) : null
+  return n === null ? t('trophySkin.label') : t('trophySkin.beatStage', { n })
+}
+
+// ─── Skills (skills-feature.md §7.2) ───────────────────────────────────────
+//
+// The whole section (tiles, picker, NEW badge, auto-fill) is
+// TeamSkillsSection.vue, rendered through the gate's lazy handle — a
+// skills-off build bundles none of it. A locked slot explains itself in this
+// modal's speech bubble (outside the scroll box).
+const skillBubbleOpen = ref(false)
+const skillBubbleText = ref('')
+const onSkillSlotLocked = (text: string) => {
+  skillBubbleText.value = text
+  skillBubbleOpen.value = true
+}
 
 // ─── Blade Selector (which blade are we configuring) ───────────────────────
 
@@ -116,18 +143,21 @@ const buyBottomUpgrade = (id: BottomPartId) => {
   emit('save', localTeam.value.map(c => ({ ...c })))
 }
 
-// Upgraded stat values for display
+// Upgraded stat values for display — in the active language's decimal
+// notation ("1.50x" en, "1,50x" de/ru/fr/tr), like the skill values (T3).
+const statNum = (n: number, digits: number): string => fmtFixed(n, digits, locale.value)
+
 const topDamage = (part: typeof TOP_PARTS_LIST[number]) =>
-  (part.damageMultiplier + TOP_UPGRADE_BONUS[part.id].damage * topLevel(part.id)).toFixed(2)
+  statNum(part.damageMultiplier + TOP_UPGRADE_BONUS[part.id].damage * topLevel(part.id), 2)
 
 const topDefense = (part: typeof TOP_PARTS_LIST[number]) =>
-  (part.defenseMultiplier + TOP_UPGRADE_BONUS[part.id].defense * topLevel(part.id)).toFixed(2)
+  statNum(part.defenseMultiplier + TOP_UPGRADE_BONUS[part.id].defense * topLevel(part.id), 2)
 
 const topHp = (part: typeof TOP_PARTS_LIST[number]) =>
   part.healthBonus + TOP_UPGRADE_BONUS[part.id].hp * topLevel(part.id)
 
 const bottomSpeed = (part: typeof BOTTOM_PARTS_LIST[number]) =>
-  (part.speedMultiplier + BOTTOM_UPGRADE_BONUS[part.id].speed * bottomLevel(part.id)).toFixed(2)
+  statNum(part.speedMultiplier + BOTTOM_UPGRADE_BONUS[part.id].speed * bottomLevel(part.id), 2)
 
 const bottomHp = (part: typeof BOTTOM_PARTS_LIST[number]) =>
   part.healthBonus + BOTTOM_UPGRADE_BONUS[part.id].hp * bottomLevel(part.id)
@@ -162,6 +192,14 @@ const setBottom = (id: BottomPartId) => {
 
 const skinPickerOpen = ref(false)
 const skinPickerTopId = ref<TopPartId>('star')
+/** The picker's cards. A bosses100-off build has no encounter that grants a
+ *  boss trophy, so an UNOWNED trophy card is hidden; one the player already
+ *  owns stays listed (and selectable). */
+const pickerSkins = computed(() => {
+  const topId = skinPickerTopId.value
+  const all = SKINS_PER_TOP[topId]
+  return BOSSES100_BUILD ? all : all.filter(id => !isEarnOnlySkin(id) || isSkinOwned(topId, id))
+})
 const skinPickerKey = ref(0)
 
 const openSkinPicker = (topId: TopPartId) => {
@@ -296,7 +334,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                     :title="t('purchaseMoreSkins')"
                   ) +
             div.text-center.part-card-body
-              div.text-white.font-bold.truncate.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
+              div.part-name.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
               div.flex.flex-col.items-center.stat-list
                 div.flex.items-center.justify-center.text-red-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
                   IconAttack.inline-block.stat-icon
@@ -343,7 +381,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               : 'bg-slate-700 border-2 border-slate-600 hover:border-slate-400'"
             )
               div.text-center.part-card-body
-                div.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
+                div.part-name.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
                 div.flex.flex-col.items-center.stat-list
                   div.flex.items-center.justify-center.text-cyan-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
                     IconSpeed.inline-block.stat-icon
@@ -371,6 +409,14 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                 class="-mb-[4px] bg-gradient-to-b from-purple-500 to-purple-800 border border-yellow-300 rounded-md shadow-md z-20"
               ) {{ t('lv') }}{{ bottomLevel(part.id) }}
 
+        //- ── Skills (team-wide, both blade tabs) — lazy, skills builds only ──
+        component(
+          v-if="TeamSkillsSectionUi"
+          :is="TeamSkillsSectionUi"
+          :open="modelValue"
+          @locked="onSkillSlotLocked"
+        )
+
         //- ── Stats Summary ──────────────────────────────────────────────────
         div.stats-bar(class="border-t border-slate-500/50")
           h3.text-yellow-300.font-black.uppercase.italic.label-section(
@@ -385,13 +431,13 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               span.text-blue-400.font-bold {{ stats.totalWeight }}
             div.flex.items-center
               IconAttack.stat-summary-icon.text-red-400
-              span.text-red-400.font-bold {{ stats.damageMultiplier.toFixed(1) }}x
+              span.text-red-400.font-bold {{ statNum(stats.damageMultiplier, 1) }}x
             div.flex.items-center
               IconDefense.stat-summary-icon.text-purple-400
-              span.text-purple-400.font-bold {{ stats.defenseMultiplier.toFixed(1) }}x
+              span.text-purple-400.font-bold {{ statNum(stats.defenseMultiplier, 1) }}x
             div.flex.items-center
               IconSpeed.stat-summary-icon.text-cyan-400
-              span.text-cyan-400.font-bold {{ stats.speedMultiplier.toFixed(1) }}x
+              span.text-cyan-400.font-bold {{ statNum(stats.speedMultiplier, 1) }}x
 
       //- ── Hint Texts ─────────────────────────────────────────────────────
       //- Short, precise instructions about how the modal works. Sit at the
@@ -402,6 +448,9 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           | {{ t('hintSelectCards') }}
         p.hint-text.m-0(class="mt-1")
           | {{ t('hintPlusIcon') }}
+
+  //- ── Locked skill slot teaser (TeamSkillsSection → `locked`) ─────────────
+  FSpeechBubble(v-model="skillBubbleOpen" :text="skillBubbleText")
 
   //- ── Skin Picker Modal ───────────────────────────────────────────────────
   FModal(
@@ -420,7 +469,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           span {{ coins }}g
       div.grid.gap-2.skin-picker-grid(class="grid-cols-3 sm:grid-cols-4")
         div.skin-card(
-          v-for="modelId in SKINS_PER_TOP[skinPickerTopId]"
+          v-for="modelId in pickerSkins"
           :key="modelId"
           class="flex flex-col items-center rounded-xl p-1.5 border-2 transition-all"
           :class="[\
@@ -445,6 +494,17 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-3 py-0.5 bg-green-600 hover:bg-green-500 text-white cursor-pointer"
               @click="handleSelectSkin(skinPickerTopId, modelId)"
             ) {{ t('selectButton') }}
+          //- Boss trophy (earn-only): never sold for coins or ads — the card only
+          //- says where it comes from: the first stage whose boss grants it.
+          template(v-else-if="isEarnOnlySkin(modelId)")
+            div.rounded-lg.font-bold.skin-card-action.flex.items-center.gap-1(
+              class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5 bg-slate-700 text-amber-300"
+              role="note"
+              :title="t('trophySkin.hint')"
+              :aria-label="trophyCardText(modelId)"
+            )
+              span(aria-hidden="true") 🏆
+              span.game-text {{ trophyCardText(modelId) }}
           //- Ad-unlock skin (rewarded-ad builds only): one ad instead of a coin price.
           template(v-else-if="isAdUnlockSkin(modelId)")
             button.rounded-lg.font-bold.transition-all.skin-card-action(
@@ -490,7 +550,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 // TOP BLADE / BOTTOM PART / STATS — base size matches text-xs sm:text-sm.
 // Per-breakpoint scaling below bumps it ~30-40% for readability while
 // keeping the cards inside the modal viewport.
-.label-section
+.label-section, .skills-section :deep(.label-section)
   font-size: 0.95rem
   line-height: 1.1
 
@@ -503,6 +563,9 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 .hint-text
   font-size: 0.75rem
   line-height: 1.25
+
+// Skills section styles live in TeamSkillsSection.vue (the section heading
+// shares `.label-section` above through :deep).
 
 // ─── Base Layout (portrait / desktop) ────────────────────────────────────────
 
@@ -552,6 +615,20 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
 .part-card-body
   padding: 0 0 0
+
+// Part name (top + bottom cards). Long names wrap onto a second line instead
+// of truncating / spilling past the card edge ("Round Guard" overflowed a
+// 360px-wide card by 4px; "Звёздный клинок", "Мягкий панцирь" were cut to
+// an ellipsis). Word breaks first, hyphenation (the <html lang> is the active
+// locale) for a single over-long word, a hard break only as the last resort.
+// The tighter line-height + block padding keep a one-line name at its old
+// ~20px height, so short-name locales lay out exactly as before.
+.part-name
+  line-height: 1.15
+  padding: 0.15em 1px
+  overflow-wrap: break-word
+  hyphens: auto
+  text-wrap: balance
 
 // Top part card needs internal top padding so the floating row above
 // the border doesn't visually collide with the part label.
@@ -667,7 +744,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   // (The sm+ `max-height: calc(100dvh - 10rem)` budget lived here. Dropped
   // along with the base one — FModal owns the height cap now.)
 
-  .label-section
+  .label-section, .skills-section :deep(.label-section)
     font-size: 1.15rem
 
   .hint-text
@@ -805,7 +882,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   // Landscape mobile is the tightest viewport — keep the section labels
   // readable but only modestly larger so the cards still fit without
   // scrolling. (~30% over the original text-xs.)
-  .label-section
+  .label-section, .skills-section :deep(.label-section)
     font-size: 0.7rem
     line-height: 1
 
@@ -991,7 +1068,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   .config-layout
     gap: 0.45rem
 
-  .label-section
+  .label-section, .skills-section :deep(.label-section)
     font-size: 0.85rem
     line-height: 1.1
 

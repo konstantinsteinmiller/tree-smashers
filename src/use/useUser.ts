@@ -49,6 +49,10 @@ export const isDemo = import.meta.env.VITE_APP_DEMO === 'true'
 export const isDailyChallengeEnabled = import.meta.env.VITE_APP_FEATURE_DAILY_CHALLENGE !== 'false'
 export const isBgSkinsEnabled = import.meta.env.VITE_APP_FEATURE_BG_SKINS !== 'false'
 
+// Skills (skills-feature.md §10.7/§10.10) are the one OPT-IN flag and live in
+// their own flag boundary: `SKILLS_BUILD` in `src/skills/skillsGate.ts` is the
+// only reader of VITE_APP_FEATURE_SKILLS (tests/skillsFlagBoundary.test.ts).
+
 export const version: string = APP_VERSION
 
 // ─── Persisted settings (localStorage-backed) ──────────────────────────────

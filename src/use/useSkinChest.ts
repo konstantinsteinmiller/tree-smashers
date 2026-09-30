@@ -6,6 +6,7 @@ import {
   buySkin,
   type SpinnerModelId
 } from '@/use/useModels'
+import { isEarnOnlySkin } from '@/data/skinCatalog'
 import type { TopPartId } from '@/types/spinner'
 import { saveDataVersion } from '@/use/useSaveStatus'
 
@@ -47,6 +48,8 @@ const getUnownedPool = (filterFn?: (id: SpinnerModelId) => boolean): GrantedSkin
     for (const modelId of skins) {
       if (seen.has(modelId)) continue
       seen.add(modelId)
+      // Boss trophies are earn-only: the chest never grants them.
+      if (isEarnOnlySkin(modelId)) continue
       if (isModelFullyOwned(modelId)) continue
       if (filterFn && !filterFn(modelId)) continue
       result.push({ topPartId, modelId, isSpecial: SPECIAL_SKINS.has(modelId) })
@@ -97,7 +100,7 @@ export const skinChestIconSkin = computed(() => iconSkin.value)
 export const skinChestHasRewards = computed(() => {
   for (const skins of Object.values(SKINS_PER_TOP)) {
     for (const modelId of skins) {
-      if (!isModelFullyOwned(modelId)) return true
+      if (!isEarnOnlySkin(modelId) && !isModelFullyOwned(modelId)) return true
     }
   }
   return false

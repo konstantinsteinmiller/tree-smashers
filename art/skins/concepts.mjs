@@ -247,3 +247,37 @@ export const CLASS_ORDER = ['star', 'triangle', 'round', 'quadratic', 'cushioned
 
 /** Flat list, class order then panel order (panel 1..4 = TL, TR, BL, BR). */
 export const ALL_SKINS = CLASS_ORDER.flatMap(cls => CLASSES[cls].skins.map((s, i) => ({ ...s, cls, panel: i + 1 })))
+
+/**
+ * Boss TROPHY skins (bosses-100-feature.md §3.5 / §7.1) — worn by the three
+ * new stage-101+ bosses and EARN-ONLY in game (`TROPHY_SKINS` in
+ * src/data/skinCatalog.ts). Same fields as a class skin plus `cls` and the
+ * boss that wears it. They are not part of the 2x2 class sheets (those hold
+ * exactly four panels): build-refs.mjs writes only `<cls>/single-<id>.png`
+ * for them and build-prompts.mjs the single + no-layout prompts.
+ * The procedural fallback drawing of each (what ships until one is painted)
+ * lives in art/bosses/painters.mjs.
+ */
+export const TROPHY_SKINS = [
+  {
+    id: 'cinder', name: 'Cinder', cls: 'round', boss: 'The Cinder Tyrant',
+    tpl: { kind: 'disc', rings: [0.46, 0.8], grate: true },
+    subject: 'a round iron brazier spinning top: a smooth closed rim of black cast iron with FOUR riveted grate bars crossing a bed of glowing coals, thin molten cracks between the coals (nothing sticks out of the circle)',
+    colour: 'black cast iron #221e27 to #3b3640 with ash-grey rim highlights, coal glow #ff6a1a with #ffd27a hot cores',
+    medallion: 'a single flame inside a ring'
+  },
+  {
+    id: 'frost-vault', name: 'Frost Vault', cls: 'quadratic', boss: 'The Glacier Warden',
+    tpl: { kind: 'squircle', a: 0.8, p: 5, cornerLobes: 0.27 },
+    subject: 'a four-lobed vault door frozen over: a square steel vault face with FOUR rounded frost-crusted lobes at its corners, heavy bolts iced into the four lobes, and a spoked vault wheel as the inner ring',
+    colour: 'steel blue-grey #4a5a6e, frost white #f2fbff, glacier cyan #7fd4ff, deep ice #2a7fc9',
+    medallion: 'a padlock with a snowflake keyhole'
+  },
+  {
+    id: 'yeti', name: 'Yeti', cls: 'triangle', boss: 'The Frostbite Yeti',
+    tpl: { kind: 'barbs', n: 16, inner: 0.74, width: 0.75, style: 'cone' },
+    subject: 'a yeti-fur spinning top: a round body ringed ALL the way round by shaggy white fur tufts tipped with sixteen icicle spikes pointing straight out, and a band of blue-grey hide as the inner ring',
+    colour: 'snow-white #ffffff and #dfe9f2 fur, icicles #9fe7e0 fading to #4aa3d8, blue-grey hide #3b4b63',
+    medallion: 'a yeti face with two short tusks'
+  }
+]

@@ -19,6 +19,10 @@ import {
   isAdUnlockSkin,
   isCoinPurchasable,
   skinCost,
+  TROPHY_SKINS,
+  isEarnOnlySkin,
+  offerableSkinsForTop,
+  topPartOfSkin,
   getOfferableSkinPool as buildOfferableSkinPool,
   type SpinnerModelId
 } from '@/data/skinCatalog'
@@ -42,13 +46,16 @@ export {
   AD_SKIN_COIN_COST,
   isAdUnlockSkin,
   isCoinPurchasable,
-  skinCost
+  skinCost,
+  TROPHY_SKINS,
+  isEarnOnlySkin
 }
 export type { SpinnerModelId }
 
-/** Pick a random skin from the available pool for a given top part */
+/** Pick a random skin from the available pool for a given top part. Never an
+ *  earn-only boss trophy: those are worn only by the bosses that grant them. */
 export const getRandomSkinForTop = (topPartId: TopPartId): SpinnerModelId => {
-  const skins = SKINS_PER_TOP[topPartId]
+  const skins = offerableSkinsForTop(topPartId)
   return skins[Math.floor(Math.random() * skins.length)] as SpinnerModelId
 }
 
@@ -136,9 +143,11 @@ export const wasSkinPickerOpened = (topPartId: TopPartId): boolean =>
 export const ownedSkinsForTop = (topPartId: TopPartId): SpinnerModelId[] =>
   SKINS_PER_TOP[topPartId].filter(id => isSkinOwned(topPartId, id))
 
-/** True if at least one skin in this top part's catalog is not yet owned. */
+/** True if at least one skin in this top part's catalog is not yet owned —
+ *  counting only skins the player can get from the shop (an unowned boss
+ *  trophy must not make the picker's "+" bounce). */
 export const hasUnownedSkinsForTop = (topPartId: TopPartId): boolean =>
-  SKINS_PER_TOP[topPartId].some(id => !isSkinOwned(topPartId, id))
+  offerableSkinsForTop(topPartId).some(id => !isSkinOwned(topPartId, id))
 
 /** Default skins (first in each list) are always owned */
 export const isSkinOwned = (topPartId: TopPartId, modelId: SpinnerModelId): boolean => {
@@ -170,6 +179,28 @@ export const buySkin = (topPartId: TopPartId, modelId: SpinnerModelId): boolean 
   saveOwnedSkins()
   return true
 }
+
+/**
+ * Grant an earn-only boss trophy skin (bosses-100-feature.md §3.5) — THE way
+ * a trophy enters a save. Call it on the boss win (BW6's trophy card, after
+ * the roulette Continue); the caller skips cheat / ghost / league battles.
+ *
+ * Idempotent: returns true only when this call unlocked the skin, false when
+ * it was already owned or is not a trophy skin (nothing is written then).
+ * Persists through `buySkin` → `spinner_owned_skins` (SKINS_KEY), the key the
+ * save system syncs to the cloud and merges (SaveMergePolicy).
+ */
+export const grantTrophySkin = (modelId: SpinnerModelId): boolean => {
+  if (!isEarnOnlySkin(modelId)) return false
+  const topPartId = topPartOfSkin(modelId)
+  if (!topPartId) return false
+  return buySkin(topPartId, modelId)
+}
+
+/** Grant every trophy of an encounter (`BossEncounter.trophySkins`); returns
+ *  only the ones this call newly unlocked, in order — what the trophy card shows. */
+export const grantTrophySkins = (modelIds: readonly SpinnerModelId[]): SpinnerModelId[] =>
+  modelIds.filter(id => grantTrophySkin(id))
 
 /** Shop purchase with coins. On a build with rewarded ads it refuses the
  *  ad-unlock skins (`AD_UNLOCK_SKINS`) so no coin path can grant them; on a

@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astra areno',
     'stage_99': 'Omega-defio',
     'stage_100': 'La Eterna Ĥoro',
+    'boss_cinder_tyrant': 'La Cindra Tirano',
+    'boss_glacier_warden': 'La Glaĉera Gardisto',
+    'boss_frostbite_yeti': 'La Frostmorda Jetio',
+    'boss_twin_pyres': 'La Ĝemelaj Ŝtiparoj',
+    'boss_blizzard_choir': 'La Neĝŝtorma Ĥoro',
+    'boss_shattering_glacier': 'La Fendiĝanta Glaĉero',
+    'boss_frostfire_pact': 'La Fajr-Glacia Pakto',
+    'boss_magma_titan': 'La Magma Titano',
+    'boss_blizzard_twins': 'La Neĝŝtormaj Ĝemeloj',
+    'boss_elemental_court': 'La Elementa Kortego',
     'cheat_boss': 'Trompa estro',
     'cheat_ghost': 'Fantoma ĝemelo',
     'cheat_split': 'Frakasanta svarmo',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapo',
   'bossStage': 'Estro-etapo',
+  'labBadge': 'LAB',
   'bossDefeated': 'Estro venkita',
   'stageN': 'Etapo {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Ankoraŭ {n} etapoj',
     'nextUp': 'Venonta etapo!',
     'portraitAlt': 'Venonta estro: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Arda Novao',
+      'frost': 'Glacia Seruro',
+      'chill': 'Frostmordo'
+    },
+    'frozenAria': 'Frostigita: preterlasas sian sekvan vicon',
+    'frozenHint': 'Frostigita! Degelos post ĉi tiu vico.',
+    'chillAria': 'Malvarmigita: rapido −{pct}%',
+    'trophyUnlocked': '{name} malŝlosita!'
+  },
+  'skills': {
+    'title': 'Kapabloj',
+    'slotEmpty': 'Malplena',
+    'slotAria': 'Kapablo-loko {n}',
+    'slotChip': 'Loko {n}',
+    'unlockAt': 'Etapo {n}',
+    'teaser': 'Venku la estron de etapo {n} por malŝlosi kapablojn!',
+    'lockedSkill': 'Malŝlosiĝas post la estro de etapo {n}',
+    'equip': 'Ekipi',
+    'remove': 'Forigi',
+    'equipped': 'Ekipita',
+    'max': 'MAKS',
+    'new': 'NOVA',
+    'now': 'Nun',
+    'next': 'Sekva',
+    'nextLine': 'Sekva: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Kapabloj malŝlositaj!',
+    'newSkillTitle': 'Nova kapablo!',
+    'newSlotTitle': 'Nova kapablo-loko!',
+    'bossDrop': 'Venku ĉi tiun estron por malŝlosi {name}',
+    'bossDropMystery': 'Venku ĉi tiun estron por malŝlosi ion novan',
+    'learn': 'Lerni',
+    'manage': 'Ekipi kaj plibonigi',
+    'pickerTitle': 'Kapabloj · loko {n}',
+    'opponentSkills': 'Kapabloj de la kontraŭulo',
+    'hint': 'Viaj ekipitaj kapabloj validas por ambaŭ turboj. Lernu kaj plibonigu kapablojn per moneroj ĝis nivelo 10.',
+    'learnAria': 'Lerni {name} kontraŭ {cost} monero | Lerni {name} kontraŭ {cost} moneroj',
+    'upgradeAria': 'Plibonigi {name} kontraŭ {cost} monero | Plibonigi {name} kontraŭ {cost} moneroj',
+    'topUpAria': 'Spekti reklamon por {n} monero | Spekti reklamon por {n} moneroj',
+    'hudAria': '{name}, nivelo {n}',
+    'intro': {
+      'kicker': 'Nova potenco',
+      'line1': 'Venku estrojn por malŝlosi kapablojn.',
+      'line2': 'Lernu kaj plibonigu ilin per moneroj.',
+      'line3': 'Ekipu ĝis 2 — ambaŭ turboj uzas ilin.',
+      'line4': 'En batalo ili ekagas memstare.',
+      'cta': 'Elektu vian kapablon',
+      'demoAria': 'Ekzemplo: {name} iras en kapablo-lokon. En batalo ĝi blokas duonon de malamika bato kaj resendas ĝin.'
+    },
+    'names': {
+      'phase_step': 'Faza paŝo',
+      'guard_shell': 'Gardoŝelo',
+      'second_wind': 'Dua spiro',
+      'lucky_edge': 'Bonŝanca eĝo',
+      'homing_rockets': 'Celserĉaj raketoj',
+      'opening_salvo': 'Malferma salvo',
+      'momentum': 'Impeto',
+      'hazard_ward': 'Danĝeroŝirmilo',
+      'static_charge': 'Statika ŝargo',
+      'mirror_plate': 'Spegula plato'
+    },
+    'desc': {
+      'phase_step': '{chance}% ŝanco trapasi malamikan baton sen damaĝo. Malvarmiĝo {cd} s.',
+      'guard_shell': 'Komencu ĉiun batalon kun ŝildo de {pct}% de la maksimuma vivo. Ĝi sorbas damaĝon antaŭ la vivo.',
+      'second_wind': 'Unufoje por batalo, kiam la vivo falas al {threshold}% aŭ malpli: resanigu {pct}% de la maksimuma vivo.',
+      'lucky_edge': '{chance}% ŝanco, ke bato fariĝu bonŝanca kritika bato kun ×{mult} damaĝo.',
+      'homing_rockets': 'Ĉiujn {n} kolizojn kun malamikoj: raketoj trafas ĝis 3 malamikojn por {pct}% de solida bato, dividite.',
+      'opening_salvo': 'Kiam la batalo komenciĝas, ĉiu malamiko perdas {pct}% de sia maksimuma vivo.',
+      'momentum': 'Dum via lanĉo, ĉiu resalto de muro aŭ bato aldonas +{pct}% damaĝon al viaj sekvaj batoj (maks. 3).',
+      'hazard_ward': 'Lafo kaj tondraj aŭroj damaĝas je {hazard}% malpli, pikiloj je {chip}% malpli; ŝokmuroj lasas al vi {shock}% rapidon anstataŭ 10%.',
+      'static_charge': '{chance}% ŝanco elektroŝoki malamikon, kiu ramas vin: ĝi haltas kaj preterlasas sian sekvan vicon.',
+      'mirror_plate': '{chance}% ŝanco bloki duonon de malamika bato kaj resendi ĝin.'
+    }
   },
   'you': 'VI',
   'prev': 'Antaŭa',
@@ -193,7 +281,7 @@ export default {
     'free': 'SENPAGE',
     'spinning': 'Turniĝas...',
     'spinAgain': 'Turnu denove',
-    'tripleCoinsAria': 'Spektu reklamon por ricevi entute {count} monerojn',
+    'tripleCoinsAria': 'Spektu reklamon por ricevi entute {count} moneron | Spektu reklamon por ricevi entute {count} monerojn',
     'skip': 'Preterlasi',
     'youWin': 'VI VENKIS!',
     'youLose': 'VI MALVENKIS!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Invitkodo',
     'copy': 'Kopii',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Aliĝu al mia PvP-batalo en Chaos Arena!'
+    'shareText': 'Aliĝu al mia PvP-batalo en Chaos Arena!',
+    'versionMismatch': 'Via kontraŭulo uzas alian version de la ludo. Ambaŭ ludantoj reŝargu la paĝon kaj reprovu.'
   },
   'parts': {
     'star': 'Stelklingo',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narvalo',
     'stag-beetle': 'Cervoskarabo',
     'drill': 'Borilo',
-    'lancer': 'Lancisto'
+    'lancer': 'Lancisto',
+    'cinder': 'Cindro',
+    'frost-vault': 'Frosta Volbo',
+    'yeti': 'Jetio'
   },
   'skinChest': {
     'acquired': '{name} akirita!'
+  },
+  'trophySkin': {
+    'label': 'Estra trofeo',
+    'hint': 'Gajnata per venko super la estro, kiu portas ĝin',
+    'beatStage': 'Venku etapon {n}'
   },
   'tips': {
     'tankyBottom': 'Konsilo: Ĉu vi jam provis fortikan malsupran parton? Ĝi donas multe da HP, por ke vi travivu pli da raŭndoj!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Pliaj diamantoj',
-        'subtitle': 'Diamantoj malŝlosas fonojn kaj (baldaŭ) potencajn kapablojn.',
+        'subtitle': 'Diamantoj malŝlosas fonojn por via areno.',
         'popular': 'Populara',
         'bestValue': 'Plej bona',
         'note': 'Aĉetoj subtenas la ludon. Sekura pago.'

@@ -79,7 +79,7 @@ describe('3x payout scales with the stage', () => {
 })
 
 describe('where the button appears', () => {
-  const base = { adsBuild: true, result: 'win' as const, bossWin: false, baseCoins: 120 }
+  const base = { adsBuild: true, result: 'win' as const, bossWin: false, pvp: false, baseCoins: 120 }
 
   it('non-boss win on an ad build', () => {
     expect(showsWinCoinsAd(base)).toBe(true)
@@ -100,6 +100,45 @@ describe('where the button appears', () => {
       expect(stage.isBoss).toBe(true)
       expect(showsWinCoinsAd({ ...base, bossWin: true, baseCoins: stage.rewardWin })).toBe(false)
     }
+  })
+
+  it('never on a PvP win (win or lose)', () => {
+    expect(showsWinCoinsAd({ ...base, pvp: true })).toBe(false)
+    expect(showsWinCoinsAd({ ...base, pvp: true, baseCoins: 500 })).toBe(false)
+    expect(showsWinCoinsAd({ ...base, pvp: true, result: 'lose' })).toBe(false)
+  })
+
+  it('still on every other non-boss win: campaign, ghost/leaderboard, daily challenge', () => {
+    // Campaign: the fought stage's rewardWin (non-boss stages).
+    for (const id of [1, 4, 9, 14]) {
+      const stage = getStageById(id)
+      expect(stage.isBoss ?? false).toBe(false)
+      expect(showsWinCoinsAd({ ...base, baseCoins: stage.rewardWin })).toBe(true)
+    }
+    // Ghost / leaderboard win: the ghost formula (50 + 2 x enemy stage).
+    expect(showsWinCoinsAd({ ...base, baseCoins: 50 + 12 * 2 })).toBe(true)
+    // Daily challenge win: 75% of the current stage's win reward.
+    expect(showsWinCoinsAd({ ...base, baseCoins: Math.round(getStageById(9).rewardWin * 0.75) })).toBe(true)
+  })
+
+  it('never after a cheat-stage or Boss Lab win (G5: they pay fixed 500/100)', () => {
+    expect(showsWinCoinsAd({ ...base, labWin: true })).toBe(false)
+    expect(showsWinCoinsAd({ ...base, labWin: true, baseCoins: 500 })).toBe(false)
+    expect(showsWinCoinsAd({ ...base, labWin: false })).toBe(true)
+  })
+
+  it('SpinnerArena marks the Lab settlement and feeds it into the predicate', () => {
+    const src = readFileSync(resolve(__dirname, '../src/views/SpinnerArena.vue'), 'utf8')
+    expect(src).toMatch(/showsWinCoinsAd\(\{[^}]*labWin: lastResultWasLab\.value[^}]*\}\)/)
+    // Set in the G1 settlement branch, right after settleLabBattle pays.
+    expect(src).toMatch(/settleLabBattle\([^)]*\)\s*\n\s*lastResultWasLab\.value = true/)
+    // Reset with the other per-screen state, so a later campaign win offers it again.
+    expect(src).toMatch(/lastWinWasBoss\.value = false\s*\n\s*lastResultWasLab\.value = false/)
+  })
+
+  it('SpinnerArena feeds the PvP flag into the predicate', () => {
+    const src = readFileSync(resolve(__dirname, '../src/views/SpinnerArena.vue'), 'utf8')
+    expect(src).toMatch(/showsWinCoinsAd\(\{[^}]*pvp: pvpMode\.value[^}]*\}\)/)
   })
 
   it('the component renders nothing on a no-ad build, even with an ad "ready"', () => {

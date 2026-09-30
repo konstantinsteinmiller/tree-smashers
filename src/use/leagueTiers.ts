@@ -105,3 +105,46 @@ export const plaqueLabel = (
   const pos = championPosition(tier, position)
   return pos ? `#${pos}` : divisionNumeral(tier, division)
 }
+
+// ─── Rank badge layout ──────────────────────────────────────────────────────
+
+/**
+ * The smallest rendered size (CSS px) at which the division numeral / Champion
+ * position still reads on the icon's own plaque. Below it the plaque's text is a
+ * few pixels tall — `III` smears into a bar and `#123` into a smudge — so the
+ * badge moves the label OUT of the icon and sets it as real text beside it.
+ */
+export const LEAGUE_BADGE_PLAQUE_MIN = 65
+
+/** `LeagueRankBadge`'s default icon size (CSS px) — also the stand-in for a
+ *  nonsense size. Below `LEAGUE_BADGE_PLAQUE_MIN`, so it renders inline. */
+export const LEAGUE_BADGE_DEFAULT_SIZE = 48
+
+export interface LeagueBadgeLayout {
+  /** `plaque`: the label is drawn on the icon. `inline`: icon + text beside it. */
+  mode: 'plaque' | 'inline'
+  /** Icon size in CSS px. */
+  iconSize: number
+  /** Inline label font size in CSS px (0 in plaque mode). */
+  fontSize: number
+  /** Gap between icon and inline label in CSS px (0 in plaque mode). */
+  gap: number
+}
+
+/**
+ * How `LeagueRankBadge` lays itself out at a given icon size. Pure, so the
+ * switch-over point is testable without mounting anything. A size that is not a
+ * positive finite number is treated as the badge's default (48 → inline). Text
+ * mode runs up to 64px; the plaque takes over from 65px.
+ */
+export const leagueBadgeLayout = (size: number): LeagueBadgeLayout => {
+  const s = Number.isFinite(size) && size > 0 ? size : LEAGUE_BADGE_DEFAULT_SIZE
+  if (s >= LEAGUE_BADGE_PLAQUE_MIN) return { mode: 'plaque', iconSize: s, fontSize: 0, gap: 0 }
+  return {
+    mode: 'inline',
+    iconSize: s,
+    // A bit under half the icon, never below a legible 10px.
+    fontSize: Math.max(10, Math.round(s * 0.42)),
+    gap: Math.max(2, Math.round(s * 0.12))
+  }
+}

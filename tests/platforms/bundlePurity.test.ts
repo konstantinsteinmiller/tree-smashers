@@ -63,6 +63,12 @@ beforeAll(async () => {
   for (const key of Object.keys(cleanEnv)) {
     if (key.startsWith('VITE_')) delete cleanEnv[key]
   }
+  // Vitest exports NODE_ENV=test, and a child that inherits it makes Vite
+  // build in NON-production mode (e.g. @vitejs/plugin-vue stops inlining
+  // templates) — not the bytes that ship. `pnpm build:<mode>` has no
+  // NODE_ENV; neither does this build (same scrub as
+  // scripts/feature-flag-audit.mjs `buildVariant`).
+  delete cleanEnv.NODE_ENV
   cleanEnv.VITE_ENABLE_OBFUSCATION = 'false' // string-marker greps need readable output
 
   await new Promise<void>((resolve, reject) => {
@@ -217,6 +223,27 @@ describe('CrazyGames build — bundle purity', () => {
       ([, content]) => /jio_games|microsoft_store|bridge-youtube-subscribe/.test(content)
     ).map(([name]) => name)
     expect(inlined, `@playgama/bridge inlined into: ${inlined.join(', ')}`).toEqual([])
+  })
+
+  it('ships the Playgama wrapper STUB, not the wrapper, on a non-Playgama build', () => {
+    // `App.vue` / `useGameplayLifecycle` import `@/utils/playgamaPlugin`
+    // statically. Their calls fold, but the obfuscated module could not be
+    // tree-shaken, so ~5 KB of dead wrapper shipped in a shared chunk Rollup
+    // NAMED after it. vite.config.ts now aliases it to playgamaPlugin.stub.ts.
+    // Nor under the stub's name (vite.config.ts `chunkFileNames`): Rollup
+    // picks the stub as the shared chunk's namesake just the same.
+    const named = [...chunkContents.keys()].filter(n => /^playgamaPlugin|\.stub-/.test(n))
+    expect(named, `chunk named after the Playgama wrapper: ${named.join(', ')}`).toEqual([])
+    const messages = [...chunkContents.entries()]
+      .filter(([, c]) => /in_game_loading_stopped|visibility_state_changed|interstitial_state_changed/.test(c))
+      .map(([n]) => n)
+    expect(messages, `Playgama wrapper code in: ${messages.join(', ')}`).toEqual([])
+  })
+
+  it('the Playgama stub exports every name the real wrapper does', () => {
+    const exportsOf = (f: string) => [...fs.readFileSync(path.join(PROJECT_ROOT, f), 'utf8')
+      .matchAll(/^export (?:const|let|function|async function) (\w+)/gm)].map(m => m[1]).sort()
+    expect(exportsOf('src/utils/playgamaPlugin.stub.ts')).toEqual(exportsOf('src/utils/playgamaPlugin.ts'))
   })
 
   it('does NOT contain the PokiSDK URL ANYWHERE — not just the hot path', () => {

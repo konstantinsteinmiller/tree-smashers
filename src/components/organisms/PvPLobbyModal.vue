@@ -10,6 +10,10 @@ import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { getSelectedSkin } from '@/use/useModels'
 import { isSdkActive } from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease } from '@/use/useMatch'
+// Skills: lazy through the skills gate — null / [] on a skills-off build,
+// where the lobby sends an empty loadout and keeps its plain ready dots.
+import { PvpReadySkillsUi, useSkillsApi } from '@/skills/skillsGate'
+import type { SkillLoadout } from '@/types/skills'
 
 interface Props {
   isOpen: boolean
@@ -33,6 +37,8 @@ const {
   gameConfig,
   hostReady,
   guestReady,
+  hostSkills,
+  guestSkills,
   bothReady,
   pendingInviteCode,
   createLobby,
@@ -151,6 +157,55 @@ const buildPvpTeam = (): import('@/types/spinner').SpinnerConfig[] => {
     bottomLevel: isLvl1 ? 1 : (playerUpgrades.value.bottoms[c.bottomPartId] ?? 0),
     modelId: getSelectedSkin(c.topPartId, i)
   }))
+}
+
+/** The player's skill loadout for this lobby — "level 1" lobbies clamp every
+ *  skill to L1 here (sender side); the receiver re-applies the same clamp. */
+const skillsApi = useSkillsApi()
+const buildPvpSkills = (): SkillLoadout =>
+  skillsApi.value?.loadoutForBattle('pvp', { levelOne: gameConfig.value.levelOne }) ?? []
+
+// ─── Ready card: both sides' skills ────────────────────────────────────────
+
+/** Before Ready the local row previews what WILL be sent; once ready it
+ *  shows the sanitised copy usePVP stores. Refreshed by a watcher (not a
+ *  computed) because loadoutForBattle may run the slot auto-fill. */
+const previewSkills = ref<SkillLoadout>([])
+const refreshPreviewSkills = () => {
+  previewSkills.value = buildPvpSkills()
+}
+watch(
+  () => [status.value, gameConfig.value.levelOne, props.isOpen, skillsApi.value] as const,
+  ([s]) => {
+    if (s === 'lobby' || s === 'ready') refreshPreviewSkills()
+  },
+  { immediate: true }
+)
+
+const mySkills = computed<SkillLoadout>(() => {
+  if (!localReady.value) return previewSkills.value
+  return isHost.value ? hostSkills.value : guestSkills.value
+})
+const opponentReady = computed(() => isHost.value ? guestReady.value : hostReady.value)
+const opponentSkills = computed<SkillLoadout>(() => {
+  if (!opponentReady.value) return []
+  return isHost.value ? guestSkills.value : hostSkills.value
+})
+const showSkillRows = computed(() => PvpReadySkillsUi !== null)
+
+type ReadySide = 'host' | 'guest'
+const READY_SIDES: readonly ReadySide[] = ['host', 'guest']
+const isMine = (side: ReadySide) => (side === 'host') === isHost.value
+const sideReady = (side: ReadySide) => side === 'host' ? hostReady.value : guestReady.value
+const sideSkills = (side: ReadySide): SkillLoadout => isMine(side) ? mySkills.value : opponentSkills.value
+
+const onToggleReady = () => {
+  if (localReady.value) {
+    setUnready()
+    return
+  }
+  refreshPreviewSkills()
+  setReady(buildPvpTeam(), buildPvpSkills())
 }
 
 // ─── Actions ───────────────────────────────────────────────────────────────
@@ -507,8 +562,35 @@ watch(() => props.isOpen, (open) => {
                 path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
             span.text-gray-300.game-text.font-bold(class="text-sm") {{ t('pvp.levelOne') }}
 
-          //- Ready status
-          div.flex.gap-3.items-center.justify-center
+          //- Ready card: ready dot per side; with skills on, each side's
+          //- skill loadout (icon + level). The local side previews what
+          //- Ready will send; the opponent's shows once they are ready.
+          div.grid.grid-cols-2.gap-2(v-if="showSkillRows")
+            div.ready-side.rounded-lg.border-2.px-2.py-2.flex.flex-col.items-center(
+              v-for="side in READY_SIDES"
+              :key="side"
+              class="gap-1.5"
+              :class="sideReady(side) \
+                ? 'border-green-500/70 bg-green-900/20' \
+                : 'border-slate-600 bg-slate-800'"
+              :data-side="side"
+            )
+              div.flex.items-center.gap-2
+                div.rounded-full(
+                  class="w-3 h-3"
+                  :class="sideReady(side) ? 'bg-green-400' : 'bg-gray-600'"
+                )
+                span.text-white.game-text.font-bold(class="text-sm") {{ t('pvp.' + side) }}
+                span.text-yellow-300.game-text.font-bold.uppercase(
+                  v-if="isMine(side)"
+                  class="text-[0.65rem]"
+                ) {{ t('you') }}
+              component(
+                :is="PvpReadySkillsUi"
+                :loadout="sideSkills(side)"
+                :mine="isMine(side)"
+              )
+          div.flex.gap-3.items-center.justify-center(v-else)
             div.flex.items-center.gap-2
               div.rounded-full(
                 class="w-3 h-3"
@@ -546,7 +628,7 @@ watch(() => props.isOpen, (open) => {
         ) {{ t('pvp.startMatch') }}
         button.w-full(
           v-else
-          @click="localReady ? setUnready() : setReady(buildPvpTeam())"
+          @click="onToggleReady"
           class="py-3 rounded-lg border-2 border-[#0f1a30] text-white font-bold game-text uppercase cursor-pointer transition-all text-sm"
           :class="localReady \
             ? 'bg-gradient-to-b from-green-500 to-green-600' \

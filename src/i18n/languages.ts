@@ -287,8 +287,9 @@ export const pluralCategoriesFor = (bcp47: string): string[] => {
 /**
  * vue-i18n `pluralRules` entry for one language.
  *
- * No message in the game uses `a | b` plural branches today (the English copy
- * is written number-neutral), so this is the safety net for when one does. A
+ * Most copy is written number-neutral; the coin-count aria labels
+ * (skills.learnAria/upgradeAria/topUpAria, spinner.tripleCoinsAria) use
+ * `a | b` branches and are called as `t(key, named, count)`. A
  * message may carry either one branch per category from `pluralCategoriesFor`
  * or that plus a leading explicit-zero branch. Anything else keeps vue-i18n's
  * English-style semantics so an un-adapted 2-branch message still picks a

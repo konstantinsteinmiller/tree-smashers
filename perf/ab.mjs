@@ -52,6 +52,10 @@ const DC = has('dc')
 const STAGE = Number(arg('stage', 1))
 const LABEL_A = arg('labelA', A_QUERY || 'A')
 const LABEL_B = arg('labelB', B_QUERY || 'B')
+// Extra init script (a file) run in BOTH arms after the stage seed, before any
+// app code — e.g. one that seeds a save shape keyed off a query param the
+// B arm sets, so a save-state A/B stays interleaved in one run.
+const INIT = arg('init', null)
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -111,6 +115,7 @@ async function runRep(port, query, repIdx) {
   await context.addInitScript(probe)
   const seed = seedScript(STAGE)
   if (seed) await context.addInitScript({ content: seed })
+  if (INIT) await context.addInitScript({ path: INIT })
   const page = await context.newPage()
   page.on('pageerror', (e) => console.error('  [pageerror]', e.message))
 

@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astrale Arena',
     'stage_99': 'Omega-Beproeving',
     'stage_100': 'Het Eeuwige Koor',
+    'boss_cinder_tyrant': 'De Sinteltiran',
+    'boss_glacier_warden': 'De Gletsjerwachter',
+    'boss_frostbite_yeti': 'De Vrieskou-Yeti',
+    'boss_twin_pyres': 'De Tweelingvuren',
+    'boss_blizzard_choir': 'Het Sneeuwstormkoor',
+    'boss_shattering_glacier': 'De Splijtende Gletsjer',
+    'boss_frostfire_pact': 'Het Vuur-en-IJspact',
+    'boss_magma_titan': 'De Magmatitaan',
+    'boss_blizzard_twins': 'De Sneeuwstormtweeling',
+    'boss_elemental_court': 'Het Elementenhof',
     'cheat_boss': 'Valsspeelbaas',
     'cheat_ghost': 'Spooktweeling',
     'cheat_split': 'Splijtende Zwerm',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Level',
   'bossStage': 'Baaslevel',
+  'labBadge': 'LAB',
   'bossDefeated': 'Baas verslagen',
   'stageN': 'Level {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Nog {n} levels',
     'nextUp': 'Volgend level!',
     'portraitAlt': 'Volgende baas: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Sintelnova',
+      'frost': 'IJsgreep',
+      'chill': 'Vrieskou'
+    },
+    'frozenAria': 'Bevroren: slaat de volgende beurt over',
+    'frozenHint': 'Bevroren! Ontdooit na deze beurt.',
+    'chillAria': 'Onderkoeld: snelheid −{pct}%',
+    'trophyUnlocked': '{name} ontgrendeld!'
+  },
+  'skills': {
+    'title': 'Vaardigheden',
+    'slotEmpty': 'Leeg',
+    'slotAria': 'Vaardigheidsslot {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Level {n}',
+    'teaser': 'Versla de baas van level {n} om vaardigheden te ontgrendelen!',
+    'lockedSkill': 'Ontgrendelt na de baas van level {n}',
+    'equip': 'Uitrusten',
+    'remove': 'Verwijderen',
+    'equipped': 'In gebruik',
+    'max': 'MAX',
+    'new': 'NIEUW',
+    'now': 'Nu',
+    'next': 'Volgende',
+    'nextLine': 'Volgende: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Vaardigheden ontgrendeld!',
+    'newSkillTitle': 'Nieuwe vaardigheid!',
+    'newSlotTitle': 'Nieuw vaardigheidsslot!',
+    'bossDrop': 'Versla deze baas om {name} te ontgrendelen',
+    'bossDropMystery': 'Versla deze baas om iets nieuws te ontgrendelen',
+    'learn': 'Leren',
+    'manage': 'Uitrusten & upgraden',
+    'pickerTitle': 'Vaardigheden · slot {n}',
+    'opponentSkills': 'Vaardigheden van tegenstander',
+    'hint': 'Je uitgeruste vaardigheden werken op beide tollen. Leer en upgrade vaardigheden met munten tot niveau 10.',
+    'learnAria': '{name} leren voor {cost} munt | {name} leren voor {cost} munten',
+    'upgradeAria': '{name} upgraden voor {cost} munt | {name} upgraden voor {cost} munten',
+    'topUpAria': 'Bekijk een advertentie voor {n} munt | Bekijk een advertentie voor {n} munten',
+    'hudAria': '{name}, niveau {n}',
+    'intro': {
+      'kicker': 'Nieuwe kracht',
+      'line1': 'Versla bazen om vaardigheden te ontgrendelen.',
+      'line2': 'Leer en upgrade ze met munten.',
+      'line3': 'Rust er tot 2 uit — beide tollen gebruiken ze.',
+      'line4': 'In gevecht activeren ze vanzelf.',
+      'cta': 'Kies je vaardigheid',
+      'demoAria': 'Voorbeeld: {name} gaat in een vaardigheidsslot. In gevecht blokkeert het de helft van een vijandelijke treffer en kaatst die terug.'
+    },
+    'names': {
+      'phase_step': 'Fasestap',
+      'guard_shell': 'Schildschaal',
+      'second_wind': 'Tweede adem',
+      'lucky_edge': 'Geluksrand',
+      'homing_rockets': 'Doelzoekende raketten',
+      'opening_salvo': 'Openingssalvo',
+      'momentum': 'Vaart',
+      'hazard_ward': 'Gevarenschild',
+      'static_charge': 'Statische lading',
+      'mirror_plate': 'Spiegelplaat'
+    },
+    'desc': {
+      'phase_step': '{chance}% kans om door een vijandelijke treffer heen te glippen zonder schade. Afkoeltijd {cd} s.',
+      'guard_shell': 'Begin elk gevecht met een schild van {pct}% van je max. HP. Het vangt schade op vóór je HP.',
+      'second_wind': 'Eén keer per gevecht, als je HP tot {threshold}% of minder zakt: herstel {pct}% van je max. HP.',
+      'lucky_edge': '{chance}% kans dat een treffer een geluksvoltreffer wordt met ×{mult} schade.',
+      'homing_rockets': 'Elke {n} botsingen met vijanden: raketten raken tot 3 vijanden voor {pct}% van een stevige treffer, verdeeld.',
+      'opening_salvo': 'Bij de start van het gevecht verliest elke vijand {pct}% van zijn max. HP.',
+      'momentum': 'Tijdens je lancering geeft elke muurkaats of treffer +{pct}% schade aan je volgende treffers (max. 3).',
+      'hazard_ward': 'Lava- en donderaura\'s doen {hazard}% minder schade, stekels {chip}% minder; schokmuren laten je {shock}% snelheid over in plaats van 10%.',
+      'static_charge': '{chance}% kans om een vijand die je ramt te elektrocuteren: hij stopt en slaat zijn volgende beurt over.',
+      'mirror_plate': '{chance}% kans om de helft van een vijandelijke treffer te blokkeren en terug te kaatsen.'
+    }
   },
   'you': 'JIJ',
   'prev': 'Vorige',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Draait...',
     'spinAgain': 'Opnieuw draaien',
-    'tripleCoinsAria': 'Bekijk een advertentie voor {count} munten in totaal',
+    'tripleCoinsAria': 'Bekijk een advertentie voor {count} munt in totaal | Bekijk een advertentie voor {count} munten in totaal',
     'skip': 'Overslaan',
     'youWin': 'GEWONNEN!',
     'youLose': 'VERLOREN!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Uitnodigingscode',
     'copy': 'Kopieer',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Doe mee met mijn Chaos Arena PvP-gevecht!'
+    'shareText': 'Doe mee met mijn Chaos Arena PvP-gevecht!',
+    'versionMismatch': 'Je tegenstander gebruikt een andere versie van het spel. Jullie moeten allebei de pagina herladen en het opnieuw proberen.'
   },
   'parts': {
     'star': 'Sterlemmet',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narwal',
     'stag-beetle': 'Vliegend Hert',
     'drill': 'Boor',
-    'lancer': 'Lansier'
+    'lancer': 'Lansier',
+    'cinder': 'Sintel',
+    'frost-vault': 'IJskluis',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} verkregen!'
+  },
+  'trophySkin': {
+    'label': 'Baastrofee',
+    'hint': 'Verdien je door de baas te verslaan die hem draagt',
+    'beatStage': 'Versla level {n}'
   },
   'tips': {
     'tankyBottom': 'Tip: heb je al een Robuust onderstuk geprobeerd? Je krijgt veel HP om meer rondes te overleven!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Haal diamanten',
-        'subtitle': 'Diamanten ontgrendelen achtergronden en (binnenkort) krachtige vaardigheden.',
+        'subtitle': 'Diamanten ontgrendelen achtergronden voor je arena.',
         'popular': 'Populair',
         'bestValue': 'Beste deal',
         'note': 'Aankopen steunen het spel. Veilig betalen.'

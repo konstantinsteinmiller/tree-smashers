@@ -465,8 +465,9 @@ const bootstrap = async () => {
     missingWarn: false,
     fallbackWarn: false,
     // CLDR-aware `a | b | c` branch selection per language (ru/uk/pl/cs/ar…
-    // have 3–6 categories). No message uses plural branches yet; this keeps
-    // one from silently picking the English branch when it does.
+    // have 3–6 categories). Used by the coin-count aria labels
+    // (skills.learnAria/upgradeAria/topUpAria, spinner.tripleCoinsAria),
+    // called as t(key, named, count).
     pluralRules: buildPluralRules()
   })
 

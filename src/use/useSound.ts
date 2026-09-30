@@ -260,7 +260,8 @@ const useSounds = () => {
   const playViaWebAudio = (
     ctx: AudioContext,
     buffer: AudioBuffer,
-    ratio: number
+    ratio: number,
+    offsetSec: number
   ): SoundHandle | null => {
     try {
       const source = ctx.createBufferSource()
@@ -268,7 +269,8 @@ const useSounds = () => {
       const gain = ctx.createGain()
       gain.gain.value = clampVolume(ratio)
       source.connect(gain).connect(ctx.destination)
-      source.start()
+      if (offsetSec > 0) source.start(0, Math.min(offsetSec, buffer.duration))
+      else source.start()
       return makeWebAudioHandle(source)
     } catch (e) {
       // Browser refused to start (context killed, etc.) — signal the
@@ -279,7 +281,7 @@ const useSounds = () => {
     }
   }
 
-  const playViaHtmlAudio = (src: string, ratio: number): HTMLAudioElement => {
+  const playViaHtmlAudio = (src: string, ratio: number, offsetSec: number): HTMLAudioElement => {
     const cached = resourceCache.audio.get(src)
     const audio = cached
       ? (cached.cloneNode(false) as HTMLAudioElement)
@@ -288,13 +290,23 @@ const useSounds = () => {
     // Firefox throws DOMException if volume is NaN or out of range (can
     // happen when userSoundVolume hasn't loaded from IndexedDB yet).
     audio.volume = clampVolume(ratio)
+    if (offsetSec > 0) {
+      try {
+        audio.currentTime = offsetSec
+      } catch { /* not seekable yet — plays from the start */
+      }
+    }
     audio.play().catch(() => {
       /* autoplay blocked or media failed — ignore */
     })
     return audio
   }
 
-  const playSound = (effect: string, ratio = 0.025): SoundHandle | null => {
+  /**
+   * `offsetSec` starts playback that far INTO the file (used by the skills
+   * intro drum roll to shorten its build-up so the hit still lands on cue).
+   */
+  const playSound = (effect: string, ratio = 0.025, offsetSec = 0): SoundHandle | null => {
     // Mobile mute: don't spawn a source at all. Setting volume to 0 on
     // HTMLAudioElement is a no-op on iOS (and Web Audio gain at 0 would
     // still wake the audio graph), so we just skip playback entirely.
@@ -306,7 +318,7 @@ const useSounds = () => {
     const buffer = resourceCache.audioBuffers.get(src)
     const ctx = getAudioContext()
     if (ctx && buffer) {
-      return playViaWebAudio(ctx, buffer, ratio)
+      return playViaWebAudio(ctx, buffer, ratio, offsetSec)
     }
 
     // Slow path: Web Audio available but buffer not yet decoded. Kick off
@@ -317,7 +329,7 @@ const useSounds = () => {
     }
 
     // Fallback: HTMLAudio (also used when Web Audio is unavailable).
-    return playViaHtmlAudio(src, ratio)
+    return playViaHtmlAudio(src, ratio, offsetSec)
   }
 
   return {

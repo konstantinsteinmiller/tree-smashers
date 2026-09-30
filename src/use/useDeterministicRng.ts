@@ -13,19 +13,29 @@
 //     the seed so both peers reproduce the same sequence.
 
 let _state = 1
+// The seed the CURRENT match was started from (never advanced by draws).
+// Per-blade skill streams (skills-feature.md §9.1) derive from it, so both
+// PvP peers — which receive the same seed in `game-start` — agree on them.
+let _seed = 1
 
 /** Reseed with an explicit 32-bit value. Host→guest seed broadcast uses this. */
 export const seedMatchRng = (seed: number): void => {
   // 0 is a fixed point for mulberry32; coerce to 1 so the sequence isn't stuck.
   _state = (seed >>> 0) || 1
+  _seed = _state
 }
 
 /** Reseed with a fresh random seed and return it (so the host can broadcast). */
 export const seedMatchRngRandom = (): number => {
   const seed = (Math.random() * 0x100000000) >>> 0 || 1
   _state = seed
+  _seed = seed
   return seed
 }
+
+/** The seed the running match was (re)seeded with — stable for the whole
+ *  match, unlike the stream state `matchRng()` advances. */
+export const currentMatchSeed = (): number => _seed
 
 /** [0, 1) — drop-in replacement for Math.random() in gameplay paths. */
 export const matchRng = (): number => {

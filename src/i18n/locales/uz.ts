@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Yulduzli Arena',
     'stage_99': 'Omega Jangi',
     'stage_100': 'Oʻlmas Xor',
+    'boss_cinder_tyrant': 'Kul Zolimi',
+    'boss_glacier_warden': 'Muzlik Qoʻriqchisi',
+    'boss_frostbite_yeti': 'Ayoz Yetisi',
+    'boss_twin_pyres': 'Egizak Gulxanlar',
+    'boss_blizzard_choir': 'Qorboʻron Xori',
+    'boss_shattering_glacier': 'Parchalanuvchi Muzlik',
+    'boss_frostfire_pact': 'Olov va Muz Ahdi',
+    'boss_magma_titan': 'Magma Titani',
+    'boss_blizzard_twins': 'Qorboʻron Egizaklari',
+    'boss_elemental_court': 'Unsurlar Saroyi',
     'cheat_boss': 'Firibgar Boss',
     'cheat_ghost': 'Arvoh Egizak',
     'cheat_split': 'Boʻlinuvchi Toʻda',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Bosqich',
   'bossStage': 'Boss bosqichi',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss yengildi',
   'stageN': '{n}-bosqich',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Qolgan bosqichlar: {n}',
     'nextUp': 'Keyingi bosqich!',
     'portraitAlt': 'Keyingi boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Choʻgʻ Novasi',
+      'frost': 'Muz Qulfi',
+      'chill': 'Ayoz Tishlashi'
+    },
+    'frozenAria': 'Muzlagan: keyingi navbatini oʻtkazib yuboradi',
+    'frozenHint': 'Muzladi! Bu navbatdan keyin eriydi.',
+    'chillAria': 'Sovqotgan: tezlik −{pct}%',
+    'trophyUnlocked': '{name} ochildi!'
+  },
+  'skills': {
+    'title': 'Qobiliyatlar',
+    'slotEmpty': 'Boʻsh',
+    'slotAria': 'Qobiliyat uyasi {n}',
+    'slotChip': 'Uya {n}',
+    'unlockAt': 'Bosqich {n}',
+    'teaser': 'Qobiliyatlarni ochish uchun {n}-bosqich bossini yeng!',
+    'lockedSkill': '{n}-bosqich bossidan keyin ochiladi',
+    'equip': 'Taqish',
+    'remove': 'Yechish',
+    'equipped': 'Taqilgan',
+    'max': 'MAKS',
+    'new': 'YANGI',
+    'now': 'Hozir',
+    'next': 'Keyingi',
+    'nextLine': 'Keyingi: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Qobiliyatlar ochildi!',
+    'newSkillTitle': 'Yangi qobiliyat!',
+    'newSlotTitle': 'Yangi qobiliyat uyasi!',
+    'bossDrop': 'Ochish uchun bu bossni yeng: {name}',
+    'bossDropMystery': 'Yangi narsa ochish uchun bu bossni yeng',
+    'learn': 'Oʻrganish',
+    'manage': 'Taqish va kuchaytirish',
+    'pickerTitle': 'Qobiliyatlar · uya {n}',
+    'opponentSkills': 'Raqib qobiliyatlari',
+    'hint': 'Taqilgan qobiliyatlar ikkala pildiroqqa ham taʼsir qiladi. Qobiliyatlarni tangalar bilan oʻrgan va 10-darajagacha kuchaytir.',
+    'learnAria': 'Oʻrganish: {name}, {cost} tanga | Oʻrganish: {name}, {cost} tanga',
+    'upgradeAria': 'Kuchaytirish: {name}, {cost} tanga | Kuchaytirish: {name}, {cost} tanga',
+    'topUpAria': '{n} tanga uchun reklama koʻrish | {n} tanga uchun reklama koʻrish',
+    'hudAria': '{name}, {n}-daraja',
+    'intro': {
+      'kicker': 'Yangi kuch',
+      'line1': 'Qobiliyatlarni ochish uchun bosslarni yeng.',
+      'line2': 'Ularni tangalar bilan oʻrgan va kuchaytir.',
+      'line3': '2 tagacha taq — ikkala pildiroq ham ishlatadi.',
+      'line4': 'Jangda ular oʻzi ishga tushadi.',
+      'cta': 'Qobiliyatingni tanla',
+      'demoAria': 'Misol: {name} qobiliyat uyasiga qoʻyiladi. Jangda u dushman zarbasining yarmini toʻsib, orqaga qaytaradi.'
+    },
+    'names': {
+      'phase_step': 'Faza qadami',
+      'guard_shell': 'Himoya qobigʻi',
+      'second_wind': 'Ikkinchi nafas',
+      'lucky_edge': 'Omadli tigʻ',
+      'homing_rockets': 'Kuzatuvchi raketalar',
+      'opening_salvo': 'Ilk zalp',
+      'momentum': 'Shiddat',
+      'hazard_ward': 'Xavf qalqoni',
+      'static_charge': 'Statik zaryad',
+      'mirror_plate': 'Koʻzgu plastina'
+    },
+    'desc': {
+      'phase_step': '{chance}% ehtimol bilan dushman zarbasidan oʻtib ketib, zarar olmaysan. Qayta tiklanish {cd} s.',
+      'guard_shell': 'Har jangni maks. HP ning {pct}% miqdoridagi qalqon bilan boshla. U zararni HP dan oldin yutadi.',
+      'second_wind': 'Har jangda bir marta, HP {threshold}% yoki undan past tushganda: maks. HP ning {pct}% qismini tiklaydi.',
+      'lucky_edge': '{chance}% ehtimol bilan zarba ×{mult} zarar beruvchi omadli kritik zarbaga aylanadi.',
+      'homing_rockets': 'Dushmanlar bilan har {n} toʻqnashuvda: raketalar 3 tagacha dushmanga kuchli zarbaning {pct}% qismicha zararni boʻlib beradi.',
+      'opening_salvo': 'Jang boshlanganda har bir dushman maks. HP ning {pct}% qismini yoʻqotadi.',
+      'momentum': 'Uchirishing davomida har bir devordan sakrash yoki zarba keyingi zarbalaringga +{pct}% zarar qoʻshadi (maks. 3).',
+      'hazard_ward': 'Lava va momaqaldiroq auralari {hazard}%, tikanlar {chip}% kamroq zarar beradi; shok devorlari tezligingni 10% emas, {shock}% qoldiradi.',
+      'static_charge': '{chance}% ehtimol bilan senga urilgan dushmanni tok uradi: u toʻxtaydi va keyingi navbatini oʻtkazib yuboradi.',
+      'mirror_plate': '{chance}% ehtimol bilan dushman zarbasining yarmini toʻsib, orqaga qaytarasan.'
+    }
   },
   'you': 'SEN',
   'prev': 'Oldingi',
@@ -193,7 +281,7 @@ export default {
     'free': 'BEPUL',
     'spinning': 'Aylanmoqda...',
     'spinAgain': 'Yana aylantir',
-    'tripleCoinsAria': 'Jami {count} tanga olish uchun reklama ko‘ring',
+    'tripleCoinsAria': 'Jami {count} tanga olish uchun reklama ko‘ring | Jami {count} tanga olish uchun reklama ko‘ring',
     'skip': 'Oʻtkazish',
     'youWin': 'YUTDING!',
     'youLose': 'YUTQAZDING!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Taklif kodi',
     'copy': 'Nusxala',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Chaos Arena PvP jangimga qoʻshil!'
+    'shareText': 'Chaos Arena PvP jangimga qoʻshil!',
+    'versionMismatch': 'Raqibingiz oʻyinning boshqa versiyasidan foydalanmoqda. Ikkala oʻyinchi ham sahifani qayta yuklab, yana urinib koʻrishi kerak.'
   },
   'parts': {
     'star': 'Yulduz Tigʻ',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Bugu Qoʻngʻiz',
     'drill': 'Parma',
-    'lancer': 'Nayzador'
+    'lancer': 'Nayzador',
+    'cinder': 'Choʻgʻ',
+    'frost-vault': 'Muz Xazinasi',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} olindi!'
+  },
+  'trophySkin': {
+    'label': 'Boss kubogi',
+    'hint': 'Uni kiygan bossni yengib olinadi',
+    'beatStage': '{n}-bosqichni yeng'
   },
   'tips': {
     'tankyBottom': 'Maslahat: Chidamli pastki qismni sinab koʻrdingmi? U koʻp jon beradi — koʻproq raund chidaysan!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Olmos olish',
-        'subtitle': 'Olmoslar fonlarni va (tez orada) kuchli qobiliyatlarni ochadi.',
+        'subtitle': 'Olmoslar arenang uchun fonlarni ochadi.',
         'popular': 'Ommabop',
         'bestValue': 'Foydali',
         'note': 'Xaridlar oʻyinni qoʻllab-quvvatlaydi. Xavfsiz toʻlov.'

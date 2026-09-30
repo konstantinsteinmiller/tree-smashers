@@ -6,6 +6,7 @@ import { prependBaseUrl } from '@/utils/function.ts'
 import type { TopPartId } from '@/types/spinner'
 import { FLAME_BURN_SRC } from '@/use/borderFx'
 import { isIntroLikely, INTRO_SKIN_IDS } from '@/use/introGate'
+import { armSkillSfx } from '@/skills/skillsGate'
 
 // Shared state so it can be accessed by both the loader and the progress component
 const loadingProgress = ref(0)
@@ -194,6 +195,20 @@ const SOUND_ASSETS = [
   'audio/sfx/lose.ogg',
   'audio/sfx/reward-continue.ogg'
 ]
+
+// Skill SFX (skills-feature.md §8.3) are deferred AND gated: their file list
+// lives in `skills/skillSfx.ts`, armed from the deferred tier below through
+// the skills gate (`armSkillSfx`), so a skills-off build names none of them.
+
+// Boss-trait SFX (bosses-100-feature.md §7.3, BW4) — deferred and GATED like
+// the skill set: their file list lives in `bosses/bossTraitSfx.ts` (reached
+// only through the bosses gate's engine port), requested once when a match
+// whose roster carries a boss trait is prepared. A bosses100-off build names
+// none of them; a player below stage 110 downloads none.
+
+/** Decode a gated SFX list into the Web Audio cache (idempotent). */
+export const preloadSfxList = (list: readonly string[]): Promise<unknown> =>
+  Promise.all(list.map(src => loadAudioBuffer(prependBaseUrl(src))))
 
 // Kept for reference — music is streamed on demand from SpinnerArena, not preloaded.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -408,6 +423,9 @@ export default () => {
     deferredAssetsPromise = (async () => {
       try {
         await runInChunks(sfx, 4)
+        // Skill SFX: armed here (after the core SFX), loaded only when owned.
+        // A no-op on a skills-off build (skills gate).
+        armSkillSfx()
         await runInChunks(vfx, 4)
       } catch (e) {
         console.error('Deferred asset preload failed:', e)

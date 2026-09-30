@@ -2,11 +2,11 @@
 // like skinCatalog.ts). Binding design: skills-feature.md §4 (tables), §6
 // (economy), §10.1 (data model).
 //
-// The level tables are VERBATIM copies of tools/skills-sim/skills.mjs — the
-// balance proof in skills-feature.md §3 was measured on those numbers.
-// tests/skillCatalog.test.ts imports the .mjs and fails on any drift. Re-tune
-// loop: edit skills.mjs → re-run the pair sweep (worst pair ≤ 1.50 with ~3 %
-// headroom) → copy the tables here and to skills-feature.md §4.
+// The level tables here are the single source of truth: tools/skills-sim reads
+// them at load time, and tests/skillCatalog.test.ts checks that it does. The
+// balance proof in skills-feature.md §3 was measured on these numbers. Re-tune
+// loop: edit the tables here → re-run the pair sweep (worst pair ≤ 1.50 with
+// ~3 % headroom) → update skills-feature.md §4.
 //
 // Deliberately absent: any ad flag. The optional rewarded coin top-up (§6.5)
 // is gated by the build-time HAS_REWARDED_ADS / isRewardedReady elsewhere.

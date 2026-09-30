@@ -1,4 +1,4 @@
-import type { BladeSkills } from './skills'
+import type { SkillRuntime } from '@/use/skills/skillCore'
 
 // ─── Top & Bottom Part Identifiers ───────────────────────────────────────────
 
@@ -62,6 +62,15 @@ export type BossAbility =
   | 'life-leech'
   | 'thunder'
 
+/**
+ * Stage-101+ boss mechanics (bosses-100-feature.md §4), carried by NPC bosses
+ * next to their {@link BossAbility}:
+ *  - 'ember' → Ember Nova: burn pulse around the carrier on the combat clock
+ *  - 'frost' → Frost Lock: touch drains speed, the carrier's ram freezes
+ *  - 'chill' → Frostbite: every touch adds a stacking slow
+ */
+export type BossTrait = 'ember' | 'frost' | 'chill'
+
 export interface SpinnerConfig {
   topPartId: TopPartId
   bottomPartId: BottomPartId
@@ -70,6 +79,11 @@ export interface SpinnerConfig {
   modelId?: string
   isBoss?: boolean
   bossAbility?: BossAbility
+  /** Stage-101+ boss mechanic this blade carries (NPC bosses only). */
+  bossTrait?: BossTrait
+  /** Trait handed to this boss's split children (Shattering Glacier: 'chill');
+   *  children otherwise drop the parent's trait. */
+  shardTrait?: BossTrait
   /** Boss-tier HP (2×) without the boss size/spin/arena treatment. Used by the
    *  daily challenge's lone enemy, which fights at boss stats but normal size. */
   bossStats?: boolean
@@ -90,6 +104,11 @@ export interface SpinnerStats {
 
 export interface SpinnerState {
   id: number
+  /** Peer-independent identity (PvP determinism): host team 0..n-1, guest
+   *  team 100+i, spawned children derived from their parent. Unlike `id`
+   *  (a per-client counter) it is identical on both PvP clients, so it
+   *  orders collision pairs, the state hash and per-blade RNG streams. */
+  syncKey: number
   x: number
   y: number
   vx: number
@@ -104,7 +123,8 @@ export interface SpinnerState {
   rotation: number
   rotationSpeed: number
   hitFlash: number
-  /** Timestamp of last shock-arena zap; gates re-zap to ≥100ms apart. */
+  /** Game-clock time (`gameTime()`) of the last shock-arena zap; gates
+   *  re-zap to ≥250ms apart. */
   lastShockMs?: number
   wallBounceCount: number
   lastHitTime: number
@@ -162,14 +182,27 @@ export interface SpinnerState {
   /** Timestamp of last thunder damage tick per target blade id.
    *  Key is the target blade's numeric `id` (matches `SpinnerState.id`). */
   thunderLastHit?: Map<number, number>
-  // ── skills (skills-feature.md §10.1; engine wiring lands in WP4) ──────
-  /** Per-blade skill runtime state; only created when a loadout is given. */
-  skills?: BladeSkills
+  // ── skills (skills-feature.md §10.1 / §10.3) ──────────────────────────
+  /** Per-blade skill runtime state (`createBladeSkills`); only set when the
+   *  blade's side has a non-empty loadout — unset is the no-skills fast path. */
+  skills?: SkillRuntime
   /** Static Charge: the turn index on which this blade may not be launched. */
   stunnedForTurn?: number
   /** Static Charge: the turn index this blade is immune to a new stun
    *  (no two consecutive stuns). */
   stunImmuneTurn?: number
+  /** Which rule set the launch lock `stunnedForTurn`: Static Charge
+   *  ('stun') or the Glacier Warden's Frost Lock ('frost'). The
+   *  never-lose-a-turn thaw clears frost locks only (bosses-100 §4.2). */
+  lockKind?: 'stun' | 'frost'
+  // ── boss traits (bosses-100-feature.md §4.3, §12.1) ───────────────────
+  /** Frostbite: expiry team-turn per live chill stack, slots [0, chillN)
+   *  live; allocated once per potential victim in initGame (trait matches). */
+  chillExp?: Float64Array
+  /** Frostbite: live chill stack count (statsFor: speed × (1 − 0.1·n)). */
+  chillN?: number
+  /** Frostbite: game time of the last chill stack (250 ms gate). */
+  lastChillAt?: number
 }
 
 // ─── Arena Powerup ───────────────────────────────────────────────────────────

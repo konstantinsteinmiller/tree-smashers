@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Ulduz Arenası',
     'stage_99': 'Omeqa Döyüşü',
     'stage_100': 'Ölməz Xor',
+    'boss_cinder_tyrant': 'Kül Tiranı',
+    'boss_glacier_warden': 'Buzlaq Keşikçisi',
+    'boss_frostbite_yeti': 'Ayaz Yetisi',
+    'boss_twin_pyres': 'Əkiz Tonqallar',
+    'boss_blizzard_choir': 'Çovğun Xoru',
+    'boss_shattering_glacier': 'Parçalanan Buzlaq',
+    'boss_frostfire_pact': 'Od və Buz Paktı',
+    'boss_magma_titan': 'Maqma Titanı',
+    'boss_blizzard_twins': 'Çovğun Əkizləri',
+    'boss_elemental_court': 'Ünsürlər Divanı',
     'cheat_boss': 'Fırıldaqçı Boss',
     'cheat_ghost': 'Xəyalət Əkiz',
     'cheat_split': 'Parçalanan Sürü',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Mərhələ',
   'bossStage': 'Boss mərhələsi',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss məğlub edildi',
   'stageN': 'Mərhələ {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Qalan mərhələ: {n}',
     'nextUp': 'Növbəti mərhələ!',
     'portraitAlt': 'Növbəti boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Köz Novası',
+      'frost': 'Buz Kilidi',
+      'chill': 'Ayaz Dişi'
+    },
+    'frozenAria': 'Donub: növbəti gedişini buraxır',
+    'frozenHint': 'Donub! Bu gedişdən sonra əriyəcək.',
+    'chillAria': 'Üşüyüb: sürət −{pct}%',
+    'trophyUnlocked': '{name} açıldı!'
+  },
+  'skills': {
+    'title': 'Bacarıqlar',
+    'slotEmpty': 'Boş',
+    'slotAria': 'Bacarıq yuvası {n}',
+    'slotChip': 'Yuva {n}',
+    'unlockAt': 'Mərhələ {n}',
+    'teaser': 'Bacarıqları açmaq üçün mərhələ {n} bossunu məğlub et!',
+    'lockedSkill': 'Mərhələ {n} bossundan sonra açılır',
+    'equip': 'Tax',
+    'remove': 'Çıxar',
+    'equipped': 'Taxılıb',
+    'max': 'MAKS',
+    'new': 'YENİ',
+    'now': 'İndi',
+    'next': 'Növbəti',
+    'nextLine': 'Növbəti: {values}',
+    'seconds': '{n} san',
+    'percent': '{n}%',
+    'unlockedTitle': 'Bacarıqlar açıldı!',
+    'newSkillTitle': 'Yeni bacarıq!',
+    'newSlotTitle': 'Yeni bacarıq yuvası!',
+    'bossDrop': 'Açmaq üçün bu bossu məğlub et: {name}',
+    'bossDropMystery': 'Yeni bir şey açmaq üçün bu bossu məğlub et',
+    'learn': 'Öyrən',
+    'manage': 'Tax və gücləndir',
+    'pickerTitle': 'Bacarıqlar · yuva {n}',
+    'opponentSkills': 'Rəqibin bacarıqları',
+    'hint': 'Taxılmış bacarıqlar hər iki fırfıraya təsir edir. Bacarıqları sikkələrlə öyrən və 10-cu səviyyəyədək gücləndir.',
+    'learnAria': 'Öyrən: {name}, {cost} sikkə | Öyrən: {name}, {cost} sikkə',
+    'upgradeAria': 'Gücləndir: {name}, {cost} sikkə | Gücləndir: {name}, {cost} sikkə',
+    'topUpAria': '{n} sikkə üçün reklama bax | {n} sikkə üçün reklama bax',
+    'hudAria': '{name}, səviyyə {n}',
+    'intro': {
+      'kicker': 'Yeni güc',
+      'line1': 'Bacarıqları açmaq üçün bossları məğlub et.',
+      'line2': 'Onları sikkələrlə öyrən və gücləndir.',
+      'line3': '2-yə qədər tax — hər iki fırfıra istifadə edir.',
+      'line4': 'Döyüşdə özləri işə düşür.',
+      'cta': 'Bacarığını seç',
+      'demoAria': 'Nümunə: {name} bacarıq yuvasına qoyulur. Döyüşdə düşmən zərbəsinin yarısını bloklayıb geri qaytarır.'
+    },
+    'names': {
+      'phase_step': 'Faza Addımı',
+      'guard_shell': 'Qoruyucu Qabıq',
+      'second_wind': 'İkinci Nəfəs',
+      'lucky_edge': 'Şanslı Tiyə',
+      'homing_rockets': 'İstiqamətli Raketlər',
+      'opening_salvo': 'Açılış Yaylımı',
+      'momentum': 'Təkan',
+      'hazard_ward': 'Təhlükə Qalxanı',
+      'static_charge': 'Statik Yük',
+      'mirror_plate': 'Güzgü Lövhə'
+    },
+    'desc': {
+      'phase_step': '{chance}% ehtimalla düşmən zərbəsindən keçib zərər almırsan. Gözləmə {cd} san.',
+      'guard_shell': 'Hər döyüşə maks. canın {pct}% miqdarında qalxanla başla. Qalxan zərəri candan əvvəl udur.',
+      'second_wind': 'Döyüşdə bir dəfə, can {threshold}% və ya aşağı düşəndə: maks. canın {pct}% miqdarı bərpa olunur.',
+      'lucky_edge': '{chance}% ehtimalla zərbə ×{mult} zərər vuran şanslı kritik zərbəyə çevrilir.',
+      'homing_rockets': 'Düşmənlərlə hər {n} toqquşmada: raketlər ən çox 3 düşmənə güclü zərbənin {pct}% miqdarında zərər paylayır.',
+      'opening_salvo': 'Döyüş başlayanda hər düşmən maks. canının {pct}% miqdarını itirir.',
+      'momentum': 'Atılışın zamanı hər divardan sıçrayış və ya zərbə növbəti zərbələrinə +{pct}% zərər əlavə edir (maks. 3).',
+      'hazard_ward': 'Lava və ildırım auraları {hazard}%, tikanlar {chip}% az zərər vurur; şok divarlarında sürətin 10% yox, {shock}% qalır.',
+      'static_charge': '{chance}% ehtimalla səni vuran düşməni elektrik vurur: dayanır və növbəti gedişini buraxır.',
+      'mirror_plate': '{chance}% ehtimalla düşmən zərbəsinin yarısını bloklayıb geri qaytarırsan.'
+    }
   },
   'you': 'SƏN',
   'prev': 'Geri',
@@ -193,7 +281,7 @@ export default {
     'free': 'PULSUZ',
     'spinning': 'Fırlanır...',
     'spinAgain': 'Yenə fırlat',
-    'tripleCoinsAria': 'Cəmi {count} sikkə almaq üçün reklama bax',
+    'tripleCoinsAria': 'Cəmi {count} sikkə almaq üçün reklama bax | Cəmi {count} sikkə almaq üçün reklama bax',
     'skip': 'Keç',
     'youWin': 'QALİB GƏLDİN!',
     'youLose': 'MƏĞLUB OLDUN!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Dəvət kodu',
     'copy': 'Kopyala',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Chaos Arena PvP döyüşümə qoşul!'
+    'shareText': 'Chaos Arena PvP döyüşümə qoşul!',
+    'versionMismatch': 'Rəqibin oyunun fərqli versiyasını işlədir. Hər iki oyunçu səhifəni yeniləyib yenidən cəhd etməlidir.'
   },
   'parts': {
     'star': 'Ulduz Bıçaq',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Maral Böcəyi',
     'drill': 'Burğu',
-    'lancer': 'Nizəçi'
+    'lancer': 'Nizəçi',
+    'cinder': 'Köz',
+    'frost-vault': 'Buz Xəzinəsi',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} əldə edildi!'
+  },
+  'trophySkin': {
+    'label': 'Boss kuboku',
+    'hint': 'Onu geyən bossu məğlub etməklə qazanılır',
+    'beatStage': 'Mərhələ {n}-də qalib gəl'
   },
   'tips': {
     'tankyBottom': 'Məsləhət: Dözümlü alt hissəni sınamısan? Çoxlu can verir, daha çox raund dözürsən!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Almaz al',
-        'subtitle': 'Almazlar fonları və (tezliklə) güclü bacarıqları açır.',
+        'subtitle': 'Almazlar arenan üçün fonları açır.',
         'popular': 'Populyar',
         'bestValue': 'Ən sərfəli',
         'note': 'Alışların oyuna dəstək olur. Təhlükəsiz ödəniş.'

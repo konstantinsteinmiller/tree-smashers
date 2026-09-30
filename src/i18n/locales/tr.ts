@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Yıldız Arenası',
     'stage_99': 'Omega Çilesi',
     'stage_100': 'Ölümsüz Koro',
+    'boss_cinder_tyrant': 'Kül Tiranı',
+    'boss_glacier_warden': 'Buzul Muhafızı',
+    'boss_frostbite_yeti': 'Ayaz Yetisi',
+    'boss_twin_pyres': 'İkiz Alevler',
+    'boss_blizzard_choir': 'Tipi Korosu',
+    'boss_shattering_glacier': 'Parçalanan Buzul',
+    'boss_frostfire_pact': 'Ateş ve Buz Paktı',
+    'boss_magma_titan': 'Magma Titanı',
+    'boss_blizzard_twins': 'Tipi İkizleri',
+    'boss_elemental_court': 'Elementler Divanı',
     'cheat_boss': 'Hileci Boss',
     'cheat_ghost': 'Hayalet İkiz',
     'cheat_split': 'Parçalanan Sürü',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Bölüm',
   'bossStage': 'Boss Bölümü',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss yenildi',
   'stageN': '{n}. Bölüm',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Kalan bölüm: {n}',
     'nextUp': 'Sıradaki bölüm!',
     'portraitAlt': 'Sonraki boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Kor Novası',
+      'frost': 'Buz Kilidi',
+      'chill': 'Ayaz Isırığı'
+    },
+    'frozenAria': 'Donmuş: sonraki sırasını kaçırır',
+    'frozenHint': 'Donmuş! Bu turdan sonra çözülür.',
+    'chillAria': 'Üşümüş: hız −%{pct}',
+    'trophyUnlocked': '{name} açıldı!'
+  },
+  'skills': {
+    'title': 'Yetenekler',
+    'slotEmpty': 'Boş',
+    'slotAria': 'Yetenek yuvası {n}',
+    'slotChip': 'Yuva {n}',
+    'unlockAt': 'Bölüm {n}',
+    'teaser': 'Yetenekleri açmak için {n}. bölümün boss\'unu yen!',
+    'lockedSkill': '{n}. bölümün boss\'undan sonra açılır',
+    'equip': 'Tak',
+    'remove': 'Çıkar',
+    'equipped': 'Takılı',
+    'max': 'MAKS',
+    'new': 'YENİ',
+    'now': 'Şimdi',
+    'next': 'Sonraki',
+    'nextLine': 'Sonraki: {values}',
+    'seconds': '{n} sn',
+    'percent': '%{n}',
+    'unlockedTitle': 'Yetenekler açıldı!',
+    'newSkillTitle': 'Yeni yetenek!',
+    'newSlotTitle': 'Yeni yetenek yuvası!',
+    'bossDrop': 'Açmak için bu boss\'u yen: {name}',
+    'bossDropMystery': 'Yeni bir şey açmak için bu boss\'u yen',
+    'learn': 'Öğren',
+    'manage': 'Tak ve geliştir',
+    'pickerTitle': 'Yetenekler · yuva {n}',
+    'opponentSkills': 'Rakibin yetenekleri',
+    'hint': 'Takılı yeteneklerin iki topaçta da işe yarar. Yetenekleri altınla öğren ve 10. seviyeye kadar geliştir.',
+    'learnAria': 'Öğren: {name}, {cost} altın | Öğren: {name}, {cost} altın',
+    'upgradeAria': 'Geliştir: {name}, {cost} altın | Geliştir: {name}, {cost} altın',
+    'topUpAria': '{n} altın için reklam izle | {n} altın için reklam izle',
+    'hudAria': '{name}, seviye {n}',
+    'intro': {
+      'kicker': 'Yeni güç',
+      'line1': 'Yetenekleri açmak için boss\'ları yen.',
+      'line2': 'Onları altınla öğren ve geliştir.',
+      'line3': 'En fazla 2 tane tak — iki topaç da kullanır.',
+      'line4': 'Savaşta kendiliğinden devreye girer.',
+      'cta': 'Yeteneğini seç',
+      'demoAria': 'Örnek: {name} bir yetenek yuvasına girer. Savaşta düşman vuruşunun yarısını engeller ve geri yollar.'
+    },
+    'names': {
+      'phase_step': 'Faz Adımı',
+      'guard_shell': 'Koruyucu Kabuk',
+      'second_wind': 'İkinci Nefes',
+      'lucky_edge': 'Şanslı Kenar',
+      'homing_rockets': 'Güdümlü Roketler',
+      'opening_salvo': 'Açılış Salvosu',
+      'momentum': 'İvme',
+      'hazard_ward': 'Tehlike Kalkanı',
+      'static_charge': 'Statik Yük',
+      'mirror_plate': 'Ayna Plaka'
+    },
+    'desc': {
+      'phase_step': '%{chance} ihtimalle bir düşman vuruşunun içinden geçer, hasar almazsın. Bekleme süresi {cd} sn.',
+      'guard_shell': 'Her savaşa maks. canın %{pct} kadarı bir kalkanla başla. Kalkan hasarı candan önce emer.',
+      'second_wind': 'Savaş başına bir kez, canın %{threshold} veya altına düştüğünde: maks. canın %{pct} kadarını iyileştir.',
+      'lucky_edge': '%{chance} ihtimalle bir vuruş, ×{mult} hasar veren şanslı bir kritik vuruşa dönüşür.',
+      'homing_rockets': 'Düşmanlarla her {n} çarpışmada: roketler en fazla 3 düşmana, sağlam bir vuruşun %{pct} kadarı hasarı paylaştırarak vurur.',
+      'opening_salvo': 'Savaş başladığında her düşman maks. canının %{pct} kadarını kaybeder.',
+      'momentum': 'Fırlatışın sırasında her duvar sekmesi veya vuruş sonraki vuruşlarına +%{pct} hasar ekler (maks. 3).',
+      'hazard_ward': 'Lav ve gök gürültüsü auraları %{hazard}, dikenler %{chip} daha az hasar verir; şok duvarları hızının %10 yerine %{shock} kadarını bırakır.',
+      'static_charge': '%{chance} ihtimalle sana çarpan düşmana elektrik çarptırırsın: durur ve sonraki sırasını kaçırır.',
+      'mirror_plate': '%{chance} ihtimalle bir düşman vuruşunun yarısını engelleyip geri gönderirsin.'
+    }
   },
   'you': 'SEN',
   'prev': 'Geri',
@@ -193,7 +281,7 @@ export default {
     'free': 'ÜCRETSİZ',
     'spinning': 'Dönüyor...',
     'spinAgain': 'Tekrar Çevir',
-    'tripleCoinsAria': 'Toplam {count} jeton almak için reklam izle',
+    'tripleCoinsAria': 'Toplam {count} altın almak için reklam izle | Toplam {count} altın almak için reklam izle',
     'skip': 'Geç',
     'youWin': 'KAZANDIN!',
     'youLose': 'KAYBETTİN!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Davet Kodu',
     'copy': 'Kopyala',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Chaos Arena PvP savaşıma katıl!'
+    'shareText': 'Chaos Arena PvP savaşıma katıl!',
+    'versionMismatch': 'Rakibin oyunun farklı bir sürümünü kullanıyor. İki oyuncu da sayfayı yenileyip tekrar denemeli.'
   },
   'parts': {
     'star': 'Yıldız Bıçak',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Deniz Gergedanı',
     'stag-beetle': 'Geyik Böceği',
     'drill': 'Matkap',
-    'lancer': 'Mızrakçı'
+    'lancer': 'Mızrakçı',
+    'cinder': 'Kor',
+    'frost-vault': 'Buz Mahzeni',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} kazanıldı!'
+  },
+  'trophySkin': {
+    'label': 'Boss kupası',
+    'hint': 'Onu giyen boss yenilince kazanılır',
+    'beatStage': '{n}. Bölümü geç'
   },
   'tips': {
     'tankyBottom': 'İpucu: Dayanıklı bir alt parça denedin mi? Sana bolca can verir, daha çok tur dayanırsın!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Elmas Al',
-        'subtitle': 'Elmaslar arka planların ve (yakında) güçlü yeteneklerin kilidini açar.',
+        'subtitle': 'Elmaslar arenan için arka planların kilidini açar.',
         'popular': 'Popüler',
         'bestValue': 'Avantajlı',
         'note': 'Satın alımlar oyunu destekler. Güvenli ödeme.'

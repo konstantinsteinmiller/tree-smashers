@@ -4,6 +4,8 @@ import type { TopPartId, BottomPartId, SpinnerConfig } from '@/types/spinner'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { crazyPlayerName, submitCgScore } from '@/use/useCrazyGames'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { FAKE_NAMES, makeName, scrubNpcNames } from '@/use/leaderboardNames'
+import type { SkillLoadout } from '@/types/skills'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -18,6 +20,11 @@ export interface LeaderboardEntry {
   /** Timestamp when the daily climb counter was last reset. */
   dailyResetAt: number
   isPlayer?: boolean
+  /** An explicit skill loadout for a rematch (skills-feature.md §9.1). The
+   *  board never stores one: a ghost's loadout is derived from `id` +
+   *  `maxStage` at fight time (`use/skills/ghostSkills.ts`, skills builds
+   *  only), so it is absent here unless a caller supplies one. */
+  skills?: SkillLoadout
 }
 
 // ─── Tunables ───────────────────────────────────────────────────────────────
@@ -58,30 +65,6 @@ const NEWCOMER_CHANCE_PER_TICK = MAX_NEWCOMERS_PER_DAY / 24
 const NEWCOMERS_KEY = 'spinner_leaderboard_newcomers'
 const GHOST_FIGHTS_KEY = 'spinner_ghost_fights_today'
 
-// Names lean ~60% silly/childish to match the 6–15 target audience.
-// Sensitive themes (sexual, political, religious, slurs, drugs/alcohol,
-// real-world violence, body-shaming) are intentionally excluded.
-const FAKE_NAMES = [
-  // ── "Cool" edgy names (~40%) ───────────────────────────────────────────
-  'BladeKing', 'StormFury', 'NightHowl', 'IronVortex', 'CrimsonAce',
-  'ShadowRipper', 'NovaStrike', 'PhoenixWrath', 'TitanForge', 'VenomEdge',
-  'FrostFang', 'EmberSoul', 'ThunderJax', 'OmegaSpin', 'RiftBreaker',
-  'KaiserBolt', 'OnyxClaw', 'BlazeMonk', 'HavocReign', 'EchoStrike',
-  'PulseRogue', 'AstroDuke', 'DriftKing', 'FuryMax', 'NebulaJin',
-  'SableHex', 'TempestVox', 'NeonFang', 'VoltaireX', 'StarflareQ',
-  // ── Silly / childish names (~60%) ──────────────────────────────────────
-  'AllKiller', 'Farter', 'BurpKing', 'FartZilla', 'ToeJam',
-  'BoogerBoy', 'SnotRocket', 'PicklePants', 'WafflePants', 'NuggetKing',
-  'TacoTornado', 'BananaBruh', 'PizzaPirate', 'NoodleArm', 'MuffinMan',
-  'CheeseWhiz', 'SpaghettiKid', 'JellyBean', 'DonutDude', 'PancakePirate',
-  'MeatballHead', 'BurritoBomber', 'NachoBoss', 'SodaSlurper', 'JuiceBoxHero',
-  'WiggleWorm', 'GiggleGoblin', 'WackyJack', 'ZanyZeke', 'SillyBilly',
-  'GoofyGus', 'DerpyDuck', 'KooKooKid', 'BonkBoy', 'BoingBoing',
-  'SquishyKing', 'JellyJiggler', 'ThumpyBunny', 'NoobSlayer', 'LagBeast',
-  'SkibidiKing', 'YeetMaster', 'SusBro', 'DabKing', 'BigChungus',
-  'SneezyPete', 'HiccupHero', 'CrumbCrusher', 'BellyFlopper', 'GrumpyGus'
-]
-
 const TOP_IDS: TopPartId[] = ['star', 'triangle', 'round', 'quadratic', 'cushioned', 'piercer']
 const BOTTOM_IDS: BottomPartId[] = ['speedy', 'tanky', 'balanced']
 const FAKE_MODEL_IDS = [
@@ -110,39 +93,6 @@ const generateBlade = (stage: number): SpinnerConfig => ({
   modelId: rand(FAKE_MODEL_IDS)
 })
 
-// Textual suffix pool. Empty strings are intentionally included so a
-// chunk of names stay bare. The rest mixes generic "cool" tags with
-// gamer / streamer culture references appropriate for ages 6–15.
-// We deliberately avoid numeric suffixes and any taunting tags
-// (e.g. "EZ", "Noob") since names should read like real kid handles.
-const NAME_SUFFIXES = [
-  // ~30% bare
-  '', '', '', '', '', '', '', '', '', '', '', '',
-  // generic / cool
-  'Jr', 'Pro', 'X', 'MVP', 'Max', 'Z', 'Boss', 'Mega', 'Ace', 'Prime',
-  // gamer / streamer / meme culture
-  'Kong', 'Lol', 'Rofl', 'WTF', 'Pig', 'Lel', 'Kack', 'JustChat', 'GG', 'YT', 'TV', 'OP', 'AFK',
-  'Goat', 'Lame', 'Tuber', 'Mate', 'Bro', 'Brah', 'Dude', 'Fam', 'Hype', 'Wow', 'Sus', 'Yeet', 'Fock', 'Type'
-]
-const NAME_PREFIXES = [
-  // ~30% bare
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-  // generic / cool
-  'The', 'Hyper', 'Mega', 'Super', 'Dipshit', 'Focker', 'Lick', 'Jim', 'Jane', 'Pipi',
-  // gamer / streamer / meme culture
-  'Tum', 'Luck', 'Chang', 'Ching', 'Kar', 'Fly', 'Hammer', 'Giga', 'GG',
-  'Goat', 'Lame', 'Tuber', 'Bro', 'Brahhh', 'Hype', 'Sus'
-]
-
-const makeName = (i: number): string => {
-  const base = FAKE_NAMES[i % FAKE_NAMES.length] ?? 'Rival'
-  // Pick a random suffix (often empty) so names feel naturally varied
-  // instead of every "round" sharing the same suffix.
-  const suffix = NAME_SUFFIXES[Math.floor(Math.random() * NAME_SUFFIXES.length)]!
-  const prefix = NAME_PREFIXES[Math.floor(Math.random() * NAME_PREFIXES.length)]!
-  return suffix || prefix ? `${prefix}${base}${suffix}` : base
-}
-
 // ─── Persistence ────────────────────────────────────────────────────────────
 
 const isValidEntry = (e: any): e is LeaderboardEntry =>
@@ -157,7 +107,7 @@ const loadEntries = (): LeaderboardEntry[] => {
       // Allow growth beyond INITIAL_PLAYER_COUNT (newcomers join over time),
       // but reject anything obviously broken or smaller than the seed.
       if (Array.isArray(parsed) && parsed.length >= INITIAL_PLAYER_COUNT && parsed.every(isValidEntry)) {
-        return parsed
+        return scrubNpcNames(parsed)
       }
     }
   } catch { /* fall through */
@@ -635,7 +585,10 @@ const useLeaderboard = () => {
       dailyResetAt: 0,
       isPlayer: true
     }
-    const merged = [...npcEntries.value, playerEntry]
+    // Ghost skill loadouts are derived at fight time (arenaSkills →
+    // ghostSkills.ts), never here: the board carries no skill code at all.
+    const npcs = npcEntries.value
+    const merged = [...npcs, playerEntry]
     // Stable order: higher stage first; player wins ties so their position is well-defined.
     merged.sort((a, b) => {
       if (b.maxStage !== a.maxStage) return b.maxStage - a.maxStage

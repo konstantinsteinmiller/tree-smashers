@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Arena Astral',
     'stage_99': 'Repte Omega',
     'stage_100': 'El Cor Etern',
+    'boss_cinder_tyrant': 'El Tirà de Cendra',
+    'boss_glacier_warden': 'El Guardià Glacial',
+    'boss_frostbite_yeti': 'El Ieti Gelat',
+    'boss_twin_pyres': 'Les Fogueres Bessones',
+    'boss_blizzard_choir': 'El Cor del Torb',
+    'boss_shattering_glacier': 'La Glacera Esmicolada',
+    'boss_frostfire_pact': 'El Pacte de Gel i Foc',
+    'boss_magma_titan': 'El Tità de Magma',
+    'boss_blizzard_twins': 'Els Bessons del Torb',
+    'boss_elemental_court': 'La Cort Elemental',
     'cheat_boss': 'Cap Trampós',
     'cheat_ghost': 'Bessó Fantasma',
     'cheat_split': 'Eixam Esmicolat',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase del cap',
+  'labBadge': 'LAB',
   'bossDefeated': 'Cap derrotat',
   'stageN': 'Fase {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Falten {n} fases',
     'nextUp': 'Propera fase!',
     'portraitAlt': 'Proper cap: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova de Brases',
+      'frost': 'Pany de Gel',
+      'chill': 'Congelació'
+    },
+    'frozenAria': 'Congelada: perd el torn següent',
+    'frozenHint': 'Congelada! Es desglaça després del torn.',
+    'chillAria': 'Refredada: velocitat −{pct}%',
+    'trophyUnlocked': '{name} desbloquejat!'
+  },
+  'skills': {
+    'title': 'Habilitats',
+    'slotEmpty': 'Buit',
+    'slotAria': 'Espai d\'habilitat {n}',
+    'slotChip': 'Espai {n}',
+    'unlockAt': 'Fase {n}',
+    'teaser': 'Derrota el cap de la fase {n} per desbloquejar habilitats!',
+    'lockedSkill': 'Es desbloqueja després del cap de la fase {n}',
+    'equip': 'Equipa',
+    'remove': 'Treu',
+    'equipped': 'Equipada',
+    'max': 'MÀX',
+    'new': 'NOU',
+    'now': 'Ara',
+    'next': 'Següent',
+    'nextLine': 'Següent: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Habilitats desbloquejades!',
+    'newSkillTitle': 'Nova habilitat!',
+    'newSlotTitle': 'Nou espai d\'habilitat!',
+    'bossDrop': 'Derrota aquest cap per desbloquejar {name}',
+    'bossDropMystery': 'Derrota aquest cap per desbloquejar una novetat',
+    'learn': 'Aprèn',
+    'manage': 'Equipa i millora',
+    'pickerTitle': 'Habilitats · espai {n}',
+    'opponentSkills': 'Habilitats del rival',
+    'hint': 'Les habilitats equipades funcionen a totes dues baldufes. Aprèn-les i millora-les amb monedes fins al nivell 10.',
+    'learnAria': 'Aprèn {name} per {cost} moneda | Aprèn {name} per {cost} monedes',
+    'upgradeAria': 'Millora {name} per {cost} moneda | Millora {name} per {cost} monedes',
+    'topUpAria': 'Mira un anunci per obtenir {n} moneda | Mira un anunci per obtenir {n} monedes',
+    'hudAria': '{name}, nivell {n}',
+    'intro': {
+      'kicker': 'Nou poder',
+      'line1': 'Derrota caps per desbloquejar habilitats.',
+      'line2': 'Aprèn-les i millora-les amb monedes.',
+      'line3': 'Equipa\'n fins a 2: les fan servir totes dues baldufes.',
+      'line4': 'En combat s\'activen soles.',
+      'cta': 'Tria la teva habilitat',
+      'demoAria': 'Exemple: {name} va a un espai d\'habilitat. En combat bloqueja la meitat d\'un cop enemic i el retorna.'
+    },
+    'names': {
+      'phase_step': 'Pas de fase',
+      'guard_shell': 'Closca guardiana',
+      'second_wind': 'Segon alè',
+      'lucky_edge': 'Tall de la sort',
+      'homing_rockets': 'Coets teledirigits',
+      'opening_salvo': 'Salva inicial',
+      'momentum': 'Impuls',
+      'hazard_ward': 'Protecció ambiental',
+      'static_charge': 'Càrrega estàtica',
+      'mirror_plate': 'Placa mirall'
+    },
+    'desc': {
+      'phase_step': '{chance}% de probabilitat de travessar un cop enemic sense rebre dany. Recàrrega {cd} s.',
+      'guard_shell': 'Comença cada combat amb un escut del {pct}% dels PV màx. Absorbeix el dany abans que els PV.',
+      'second_wind': 'Un cop per combat, quan els PV baixen al {threshold}% o menys: cura el {pct}% dels PV màx.',
+      'lucky_edge': '{chance}% de probabilitat que un cop sigui un crític de la sort de ×{mult} de dany.',
+      'homing_rockets': 'Cada {n} xocs amb enemics: coets colpegen fins a 3 enemics amb el {pct}% d\'un cop fort, repartit.',
+      'opening_salvo': 'En començar el combat, cada enemic perd el {pct}% dels seus PV màx.',
+      'momentum': 'Durant el teu llançament, cada rebot a la paret o cop afegeix +{pct}% de dany als cops següents (màx. 3).',
+      'hazard_ward': 'La lava i les aures de tro fan un {hazard}% menys de dany, les punxes un {chip}% menys; les parets elèctriques et deixen un {shock}% de velocitat en lloc del 10%.',
+      'static_charge': '{chance}% de probabilitat d\'electrocutar un enemic que t\'envesteix: s\'atura i perd el torn següent.',
+      'mirror_plate': '{chance}% de probabilitat de bloquejar la meitat d\'un cop enemic i retornar-la.'
+    }
   },
   'you': 'TU',
   'prev': 'Ant.',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Girant...',
     'spinAgain': 'Torna a girar',
-    'tripleCoinsAria': 'Mira un anunci per obtenir {count} monedes en total',
+    'tripleCoinsAria': 'Mira un anunci per obtenir {count} moneda en total | Mira un anunci per obtenir {count} monedes en total',
     'skip': 'Salta',
     'youWin': 'HAS GUANYAT!',
     'youLose': 'HAS PERDUT!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Codi d\'invitació',
     'copy': 'Copia',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Uneix-te a la meva batalla PvP de Chaos Arena!'
+    'shareText': 'Uneix-te a la meva batalla PvP de Chaos Arena!',
+    'versionMismatch': 'El teu rival fa servir una altra versió del joc. Tots dos jugadors heu de recarregar la pàgina i tornar-ho a provar.'
   },
   'parts': {
     'star': 'Fulla Estelar',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Escanyapolls',
     'drill': 'Trepant',
-    'lancer': 'Llancer'
+    'lancer': 'Llancer',
+    'cinder': 'Cendra',
+    'frost-vault': 'Volta Gelada',
+    'yeti': 'Ieti'
   },
   'skinChest': {
     'acquired': 'Has obtingut {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofeu de cap',
+    'hint': 'S’obté en derrotar el cap que el porta',
+    'beatStage': 'Supera la fase {n}'
   },
   'tips': {
     'tankyBottom': 'Consell: has provat una peça inferior Tanc? Et dona molta vida per aguantar més rondes!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Obtén diamants',
-        'subtitle': 'Els diamants desbloquegen fons i (aviat) habilitats poderoses.',
+        'subtitle': 'Els diamants desbloquegen fons per a la teva arena.',
         'popular': 'Popular',
         'bestValue': 'Millor preu',
         'note': 'Les compres donen suport al joc. Pagament segur.'

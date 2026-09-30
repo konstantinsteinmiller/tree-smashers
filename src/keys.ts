@@ -52,3 +52,8 @@ export const POSTED_NAME_KEY = 'spinner_posted_name'
 /** The best stage the server has ACCEPTED. The whole write rule is
  *  `stage > this`, so it may only be set after a confirmed 200. */
 export const SUBMITTED_STAGE_KEY = 'spinner_submitted_stage'
+
+// ─── Skills (skills-feature.md §10.4) ──────────────────────────────────────
+// Declared in the flag-boundary module `src/skills/skillKeys.ts` (so a
+// skills-off build drops the strings); re-exported here for existing imports.
+export { SKILLS_KEY, SKILL_LOADOUT_KEY, SKILL_UI_KEY } from '@/skills/skillKeys'

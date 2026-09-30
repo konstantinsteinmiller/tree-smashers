@@ -5,6 +5,13 @@ import { modelImgPath } from '@/use/useModels'
 import { isLowQuality } from '@/use/useQuality'
 import { prependBaseUrl } from '@/utils/function'
 import type { BossPeek } from '@/use/bossPeek'
+// Lazy, null on a skills-off build (skills gate).
+import { SkillDropChipUi } from '@/skills/skillsGate'
+// Bosses 100+ (bosses gate): the trait glyph is a lazy handle, null on a
+// bosses100-off build; the crest lookup is pure boundary data used only
+// behind the literal.
+import { BOSSES100_BUILD, BossTraitGlyphUi } from '@/bosses/bosses100Gate'
+import { bossBadgeImgPathForSkin } from '@/data/bossArt'
 
 /**
  * ─── "Next boss · Stage 5" ──────────────────────────────────────────────────
@@ -56,6 +63,12 @@ const distance = computed(() =>
 )
 
 const portraitAlt = computed(() => t('bossPeek.portraitAlt', { name: bossName.value }))
+
+// Stage-101+ encounters (bosses-100-feature.md §7.2): the boss's crest on the
+// frame's upper-left shoulder and its mechanics as a glyph row under the name,
+// so the player learns what is coming 1–2 stages ahead. Classic bosses: none.
+const crestSrc = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? bossBadgeImgPathForSkin(props.peek.modelId) : null))
+const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props.peek.traits ?? [] : []))
 </script>
 
 <template lang="pug">
@@ -83,6 +96,23 @@ const portraitAlt = computed(() => t('bossPeek.portraitAlt', { name: bossName.va
       span.boss-peek__ember(aria-hidden="true")
       span.boss-peek__ember(aria-hidden="true")
       span.boss-peek__ember(aria-hidden="true")
+      //- The skill this boss drops (or "?" before the first unlock), pinned
+      //- to the frame's upper right. Hides itself when there is none.
+      component.boss-peek__drop(
+        v-if="SkillDropChipUi"
+        :is="SkillDropChipUi"
+        :boss-stage-id="peek.bossStageId"
+        :size="26"
+      )
+      //- New-encounter crest (the painted hex badge) on the upper-left shoulder.
+      img.boss-peek__crest.pointer-events-none(
+        v-if="crestSrc"
+        :src="crestSrc"
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+        decoding="async"
+      )
 
     //- Banner: tucked under the frame's right wing. The distance chip wraps
     //- under the headline when a long locale runs out of width.
@@ -91,6 +121,9 @@ const portraitAlt = computed(() => t('bossPeek.portraitAlt', { name: bossName.va
         span.boss-peek__headline.font-black.uppercase.game-text {{ headline }}
         span.boss-peek__distance.font-bold.game-text {{ distance }}
       span.boss-peek__name.font-black.italic.text-white.game-text {{ bossName }}
+      //- The encounter's mechanics (flame ring / ice block / snowflake).
+      div.boss-peek__traits.flex.items-center(v-if="BossTraitGlyphUi && traits.length" data-boss-peek-traits)
+        component(v-for="tr in traits" :key="tr" :is="BossTraitGlyphUi" :trait="tr" :size="20")
 </template>
 
 <style scoped lang="sass">
@@ -174,6 +207,27 @@ const portraitAlt = computed(() => t('bossPeek.portraitAlt', { name: bossName.va
   inset: 0
   width: 100%
   height: 100%
+
+// Boss-drop skill chip on the frame's upper-right shoulder (clear of the
+// horned skull at the top centre).
+.boss-peek__drop
+  position: absolute
+  right: 4%
+  top: 8%
+  z-index: 2
+
+// New-encounter crest on the upper-left shoulder (clear of the skull).
+.boss-peek__crest
+  position: absolute
+  left: 0
+  top: 4%
+  width: 34%
+  height: auto
+  z-index: 2
+
+.boss-peek__traits
+  gap: 0.3rem
+  margin-top: 0.15rem
 
 // Embers: three 3px sparks rising off the frame, staggered.
 .boss-peek__ember

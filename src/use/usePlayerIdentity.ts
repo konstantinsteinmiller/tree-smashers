@@ -3,6 +3,7 @@ import { flushSaveNow } from '@/use/persistedState'
 import {
   ANON_NAME_KEY, PLAYER_ID_KEY, PLAYER_NAME_KEY, SDK_NAME_KEY
 } from '@/keys'
+import { sanitizeDisplayName } from '@/utils/nameDenylist'
 
 /**
  * ─── Who the leaderboard row belongs to ─────────────────────────────────────
@@ -212,7 +213,12 @@ export const resolveIdentity = async (): Promise<PlayerIdentity> => {
   }
   if (dirty) void flushSaveNow()
 
-  return { id, name, source: sdkName ? 'sdk' : source }
+  // The name that LEAVES the device: a denylisted one is swapped for its
+  // deterministic guest stand-in (`sanitizeDisplayName` — the very function
+  // the Worker and the snapshot baker run) BEFORE it is ever posted, so the
+  // offending string never reaches the Worker, and the own row shows the same
+  // stand-in the board does. The stored choice is left as the player typed it.
+  return { id, name: sanitizeDisplayName(name), source: sdkName ? 'sdk' : source }
 }
 
 /** Let the player name themselves. Highest precedence, never overwritten. */

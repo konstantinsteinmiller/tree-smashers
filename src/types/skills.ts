@@ -4,14 +4,12 @@
 // `src/data/skillCatalog.ts`; this file stays dependency-free so both the
 // catalog and `spinner.ts` can import it without a cycle.
 
-/** The ten skill ids. ORDER IS STABLE: `SKILL_BIT` in the catalog is
- *  `1 << index`, so append new skills at the end, never reorder. (The order
- *  is the design's §10.1 list; the unlock order is `unlockStage`, see
- *  `SKILL_AUTOFILL_ORDER`.) */
-export const SKILL_IDS = [
-  'phase_step', 'guard_shell', 'second_wind', 'lucky_edge', 'homing_rockets',
-  'opening_salvo', 'momentum', 'hazard_ward', 'static_charge', 'mirror_plate'
-] as const
+// The ten skill ids live in the flag-boundary module `src/skills/skillIds.ts`
+// (so the save-merge score can count levels on any build without pulling this
+// file in); ORDER IS STABLE — see there.
+import { SKILL_IDS } from '@/skills/skillIds'
+
+export { SKILL_IDS }
 
 export type SkillId = (typeof SKILL_IDS)[number]
 

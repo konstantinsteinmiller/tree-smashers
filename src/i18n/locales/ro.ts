@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Arena Astrală',
     'stage_99': 'Provocarea Omega',
     'stage_100': 'Corul Veșnic',
+    'boss_cinder_tyrant': 'Tiranul de Cenușă',
+    'boss_glacier_warden': 'Paznicul Ghețarului',
+    'boss_frostbite_yeti': 'Yeti cel Înghețat',
+    'boss_twin_pyres': 'Rugurile Gemene',
+    'boss_blizzard_choir': 'Corul Viscolului',
+    'boss_shattering_glacier': 'Ghețarul Sfărâmat',
+    'boss_frostfire_pact': 'Pactul Focului și Gheții',
+    'boss_magma_titan': 'Titanul de Magmă',
+    'boss_blizzard_twins': 'Gemenii Viscolului',
+    'boss_elemental_court': 'Curtea Elementelor',
     'cheat_boss': 'Bossul Trișor',
     'cheat_ghost': 'Geamănul Fantomă',
     'cheat_split': 'Roiul Spulberat',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapă cu boss',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss învins',
   'stageN': 'Etapa {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Etape rămase: {n}',
     'nextUp': 'Etapa următoare!',
     'portraitAlt': 'Următorul boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova de Jar',
+      'frost': 'Lacăt de Gheață',
+      'chill': 'Degerătură'
+    },
+    'frozenAria': 'Înghețat: pierde tura următoare',
+    'frozenHint': 'Înghețat! Se dezgheață după tura asta.',
+    'chillAria': 'Răcit: viteză −{pct}%',
+    'trophyUnlocked': 'Deblocat: {name}!'
+  },
+  'skills': {
+    'title': 'Abilități',
+    'slotEmpty': 'Gol',
+    'slotAria': 'Slot de abilitate {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Etapa {n}',
+    'teaser': 'Învinge boss-ul etapei {n} ca să deblochezi abilitățile!',
+    'lockedSkill': 'Se deblochează după boss-ul etapei {n}',
+    'equip': 'Echipează',
+    'remove': 'Scoate',
+    'equipped': 'Echipată',
+    'max': 'MAXIM',
+    'new': 'NOU',
+    'now': 'Acum',
+    'next': 'Următor',
+    'nextLine': 'Următor: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Abilități deblocate!',
+    'newSkillTitle': 'Abilitate nouă!',
+    'newSlotTitle': 'Slot nou de abilitate!',
+    'bossDrop': 'Învinge acest boss ca să deblochezi {name}',
+    'bossDropMystery': 'Învinge acest boss ca să deblochezi ceva nou',
+    'learn': 'Învață',
+    'manage': 'Echipare și upgrade',
+    'pickerTitle': 'Abilități · slot {n}',
+    'opponentSkills': 'Abilitățile adversarului',
+    'hint': 'Abilitățile echipate funcționează pe ambii titirezi. Învață și îmbunătățește abilitățile cu monede până la nivelul 10.',
+    'learnAria': 'Învață {name} pentru {cost} monedă | Învață {name} pentru {cost} monede | Învață {name} pentru {cost} de monede',
+    'upgradeAria': 'Îmbunătățește {name} pentru {cost} monedă | Îmbunătățește {name} pentru {cost} monede | Îmbunătățește {name} pentru {cost} de monede',
+    'topUpAria': 'Urmărește o reclamă pentru {n} monedă | Urmărește o reclamă pentru {n} monede | Urmărește o reclamă pentru {n} de monede',
+    'hudAria': '{name}, nivelul {n}',
+    'intro': {
+      'kicker': 'Putere nouă',
+      'line1': 'Învinge boși ca să deblochezi abilități.',
+      'line2': 'Învață-le și îmbunătățește-le cu monede.',
+      'line3': 'Echipează până la 2 — le folosesc ambii titirezi.',
+      'line4': 'În luptă se activează singure.',
+      'cta': 'Alege-ți abilitatea',
+      'demoAria': 'Exemplu: {name} intră într-un slot de abilitate. În luptă blochează jumătate dintr-o lovitură inamică și o trimite înapoi.'
+    },
+    'names': {
+      'phase_step': 'Pas fazic',
+      'guard_shell': 'Carapace de gardă',
+      'second_wind': 'Al doilea suflu',
+      'lucky_edge': 'Tăiș norocos',
+      'homing_rockets': 'Rachete ghidate',
+      'opening_salvo': 'Salvă de deschidere',
+      'momentum': 'Avânt',
+      'hazard_ward': 'Scut de pericole',
+      'static_charge': 'Sarcină statică',
+      'mirror_plate': 'Placă oglindă'
+    },
+    'desc': {
+      'phase_step': '{chance}% șansă să treci prin lovitura unui inamic fără daune. Reîncărcare {cd} s.',
+      'guard_shell': 'Începi fiecare luptă cu un scut de {pct}% din HP maxim. Absoarbe daunele înaintea HP-ului.',
+      'second_wind': 'O dată pe luptă, când HP-ul scade la {threshold}% sau mai puțin: vindecă {pct}% din HP maxim.',
+      'lucky_edge': '{chance}% șansă ca o lovitură să devină o lovitură critică norocoasă cu daune ×{mult}.',
+      'homing_rockets': 'La fiecare {n} ciocniri cu inamici: rachete lovesc până la 3 inamici cu {pct}% dintr-o lovitură solidă, împărțit.',
+      'opening_salvo': 'La începutul luptei, fiecare inamic pierde {pct}% din HP-ul maxim.',
+      'momentum': 'În timpul lansării tale, fiecare ricoșeu din perete sau lovitură adaugă +{pct}% daune loviturilor următoare (max. 3).',
+      'hazard_ward': 'Lava și aurele de tunet rănesc cu {hazard}% mai puțin, țepii cu {chip}% mai puțin; zidurile electrice îți lasă {shock}% viteză în loc de 10%.',
+      'static_charge': '{chance}% șansă să electrocutezi un inamic care te lovește: se oprește și pierde tura următoare.',
+      'mirror_plate': '{chance}% șansă să blochezi jumătate dintr-o lovitură inamică și s-o trimiți înapoi.'
+    }
   },
   'you': 'TU',
   'prev': 'Înapoi',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATUIT',
     'spinning': 'Se învârte...',
     'spinAgain': 'Învârte din nou',
-    'tripleCoinsAria': 'Urmărește o reclamă ca să primești în total {count} monede',
+    'tripleCoinsAria': 'Urmărește o reclamă ca să primești în total {count} monedă | Urmărește o reclamă ca să primești în total {count} monede | Urmărește o reclamă ca să primești în total {count} de monede',
     'skip': 'Sari peste',
     'youWin': 'AI CÂȘTIGAT!',
     'youLose': 'AI PIERDUT!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Cod de invitație',
     'copy': 'Copiază',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Intră în lupta mea PvP din Chaos Arena!'
+    'shareText': 'Intră în lupta mea PvP din Chaos Arena!',
+    'versionMismatch': 'Adversarul tău folosește altă versiune a jocului. Amândoi jucătorii trebuie să reîncarce pagina și să încerce din nou.'
   },
   'parts': {
     'star': 'Lamă stelară',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Rădașcă',
     'drill': 'Burghiu',
-    'lancer': 'Lăncier'
+    'lancer': 'Lăncier',
+    'cinder': 'Jar',
+    'frost-vault': 'Cripta de Gheață',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Ai obținut: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofeu de boss',
+    'hint': 'Se obține învingând bossul care îl poartă',
+    'beatStage': 'Treci de etapa {n}'
   },
   'tips': {
     'tankyBottom': 'Sfat: Ai încercat o parte de jos rezistentă? Îți dă mult HP ca să reziști mai multe runde!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Obține diamante',
-        'subtitle': 'Diamantele deblochează fundaluri și (în curând) abilități puternice.',
+        'subtitle': 'Diamantele deblochează fundaluri pentru arena ta.',
         'popular': 'Popular',
         'bestValue': 'Top ofertă',
         'note': 'Achizițiile susțin jocul. Plată securizată.'

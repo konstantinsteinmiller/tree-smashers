@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astrální aréna',
     'stage_99': 'Výzva Omega',
     'stage_100': 'Věčný sbor',
+    'boss_cinder_tyrant': 'Popelavý tyran',
+    'boss_glacier_warden': 'Strážce ledovce',
+    'boss_frostbite_yeti': 'Mrazivý yetti',
+    'boss_twin_pyres': 'Plamenná dvojčata',
+    'boss_blizzard_choir': 'Sbor vánice',
+    'boss_shattering_glacier': 'Tříštící se ledovec',
+    'boss_frostfire_pact': 'Pakt ohně a ledu',
+    'boss_magma_titan': 'Magmový titán',
+    'boss_blizzard_twins': 'Dvojčata vánice',
+    'boss_elemental_court': 'Dvůr živlů',
     'cheat_boss': 'Podvodný boss',
     'cheat_ghost': 'Přízračné dvojče',
     'cheat_split': 'Tříštivý roj',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa s bossem',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss poražen',
   'stageN': 'Etapa {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Zbývá etap: {n}',
     'nextUp': 'Další etapa!',
     'portraitAlt': 'Další boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova žáru',
+      'frost': 'Mrazivé pouto',
+      'chill': 'Omrzliny'
+    },
+    'frozenAria': 'Zmrzlá: vynechá příští tah',
+    'frozenHint': 'Zmrzlá! Rozmrzne po tomto tahu.',
+    'chillAria': 'Prochladlá: rychlost −{pct}%',
+    'trophyUnlocked': 'Odemčeno: {name}!'
+  },
+  'skills': {
+    'title': 'Schopnosti',
+    'slotEmpty': 'Prázdné',
+    'slotAria': 'Slot schopnosti {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Etapa {n}',
+    'teaser': 'Poraz bosse etapy {n} a odemkni schopnosti!',
+    'lockedSkill': 'Odemkne se po bossovi etapy {n}',
+    'equip': 'Nasadit',
+    'remove': 'Sundat',
+    'equipped': 'Nasazeno',
+    'max': 'MAX',
+    'new': 'NOVÉ',
+    'now': 'Teď',
+    'next': 'Další',
+    'nextLine': 'Další: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Schopnosti odemčeny!',
+    'newSkillTitle': 'Nová schopnost!',
+    'newSlotTitle': 'Nový slot schopnosti!',
+    'bossDrop': 'Poraz tohoto bosse a odemkni {name}',
+    'bossDropMystery': 'Poraz tohoto bosse a odemkni něco nového',
+    'learn': 'Naučit',
+    'manage': 'Nasadit a vylepšit',
+    'pickerTitle': 'Schopnosti · slot {n}',
+    'opponentSkills': 'Schopnosti soupeře',
+    'hint': 'Nasazené schopnosti platí pro každou tvou káču. Uč se a vylepšuj schopnosti za mince až na úroveň 10.',
+    'learnAria': 'Naučit {name} za {cost} minci | Naučit {name} za {cost} mince | Naučit {name} za {cost} mincí',
+    'upgradeAria': 'Vylepšit {name} za {cost} minci | Vylepšit {name} za {cost} mince | Vylepšit {name} za {cost} mincí',
+    'topUpAria': 'Sleduj reklamu a získej {n} minci | Sleduj reklamu a získej {n} mince | Sleduj reklamu a získej {n} mincí',
+    'hudAria': '{name}, úroveň {n}',
+    'intro': {
+      'kicker': 'Nová síla',
+      'line1': 'Porážej bosse a odemykej schopnosti.',
+      'line2': 'Uč se je a vylepšuj za mince.',
+      'line3': 'Nasaď až 2 — používá je každá tvá káča.',
+      'line4': 'V boji se spouštějí samy.',
+      'cta': 'Vyber si schopnost',
+      'demoAria': 'Příklad: {name} jde do slotu schopnosti. V boji zablokuje polovinu nepřítelova zásahu a pošle ji zpět.'
+    },
+    'names': {
+      'phase_step': 'Fázový krok',
+      'guard_shell': 'Ochranná skořápka',
+      'second_wind': 'Druhý dech',
+      'lucky_edge': 'Šťastné ostří',
+      'homing_rockets': 'Naváděné rakety',
+      'opening_salvo': 'Úvodní salva',
+      'momentum': 'Hybnost',
+      'hazard_ward': 'Ochrana před živly',
+      'static_charge': 'Statický náboj',
+      'mirror_plate': 'Zrcadlový plát'
+    },
+    'desc': {
+      'phase_step': '{chance}% šance proklouznout nepřátelským zásahem bez poškození. Přebíjení {cd} s.',
+      'guard_shell': 'Začni každý boj se štítem za {pct}% max. HP. Pohlcuje poškození dřív než HP.',
+      'second_wind': 'Jednou za boj, když HP klesnou na {threshold}% nebo méně: vyléčí {pct}% max. HP.',
+      'lucky_edge': '{chance}% šance, že se zásah stane šťastným kritickým zásahem s poškozením ×{mult}.',
+      'homing_rockets': 'Každých {n} srážek s nepřáteli: rakety zasáhnou až 3 nepřátele za {pct}% pořádného zásahu, rozděleno.',
+      'opening_salvo': 'Na začátku boje ztratí každý nepřítel {pct}% svých max. HP.',
+      'momentum': 'Během tvého vystřelení přidá každý odraz od stěny nebo zásah +{pct}% poškození dalším zásahům (max. 3).',
+      'hazard_ward': 'Láva a bouřkové aury zraňují o {hazard}% méně, bodce o {chip}% méně; šokové stěny ti nechají {shock}% rychlosti místo 10%.',
+      'static_charge': '{chance}% šance zasáhnout elektřinou nepřítele, který do tebe narazí: zastaví se a vynechá další tah.',
+      'mirror_plate': '{chance}% šance zablokovat polovinu nepřítelova zásahu a poslat ji zpět.'
+    }
   },
   'you': 'TY',
   'prev': 'Zpět',
@@ -193,7 +281,7 @@ export default {
     'free': 'ZDARMA',
     'spinning': 'Točí se...',
     'spinAgain': 'Točit znovu',
-    'tripleCoinsAria': 'Podívej se na reklamu a získej celkem {count} mincí',
+    'tripleCoinsAria': 'Podívej se na reklamu a získej celkem {count} minci | Podívej se na reklamu a získej celkem {count} mince | Podívej se na reklamu a získej celkem {count} mincí',
     'skip': 'Přeskočit',
     'youWin': 'VÍTĚZSTVÍ!',
     'youLose': 'PROHRA!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kód pozvánky',
     'copy': 'Kopírovat',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Přidej se k mé PvP bitvě v Chaos Arena!'
+    'shareText': 'Přidej se k mé PvP bitvě v Chaos Arena!',
+    'versionMismatch': 'Tvůj soupeř používá jinou verzi hry. Oba hráči by měli znovu načíst stránku a zkusit to znovu.'
   },
   'parts': {
     'star': 'Hvězdné ostří',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Roháč',
     'drill': 'Vrták',
-    'lancer': 'Kopiník'
+    'lancer': 'Kopiník',
+    'cinder': 'Popel',
+    'frost-vault': 'Mrazivá klenba',
+    'yeti': 'Yetti'
   },
   'skinChest': {
     'acquired': 'Získáno: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofej z bosse',
+    'hint': 'Získáš porážkou bosse, který ho nosí',
+    'beatStage': 'Poraz etapu {n}'
   },
   'tips': {
     'tankyBottom': 'Tip: Zkus odolný spodní díl! Dává spoustu HP, takže vydržíš víc kol.',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Získej diamanty',
-        'subtitle': 'Diamanty odemykají pozadí a (brzy) silné schopnosti.',
+        'subtitle': 'Diamanty odemykají pozadí pro tvou arénu.',
         'popular': 'Oblíbené',
         'bestValue': 'Výhodné',
         'note': 'Nákupy podporují hru. Bezpečná platba.'

@@ -47,7 +47,10 @@ import { requestIntroReplay } from '@/use/useIntroCutscene'
 import { INTRO_SEEN_KEY } from '@/use/introGate'
 import { DAILY_SPEED_GIFT_KEY, SPEED_GIFT_KEY } from '@/use/speedGiftGate'
 
-/** Keys that must SURVIVE a progress reset (settings + purchased content). */
+/** Keys that must SURVIVE a progress reset (settings + purchased content).
+ *  Skills (`spinner_skills`, `spinner_skill_loadout`, `spinner_skill_ui`) are
+ *  deliberately NOT here: they are progress (coins spent on unlocks the stage
+ *  gives back), so the sweep wipes them and the skills intro can show again. */
 const KEEP_KEYS = new Set<string>([
   // Settings
   'spinner_user_sound_volume',

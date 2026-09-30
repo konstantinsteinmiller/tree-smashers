@@ -23,7 +23,7 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CLASSES, CLASS_ORDER } from './concepts.mjs'
+import { CLASSES, CLASS_ORDER, TROPHY_SKINS } from './concepts.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const POS = ['Top-left', 'Top-right', 'Bottom-left', 'Bottom-right']
@@ -259,9 +259,20 @@ for (const cls of CLASS_ORDER) {
     md.push(`## ${s.name} — re-paint, no layout sheet (attach 2-3 accepted ${def.label} skins as finish refs only → images/models/${s.id}_256x256.webp)`, '', `${fenceFor(fp)}text`, fp.trimEnd(), fenceFor(fp), '')
   }
 }
+// Boss trophy skins (single + no-layout only; they are not on a class sheet).
+for (const s of TROPHY_SKINS) {
+  const dir = join(HERE, s.cls)
+  const label = CLASSES[s.cls].label
+  const p = singlePrompt(s.cls, s)
+  writeFileSync(join(dir, `prompt-${s.id}.txt`), p)
+  md.push(`## ${s.name} — boss trophy, single (attach 2-3 accepted ${label} skins, then ${s.cls}/single-${s.id}.png → images/models/${s.id}_256x256.webp)`, '', `${fenceFor(p)}text`, p.trimEnd(), fenceFor(p), '')
+  const fp = freePrompt(s.cls, s)
+  writeFileSync(join(dir, `prompt-${s.id}-free.txt`), fp)
+  md.push(`## ${s.name} — boss trophy, re-paint, no layout sheet (attach 2-3 accepted ${label} skins as finish refs only → images/models/${s.id}_256x256.webp)`, '', `${fenceFor(fp)}text`, fp.trimEnd(), fenceFor(fp), '')
+}
 // The combined markdown (one fenced block per prompt, copy button in any
 // preview) duplicates the .txt files, so it is written only on request and
 // never committed: node art/skins/build-prompts.mjs --md
 const wantMd = process.argv.includes('--md')
 if (wantMd) writeFileSync(join(HERE, 'PROMPTS-skins.md'), md.join('\n'))
-console.log(`wrote 6 sheet prompts, 24 single + 24 no-layout re-paint prompts${wantMd ? ', PROMPTS-skins.md' : ''}`)
+console.log(`wrote 6 sheet prompts, ${24 + TROPHY_SKINS.length} single + ${24 + TROPHY_SKINS.length} no-layout re-paint prompts${wantMd ? ', PROMPTS-skins.md' : ''}`)

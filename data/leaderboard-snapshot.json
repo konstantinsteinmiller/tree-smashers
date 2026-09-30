@@ -1,8 +1,8 @@
 {
   "source": "https://leaderboard-chaos-arena.rodent-race.workers.dev",
-  "fetchedAt": 1790749978073,
-  "updatedAt": 1790749977988,
-  "total": 3163,
+  "fetchedAt": 1790796455023,
+  "updatedAt": 1790796406510,
+  "total": 3338,
   "entries": [
     {
       "rank": 1,
@@ -30,9 +30,9 @@
     },
     {
       "rank": 5,
-      "name": "Jeffreyespsteinf",
-      "score": 345,
-      "power": 188
+      "name": "Blader354774",
+      "score": 358,
+      "power": 192
     },
     {
       "rank": 6,
@@ -96,513 +96,513 @@
     },
     {
       "rank": 16,
+      "name": "Spinner599633",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Striker959144",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Spinner772802",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Rogue670017",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Striker648814",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Blader774829",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Rogue984153",
+      "score": 201,
+      "power": 255
+    },
+    {
+      "rank": 16,
+      "name": "Talon742196",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Blader587015",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Rogue760304",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Havoc788727",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Spinner752326",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Cyclone522213",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Vortex228217",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Havoc371518",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 16,
+      "name": "Havoc683559",
+      "score": 201,
+      "power": 360
+    },
+    {
+      "rank": 32,
       "name": "FreakyGod.5hSd",
       "score": 197,
       "power": 192
     },
     {
-      "rank": 17,
+      "rank": 33,
       "name": "HIBINOKAEDE",
       "score": 195,
       "power": 131
     },
     {
-      "rank": 17,
+      "rank": 33,
       "name": "DrivingKitty.wse",
       "score": 195,
       "power": 199
     },
     {
-      "rank": 17,
+      "rank": 33,
       "name": "HairyDoctor.mwvS",
       "score": 195,
       "power": 156
     },
     {
-      "rank": 20,
+      "rank": 36,
       "name": "Dalmita",
       "score": 188,
       "power": 171
     },
     {
-      "rank": 21,
+      "rank": 37,
       "name": "AstralHorizon",
       "score": 185,
       "power": 125
     },
     {
-      "rank": 22,
+      "rank": 38,
       "name": "KolM111",
       "score": 180,
       "power": 132
     },
     {
-      "rank": 22,
+      "rank": 38,
       "name": "SilentStorm.jQT2",
       "score": 180,
       "power": 185
     },
     {
-      "rank": 24,
+      "rank": 40,
       "name": "Wabasabq",
       "score": 177,
       "power": 147
     },
     {
-      "rank": 25,
+      "rank": 41,
       "name": "SharpSeal.rZVb",
       "score": 175,
       "power": 229
     },
     {
-      "rank": 25,
+      "rank": 41,
       "name": "PineapplePie13",
       "score": 175,
       "power": 214
     },
     {
-      "rank": 25,
+      "rank": 41,
       "name": "Eol_12",
       "score": 175,
       "power": 271
     },
     {
-      "rank": 28,
-      "name": "MeinKampf123",
+      "rank": 44,
+      "name": "Ripper217592",
       "score": 171,
       "power": 164
     },
     {
-      "rank": 29,
+      "rank": 44,
+      "name": "Ripper122517",
+      "score": 171,
+      "power": 237
+    },
+    {
+      "rank": 46,
       "name": "Bx687_FR",
       "score": 169,
       "power": 214
     },
     {
-      "rank": 30,
+      "rank": 47,
       "name": "David_blizz",
       "score": 165,
       "power": 134
     },
     {
-      "rank": 31,
+      "rank": 48,
+      "name": "Spinner360375",
+      "score": 161,
+      "power": 231
+    },
+    {
+      "rank": 48,
+      "name": "Blader731474",
+      "score": 161,
+      "power": 231
+    },
+    {
+      "rank": 50,
       "name": "Nemrikiya",
       "score": 158,
       "power": 146
     },
     {
-      "rank": 31,
+      "rank": 50,
       "name": "NerdyYeti.p4AE",
       "score": 158,
       "power": 187
     },
     {
-      "rank": 33,
+      "rank": 52,
       "name": "iokingda",
       "score": 156,
       "power": 145
     },
     {
-      "rank": 34,
+      "rank": 53,
       "name": "MoonSeagull.UVcZ",
       "score": 155,
       "power": 137
     },
     {
-      "rank": 34,
-      "name": "BlueStar.S3x0",
+      "rank": 53,
+      "name": "Ripper987912",
       "score": 155,
       "power": 167
     },
     {
-      "rank": 34,
+      "rank": 53,
       "name": "PaperGoblin.Belk",
       "score": 155,
       "power": 143
     },
     {
-      "rank": 37,
+      "rank": 56,
       "name": "JuicyDemon.h0xC",
       "score": 154,
       "power": 151
     },
     {
-      "rank": 38,
+      "rank": 57,
       "name": "ClassyDoctor.aIx",
       "score": 150,
       "power": 165
     },
     {
-      "rank": 39,
+      "rank": 58,
       "name": "naynoumakeita201",
-      "score": 145,
-      "power": 193
+      "score": 146,
+      "power": 195
     },
     {
-      "rank": 40,
+      "rank": 59,
       "name": "Big_Quinny",
       "score": 140,
       "power": 163
     },
     {
-      "rank": 40,
+      "rank": 59,
       "name": "Lavakilla2524",
       "score": 140,
       "power": 160
     },
     {
-      "rank": 40,
+      "rank": 59,
       "name": "WeaponizedSasqua",
       "score": 140,
       "power": 119
     },
     {
-      "rank": 43,
+      "rank": 62,
       "name": "EvilKing.",
       "score": 132,
       "power": 98
     },
     {
-      "rank": 44,
+      "rank": 63,
+      "name": "Blazer177868",
+      "score": 131,
+      "power": 213
+    },
+    {
+      "rank": 64,
       "name": "FieryHorse.fn9K",
       "score": 129,
       "power": 196
     },
     {
-      "rank": 45,
+      "rank": 65,
       "name": "Rizotv",
       "score": 121,
       "power": 99
     },
     {
-      "rank": 46,
+      "rank": 65,
+      "name": "Blazer772879",
+      "score": 121,
+      "power": 207
+    },
+    {
+      "rank": 67,
       "name": "Sandwichmaker3",
       "score": 120,
       "power": 127
     },
     {
-      "rank": 46,
+      "rank": 67,
       "name": "Rinofa",
       "score": 120,
       "power": 130
     },
     {
-      "rank": 48,
+      "rank": 69,
       "name": "MerryWarrior.juY",
       "score": 112,
       "power": 198
     },
     {
-      "rank": 49,
+      "rank": 70,
       "name": "INVINCIBLE14",
       "score": 111,
       "power": 182
     },
     {
-      "rank": 50,
+      "rank": 70,
+      "name": "Vortex268745",
+      "score": 111,
+      "power": 306
+    },
+    {
+      "rank": 70,
+      "name": "Havoc916512",
+      "score": 111,
+      "power": 306
+    },
+    {
+      "rank": 70,
+      "name": "Blader713698",
+      "score": 111,
+      "power": 306
+    },
+    {
+      "rank": 70,
+      "name": "Havoc723040",
+      "score": 111,
+      "power": 306
+    },
+    {
+      "rank": 70,
+      "name": "Havoc116830",
+      "score": 111,
+      "power": 306
+    },
+    {
+      "rank": 70,
+      "name": "Blader444089",
+      "score": 111,
+      "power": 201
+    },
+    {
+      "rank": 77,
+      "name": "Ripper383902",
+      "score": 107,
+      "power": 306
+    },
+    {
+      "rank": 78,
+      "name": "Havoc919880",
+      "score": 106,
+      "power": 195
+    },
+    {
+      "rank": 79,
       "name": "ZSMZSM",
       "score": 101,
       "power": 113
     },
     {
-      "rank": 50,
+      "rank": 79,
       "name": "tinnkotakeru",
       "score": 101,
       "power": 101
     },
     {
-      "rank": 52,
+      "rank": 81,
       "name": "GreenMermaid.43A",
       "score": 100,
       "power": 148
     },
     {
-      "rank": 53,
+      "rank": 82,
+      "name": "Peerderbaer",
+      "score": 99,
+      "power": 72
+    },
+    {
+      "rank": 83,
+      "name": "_N3XuS_",
+      "score": 96,
+      "power": 77
+    },
+    {
+      "rank": 84,
       "name": "WhyNot20",
       "score": 95,
       "power": 192
     },
     {
-      "rank": 53,
+      "rank": 84,
       "name": "AHMED.1234.",
       "score": 95,
       "power": 63
     },
     {
-      "rank": 53,
+      "rank": 84,
       "name": "Voidx56",
       "score": 95,
       "power": 140
     },
     {
-      "rank": 53,
+      "rank": 84,
       "name": "Employment",
       "score": 95,
       "power": 97
     },
     {
-      "rank": 53,
-      "name": "_N3XuS_",
-      "score": 95,
-      "power": 65
-    },
-    {
-      "rank": 58,
+      "rank": 88,
       "name": "GentleInvader.wA",
       "score": 92,
       "power": 160
     },
     {
-      "rank": 59,
+      "rank": 89,
       "name": "Talon437876",
       "score": 90,
       "power": 0
     },
     {
-      "rank": 59,
+      "rank": 89,
       "name": "Ripper939912",
       "score": 90,
       "power": 0
     },
     {
-      "rank": 61,
+      "rank": 91,
       "name": "WobblyMonster.Tx",
       "score": 89,
       "power": 101
     },
     {
-      "rank": 62,
+      "rank": 91,
+      "name": "FlyingInvader.W0",
+      "score": 89,
+      "power": 105
+    },
+    {
+      "rank": 93,
       "name": "frfrefrr",
       "score": 88,
       "power": 124
     },
     {
-      "rank": 62,
+      "rank": 93,
       "name": "CiaoMic13",
       "score": 88,
       "power": 162
     },
     {
-      "rank": 62,
+      "rank": 93,
       "name": "IronHamster.BxgO",
       "score": 88,
       "power": 141
     },
     {
-      "rank": 62,
+      "rank": 93,
       "name": "Dragon1000Crysta",
       "score": 88,
       "power": 116
     },
     {
-      "rank": 62,
+      "rank": 93,
       "name": "Tartaros9533",
       "score": 88,
       "power": 119
     },
     {
-      "rank": 67,
+      "rank": 93,
+      "name": "JuicyCarrot.XmPA",
+      "score": 88,
+      "power": 90
+    },
+    {
+      "rank": 99,
       "name": "Jamestsim",
       "score": 85,
       "power": 82
     },
     {
-      "rank": 67,
+      "rank": 99,
       "name": "SleepyDoctor.e3S",
       "score": 85,
       "power": 90
-    },
-    {
-      "rank": 67,
-      "name": "XxWSPxX",
-      "score": 85,
-      "power": 147
-    },
-    {
-      "rank": 67,
-      "name": "GreenGuardian.PS",
-      "score": 85,
-      "power": 169
-    },
-    {
-      "rank": 67,
-      "name": "RavenQuill",
-      "score": 85,
-      "power": 187
-    },
-    {
-      "rank": 67,
-      "name": "FlameViper.BOki",
-      "score": 85,
-      "power": 106
-    },
-    {
-      "rank": 67,
-      "name": "Leticia_coelho",
-      "score": 85,
-      "power": 172
-    },
-    {
-      "rank": 67,
-      "name": "RichSpider.DYmj",
-      "score": 85,
-      "power": 136
-    },
-    {
-      "rank": 67,
-      "name": "shinuti",
-      "score": 85,
-      "power": 99
-    },
-    {
-      "rank": 76,
-      "name": "Ahmed201022",
-      "score": 80,
-      "power": 97
-    },
-    {
-      "rank": 76,
-      "name": "omiaoiww",
-      "score": 80,
-      "power": 102
-    },
-    {
-      "rank": 76,
-      "name": "GamingOllie",
-      "score": 80,
-      "power": 91
-    },
-    {
-      "rank": 76,
-      "name": "Haibyrok",
-      "score": 80,
-      "power": 72
-    },
-    {
-      "rank": 76,
-      "name": "AmazingCocktail.",
-      "score": 80,
-      "power": 78
-    },
-    {
-      "rank": 76,
-      "name": "Zeek000",
-      "score": 80,
-      "power": 152
-    },
-    {
-      "rank": 76,
-      "name": "FutureHamster.i9",
-      "score": 80,
-      "power": 72
-    },
-    {
-      "rank": 76,
-      "name": "WindElf.UMkA",
-      "score": 80,
-      "power": 103
-    },
-    {
-      "rank": 76,
-      "name": "KK3vin",
-      "score": 80,
-      "power": 87
-    },
-    {
-      "rank": 76,
-      "name": "TurboDoctor.IG7f",
-      "score": 80,
-      "power": 124
-    },
-    {
-      "rank": 76,
-      "name": "OrionTheDragonNi",
-      "score": 80,
-      "power": 126
-    },
-    {
-      "rank": 76,
-      "name": "gerard240",
-      "score": 80,
-      "power": 108
-    },
-    {
-      "rank": 76,
-      "name": "SfHigh",
-      "score": 80,
-      "power": 77
-    },
-    {
-      "rank": 76,
-      "name": "Peerderbaer",
-      "score": 80,
-      "power": 58
-    },
-    {
-      "rank": 76,
-      "name": "LazerCoffee.X8o2",
-      "score": 80,
-      "power": 89
-    },
-    {
-      "rank": 76,
-      "name": "GAMER_027",
-      "score": 80,
-      "power": 121
-    },
-    {
-      "rank": 76,
-      "name": "Roberto.F",
-      "score": 80,
-      "power": 86
-    },
-    {
-      "rank": 93,
-      "name": "SavageAttackMach",
-      "score": 78,
-      "power": 68
-    },
-    {
-      "rank": 94,
-      "name": "VOIDCLAN",
-      "score": 76,
-      "power": 99
-    },
-    {
-      "rank": 94,
-      "name": "Jeminiah",
-      "score": 76,
-      "power": 82
-    },
-    {
-      "rank": 94,
-      "name": "THEOriiejdjjdj",
-      "score": 76,
-      "power": 96
-    },
-    {
-      "rank": 94,
-      "name": "SillyLemon.3Ok8",
-      "score": 76,
-      "power": 72
-    },
-    {
-      "rank": 94,
-      "name": "carlinis",
-      "score": 76,
-      "power": 88
-    },
-    {
-      "rank": 99,
-      "name": "Brggaming1",
-      "score": 75,
-      "power": 134
-    },
-    {
-      "rank": 99,
-      "name": "diegoacopaa",
-      "score": 75,
-      "power": 215
     }
   ],
   "dist": [
@@ -623,7 +623,7 @@
       1
     ],
     [
-      345,
+      358,
       1
     ],
     [
@@ -659,6 +659,10 @@
       1
     ],
     [
+      201,
+      16
+    ],
+    [
       197,
       1
     ],
@@ -688,7 +692,7 @@
     ],
     [
       171,
-      1
+      2
     ],
     [
       169,
@@ -697,6 +701,10 @@
     [
       165,
       1
+    ],
+    [
+      161,
+      2
     ],
     [
       158,
@@ -719,7 +727,7 @@
       1
     ],
     [
-      145,
+      146,
       1
     ],
     [
@@ -731,12 +739,16 @@
       1
     ],
     [
+      131,
+      1
+    ],
+    [
       129,
       1
     ],
     [
       121,
-      1
+      2
     ],
     [
       120,
@@ -748,6 +760,14 @@
     ],
     [
       111,
+      7
+    ],
+    [
+      107,
+      1
+    ],
+    [
+      106,
       1
     ],
     [
@@ -759,8 +779,16 @@
       1
     ],
     [
+      99,
+      1
+    ],
+    [
+      96,
+      1
+    ],
+    [
       95,
-      5
+      4
     ],
     [
       92,
@@ -772,19 +800,19 @@
     ],
     [
       89,
-      1
+      2
     ],
     [
       88,
-      5
+      6
     ],
     [
       85,
-      8
+      11
     ],
     [
       80,
-      17
+      18
     ],
     [
       78,
@@ -792,11 +820,11 @@
     ],
     [
       76,
-      5
+      7
     ],
     [
       75,
-      10
+      9
     ],
     [
       73,
@@ -804,7 +832,7 @@
     ],
     [
       70,
-      7
+      6
     ],
     [
       68,
@@ -836,7 +864,7 @@
     ],
     [
       60,
-      8
+      28
     ],
     [
       59,
@@ -860,7 +888,7 @@
     ],
     [
       53,
-      1
+      2
     ],
     [
       52,
@@ -904,7 +932,7 @@
     ],
     [
       42,
-      2
+      3
     ],
     [
       41,
@@ -912,7 +940,7 @@
     ],
     [
       40,
-      31
+      34
     ],
     [
       39,
@@ -920,11 +948,11 @@
     ],
     [
       38,
-      3
+      5
     ],
     [
       37,
-      8
+      9
     ],
     [
       36,
@@ -944,7 +972,7 @@
     ],
     [
       32,
-      6
+      12
     ],
     [
       31,
@@ -960,19 +988,19 @@
     ],
     [
       28,
-      7
+      8
     ],
     [
       27,
-      4
+      5
     ],
     [
       26,
-      7
+      8
     ],
     [
       25,
-      28
+      33
     ],
     [
       24,
@@ -984,7 +1012,7 @@
     ],
     [
       22,
-      8
+      9
     ],
     [
       21,
@@ -992,7 +1020,7 @@
     ],
     [
       20,
-      35
+      36
     ],
     [
       19,
@@ -1004,71 +1032,71 @@
     ],
     [
       17,
-      31
-    ],
-    [
-      16,
-      9
-    ],
-    [
-      15,
-      14
-    ],
-    [
-      14,
-      10
-    ],
-    [
-      13,
       34
     ],
     [
+      16,
+      12
+    ],
+    [
+      15,
+      13
+    ],
+    [
+      14,
+      12
+    ],
+    [
+      13,
+      37
+    ],
+    [
       12,
-      39
+      42
     ],
     [
       11,
-      61
+      73
     ],
     [
       10,
-      29
+      33
     ],
     [
       9,
-      51
+      52
     ],
     [
       8,
-      155
+      160
     ],
     [
       7,
-      67
+      69
     ],
     [
       6,
-      246
+      251
     ],
     [
       5,
-      95
+      98
     ],
     [
       4,
-      188
+      191
     ],
     [
       3,
-      574
+      594
     ],
     [
       2,
-      903
+      925
     ],
     [
       1,
-      105
+      110
     ]
   ]
 }

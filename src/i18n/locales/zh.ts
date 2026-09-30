@@ -102,6 +102,16 @@ export default {
     'stage_98': '星界竞技场',
     'stage_99': '终极护手',
     'stage_100': '永恒唱诗班',
+    'boss_cinder_tyrant': '灰烬暴君',
+    'boss_glacier_warden': '冰川守卫',
+    'boss_frostbite_yeti': '冻伤雪怪',
+    'boss_twin_pyres': '双生烈焰',
+    'boss_blizzard_choir': '暴雪唱诗班',
+    'boss_shattering_glacier': '碎裂冰川',
+    'boss_frostfire_pact': '冰火盟约',
+    'boss_magma_titan': '岩浆泰坦',
+    'boss_blizzard_twins': '暴雪双子',
+    'boss_elemental_court': '元素王庭',
     'cheat_boss': '作弊首领',
     'cheat_ghost': '幻影双子',
     'cheat_split': '粉碎虫群',
@@ -167,6 +177,7 @@ export default {
   'vs': 'VS',
   'stage': '关卡',
   'bossStage': '首领关卡',
+  'labBadge': '实验室',
   'bossDefeated': '击败首领',
   'stageN': '第 {n} 关',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -180,6 +191,83 @@ export default {
     'stagesAway': '还有{n}关',
     'nextUp': '就在下一关！',
     'portraitAlt': '下个首领：{name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': '余烬新星',
+      'frost': '冰霜禁锢',
+      'chill': '冻伤'
+    },
+    'frozenAria': '冰冻中：跳过下一回合',
+    'frozenHint': '冰冻中！本回合后解冻。',
+    'chillAria': '寒意：速度 −{pct}%',
+    'trophyUnlocked': '{name}已解锁！'
+  },
+  'skills': {
+    'title': '技能',
+    'slotEmpty': '空',
+    'slotAria': '技能槽 {n}',
+    'slotChip': '技能槽 {n}',
+    'unlockAt': '第{n}关',
+    'teaser': '击败第{n}关首领即可解锁技能！',
+    'lockedSkill': '击败第{n}关首领后解锁',
+    'equip': '装备',
+    'remove': '卸下',
+    'equipped': '已装备',
+    'max': '满级',
+    'new': '新',
+    'now': '当前',
+    'next': '下一级',
+    'nextLine': '下一级：{values}',
+    'seconds': '{n}秒',
+    'percent': '{n}%',
+    'unlockedTitle': '技能已解锁！',
+    'newSkillTitle': '新技能！',
+    'newSlotTitle': '新技能槽！',
+    'bossDrop': '击败此首领解锁{name}',
+    'bossDropMystery': '击败此首领解锁新内容',
+    'learn': '学习',
+    'manage': '装备与升级',
+    'pickerTitle': '技能 · 技能槽 {n}',
+    'opponentSkills': '对手的技能',
+    'hint': '已装备的技能对两个陀螺都生效。用金币学习并升级技能，最高 10 级。',
+    'learnAria': '花费 {cost} 金币学习{name}',
+    'upgradeAria': '花费 {cost} 金币升级{name}',
+    'topUpAria': '观看广告获得 {n} 金币',
+    'hudAria': '{name}，{n} 级',
+    'intro': {
+      'kicker': '新力量',
+      'line1': '击败首领解锁技能。',
+      'line2': '用金币学习并升级技能。',
+      'line3': '最多装备 2 个——两个陀螺都会使用。',
+      'line4': '战斗中会自动触发。',
+      'cta': '选择你的技能',
+      'demoAria': '示例：将{name}放入技能槽。战斗中它会挡住敌人攻击的一半并反弹回去。'
+    },
+    'names': {
+      'phase_step': '相位步',
+      'guard_shell': '守护护盾',
+      'second_wind': '绝地回生',
+      'lucky_edge': '幸运之刃',
+      'homing_rockets': '追踪火箭',
+      'opening_salvo': '开场齐射',
+      'momentum': '动量',
+      'hazard_ward': '灾害结界',
+      'static_charge': '静电充能',
+      'mirror_plate': '镜面装甲'
+    },
+    'desc': {
+      'phase_step': '{chance}% 几率穿过敌人的攻击，不受伤害。冷却 {cd} 秒。',
+      'guard_shell': '每场战斗开始时获得最大生命值 {pct}% 的护盾，优先于生命值吸收伤害。',
+      'second_wind': '每场战斗一次：生命值降至 {threshold}% 或以下时，恢复最大生命值的 {pct}%。',
+      'lucky_edge': '{chance}% 几率使攻击成为幸运暴击，造成 ×{mult} 伤害。',
+      'homing_rockets': '每与敌人碰撞 {n} 次，火箭攻击最多 3 个敌人，共造成一次重击 {pct}% 的伤害（平分）。',
+      'opening_salvo': '战斗开始时，每个敌人损失最大生命值的 {pct}%。',
+      'momentum': '发射期间，每次撞墙反弹或命中都使之后的攻击伤害 +{pct}%（最多 3 层）。',
+      'hazard_ward': '熔岩和雷电光环伤害降低 {hazard}%，尖刺伤害降低 {chip}%；撞到电击墙后保留 {shock}% 速度（原为 10%）。',
+      'static_charge': '{chance}% 几率电击撞向你的敌人：它会停下并跳过下一回合。',
+      'mirror_plate': '{chance}% 几率挡住敌人攻击的一半并反弹回去。'
+    }
   },
   'you': '你',
   'prev': '上一页',
@@ -256,7 +344,8 @@ export default {
     'inviteCode': '邀请码',
     'copy': '复制',
     'shareTitle': '混沌竞技场 PvP',
-    'shareText': '加入我的混沌竞技场PvP对战！'
+    'shareText': '加入我的混沌竞技场PvP对战！',
+    'versionMismatch': '对手使用的游戏版本不同。双方玩家都需要刷新页面后再试一次。'
   },
   'parts': {
     'star': '星刃',
@@ -364,10 +453,18 @@ export default {
     'narwhal': '独角鲸',
     'stag-beetle': '锹甲',
     'drill': '钻头',
-    'lancer': '枪骑士'
+    'lancer': '枪骑士',
+    'cinder': '余烬',
+    'frost-vault': '冰霜穹顶',
+    'yeti': '雪怪'
   },
   'skinChest': {
     'acquired': '获得{name}！'
+  },
+  'trophySkin': {
+    'label': '首领战利品',
+    'hint': '击败穿戴此皮肤的首领即可获得',
+    'beatStage': '通过第 {n} 关'
   },
   'tips': {
     'tankyBottom': '提示：试过坦克型下部零件吗？它能大幅提升生命值，让你撑过更多回合！',
@@ -506,7 +603,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': '获取钻石',
-        'subtitle': '钻石可解锁背景以及（即将推出的）强力技能。',
+        'subtitle': '钻石可解锁竞技场背景。',
         'popular': '热门',
         'bestValue': '超值',
         'note': '购买可支持游戏。安全结算。'

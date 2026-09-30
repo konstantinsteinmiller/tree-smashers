@@ -30,6 +30,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// A .ts import from a .mjs: Node (>= 22.18) strips the types natively, and the
+// module is written in erasable-only TypeScript for exactly this.
+import { isDenylistedName, safeNameFor } from '../src/utils/nameDenylist.ts'
 
 /**
  * The board's public origin.
@@ -66,6 +69,17 @@ const getJson = async (url, signal) => {
 }
 
 /**
+ * Mask denylisted names (`src/utils/nameDenylist.ts`) before they are baked.
+ *
+ * RENAMED, not dropped: the row keeps its rank, score and power, so the table
+ * and the histogram still agree and nobody below moves up a place. The stand-in
+ * is the same deterministic generated name the Worker and the client use, so the
+ * three never disagree about what a masked row is called.
+ */
+export const sanitizeEntries = (entries) =>
+  entries.map((e) => (isDenylistedName(e.name) ? { ...e, name: safeNameFor(e.name) } : e))
+
+/**
  * Validate a `/top` response into the shape the game reads.
  *
  * Everything here is remote input — the same rule the client applies to the
@@ -84,14 +98,14 @@ export const buildSnapshot = (top, source) => {
     throw new Error('/top carried no histogram — deploy the Worker in worker/ first')
   }
 
-  const entries = top.entries
+  const entries = sanitizeEntries(top.entries
     .filter((e) => e && typeof e === 'object')
     .map((e, i) => ({
       rank: Number(e.rank) || i + 1,
       name: typeof e.name === 'string' ? e.name : '',
       score: Number(e.score) || 0,
       power: Number(e.power) || 0
-    }))
+    })))
 
   const buckets = top.dist
     .filter((b) => Array.isArray(b) && b.length === 2)
@@ -163,25 +177,41 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import
   // committed snapshot is a perfectly good stand-in. Run bare (no flag) to have
   // a refresh you asked for tell you it did not happen.
   const soft = process.argv.includes('--soft')
-  try {
-    const snap = await refreshSnapshot()
-    const [topScore] = snap.dist[0]
-    const cut = snap.entries.at(-1)?.score ?? 0
-    console.log(
-      `[leaderboard] ${snap.total} players, ${snap.entries.length} published rows, `
-      + `top score ${topScore}, top-100 cut at ${cut}`
-    )
-    console.log(`[leaderboard] wrote ${SNAPSHOT_FILE}`)
-  } catch (err) {
-    const why = err instanceof Error ? err.message : String(err)
-    if (soft) {
-      console.warn(`[leaderboard] refresh skipped (${why}) — keeping the committed snapshot.`)
-    } else {
-      console.error(`[leaderboard] refresh FAILED: ${why}`)
-      // `exitCode`, not `process.exit()`: the latter tears the loop down while
-      // undici's sockets are still closing and trips a libuv assertion on
-      // Windows. The caller still sees a non-zero status.
+  // `--sanitize` re-masks the COMMITTED snapshot in place, offline — for when
+  // the denylist grows and the board cannot (or need not) be re-fetched.
+  if (process.argv.includes('--sanitize')) {
+    const snap = readSnapshot()
+    if (!snap) {
+      console.error('[leaderboard] no readable snapshot to sanitise')
       process.exitCode = 1
+    } else {
+      const before = snap.entries.map((e) => e.name)
+      snap.entries = sanitizeEntries(snap.entries)
+      const renamed = snap.entries.filter((e, i) => e.name !== before[i]).length
+      writeFileSync(SNAPSHOT_FILE, JSON.stringify(snap, null, 2) + '\n', 'utf-8')
+      console.log(`[leaderboard] sanitised ${SNAPSHOT_FILE}: ${renamed} row(s) renamed`)
+    }
+  } else {
+    try {
+      const snap = await refreshSnapshot()
+      const [topScore] = snap.dist[0]
+      const cut = snap.entries.at(-1)?.score ?? 0
+      console.log(
+        `[leaderboard] ${snap.total} players, ${snap.entries.length} published rows, `
+        + `top score ${topScore}, top-100 cut at ${cut}`
+      )
+      console.log(`[leaderboard] wrote ${SNAPSHOT_FILE}`)
+    } catch (err) {
+      const why = err instanceof Error ? err.message : String(err)
+      if (soft) {
+        console.warn(`[leaderboard] refresh skipped (${why}) — keeping the committed snapshot.`)
+      } else {
+        console.error(`[leaderboard] refresh FAILED: ${why}`)
+        // `exitCode`, not `process.exit()`: the latter tears the loop down while
+        // undici's sockets are still closing and trips a libuv assertion on
+        // Windows. The caller still sees a non-zero status.
+        process.exitCode = 1
+      }
     }
   }
 }

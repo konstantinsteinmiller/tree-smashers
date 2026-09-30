@@ -107,6 +107,11 @@ const saveState = () => {
 
 // ─── Honor Calculation ─────────────────────────────────────────────────────
 
+/** Honour weight of ONE skill level, in part levels (skills-feature.md §9.1:
+ *  a maxed skill pair ≈ 4 part levels per part, so 20 skill levels count as
+ *  16 part levels). */
+export const HONOR_SKILL_LEVEL_WEIGHT = 0.8
+
 /**
  * Calculate honor points earned from a PvP win.
  *
@@ -114,13 +119,25 @@ const saveState = () => {
  * - Under-leveled winner (opponent stronger): bonus up to +100
  * - Over-leveled winner (opponent weaker):  penalty down to 25 minimum
  *
+ * Each side's total = Σ part levels + HONOR_SKILL_LEVEL_WEIGHT × Σ skill
+ * levels (skills-feature.md §9.1).
+ *
  * @param myTotalLevel  Sum of all part levels on winner's team
  * @param enemyTotalLevel Sum of all part levels on loser's team
+ * @param mySkillLevels  Σ skill levels of the winner's loadout (0 = none)
+ * @param enemySkillLevels Σ skill levels of the loser's loadout (0 = none)
  */
-export const calcHonorPoints = (myTotalLevel: number, enemyTotalLevel: number): number => {
-  if (myTotalLevel <= 0 && enemyTotalLevel <= 0) return HONOR_BASE_WIN // both level 1
+export const calcHonorPoints = (
+  myTotalLevel: number,
+  enemyTotalLevel: number,
+  mySkillLevels = 0,
+  enemySkillLevels = 0
+): number => {
+  const myTotal = myTotalLevel + HONOR_SKILL_LEVEL_WEIGHT * mySkillLevels
+  const enemyTotal = enemyTotalLevel + HONOR_SKILL_LEVEL_WEIGHT * enemySkillLevels
+  if (myTotal <= 0 && enemyTotal <= 0) return HONOR_BASE_WIN // both level 1
 
-  const diff = enemyTotalLevel - myTotalLevel // positive = opponent was stronger
+  const diff = enemyTotal - myTotal // positive = opponent was stronger
   // Scale: each level of difference adds/removes ~10 honor
   const bonus = Math.round(diff * 10)
   return Math.max(25, Math.min(200, HONOR_BASE_WIN + bonus))

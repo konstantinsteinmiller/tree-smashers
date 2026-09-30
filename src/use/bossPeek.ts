@@ -40,7 +40,9 @@ import {
   type Stage,
   type StageBladeConfig
 } from '@/use/useSpinnerCampaign'
-import type { GameResult } from '@/types/spinner'
+import type { BossTrait, GameResult } from '@/types/spinner'
+import { bossTraitsOf, type BossEncounterId } from '@/data/bossEncounters'
+import { BOSSES100_BUILD } from '@/bosses/bosses100Gate'
 
 /** Which kind of battle just ended. Only `'campaign'` can carry a peek. */
 export type BattleMode = 'campaign' | 'daily' | 'pvp' | 'ghost' | 'cheat'
@@ -73,6 +75,10 @@ export interface BossPeek {
   modelId: string | null
   /** True when the boss stage fields more than one blade. */
   isTeam: boolean
+  /** Stage-101+ encounter the boss stage fields (bosses-100-feature.md §5); absent for classic bosses. */
+  encounterId?: BossEncounterId
+  /** The encounter's boss mechanics in chip order (§7.2 trait glyph row); absent for classic bosses. */
+  traits?: BossTrait[]
 }
 
 export interface BossPeekInput {
@@ -172,6 +178,9 @@ export const getBossPeek = (
     nameKey: boss.name,
     cycleSuffix: boss.cycleSuffix ?? '',
     modelId: bossPreviewModelId(boss.enemyTeam),
-    isTeam: boss.enemyTeam.length > 1
+    isTeam: boss.enemyTeam.length > 1,
+    ...(BOSSES100_BUILD && boss.bossEncounterId
+      ? { encounterId: boss.bossEncounterId, traits: bossTraitsOf(boss.enemyTeam) }
+      : {})
   }
 }

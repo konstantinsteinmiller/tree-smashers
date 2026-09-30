@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Arena Astrale',
     'stage_99': 'Sfida Omega',
     'stage_100': 'Il Coro Eterno',
+    'boss_cinder_tyrant': 'Il Tiranno di Cenere',
+    'boss_glacier_warden': 'Il Custode dei Ghiacci',
+    'boss_frostbite_yeti': 'Lo Yeti del Gelo',
+    'boss_twin_pyres': 'Le Pire Gemelle',
+    'boss_blizzard_choir': 'Il Coro della Bufera',
+    'boss_shattering_glacier': 'Il Ghiacciaio Infranto',
+    'boss_frostfire_pact': 'Il Patto di Fuoco e Gelo',
+    'boss_magma_titan': 'Il Titano di Magma',
+    'boss_blizzard_twins': 'I Gemelli della Bufera',
+    'boss_elemental_court': 'La Corte Elementale',
     'cheat_boss': 'Boss Imbroglione',
     'cheat_ghost': 'Gemello Fantasma',
     'cheat_split': 'Sciame Frantumante',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase Boss',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss sconfitto',
   'stageN': 'Fase {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Mancano {n} fasi',
     'nextUp': 'Prossima fase!',
     'portraitAlt': 'Prossimo boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova di Brace',
+      'frost': 'Morsa di Gelo',
+      'chill': 'Assideramento'
+    },
+    'frozenAria': 'Congelata: salta il prossimo turno',
+    'frozenHint': 'Congelata! Si scongela dopo questo turno.',
+    'chillAria': 'Raffreddata: velocità −{pct}%',
+    'trophyUnlocked': '{name} sbloccato!'
+  },
+  'skills': {
+    'title': 'Abilità',
+    'slotEmpty': 'Vuoto',
+    'slotAria': 'Slot abilità {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Fase {n}',
+    'teaser': 'Sconfiggi il boss della fase {n} per sbloccare le abilità!',
+    'lockedSkill': 'Si sblocca dopo il boss della fase {n}',
+    'equip': 'Equipaggia',
+    'remove': 'Rimuovi',
+    'equipped': 'In uso',
+    'max': 'MAX',
+    'new': 'NUOVO',
+    'now': 'Ora',
+    'next': 'Prossimo',
+    'nextLine': 'Prossimo: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Abilità sbloccate!',
+    'newSkillTitle': 'Nuova abilità!',
+    'newSlotTitle': 'Nuovo slot abilità!',
+    'bossDrop': 'Sconfiggi questo boss per sbloccare {name}',
+    'bossDropMystery': 'Sconfiggi questo boss per sbloccare una novità',
+    'learn': 'Impara',
+    'manage': 'Equipaggia e potenzia',
+    'pickerTitle': 'Abilità · slot {n}',
+    'opponentSkills': 'Abilità dell\'avversario',
+    'hint': 'Le abilità equipaggiate valgono per entrambe le trottole. Imparale e potenziale con le monete fino al livello 10.',
+    'learnAria': 'Impara {name} per {cost} moneta | Impara {name} per {cost} monete',
+    'upgradeAria': 'Potenzia {name} per {cost} moneta | Potenzia {name} per {cost} monete',
+    'topUpAria': 'Guarda uno spot per {n} moneta | Guarda uno spot per {n} monete',
+    'hudAria': '{name}, livello {n}',
+    'intro': {
+      'kicker': 'Nuovo potere',
+      'line1': 'Sconfiggi i boss per sbloccare abilità.',
+      'line2': 'Imparale e potenziale con le monete.',
+      'line3': 'Equipaggiane fino a 2: le usano entrambe le trottole.',
+      'line4': 'In battaglia si attivano da sole.',
+      'cta': 'Scegli la tua abilità',
+      'demoAria': 'Esempio: {name} va in uno slot abilità. In battaglia blocca metà di un colpo nemico e lo rimanda indietro.'
+    },
+    'names': {
+      'phase_step': 'Passo di fase',
+      'guard_shell': 'Guscio guardiano',
+      'second_wind': 'Secondo fiato',
+      'lucky_edge': 'Filo fortunato',
+      'homing_rockets': 'Razzi a ricerca',
+      'opening_salvo': 'Salva d\'apertura',
+      'momentum': 'Slancio',
+      'hazard_ward': 'Scudo ambientale',
+      'static_charge': 'Carica statica',
+      'mirror_plate': 'Piastra specchio'
+    },
+    'desc': {
+      'phase_step': '{chance}% di probabilità di attraversare un colpo nemico senza subire danni. Ricarica {cd} s.',
+      'guard_shell': 'Inizi ogni battaglia con uno scudo pari al {pct}% dei PV max. Assorbe i danni prima dei PV.',
+      'second_wind': 'Una volta per battaglia, quando i PV scendono al {threshold}% o meno: cura il {pct}% dei PV max.',
+      'lucky_edge': '{chance}% di probabilità che un colpo diventi un critico fortunato da ×{mult} danni.',
+      'homing_rockets': 'Ogni {n} scontri con i nemici: razzi colpiscono fino a 3 nemici per il {pct}% di un colpo pieno, diviso.',
+      'opening_salvo': 'All\'inizio della battaglia, ogni nemico perde il {pct}% dei suoi PV max.',
+      'momentum': 'Durante il tuo lancio, ogni rimbalzo sul muro o colpo aggiunge +{pct}% di danni ai colpi successivi (max 3).',
+      'hazard_ward': 'Lava e aure del tuono fanno il {hazard}% di danni in meno, le spine il {chip}% in meno; i muri elettrici ti lasciano il {shock}% di velocità invece del 10%.',
+      'static_charge': '{chance}% di probabilità di fulminare un nemico che ti sperona: si ferma e salta il turno successivo.',
+      'mirror_plate': '{chance}% di probabilità di bloccare metà di un colpo nemico e rimandarla indietro.'
+    }
   },
   'you': 'TU',
   'prev': 'Prec.',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'In rotazione...',
     'spinAgain': 'Gira ancora',
-    'tripleCoinsAria': 'Guarda una pubblicità per ottenere {count} monete in totale',
+    'tripleCoinsAria': 'Guarda una pubblicità per ottenere {count} moneta in totale | Guarda una pubblicità per ottenere {count} monete in totale',
     'skip': 'Salta',
     'youWin': 'HAI VINTO!',
     'youLose': 'HAI PERSO!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Codice invito',
     'copy': 'Copia',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Unisciti alla mia sfida PvP su Chaos Arena!'
+    'shareText': 'Unisciti alla mia sfida PvP su Chaos Arena!',
+    'versionMismatch': 'Il tuo avversario usa una versione diversa del gioco. Entrambi i giocatori devono ricaricare la pagina e riprovare.'
   },
   'parts': {
     'star': 'Lama Stella',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narvalo',
     'stag-beetle': 'Cervo Volante',
     'drill': 'Trivella',
-    'lancer': 'Lanciere'
+    'lancer': 'Lanciere',
+    'cinder': 'Brace',
+    'frost-vault': 'Volta di Gelo',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Hai ottenuto {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofeo boss',
+    'hint': 'Si ottiene sconfiggendo il boss che lo indossa',
+    'beatStage': 'Supera la fase {n}'
   },
   'tips': {
     'tankyBottom': 'Consiglio: hai provato una parte inferiore Resistente? Ti dà un sacco di PS per durare più turni!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Ottieni diamanti',
-        'subtitle': 'I diamanti sbloccano sfondi e (presto) abilità potenti.',
+        'subtitle': 'I diamanti sbloccano sfondi per la tua arena.',
         'popular': 'Popolare',
         'bestValue': 'Top offerta',
         'note': 'Gli acquisti sostengono il gioco. Pagamento sicuro.'

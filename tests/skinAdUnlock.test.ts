@@ -25,14 +25,16 @@ import {
   isCoinPurchasable,
   skinCost,
   getOfferableSkinPool,
+  isEarnOnlySkin,
   type SpinnerModelId
 } from '@/data/skinCatalog'
 import type { TopPartId } from '@/types/spinner'
 
-/** The expansion = the last 4 entries of every top part's list. */
+/** The expansion = the last 4 entries of every top part's list, not counting
+ *  the earn-only boss trophies appended after it (never sold, never ad-unlocked). */
 const newestFourPerTop = (): { top: TopPartId, id: SpinnerModelId }[] =>
   (Object.entries(SKINS_PER_TOP) as [TopPartId, SpinnerModelId[]][])
-    .flatMap(([top, ids]) => ids.slice(-4).map(id => ({ top, id })))
+    .flatMap(([top, ids]) => ids.filter(id => !isEarnOnlySkin(id)).slice(-4).map(id => ({ top, id })))
 
 const freshImport = async () => {
   vi.resetModules()
@@ -69,18 +71,18 @@ describe('ad-unlock skins — catalog', () => {
     }
     for (const ids of Object.values(SKINS_PER_TOP)) {
       for (const id of ids) {
-        if (adIds.has(id)) continue
+        if (adIds.has(id) || isEarnOnlySkin(id)) continue
         expect(isCoinPurchasable(id, true), id).toBe(true)
         expect(isAdUnlockSkin(id, true), id).toBe(false)
       }
     }
   })
 
-  it('no-ad build: no ad unlock, every skin is coin-purchasable', () => {
+  it('no-ad build: no ad unlock, every skin but the earn-only trophies is coin-purchasable', () => {
     for (const ids of Object.values(SKINS_PER_TOP)) {
       for (const id of ids) {
         expect(isAdUnlockSkin(id, false), id).toBe(false)
-        expect(isCoinPurchasable(id, false), id).toBe(true)
+        expect(isCoinPurchasable(id, false), id).toBe(!isEarnOnlySkin(id))
       }
     }
   })

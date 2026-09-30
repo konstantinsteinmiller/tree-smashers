@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
+import { ref, computed, watch, shallowRef, type Ref, type ComputedRef, type ShallowRef } from 'vue'
 import { isGamePaused, registerPauseSyncer } from '@/use/useGamePause'
 import type {
   SpinnerState,
@@ -9,7 +9,8 @@ import type {
   MeteorParticle,
   SpritesheetAnimation,
   Powerup,
-  PowerupStat
+  PowerupStat,
+  BossTrait
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import { bossHpRubberBandMul } from '@/use/useSpinnerCampaign'
@@ -32,7 +33,8 @@ import useSounds from '@/use/useSound'
 import { prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
-import { matchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
+import { matchRng, seedMatchRng, seedMatchRngRandom, currentMatchSeed } from '@/use/useDeterministicRng'
+import { currentPvpRole } from '@/use/usePVP'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
 import { FX } from '@/use/useQuality'
@@ -40,6 +42,37 @@ import {
   createBorderFx, resetBorderFx, tickBorderFx, triggerBurn, triggerHeal,
   renderBurns, renderHeals, FLAME_BURN_SRC, BORDER_FX_POOL_SIZE
 } from '@/use/borderFx'
+import type { SkillId, SkillLoadout } from '@/types/skills'
+// Skills (skills-feature.md §5/§8/§10.3) reach the engine in two parts:
+//   • the string-free core (HP loss, stun / phase / bounce bookkeeping, result
+//     objects) — static, it runs on every build and reduces to plain HP maths
+//     for a blade without `skills`;
+//   • everything that creates or rolls a skill, and the skill VFX — the skill
+//     port (`skills/skillEngine.ts`), loaded only through the skills gate and
+//     handed in with `installSkillEngine`. Until then (and forever on a
+//     skills-off build) no blade ever gets `skills`.
+// Every skill-only path is additionally behind the `SKILLS_BUILD` literal, so
+// a skills-off build folds the engine's skill glue away entirely.
+import {
+  applyHpLoss, beginLaunchSkills, blocksEnemyChip, countPickable,
+  createContactResult, createHpLossResult, createIncomingResult, createOutgoingResult,
+  effectiveHp, hazardShockKeep, isStunnedFor, onOwnBounce,
+  type HpLossKind, type SkillBlade, type SkillRefStats
+} from '@/use/skills/skillCore'
+import type {
+  SkillEvent, SkillEventKind, SkillRocketView, SkillVfx, SkillVfxBlade
+} from '@/use/skills/skillVfx'
+import { SKILLS_BUILD, type SkillEnginePort } from '@/skills/skillsGate'
+// Boss traits (bosses-100-feature.md §4, §12.2) reach the engine the same way
+// as skills: the rules, VFX and SFX are ONE port (`bosses/bossTraitEngine.ts`)
+// loaded through the bosses gate and handed in with `installBossTraitEngine`;
+// every trait path is additionally behind the `BOSSES100_BUILD` literal, so a
+// bosses100-off build folds the engine's trait glue away entirely.
+import type { BossClock, TraitContactResult, TraitHudRow } from '@/use/bosses/bossTraits'
+import type {
+  BossTraitEvent, BossTraitEventKind, BossTraitGlyph, BossTraitVfx
+} from '@/use/bosses/bossTraitVfx'
+import { BOSSES100_BUILD, type BossTraitEnginePort } from '@/bosses/bosses100Gate'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
@@ -557,6 +590,114 @@ const renderSandstormAura = (ctx: AuraCtx, R: number, now: number): void => {
   }
 }
 
+// ─── Skills: public contracts (skills-feature.md §8.1, §9.1, §10.3) ─────────
+
+/**
+ * Trailing options object of `initGame` (after the positional params, which
+ * stay for the existing call sites).
+ *
+ *  • `seed` — start the match RNG from this value (reproducible battles).
+ *  • `skillLoadout` — the LOCAL side's team loadout (`playerBlades`), usually
+ *    `loadoutForBattle(mode)` from useSkills. Every blade of the side carries
+ *    both slots (§5 "shared loadout").
+ *  • `enemySkillLoadout` — the OTHER side (`npcBlades`): the PvP opponent's
+ *    loadout from `player-ready`, or a ghost's recorded loadout. Campaign and
+ *    daily AI enemies pass nothing (§9 — enemies carry no skills in v1).
+ *
+ * Omitted / empty / fully invalid loadouts leave `blade.skills` unset — the
+ * engine then runs exactly the pre-skills code path (same state hashes).
+ * Loadouts are sanitised by `createBladeSkills` (unknown ids, duplicates,
+ * > 2 entries dropped; levels clamped 1–10).
+ */
+export interface InitGameOptions {
+  seed?: number
+  skillLoadout?: SkillLoadout | null
+  enemySkillLoadout?: SkillLoadout | null
+}
+
+/** Live state of one HUD skill chip — structurally the `SkillHudState` prop
+ *  of `SkillHudIcon.vue` (a fresh object per publish, so props update). */
+export interface SkillHudChipState {
+  /** Guard Shell: shield / shieldMax (0…1). */
+  ring?: number
+  /** Phase Step: cooldown length; restart the sweep when `cooldownKey` changes. */
+  cooldownMs?: number
+  cooldownKey?: number
+  /** Momentum stacks (current launch) / Homing Rockets contacts toward the volley. */
+  pips?: number
+  pipsMax?: number
+  /** Second Wind used / Opening Salvo fired. */
+  spent?: boolean
+  /** Increments on every proc of this skill on this blade (flash). */
+  flashKey?: number
+}
+
+/** One equipped skill of one local blade. */
+export interface SkillHudSlot {
+  id: SkillId
+  level: number
+  state: SkillHudChipState
+}
+
+/**
+ * `skillHud.value[i]` = the chips of `playerBlades[i]` (index at initGame,
+ * i.e. the stat-card order); `[]` when the local side has no skills. A NEW
+ * array is assigned (≤ 10 Hz, only when a chip changed), so plain props update.
+ */
+export type SkillHudRows = SkillHudSlot[][]
+
+/** Size of the skill-event ring buffer (`skillEvents`). */
+export const SKILL_EVENT_BUFFER = 32
+
+export type { SkillEvent, SkillEventKind }
+export type { BossTraitEvent, BossTraitEventKind, TraitHudRow }
+
+/**
+ * `bossTraitHud.value[i]` = boss-trait state of `playerBlades[i]` (stat-card
+ * order): `frozen` = frost-locked for its team's next turn (ice card, not
+ * pickable), `chill` = live Frostbite stacks 0…5 (SPD shows statsFor's value,
+ * which already includes the slow). `[]` in matches without traits. A NEW
+ * array of new row objects is assigned only when a row changed (trait events
+ * / turn changes, never per frame), so plain props update.
+ */
+export type BossTraitHudRows = TraitHudRow[]
+
+// ─── Skill port (installed by the skills gate; null = no skills) ─────────────
+// Module-level so every engine instance sees it. `installSkillEngine` is called
+// by the arena once `loadSkillEngine()` resolved; before that a battle is set
+// up without skills (the arena re-inits the waiting board once the port and
+// the loadout are in). A skills-off build never installs one.
+//
+// Port members are named in BRACKET form (`skillPort['createBladeSkills']`),
+// for the reason spelled out at the boss port below: a dotted access becomes
+// an obfuscator-made literal that `reservedStrings` cannot protect, so the
+// names outlived the folded calls in a skills-off build's string array.
+let skillPort: SkillEnginePort | null = null
+/** Hand the engine its skill port (or null to take it away, tests). */
+export const installSkillEngine = (port: SkillEnginePort | null): void => {
+  skillPort = SKILLS_BUILD ? port : null
+}
+/** Is a skill port installed (the arena waits for it before a battle)? */
+export const hasSkillEngine = (): boolean => skillPort !== null
+
+// ─── Boss-trait port (installed via the bosses gate; null = no traits) ──────
+// Same contract as the skill port: until `installBossTraitEngine` ran (and
+// forever on a bosses100-off build) a trait carrier fights without its trait —
+// the arena waits for the port before a battle and rebuilds a waiting board.
+//
+// The engine names port members in BRACKET form (`bossPort['renderIceShell']`)
+// on purpose: the obfuscator rewrites a dotted member access into a new string
+// literal that `reservedStrings` cannot protect, so the member names would
+// stay in the string array of a bosses100-off build after the calls folded
+// away; an original literal is reserved (vite.config.ts) and folds with them.
+let bossPort: BossTraitEnginePort | null = null
+/** Hand the engine its boss-trait port (or null to take it away, tests). */
+export const installBossTraitEngine = (port: BossTraitEnginePort | null): void => {
+  bossPort = BOSSES100_BUILD ? port : null
+}
+/** Is a boss-trait port installed? */
+export const hasBossTraitEngine = (): boolean => bossPort !== null
+
 export const useSpinnerGame = () => {
   // ── Game Phase ───────────────────────────────────────────────────────────
   const phase: Ref<GamePhase> = ref('idle')
@@ -648,22 +789,69 @@ export const useSpinnerGame = () => {
   let pvpTickCount = 0
   const gameTime = (): number =>
     pvpMode.value ? pvpTickCount * FIXED_STEP_MS : performance.now()
+  // Simulation clock for skill objects that must freeze with the physics
+  // loop (Homing Rockets). Outside PvP `gameTime()` is the wall clock, so a
+  // rocket in flight during a platform pause / hidden tab kept flying on
+  // screen and landed on the first tick after resume. This advances once per
+  // physics tick (so it also honours 2x sim speed); PvP keeps `gameTime()`,
+  // which is already tick-based and part of the lockstep contract.
+  // The per-blade contact GATES run on it too (bosses BW4): the shared 250 ms
+  // `lastShockMs` gate (shock wall / bouncer, Static Charge, Frost Lock's cold
+  // touch), Frostbite's `lastChillAt`, Phase Step's `phasedUntil` and a split
+  // child's `invulnerableUntil` are compared against each other's `now`, so
+  // they move together — on the wall clock a platform pause (or a hidden tab)
+  // opened every gate on resume. PvP: identical to gameTime(), no change.
+  let simTickCount = 0
+  const skillClock = (): number =>
+    pvpMode.value ? gameTime() : simTickCount * FIXED_STEP_MS
 
-  /** Compute a lightweight hash of all gameplay-relevant blade state.
-   *  Both clients see the arena mirrored (player↔npc swapped, coordinates
-   *  negated). We normalize by using absolute positions and sorting, so
-   *  both sides produce the same hash for the same physical state. */
+  // ── Peer-independent blade identity (PvP determinism) ──────────────────
+  // The two PvP clients hold the teams in swapped playerBlades/npcBlades
+  // arrays and see the arena y-mirrored. `syncKey` (host team 0..n-1, guest
+  // team 100+i, children derived from their parent) is identical on both,
+  // and everything order-sensitive — collision pair order, the anti-draw
+  // tie-break, RNG draw order, the state hash — runs in syncKey order.
+  const SYNC_KEY_GUEST_BASE = 100
+  // True when this client is the PvP GUEST: its own team gets the guest
+  // keys and the state hash flips y back into the host's frame.
+  let pvpLocalIsGuest = false
+  // The seed this match's RNG started from (PvP: the host's broadcast seed).
+  let matchSeed = 1
+  // Per-parent spawn ordinal → child syncKey = (parent + 1) * 1000 + ordinal.
+  const childSpawnSeq = new Map<number, number>()
+  const childSyncKey = (parent: SpinnerState): number => {
+    const n = childSpawnSeq.get(parent.syncKey) ?? 0
+    childSpawnSeq.set(parent.syncKey, n + 1)
+    return (parent.syncKey + 1) * 1000 + n
+  }
+  // Rebuilt only when a blade array is reassigned (spawns), not per tick.
+  const bladesBySyncKey = computed<SpinnerState[]>(() =>
+    [...allBlades.value].sort((p, q) => p.syncKey - q.syncKey)
+  )
+
+  /** Hash of all gameplay-relevant blade state, identical on both PvP
+   *  clients for the same physical state: blades in syncKey order, position
+   *  AND velocity in the host's frame (the guest un-mirrors y). */
   const computeStateHash = (): string => {
+    const flip = pvpLocalIsGuest ? -1 : 1
     const entries: string[] = []
-    for (const b of [...playerBlades.value, ...npcBlades.value]) {
-      // Use absolute coords so mirrored views match
-      const ax = Math.abs(b.x)
-      const ay = Math.abs(b.y)
-      entries.push(
-        `${ax.toFixed(2)},${ay.toFixed(2)},${b.hp.toFixed(2)}`
-      )
+    for (const b of bladesBySyncKey.value) {
+      let e = `${b.syncKey}:${b.x.toFixed(3)},${(b.y * flip).toFixed(3)},`
+        + `${b.vx.toFixed(3)},${(b.vy * flip).toFixed(3)},${b.hp.toFixed(3)}`
+      // Skill state (§9.1 / WP3 item 9) — appended only for blades that carry
+      // skills or were stunned, so a match without skills hashes exactly as
+      // before. `stunnedForTurn` is a per-side turn index that both peers
+      // count identically; `rngState` catches a proc-stream desync.
+      if (b.skills !== undefined || b.stunnedForTurn !== undefined) {
+        e += `;${b.skills !== undefined ? b.skills.shield.toFixed(3) : '-'},`
+          + `${b.stunnedForTurn ?? '-'},${b.skills !== undefined ? b.skills.rngState : '-'}`
+      }
+      // Boss traits (bosses-100 §9) — only in matches with a trait carrier,
+      // so trait-free hashes stay byte-identical.
+      if (BOSSES100_BUILD && traitsActive) e += `#${bossPort!['traitHashPart'](b)}`
+      entries.push(e)
     }
-    entries.sort()
+    if (BOSSES100_BUILD && traitsActive) entries.push(`clk:${bossPort!['bossClockHashPart'](bossClock!)}`)
     const str = entries.join('|')
     let h = 5381
     for (let i = 0; i < str.length; i++) {
@@ -1058,7 +1246,7 @@ export const useSpinnerGame = () => {
   // Pooled state + draw code live in `@/use/borderFx` (unit-tested there).
   // Burn caps: low tier / Firefox get fewer concurrent instances, and on low
   // a burn plays one pass per contact instead of being held alight. Heals are
-  // never capped — every heal reads; low tier draws the cheap pulse instead.
+  // never capped — every heal of ≥1 HP reads; low tier draws the cheap pulse instead.
   const borderFx = createBorderFx()
   // Dev-only read handle for QA scripts (capture a screenshot while a burn /
   // heal is actually live). Never runs in a production build — DEV is false
@@ -1067,14 +1255,20 @@ export const useSpinnerGame = () => {
   if (import.meta.env.DEV) (window as unknown as { __borderFx?: unknown }).__borderFx = borderFx
   const burnCap = (): number => (FX.low ? 2 : isFirefox ? 3 : BORDER_FX_POOL_SIZE)
   /**
-   * The ONE hook every HP-raising code path calls after it changed `hp`:
-   * plays the heal pulse on that blade iff HP actually went up (and it is
-   * alive). No stacking — a pulse already running on the blade keeps playing
-   * untouched (see `triggerHeal`). VFX only: reads hp, never writes physics
-   * state and never draws from matchRng. Heal numbers stay at the call site.
+   * The ONE hook every HP-raising code path calls after it changed (and
+   * clamped at maxHp) `hp`. A heal only READS when the HP actually applied is
+   * at least 1: then the heal pulse plays on the blade (if alive; no stacking
+   * — a pulse already running keeps playing untouched, see `triggerHeal`) and
+   * the returned value is the rounded amount the call site shows as the heal
+   * number. Below 1 HP applied it returns 0 — no pulse, no number (the HP
+   * still went up). VFX only: reads hp, never writes physics state and never
+   * draws from matchRng. The epsilon absorbs float loss in `(x + 1) - x`.
    */
-  const healFx = (blade: SpinnerState, hpBefore: number): void => {
-    if (blade.hp > hpBefore && blade.hp > 0) triggerHeal(borderFx, blade)
+  const healFx = (blade: SpinnerState, hpBefore: number): number => {
+    const applied = blade.hp - hpBefore
+    if (applied < 1 - 1e-9 || blade.hp <= 0) return 0
+    triggerHeal(borderFx, blade)
+    return Math.round(applied)
   }
   // The flame strip is only fetched where it can be drawn: warmed by
   // initGame for a lava arena (and by the deferred preload tier when the
@@ -1092,6 +1286,12 @@ export const useSpinnerGame = () => {
     activeSparks.length = 0
     activeExplosions.length = 0
     resetBorderFx(borderFx)
+    // Skill layer: rockets still in flight are dropped with the battle.
+    if (SKILLS_BUILD) {
+      clearRockets()
+      if (skillVfx !== null) skillPort?.['resetSkillVfx'](skillVfx)
+    }
+    if (BOSSES100_BUILD && bossTraitFx !== null) bossPort?.['resetBossTraitVfx'](bossTraitFx)
   }
 
   const MAX_ACTIVE_VFX = isFirefox ? 2 : 10
@@ -1447,6 +1647,12 @@ export const useSpinnerGame = () => {
     maxLife: number
     isCrit: boolean
     comboText?: string  // thunder arena combo label
+    /** Skill popup: 12 px skill icon left of the number (§8.2). With
+     *  `value === 0` and no comboText the popup is the glyph alone. Boss
+     *  traits add their own glyphs (Frostbite's snowflake, bosses §7.3). */
+    glyph?: SkillId | BossTraitGlyph
+    /** Lucky Edge: crit-style orange ×1.5 number WITHOUT the crit shadowBlur. */
+    isLucky?: boolean
   }
 
   const DAMAGE_NUMBER_LIFE = 900
@@ -1551,7 +1757,10 @@ export const useSpinnerGame = () => {
   const COMBO_GRACE_MS = 100
   const comboState = new Map<number, { targetId: number; lastTime: number; stacks: number }>()
 
-  const spawnDamageNumber = (x: number, y: number, value: number, dealerOwner: 'player' | 'npc', isCrit = false) => {
+  const spawnDamageNumber = (
+    x: number, y: number, value: number, dealerOwner: 'player' | 'npc', isCrit = false,
+    glyph?: SkillId, isLucky = false, colorOverride?: string
+  ) => {
     if (Math.round(value) <= 0) return
     // Random angle in a 60° cone pointing upward (centered at -90°)
     const baseAngle = -Math.PI / 2
@@ -1560,15 +1769,44 @@ export const useSpinnerGame = () => {
     const speed = 0.06 + Math.random() * 0.03
 
     if (damageNumbers.length >= 60) return
-    damageNumbers.push({
+    const dn: DamageNumber = {
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       value: Math.round(value),
-      color: dealerOwner === 'player' ? '#66aaff' : '#ff6666',
+      color: colorOverride ?? (dealerOwner === 'player' ? '#66aaff' : '#ff6666'),
       life: DAMAGE_NUMBER_LIFE,
       maxLife: DAMAGE_NUMBER_LIFE,
       isCrit
+    }
+    if (glyph !== undefined) dn.glyph = glyph
+    if (isLucky) dn.isLucky = true
+    damageNumbers.push(dn)
+  }
+
+  // Skill popup colours (§8.4): the player's skills read blue/cyan/green, the
+  // opponent's (PvP / ghost) red; hazards keep their own colours.
+  const SKILL_COLOR_SHIELD = '#67e8f9'
+  const SKILL_COLOR_HEAL = '#44cc66'
+  const SKILL_COLOR_MIRROR = '#60a5fa'
+  const SKILL_COLOR_ENEMY = '#ff6666'
+  const SKILL_POPUP_THROTTLE_MS = 250
+  // Glyph-only popups (Phase, Static, stun-skip): one per blade per 250 ms.
+  const skillPopupAt = new Map<number, number>()
+
+  /** A glyph-only skill popup over a blade (throttled per blade, VFX only). */
+  const spawnSkillGlyph = (blade: SpinnerState, glyph: SkillId | BossTraitGlyph, color: string) => {
+    const now = performance.now()
+    const last = skillPopupAt.get(blade.id)
+    if (last !== undefined && now - last < SKILL_POPUP_THROTTLE_MS) return
+    if (damageNumbers.length >= 60) return
+    skillPopupAt.set(blade.id, now)
+    damageNumbers.push({
+      x: blade.x, y: blade.y - blade.radius * 0.6,
+      vx: 0, vy: -0.05,
+      value: 0, color,
+      life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+      isCrit: false, glyph
     })
   }
 
@@ -1590,8 +1828,9 @@ export const useSpinnerGame = () => {
     for (const dn of damageNumbers) {
       const alpha = Math.max(0, dn.life / dn.maxLife)
       const baseScale = 0.8 + 0.4 * (1 - alpha) // slightly grow as they fade
-      const scale = dn.isCrit ? baseScale * 1.5 : baseScale
-      const text = dn.comboText ?? dn.value.toString()
+      const scale = (dn.isCrit || dn.isLucky) ? baseScale * 1.5 : baseScale
+      const glyphOnly = dn.glyph !== undefined && dn.value === 0 && !dn.comboText
+      const text = dn.comboText ?? (glyphOnly ? '' : dn.value.toString())
 
       ctx.save()
       ctx.globalAlpha = alpha
@@ -1599,8 +1838,31 @@ export const useSpinnerGame = () => {
       ctx.textAlign = dn.comboText ? 'left' : 'center'
       ctx.textBaseline = 'middle'
 
-      // Crit: dark orange pulsating aura
-      if (dn.isCrit) {
+      // Skill glyph (§8.2): 12 px icon left of the number, or alone.
+      if (dn.glyph !== undefined) {
+        const gs = 12 * scale
+        // Width estimate (digits ≈ 0.56 em in bold Arial) — no measureText per frame.
+        const gx = glyphOnly ? dn.x : dn.x - text.length * 20 * scale * 0.28 - gs * 0.6
+        if (BOSSES100_BUILD && bossPort !== null && bossPort['isBossTraitGlyph'](dn.glyph)) {
+          bossPort['drawBossTraitGlyph'](ctx, dn.glyph, gx, dn.y, glyphOnly ? gs * 1.4 : gs, dn.color)
+        } else if (SKILLS_BUILD) {
+          // Not a boss glyph (or no boss port): a skill id.
+          skillPort?.['drawSkillGlyph'](ctx, dn.glyph as SkillId, gx, dn.y, glyphOnly ? gs * 1.4 : gs, dn.color)
+        }
+      }
+
+      if (glyphOnly) {
+        // nothing else to draw
+      } else if (dn.isLucky && !dn.isCrit) {
+        // Lucky Edge: crit colours and size, never the crit shadowBlur.
+        ctx.strokeStyle = '#000000'
+        ctx.lineWidth = 4
+        ctx.lineJoin = 'round'
+        ctx.strokeText(text, dn.x, dn.y)
+        ctx.fillStyle = '#ff8800'
+        ctx.fillText(text, dn.x, dn.y)
+      } else if (dn.isCrit) {
+        // Crit: dark orange pulsating aura
         if (!isFirefox && !FX.low) {
           const auraRadius = 8 + critPulse * 6
           ctx.shadowColor = '#cc6600'
@@ -1660,7 +1922,7 @@ export const useSpinnerGame = () => {
     blades.filter(b => b.hp > 0)
 
   const isInvulnerable = (blade: SpinnerState): boolean =>
-    blade.invulnerableUntil !== undefined && gameTime() < blade.invulnerableUntil
+    blade.invulnerableUntil !== undefined && skillClock() < blade.invulnerableUntil
 
   let firstGameBoost = false
 
@@ -1703,6 +1965,8 @@ export const useSpinnerGame = () => {
       if (buffs.defense) def *= buffs.defense
       if (buffs.speed) spd *= buffs.speed
     }
+    // Frostbite (bosses-100 §4.3): −10 % speed per chill stack, AFTER powerups.
+    if (BOSSES100_BUILD && blade.chillN && bossPort !== null) spd *= bossPort['chillSpeedMul'](blade)
     let result: SpinnerStats
     if (
       dmg === stats.damageMultiplier
@@ -1722,6 +1986,655 @@ export const useSpinnerGame = () => {
     }
     _statsCache.set(blade.id, result)
     return result
+  }
+
+  // ─── Skills: engine state (skills-feature.md §5, §8, §9.1, §10.3) ───────
+  // Rules and numbers live in `skills/skillRuntime.ts` (pure, per-blade RNG
+  // streams); this block only wires them into the loop. `blade.skills` is set
+  // only for blades whose side has a loadout, and every hook below is behind
+  // a `skills !== undefined` / `skillsActive` check, so a match without skills
+  // runs the pre-skills code path bit for bit (same state hashes).
+
+  /** Any blade of this match carries skills (fast path for per-tick work). */
+  let skillsActive = false
+  // Per-SIDE turn counters (Static Charge stuns, §4.10). Incremented when a
+  // side launches (beginLaunch) or has its turn skipped. In PvP the host's
+  // `playerTurnIndex` equals the guest's `npcTurnIndex` and vice versa, so a
+  // `stunnedForTurn` value means the same turn on both peers.
+  let playerTurnIndex = 0
+  let npcTurnIndex = 0
+  // Reusable result objects — the runtime writes into these, never allocates.
+  const skillOut = createOutgoingResult()
+  const skillIn = createIncomingResult()
+  const hpLossOut = createHpLossResult()
+  const contactOut = createContactResult<SpinnerState>()
+  /** `statsFor` typed for the runtime (one closure for the whole match). */
+  const statsForSkill = (b: SkillBlade): SkillRefStats => statsFor(b as SpinnerState)
+  /** Skill VFX pools — created from the port on the first skilled match. */
+  let skillVfx: SkillVfx | null = null
+
+  const turnIndexOf = (owner: 'player' | 'npc'): number =>
+    owner === 'player' ? playerTurnIndex : npcTurnIndex
+  /** May `blade` move on its team's NEXT turn (alive and not stunned for it)? */
+  const isPickable = (blade: SpinnerState): boolean =>
+    blade.hp > 0
+    && (blade.stunnedForTurn === undefined || !isStunnedFor(blade, turnIndexOf(blade.owner) + 1))
+  /** First living, non-stunned blade of a team (auto-select), else null. */
+  const firstPickable = (team: SpinnerState[]): SpinnerState | null => {
+    for (const b of team) if (isPickable(b)) return b
+    return null
+  }
+  /** VFX predicate: the blade sits out its team's next turn (stun glyph). */
+  const isStunnedForVfx = (b: SkillVfxBlade): boolean => {
+    const s = b as SpinnerState
+    return s.stunnedForTurn !== undefined && s.hp > 0 && isStunnedFor(s, turnIndexOf(s.owner) + 1)
+  }
+  /** Every living blade of `team` is stunned for team turn `turnIdx`. */
+  const teamAllStunned = (team: SpinnerState[], turnIdx: number): boolean => {
+    let living = 0
+    for (const b of team) if (b.hp > 0) living++
+    return living > 0 && countPickable(team, turnIdx) === 0
+  }
+
+  // ─── Boss traits: engine state (bosses-100-feature.md §4, §12.2) ────────
+  // Rules live in `bosses/bossTraits.ts` (pure, no RNG), reached through the
+  // installed port. Every hook below is behind `BOSSES100_BUILD && traitsActive`,
+  // so a match without a trait carrier runs the pre-traits code path bit for
+  // bit (same state hashes) and a bosses100-off build has none of it. The
+  // state objects are allocated by the port on the first trait match.
+
+  /** Any blade of this match carries a boss trait AND the port is in (fast path). */
+  let traitsActive = false
+  /** Combat clock: advances FIXED_STEP_MS per launched-phase substep. */
+  let bossClock: BossClock | null = null
+  let traitOut: TraitContactResult | null = null
+  let bossTraitFx: BossTraitVfx | null = null
+  /** Launch locks of either kind are in play (skills' stuns or Frost Lock). */
+  const locksActive = (): boolean => skillsActive || traitsActive
+  const teamOf = (owner: 'player' | 'npc'): SpinnerState[] =>
+    owner === 'player' ? playerBlades.value : npcBlades.value
+
+  // ── Trait event ring (VFX/SFX feed, HUD, QA) — fixed, overwritten in place;
+  // allocated by the port (BOSS_TRAIT_EVENT_BUFFER slots) on the first trait match.
+  let bossTraitEvents: BossTraitEvent[] = []
+  let bossTraitEventSeq = 0
+  const forEachBossTraitEvent = (sinceSeq: number, visit: (ev: Readonly<BossTraitEvent>) => void): number => {
+    const size = bossTraitEvents.length
+    if (size === 0) return bossTraitEventSeq
+    const from = Math.max(sinceSeq, bossTraitEventSeq - size)
+    for (let q = from; q < bossTraitEventSeq; q++) visit(bossTraitEvents[q % size]!)
+    return bossTraitEventSeq
+  }
+  const pushTraitEvent = (kind: BossTraitEventKind, trait: BossTrait, blade: SpinnerState, value: number): void => {
+    if (!BOSSES100_BUILD || bossPort === null || bossTraitFx === null) return
+    const ev = bossTraitEvents[bossTraitEventSeq % bossTraitEvents.length]!
+    bossTraitEventSeq++
+    ev.seq = bossTraitEventSeq
+    ev.t = skillClock()
+    ev.kind = kind
+    ev.trait = trait
+    ev.bladeId = blade.id
+    ev.syncKey = blade.syncKey
+    ev.owner = blade.owner
+    ev.x = blade.x
+    ev.y = blade.y
+    ev.radius = blade.radius
+    ev.value = value
+    bossPort['bossTraitVfxEvent'](bossTraitFx, ev, FX.low)
+    traitHudDirty = true
+  }
+
+  // ── Refused tap on a frozen spinner (§7.3 HUD, BW6): the arena calls
+  // `refuseFrozenTap` instead of a silent no-op — a 150 ms render-only shake
+  // of the blade plus the refused-freeze crack (shards + boss-crack SFX,
+  // throttled 400 ms by bossTraitSfx). Never written to the event ring and
+  // never touches physics or the state hash.
+  const TAP_SHAKE_MS = 150
+  let tapShakeId = -1
+  let tapShakeUntil = 0
+  let tapCrackEv: BossTraitEvent | null = null
+  const refuseFrozenTap = (blade: SpinnerState): void => {
+    if (!BOSSES100_BUILD || !traitsActive || bossPort === null || bossTraitFx === null || blade.hp <= 0) return
+    tapCrackEv ??= bossPort['createTapCrackEvent']()
+    tapShakeId = blade.id
+    tapShakeUntil = performance.now() + TAP_SHAKE_MS
+    tapCrackEv.t = skillClock()
+    tapCrackEv.bladeId = blade.id
+    tapCrackEv.syncKey = blade.syncKey
+    tapCrackEv.owner = blade.owner
+    tapCrackEv.x = blade.x
+    tapCrackEv.y = blade.y
+    tapCrackEv.radius = blade.radius
+    bossPort['bossTraitVfxEvent'](bossTraitFx, tapCrackEv, FX.low)
+  }
+
+  // ── HUD (§7.3): one row per LOCAL blade, published only on change.
+  const bossTraitHud: ShallowRef<BossTraitHudRows> = shallowRef<BossTraitHudRows>([])
+  let traitHudRows: TraitHudRow[] = []
+  let traitHudDirty = false
+  const publishTraitHud = (force = false): void => {
+    if (!BOSSES100_BUILD || bossPort === null) return
+    if (!traitHudDirty && !force) return
+    traitHudDirty = false
+    const team = playerBlades.value
+    let changed = force
+    while (traitHudRows.length < team.length) {
+      traitHudRows.push(bossPort['createTraitHudRow']())
+      changed = true
+    }
+    const next = playerTurnIndex + 1
+    for (let i = 0; i < team.length; i++) {
+      if (bossPort['writeTraitHud'](team[i]!, next, traitHudRows[i]!)) changed = true
+    }
+    if (!changed) return
+    const rows: TraitHudRow[] = []
+    for (let i = 0; i < team.length; i++) rows.push({ ...traitHudRows[i]! })
+    bossTraitHud.value = rows
+  }
+
+  /** A chill count changed: statsFor must see it at once (sim parity). */
+  const dropStats = (blade: SpinnerState): void => {
+    _statsCache.delete(blade.id)
+  }
+
+  /** Team turn START (before auto-select / the skip check): expire chill,
+   *  thaw an all-frozen team (never a lost turn, §4.2 rule 2). */
+  const traitTurnStart = (owner: 'player' | 'npc'): void => {
+    if (!BOSSES100_BUILD || !traitsActive || bossPort === null) return
+    const team = teamOf(owner)
+    const turn = turnIndexOf(owner) + 1
+    // Blades frozen for this turn (≤ 31, bitmask — no allocation).
+    let frozen = 0
+    for (let i = 0; i < team.length && i < 31; i++) {
+      if (bossPort['isFrostLockedFor'](team[i]!, turn)) frozen |= 1 << i
+    }
+    const thawed = bossPort['beginTeamTurnTraits'](team, turn)
+    for (const b of team) dropStats(b)
+    if (thawed > 0) {
+      for (let i = 0; i < team.length && i < 31; i++) {
+        const b = team[i]!
+        if ((frozen & (1 << i)) !== 0 && b.lockKind === undefined) pushTraitEvent('thaw', 'frost', b, 1)
+      }
+    }
+    traitHudDirty = true
+  }
+  const CHILL_SNAP_SIZE = 31
+  const chillSnap = new Int32Array(CHILL_SNAP_SIZE)
+  /** Team turn END (launched blade stopped, or the turn was skipped). */
+  const traitTurnEnd = (owner: 'player' | 'npc'): void => {
+    if (!BOSSES100_BUILD || !traitsActive || bossPort === null) return
+    const team = teamOf(owner)
+    const ended = turnIndexOf(owner)
+    let frozen = 0
+    for (let i = 0; i < team.length && i < 31; i++) {
+      const b = team[i]!
+      if (b.lockKind === 'frost' && b.hp > 0 && (b.stunnedForTurn ?? -Infinity) <= ended) frozen |= 1 << i
+    }
+    const n = team.length < CHILL_SNAP_SIZE ? team.length : CHILL_SNAP_SIZE
+    for (let i = 0; i < n; i++) chillSnap[i] = team[i]!.chillN ?? 0
+    bossPort['endTeamTurnTraits'](team, ended)
+    for (let i = 0; i < n; i++) {
+      const b = team[i]!
+      const left = b.chillN ?? 0
+      if (left !== chillSnap[i]) {
+        dropStats(b)
+        if (b.hp > 0) pushTraitEvent('chill_fade', 'chill', b, left)
+      }
+      if (i < 31 && (frozen & (1 << i)) !== 0 && b.lockKind === undefined) pushTraitEvent('thaw', 'frost', b, 0)
+    }
+    traitHudDirty = true
+  }
+
+  // ── Skill event ring buffer (HUD flashes, VFX feed, QA) ────────────────
+  // Fixed SKILL_EVENT_BUFFER preallocated entries, overwritten in place;
+  // `skillEventSeq` counts every event ever written (monotonic across
+  // matches). Read with `forEachSkillEvent(sinceSeq, visit)`.
+  const skillEvents: SkillEvent[] = SKILLS_BUILD
+    ? Array.from({ length: SKILL_EVENT_BUFFER }, () => ({
+      seq: 0, t: 0, kind: 'salvo' as SkillEventKind, skill: 'opening_salvo' as SkillId,
+      bladeId: -1, syncKey: -1, owner: 'player' as 'player' | 'npc', x: 0, y: 0, value: 0
+    }))
+    : []
+  let skillEventSeq = 0
+  const forEachSkillEvent = (sinceSeq: number, visit: (ev: Readonly<SkillEvent>) => void): number => {
+    const from = Math.max(sinceSeq, skillEventSeq - SKILL_EVENT_BUFFER)
+    for (let q = from; q < skillEventSeq; q++) visit(skillEvents[q % SKILL_EVENT_BUFFER]!)
+    return skillEventSeq
+  }
+
+  // ── HUD (§8.1): chips of the LOCAL side only ────────────────────────────
+  // Runtime state is copied into fresh plain objects at publish time (≤ 10 Hz,
+  // only when something changed) — never per frame, never reactive in the
+  // physics hot path.
+  interface HudTrack {
+    blade: SpinnerState
+    flash: number[]
+    cooldownKey: number
+  }
+
+  const skillHud: ShallowRef<SkillHudRows> = shallowRef<SkillHudRows>([])
+  let hudTracks: HudTrack[] = []
+  let hudDirty = false
+  let hudPublishedAt = -Infinity
+  let localSalvoSpent = false
+  const HUD_PUBLISH_MS = 100
+  const hudTrackOf = (blade: SpinnerState): HudTrack | null => {
+    for (const t of hudTracks) if (t.blade === blade) return t
+    return null
+  }
+  const hudTouch = (blade: SpinnerState): void => {
+    if (blade.owner === 'player' && blade.skills !== undefined) hudDirty = true
+  }
+  const hudProc = (blade: SpinnerState, skill: SkillId): void => {
+    if (blade.owner !== 'player' || blade.skills === undefined) return
+    const t = hudTrackOf(blade)
+    if (t === null) return
+    const i = blade.skills.ids.indexOf(skill)
+    if (i >= 0) t.flash[i] = (t.flash[i] ?? 0) + 1
+    if (skill === 'phase_step') t.cooldownKey++
+    hudDirty = true
+  }
+  const hudChipState = (t: HudTrack, id: SkillId, i: number): SkillHudChipState => {
+    const s = t.blade.skills!
+    const st: SkillHudChipState = { flashKey: t.flash[i] ?? 0 }
+    switch (id) {
+      case 'guard_shell':
+        st.ring = s.shieldMax > 0 ? s.shield / s.shieldMax : 0
+        break
+      case 'phase_step':
+        if (t.cooldownKey > 0) {
+          st.cooldownMs = s.phaseCooldownMs
+          st.cooldownKey = t.cooldownKey
+        }
+        break
+      case 'second_wind':
+        st.spent = s.secondWindUsed
+        break
+      case 'opening_salvo':
+        st.spent = localSalvoSpent
+        break
+      case 'momentum':
+        st.pips = s.stacks
+        st.pipsMax = s.momentumMaxStacks
+        break
+      case 'homing_rockets':
+        st.pips = s.rocketCount
+        st.pipsMax = s.rocketEveryN
+        break
+    }
+    return st
+  }
+  const publishSkillHud = (force = false): void => {
+    if (!hudDirty && !force) return
+    const now = performance.now()
+    if (!force && now - hudPublishedAt < HUD_PUBLISH_MS) return
+    hudPublishedAt = now
+    hudDirty = false
+    skillHud.value = hudTracks.map(t => {
+      const s = t.blade.skills
+      if (s === undefined) return []
+      return s.ids.map((id, i) => ({ id, level: s.lv[id] ?? 1, state: hudChipState(t, id, i) }))
+    })
+  }
+
+  /** Write one skill event into the ring, feed the VFX layer and the HUD. */
+  const pushSkillEvent = (kind: SkillEventKind, skill: SkillId, blade: SpinnerState, value: number): void => {
+    const ev = skillEvents[skillEventSeq % SKILL_EVENT_BUFFER]!
+    skillEventSeq++
+    ev.seq = skillEventSeq
+    ev.t = gameTime()
+    ev.kind = kind
+    ev.skill = skill
+    ev.bladeId = blade.id
+    ev.syncKey = blade.syncKey
+    ev.owner = blade.owner
+    ev.x = blade.x
+    ev.y = blade.y
+    ev.value = value
+    if (skillVfx !== null) skillPort?.['skillVfxEvent'](skillVfx, ev, FX.low)
+    hudProc(blade, skill)
+  }
+  /** Glyph / popup colour of a skill effect that belongs to `owner`'s side. */
+  const skillColor = (owner: 'player' | 'npc', own: string): string =>
+    owner === 'player' ? own : SKILL_COLOR_ENEMY
+
+  /** Popups + events for the HP loss `hpLossOut` just described (skilled target). */
+  const noteSkilledHpLoss = (target: SpinnerState): void => {
+    const o = hpLossOut
+    if (o.absorbed > 0) {
+      spawnDamageNumber(target.x, target.y - target.radius * 0.5, o.absorbed, target.owner, false,
+        'guard_shell', false, skillColor(target.owner, SKILL_COLOR_SHIELD))
+      pushSkillEvent('shield_absorb', 'guard_shell', target, o.absorbed)
+      if (o.shieldBroken) pushSkillEvent('shield_break', 'guard_shell', target, 0)
+    }
+    if (o.warded > 0) pushSkillEvent('ward', 'hazard_ward', target, o.warded)
+    if (o.healed > 0) {
+      // Same heal rule as every other heal: pulse + number only when ≥ 1 HP
+      // actually landed (the runtime already clamped the heal at maxHp).
+      const shown = healFx(target, target.hp - o.healed)
+      if (shown > 0) {
+        spawnDamageNumber(target.x, target.y + target.radius * 0.4, shown, target.owner, false,
+          'second_wind', false, SKILL_COLOR_HEAL)
+      }
+      pushSkillEvent('heal', 'second_wind', target, o.healed)
+    }
+    hudTouch(target)
+  }
+
+  // ── Homing Rockets: fixed 6-slot pool (§8.3) ───────────────────────────
+  // Gameplay objects (they deal damage on arrival and BLOCK the turn change
+  // while in flight), so they live here, not in the VFX pools. Slots are
+  // taken in index order and resolved in index order → identical on both
+  // PvP peers. A volley that finds the pool full drops its extra rockets.
+  interface SkillRocket extends SkillRocketView {
+    target: SpinnerState | null
+    damage: number
+  }
+
+  const ROCKET_POOL_SIZE = 6
+  const rocketPool: SkillRocket[] = SKILLS_BUILD
+    ? Array.from({ length: ROCKET_POOL_SIZE }, () => ({
+      active: false, owner: 'player' as 'player' | 'npc', x0: 0, y0: 0,
+      target: null, startAt: 0, arriveAt: 0, damage: 0
+    }))
+    : []
+  let rocketsInFlight = 0
+  const clearRockets = (): void => {
+    for (const r of rocketPool) {
+      r.active = false
+      r.target = null
+    }
+    rocketsInFlight = 0
+  }
+  /** Queue the volley `contactOut` describes (after onEnemyContact). */
+  const launchVolley = (bearer: SpinnerState, now: number): void => {
+    let launched = 0
+    for (let i = 0; i < contactOut.volleyCount; i++) {
+      const target = contactOut.volleyTargets[i]
+      if (!target) continue
+      let slot: SkillRocket | null = null
+      for (const r of rocketPool) {
+        if (!r.active) {
+          slot = r
+          break
+        }
+      }
+      if (slot === null) break
+      slot.active = true
+      slot.owner = bearer.owner
+      slot.x0 = bearer.x
+      slot.y0 = bearer.y
+      slot.target = target
+      slot.damage = contactOut.volleyDamage[i]!
+      // Runtime computes arrival on gameTime(); rebase the flight onto the
+      // simulation clock so a paused physics loop freezes the rocket too.
+      slot.startAt = skillClock()
+      slot.arriveAt = slot.startAt + (contactOut.volleyArriveAt - now)
+      rocketsInFlight++
+      launched++
+    }
+    pushSkillEvent('rocket_volley', 'homing_rockets', bearer, launched)
+  }
+  /** Land rockets whose flight time is over (game time; physics tick). */
+  const tickRockets = (): void => {
+    if (rocketsInFlight === 0) return
+    const now = skillClock()
+    for (const r of rocketPool) {
+      if (!r.active || now < r.arriveAt) continue
+      const t = r.target
+      r.active = false
+      r.target = null
+      rocketsInFlight--
+      // Dead or invulnerable on arrival → the rocket fizzles.
+      if (t === null || t.hp <= 0 || isInvulnerable(t)) continue
+      const hpBefore = t.hp
+      const killed = applyBladeDamage(t, r.damage, t.x, t.y, r.owner, false, 'rocket', false, 'homing_rockets')
+      pushSkillEvent('rocket_hit', 'homing_rockets', t, hpBefore - t.hp)
+      if (killed) {
+        handleSplitDeath(t)
+        triggerShake('big')
+      }
+    }
+  }
+
+  // ── Opening Salvo (§4.7) — once per team, host team first (G1) ─────────
+  const fireTeamSalvo = (team: SpinnerState[], foes: SpinnerState[]): void => {
+    const pct = skillPort!['teamSalvoPct'](team)
+    if (!(pct > 0) || team.length === 0) return
+    const src = team[0]!.owner
+    let sprites = 0
+    for (const e of foes) {
+      if (e.hp <= 0) continue
+      const d = skillPort!['salvoDamage'](e, pct)
+      if (!(d > 0)) continue
+      const hpBefore = e.hp
+      applyBladeDamage(e, d, e.x, e.y, src, false, 'salvo', false, 'opening_salvo')
+      pushSkillEvent('salvo', 'opening_salvo', e, hpBefore - e.hp)
+      // Existing explosion sheet at half scale, ≤ 5; FX.low: numbers + flash.
+      if (!FX.low && sprites < 5) {
+        activeExplosions.push(createSpritesheetAnim(
+          explosionImage, e.x, e.y,
+          EXPLOSION_FRAMES, EXPLOSION_FRAME_DURATION, EXPLOSION_FW, EXPLOSION_FH,
+          ((e.radius * 2.5) / EXPLOSION_FW) * 0.5, false
+        ))
+        sprites++
+      }
+    }
+    if (sprites > 0) {
+      try {
+        playSound('explosion-1')
+      } catch { /* sound is best-effort */
+      }
+    }
+    if (src === 'player') {
+      localSalvoSpent = true
+      for (const b of team) hudTouch(b)
+    }
+  }
+  const fireOpeningSalvo = (): void => {
+    if (!skillsActive) return
+    const hostTeam = pvpLocalIsGuest ? npcBlades.value : playerBlades.value
+    const guestTeam = pvpLocalIsGuest ? playerBlades.value : npcBlades.value
+    fireTeamSalvo(hostTeam, guestTeam)
+    fireTeamSalvo(guestTeam, hostTeam)
+  }
+
+  // ── Collision hooks (§5 steps 2, 3, 6) ─────────────────────────────────
+  /** Events / popups for the attacker step `skillOut` just described. */
+  const noteOutgoing = (att: SpinnerState, cx: number, cy: number): void => {
+    if (skillOut.lucky) pushSkillEvent('lucky', 'lucky_edge', att, 0)
+    if (skillOut.momentumStacks > 0 && att.skills !== undefined) {
+      pushSkillEvent('momentum', 'momentum', att, skillOut.momentumStacks)
+      if (damageNumbers.length < 60) {
+        damageNumbers.push({
+          x: cx, y: cy - 10, value: 0,
+          vx: 0.05, vy: -0.05,
+          color: skillColor(att.owner, '#66aaff'), life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+          isCrit: false,
+          comboText: `×${(1 + att.skills.momentumPerStack * skillOut.momentumStacks).toFixed(2)}`
+        })
+      }
+      hudTouch(att)
+    }
+  }
+  /** Events / popups for the defender step `skillIn` just described. */
+  const noteIncoming = (def: SpinnerState): void => {
+    if (skillIn.dodged) {
+      spawnSkillGlyph(def, 'phase_step', skillColor(def.owner, SKILL_COLOR_SHIELD))
+      pushSkillEvent('phase', 'phase_step', def, 0)
+    } else if (skillIn.mirrored) {
+      pushSkillEvent('mirror', 'mirror_plate', def, skillIn.reflect)
+    }
+  }
+  /** §5 step 6 for one skilled blade of an armed enemy contact. */
+  const runContactSkills = (bearer: SpinnerState, enemy: SpinnerState, now: number, lid: number | null): void => {
+    skillPort!['onEnemyContact'](
+      bearer, enemy, now, lid, turnIndexOf(enemy.owner),
+      bearer.owner === 'player' ? npcBlades.value : playerBlades.value,
+      statsForSkill, contactOut
+    )
+    if (contactOut.volley) launchVolley(bearer, now)
+    if (contactOut.shocked) {
+      enemy.hitFlash = HIT_FLASH_FRAMES
+      spawnShockBolt(bearer.x, bearer.y, enemy.x, enemy.y)
+      pushSkillEvent('static', 'static_charge', enemy, contactOut.stunned ? 1 : 0)
+      if (contactOut.stunned) {
+        // The launch lock is shared with Frost Lock; the kind tells the
+        // never-lose-a-turn thaw to leave Static Charge stuns alone.
+        enemy.lockKind = 'stun'
+        spawnSkillGlyph(enemy, 'static_charge', skillColor(bearer.owner, SKILL_COLOR_SHIELD))
+      }
+    }
+    hudTouch(bearer)
+  }
+
+  /** Frostbite stack popup colour (the frost rim's ice blue). */
+  const CHILL_POPUP_COLOR = '#aee6ff'
+  /** §12.2 item 3 for one trait carrier of an armed enemy contact. */
+  const runTraitContact = (carrier: SpinnerState, victim: SpinnerState, now: number, lid: number | null): void => {
+    if (!BOSSES100_BUILD || bossPort === null || traitOut === null) return
+    const changed = bossPort['onTraitContact'](carrier, victim, now, lid, teamOf(victim.owner), turnIndexOf(victim.owner), traitOut)
+    const trait = traitOut.trait
+    if (trait === 'frost') {
+      if (traitOut.keep > 0) {
+        victim.hitFlash = HIT_FLASH_FRAMES
+        pushTraitEvent('frost_touch', 'frost', victim, traitOut.keep)
+      }
+      if (traitOut.lock === 'locked') pushTraitEvent('freeze', 'frost', victim, turnIndexOf(victim.owner) + 1)
+      else if (traitOut.lock === 'cracked') pushTraitEvent('freeze_crack', 'frost', victim, 0)
+    } else if (trait === 'chill' && changed) {
+      dropStats(victim)
+      pushTraitEvent('chill', 'chill', victim, traitOut.stacks)
+      // §7.3 chill popup: a snowflake from the damage-number pool (VFX only).
+      spawnSkillGlyph(victim, 'snowflake', CHILL_POPUP_COLOR)
+    }
+  }
+
+  /** Burn popup colour: orange, cyan when Hazard Ward cut it. */
+  const BURN_COLOR = '#ff9a3c'
+  /** §12.2 item 2: one Ember Nova tick — every living ember carrier pulses,
+   *  each victim burns at most once, in syncKey order; kills end like lava. */
+  const fireEmberNova = (): void => {
+    if (!BOSSES100_BUILD || bossPort === null) return
+    const bp = bossPort
+    const ordered = bladesBySyncKey.value
+    if (!bp['hasLivingEmberCarrier'](ordered)) return
+    const mask = bp['emberVictimMask'](ordered)
+    let victims = 0
+    for (let i = 0; i < ordered.length && i < 31; i++) if ((mask & (1 << i)) !== 0) victims++
+    for (const c of ordered) {
+      if (c.hp > 0 && c.config.bossTrait === 'ember') pushTraitEvent('nova', 'ember', c, victims)
+    }
+    let killed = false
+    for (let i = 0; i < ordered.length && i < 31; i++) {
+      if ((mask & (1 << i)) === 0) continue
+      const v = ordered[i]!
+      const lost = bp['applyEmberBurn'](v, hpLossOut)
+      let color = BURN_COLOR
+      if (SKILLS_BUILD && v.skills !== undefined) {
+        if (hpLossOut.warded > 0) color = SKILL_COLOR_SHIELD
+        noteSkilledHpLoss(v)
+      }
+      v.hitFlash = HIT_FLASH_FRAMES
+      spawnDamageNumber(v.x, v.y, lost, v.owner === 'player' ? 'npc' : 'player', false, undefined, false, color)
+      pushTraitEvent('burn', 'ember', v, lost)
+      if (v.hp > 0) {
+        triggerBurn(borderFx, v, burnCap(), !FX.low)
+      } else {
+        killed = true
+        spawnExplosion(v.x, v.y, v.radius)
+        handleSplitDeath(v)
+      }
+    }
+    if (killed) triggerShake('big')
+  }
+
+  /** Split-boss shatter for a blade that just died (any damage source). */
+  const handleSplitDeath = (blade: SpinnerState): void => {
+    if (blade.hp <= 0 && blade.splitsOnDeath && !blade.isSplitChild) {
+      blade.splitsOnDeath = false
+      spawnSplitChildren(blade)
+    }
+  }
+
+  // ── Launch bookkeeping shared by every launch site ─────────────────────
+  /** Called after `ax`/`ay` are set: zero velocity, start the ramp, count
+   *  the side's turn, reset per-launch skill state (Momentum). */
+  const beginLaunch = (blade: SpinnerState): void => {
+    blade.vx = 0
+    blade.vy = 0
+    blade.accelFramesLeft = ACCEL_FRAMES
+    blade.wallBounceCount = 0
+    if (blade.owner === 'player') playerTurnIndex++
+    else npcTurnIndex++
+    if (SKILLS_BUILD && blade.skills !== undefined) {
+      beginLaunchSkills(blade)
+      hudTouch(blade)
+    }
+  }
+
+  /**
+   * Static Charge turn skip (§4.10, G2): the team whose turn is starting has
+   * every living blade stunned for it → the turn is consumed without a
+   * launch and play passes on. Runs at the turn transition, i.e. at the same
+   * logical point on both PvP peers. A blade stunned for turn T is immune on
+   * T + 1, so at most two skips can chain.
+   */
+  const resolveStunSkips = (): void => {
+    for (let guard = 0; guard < 3; guard++) {
+      if (phase.value === 'player_turn') {
+        const team = playerBlades.value
+        if (!teamAllStunned(team, playerTurnIndex + 1)) return
+        playerTurnIndex++
+        for (const b of team) {
+          if (b.hp > 0) {
+            spawnSkillGlyph(b, 'static_charge', SKILL_COLOR_ENEMY)
+            pushSkillEvent('stun_skip', 'static_charge', b, playerTurnIndex)
+          }
+        }
+        traitTurnEnd('player')
+        phase.value = 'npc_turn'
+        npcThinkingElapsed = 0
+        launchedBladeId.value = null
+        comboState.clear()
+        for (const b of npcBlades.value) {
+          if (b.statSwitchPhase) b.statSwitchPhase = 'attack'
+        }
+        traitTurnStart('npc')
+      } else if (phase.value === 'npc_turn') {
+        const team = npcBlades.value
+        if (!teamAllStunned(team, npcTurnIndex + 1)) return
+        npcTurnIndex++
+        for (const b of team) {
+          if (b.hp > 0) {
+            spawnSkillGlyph(b, 'static_charge', SKILL_COLOR_SHIELD)
+            pushSkillEvent('stun_skip', 'static_charge', b, npcTurnIndex)
+          }
+        }
+        traitTurnEnd('npc')
+        comboState.clear()
+        for (const b of npcBlades.value) {
+          if (b.statSwitchPhase) b.statSwitchPhase = 'defense'
+        }
+        passToPlayer()
+      } else {
+        return
+      }
+    }
+  }
+
+  /** Build `blade.skills` for a side (initGame). Returns true if any got skills. */
+  const equipSide = (team: SpinnerState[], loadout: SkillLoadout | null | undefined): boolean => {
+    if (skillPort === null || !loadout || loadout.length === 0) return false
+    let any = false
+    for (const b of team) {
+      const s = skillPort['createBladeSkills'](loadout, b.maxHp, b.syncKey, matchSeed)
+      if (s !== undefined) {
+        b.skills = s
+        any = true
+      }
+    }
+    return any
   }
 
   // ─── Factory ─────────────────────────────────────────────────────────────
@@ -1768,6 +2681,8 @@ export const useSpinnerGame = () => {
     const finalHp = stats.maxHp * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier
     return {
       id: nextBladeId++,
+      // Placeholder — every spawn site assigns the real peer-independent key.
+      syncKey: -1,
       x, y,
       vx: 0, vy: 0,
       ax: 0, ay: 0,
@@ -1822,6 +2737,7 @@ export const useSpinnerGame = () => {
     twin.ay = parent.ay
     twin.accelFramesLeft = parent.accelFramesLeft
     twin.ghostPending = false
+    twin.syncKey = childSyncKey(parent)
     // Cross-link: each half mirrors damage to the other.
     parent.linkedIds = [...(parent.linkedIds ?? []), twin.id]
     twin.linkedIds = [parent.id]
@@ -1843,7 +2759,7 @@ export const useSpinnerGame = () => {
    * and they inherit the parent's group so their swarm never self-damages.
    */
   const spawnSplitChildren = (parent: SpinnerState) => {
-    const now = gameTime()
+    const now = skillClock()
     const children: SpinnerState[] = []
     for (let i = 0; i < SPLIT_CHILD_COUNT; i++) {
       // In PvP use a fixed offset so both clients agree on child positions
@@ -1858,7 +2774,15 @@ export const useSpinnerGame = () => {
         parent.owner,
         parent.x + dx * spawnDist,
         parent.y + dy * spawnDist,
-        { ...parent.config, bossAbility: undefined, isBoss: false },
+        // Children drop the parent's boss trait; the Shattering Glacier's
+        // shards take its `shardTrait` instead (bosses-100 §6.3).
+        {
+          ...parent.config,
+          bossAbility: undefined,
+          isBoss: false,
+          bossTrait: parent.config.shardTrait,
+          shardTrait: undefined
+        },
         false
       )
       child.radius = childRadius
@@ -1866,6 +2790,7 @@ export const useSpinnerGame = () => {
       child.hp = child.maxHp
       child.groupId = parent.groupId ?? (nextGroupId++)
       child.isSplitChild = true
+      child.syncKey = childSyncKey(parent)
       child.invulnerableUntil = now + SPLIT_CHILD_INVULN_MS
       // Drift outward so the swarm spreads and settles into free space.
       const drift = 1.2
@@ -1887,18 +2812,36 @@ export const useSpinnerGame = () => {
    * Apply damage to a blade with ghost-link mirroring. Returns true if the
    * blade (or any linked half) was killed by this hit, so callers can run
    * the split-on-death handler.
+   *
+   * Every HP decrement of a skilled blade goes through the runtime's
+   * `applyHpLoss` (§5 step 5: Hazard Ward → Guard Shell → HP → Second Wind);
+   * `kind` says what the damage is ('hit' by default). A blade without
+   * skills keeps the plain `hp - dmg` path. The number shown (and mirrored
+   * over a ghost link) is the post-ward, post-shield amount.
    */
   const applyBladeDamage = (
     target: SpinnerState,
     dmg: number,
     cx: number, cy: number,
     sourceOwner: 'player' | 'npc',
-    isCrit: boolean
+    isCrit: boolean,
+    kind: HpLossKind = 'hit',
+    isLucky = false,
+    glyph?: SkillId
   ): boolean => {
     let killed = false
-    target.hp = Math.max(0, target.hp - dmg)
+    let shown = dmg
+    let color: string | undefined
+    if (!SKILLS_BUILD || target.skills === undefined) {
+      target.hp = Math.max(0, target.hp - dmg)
+    } else {
+      applyHpLoss(target, dmg, kind, hpLossOut)
+      shown = dmg - hpLossOut.absorbed - hpLossOut.warded
+      if (hpLossOut.warded > 0) color = SKILL_COLOR_SHIELD
+      noteSkilledHpLoss(target)
+    }
     target.hitFlash = HIT_FLASH_FRAMES
-    spawnDamageNumber(cx, cy, dmg, sourceOwner, isCrit)
+    spawnDamageNumber(cx, cy, shown, sourceOwner, isCrit, glyph, isLucky, color)
     if (target.hp <= 0) {
       killed = true
       spawnExplosion(target.x, target.y, target.radius)
@@ -1912,11 +2855,18 @@ export const useSpinnerGame = () => {
       for (const lid of target.linkedIds) {
         const linked = all.find(b => b.id === lid)
         if (!linked || linked.hp <= 0) continue
-        linked.hp = Math.max(0, linked.hp - dmg)
+        let linkShown = shown
+        if (!SKILLS_BUILD || linked.skills === undefined) {
+          linked.hp = Math.max(0, linked.hp - shown)
+        } else {
+          applyHpLoss(linked, shown, 'link', hpLossOut)
+          linkShown = shown - hpLossOut.absorbed - hpLossOut.warded
+          noteSkilledHpLoss(linked)
+        }
         linked.hitFlash = HIT_FLASH_FRAMES
         // Mirrored numbers render at the linked blade's location so the
         // player sees the ghost-link is real.
-        spawnDamageNumber(linked.x, linked.y, dmg, sourceOwner, false)
+        spawnDamageNumber(linked.x, linked.y, linkShown, sourceOwner, false)
         if (linked.hp <= 0) {
           killed = true
           spawnExplosion(linked.x, linked.y, linked.radius)
@@ -1977,26 +2927,38 @@ export const useSpinnerGame = () => {
     bouncerCount = 0,
     enablePowerups = false,
     powerupIntervalMs: [number, number] = [POWERUP_DEFAULT_INTERVAL_MIN_MS, POWERUP_DEFAULT_INTERVAL_MAX_MS],
-    pvp: { enabled: boolean; myTurnFirst: boolean } | null = null,
+    /** `role` = this client's lobby role; defaults to usePVP's live role. */
+    pvp: { enabled: boolean; myTurnFirst: boolean; role?: 'host' | 'guest' } | null = null,
     shape: ArenaShape = 'circle',
     /** Daily challenge match. Only the joystick rule reads it — see
      *  `isJoystickVisible` for why that mode alone needs the distinction. */
-    daily = false
+    daily = false,
+    /** `seed`: start the match RNG from this value (reproducible battles,
+     *  e.g. league replays). Omitted: PvP keeps the host's broadcast seed,
+     *  every other mode reseeds randomly. */
+    opts: InitGameOptions = {}
   ) => {
     pvpMode.value = !!pvp?.enabled
+    pvpLocalIsGuest = pvpMode.value && (pvp?.role ?? currentPvpRole()) === 'guest'
     isDailyMatch.value = daily
     // Set the arena shape BEFORE spawns so spawn/bouncer/power-up placement can
     // clamp to the active boundary geometry.
     arenaShape.value = shape
     BLADE_RADIUS = pvpMode.value ? PVP_BLADE_RADIUS : DEFAULT_BLADE_RADIUS
-    pvpTickCount = 0
+    // The PvP clock only runs during launches, so it starts a minute "in" —
+    // cooldown maps default a never-seen pair to 0, and at t≈0 the first
+    // contact of the match would otherwise read as "still in contact".
+    pvpTickCount = 3600
     firstGameBoost = boost
     // In PvP the host already seeded + broadcast a shared seed via the
     // game-start message; single-player reseeds locally per match.
-    if (!pvpMode.value) seedMatchRngRandom()
+    if (opts.seed !== undefined) seedMatchRng(opts.seed)
+    else if (!pvpMode.value) seedMatchRngRandom()
+    matchSeed = currentMatchSeed()
     stopPhysics()
     clearCombatLog()
     nextBladeId = 0
+    childSpawnSeq.clear()
     // Clear cached player model images so skin changes take effect
     for (const key of [...bladeModelImages.keys()]) {
       if (key.endsWith('_player')) bladeModelImages.delete(key)
@@ -2079,6 +3041,68 @@ export const useSpinnerGame = () => {
     npcBlades.value = nTeam.map((cfg, i) =>
       createBladeState('npc', npcPositions[i]!.x, npcPositions[i]!.y, cfg, cfg.isBoss, cfg.bossStats)
     )
+    // Peer-independent keys: the host's team is 0..n-1, the guest's 100+i.
+    // Outside PvP the local player plays the host's part.
+    const ownBase = pvpLocalIsGuest ? SYNC_KEY_GUEST_BASE : 0
+    const otherBase = pvpLocalIsGuest ? 0 : SYNC_KEY_GUEST_BASE
+    playerBlades.value.forEach((b, i) => {
+      b.syncKey = ownBase + i
+    })
+    npcBlades.value.forEach((b, i) => {
+      b.syncKey = otherBase + i
+    })
+
+    // ── Skills (§10.3 item 1/2): both sides, owner-agnostic (G3). Empty /
+    // missing loadout → `skills` stays unset (fast path, baseline hashes).
+    // Per-blade streams are seeded from (matchSeed, syncKey) — identical on
+    // both PvP peers. Spawned children (ghost twin, split, emitted) never
+    // carry skills.
+    // Skills-off build: folds to `skillsActive = false` (no port, no glue).
+    const ownSkills = SKILLS_BUILD && equipSide(playerBlades.value, opts.skillLoadout)
+    const otherSkills = SKILLS_BUILD && equipSide(npcBlades.value, opts.enemySkillLoadout)
+    skillsActive = ownSkills || otherSkills
+    playerTurnIndex = 0
+    npcTurnIndex = 0
+    skillPopupAt.clear()
+    if (SKILLS_BUILD) {
+      clearRockets()
+      if (skillsActive && skillVfx === null && skillPort !== null) skillVfx = skillPort['createSkillVfx']()
+      if (skillVfx !== null) skillPort?.['resetSkillVfx'](skillVfx)
+      localSalvoSpent = false
+      hudTracks = ownSkills
+        ? playerBlades.value.map(blade => ({
+          blade,
+          flash: blade.skills ? blade.skills.ids.map(() => 0) : [],
+          cooldownKey: 0
+        }))
+        : []
+      publishSkillHud(true)
+    }
+
+    // ── Boss traits (bosses-100 §12.2 item 1): carriers need only their
+    // config; the clock restarts per match. Chill buffers and VFX pools are
+    // allocated here, and only when the roster carries a trait.
+    traitsActive = false
+    traitHudRows = []
+    traitHudDirty = false
+    if (BOSSES100_BUILD && bossPort !== null) {
+      const bp = bossPort
+      if (bossClock !== null) bp['resetBossClock'](bossClock)
+      if (bossTraitFx !== null) bp['resetBossTraitVfx'](bossTraitFx)
+      traitsActive = bp['hasBossTraits'](allBlades.value)
+      if (traitsActive) {
+        bossClock ??= bp['createBossClock']()
+        traitOut ??= bp['createTraitContactResult']()
+        bossTraitFx ??= bp['createBossTraitVfx']()
+        if (bossTraitEvents.length === 0) bossTraitEvents = bp['createBossTraitEventRing']()
+        for (const b of allBlades.value) bp['initTraitVictim'](b)
+        bp['prepareBossTraitVfx'](bossTraitFx, allBlades.value, FX.low)
+        // Ember burns reuse the lava flame strip: fetch it during the intro.
+        for (const b of npcBlades.value) if (b.config.bossTrait === 'ember') flameImage()
+      }
+    }
+    if (BOSSES100_BUILD && traitsActive) publishTraitHud(true)
+    else if (bossTraitHud.value.length > 0) bossTraitHud.value = []
 
     // ── Boss ability wiring ───────────────────────────────────────────────
     // partners/healers are TEAM-WIDE coordination abilities: the whole roster
@@ -2250,11 +3274,15 @@ export const useSpinnerGame = () => {
       turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.opponentTurn')
       startPhysics()
       spawnMeteorShower(80, 50, 65)
+      // PvP has no meteor intro: Opening Salvo fires here, host team then
+      // guest team (G1) — before any tick, so both peers start equal.
+      if (SKILLS_BUILD) fireOpeningSalvo()
       setTimeout(() => {
         phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
         turnAnnouncement.value = ''
         npcThinkingElapsed = 0
-        const first = livingBlades(playerBlades.value)[0]
+        traitTurnStart(startsWithPlayer ? 'player' : 'npc')
+        const first = firstPickable(playerBlades.value)
         if (first) selectedBladeId.value = first.id
       }, 1200)
       return
@@ -2360,6 +3388,8 @@ export const useSpinnerGame = () => {
     let closestDist = Infinity
 
     for (const blade of livingBlades(playerBlades.value)) {
+      // Stunned for this turn (Static Charge) → cannot be picked.
+      if (!isPickable(blade)) continue
       const dx = gameX - blade.x
       const dy = gameY - blade.y
       const dist = Math.sqrt(dx * dx + dy * dy)
@@ -2402,6 +3432,10 @@ export const useSpinnerGame = () => {
 
     // Cancel zone: if pointer is back within the blade's radius, cancel the pull
     const blade = selectedBlade.value
+    if (!isPickable(blade)) {
+      cancelDrag()
+      return
+    }
     const pointerDx = dragCurrent.value.x - blade.x
     const pointerDy = dragCurrent.value.y - blade.y
     const pointerDist = Math.sqrt(pointerDx * pointerDx + pointerDy * pointerDy)
@@ -2430,12 +3464,9 @@ export const useSpinnerGame = () => {
     const ny = -dy / mag
 
     // Acceleration ramp: blade starts at 0 velocity, gains speed over ACCEL_FRAMES
-    blade.vx = 0
-    blade.vy = 0
     blade.ax = (nx * targetForce) / ACCEL_FRAMES
     blade.ay = (ny * targetForce) / ACCEL_FRAMES
-    blade.accelFramesLeft = ACCEL_FRAMES
-    blade.wallBounceCount = 0
+    beginLaunch(blade)
 
     launchedBladeId.value = blade.id
     if (blade.ghostPending) spawnGhostTwin(blade)
@@ -2455,15 +3486,16 @@ export const useSpinnerGame = () => {
     }
 
     const blade = selectedBlade.value
+    if (!isPickable(blade)) {
+      isDragging.value = false
+      return
+    }
     const stats = statsFor(blade)
     const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
 
-    blade.vx = 0
-    blade.vy = 0
     blade.ax = (lastDragNx * maxForce) / ACCEL_FRAMES
     blade.ay = (lastDragNy * maxForce) / ACCEL_FRAMES
-    blade.accelFramesLeft = ACCEL_FRAMES
-    blade.wallBounceCount = 0
+    beginLaunch(blade)
 
     launchedBladeId.value = blade.id
     if (blade.ghostPending) spawnGhostTwin(blade)
@@ -2516,6 +3548,10 @@ export const useSpinnerGame = () => {
     }
 
     const blade = selectedBlade.value
+    if (!isPickable(blade)) {
+      isJoystickDragging.value = false
+      return
+    }
     const stats = statsFor(blade)
     const ratio = Math.min(mag / JOYSTICK_MAX_PULL, 1)
     const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
@@ -2525,12 +3561,9 @@ export const useSpinnerGame = () => {
     const nx = -dx / mag
     const ny = -dy / mag
 
-    blade.vx = 0
-    blade.vy = 0
     blade.ax = (nx * targetForce) / ACCEL_FRAMES
     blade.ay = (ny * targetForce) / ACCEL_FRAMES
-    blade.accelFramesLeft = ACCEL_FRAMES
-    blade.wallBounceCount = 0
+    beginLaunch(blade)
 
     launchedBladeId.value = blade.id
     if (blade.ghostPending) spawnGhostTwin(blade)
@@ -2548,16 +3581,16 @@ export const useSpinnerGame = () => {
   const executeRemoteLaunch = (bladeIndex: number, ax: number, ay: number) => {
     const blade = npcBlades.value[bladeIndex]
     if (!blade || blade.hp <= 0) return
+    // A blade stunned for this turn cannot move (G2). The sender's engine
+    // never launches one, so this only guards a malformed message.
+    if (!isPickable(blade)) return
 
     // Mirror the acceleration: the remote player's blades sit at the
     // bottom on their screen but at the top on ours. Only the Y axis is
     // flipped; X stays the same so left/right is consistent.
-    blade.vx = 0
-    blade.vy = 0
     blade.ax = ax
     blade.ay = -ay
-    blade.accelFramesLeft = ACCEL_FRAMES
-    blade.wallBounceCount = 0
+    beginLaunch(blade)
 
     npcActiveBladeId.value = blade.id
     launchedBladeId.value = blade.id
@@ -2582,15 +3615,26 @@ export const useSpinnerGame = () => {
     phase.value = 'player_turn'
     launchedBladeId.value = null
     npcActiveBladeId.value = null
-    const first = livingBlades(playerBlades.value)[0]
+    traitTurnStart('player')
+    const first = firstPickable(playerBlades.value)
     if (first) selectedBladeId.value = first.id
   }
 
   const launchNpc = () => {
-    const living = livingBlades(npcBlades.value)
+    let living = livingBlades(npcBlades.value)
     if (living.length === 0) {
       passToPlayer()
       return
+    }
+    // Static Charge: blades stunned for this turn sit it out. (An all-stunned
+    // team never gets here — resolveStunSkips skipped the turn.)
+    if (locksActive()) {
+      const pickable = living.filter(isPickable)
+      if (pickable.length === 0) {
+        passToPlayer()
+        return
+      }
+      living = pickable
     }
 
     // Pick a random living NPC blade
@@ -2610,12 +3654,9 @@ export const useSpinnerGame = () => {
       const randAngle = Math.random() * Math.PI * 2
       const stats = statsFor(blade)
       const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
-      blade.vx = 0
-      blade.vy = 0
       blade.ax = (Math.cos(randAngle) * maxForce * 0.5) / ACCEL_FRAMES
       blade.ay = (Math.sin(randAngle) * maxForce * 0.5) / ACCEL_FRAMES
-      blade.accelFramesLeft = ACCEL_FRAMES
-      blade.wallBounceCount = 0
+      beginLaunch(blade)
       launchedBladeId.value = blade.id
       if (blade.ghostPending) spawnGhostTwin(blade)
       phase.value = 'npc_launched'
@@ -2672,12 +3713,9 @@ export const useSpinnerGame = () => {
     const targetForce = forcePct * maxForce
 
     // Acceleration ramp (same as player)
-    blade.vx = 0
-    blade.vy = 0
     blade.ax = (Math.cos(angle) * targetForce) / ACCEL_FRAMES
     blade.ay = (Math.sin(angle) * targetForce) / ACCEL_FRAMES
-    blade.accelFramesLeft = ACCEL_FRAMES
-    blade.wallBounceCount = 0
+    beginLaunch(blade)
 
     launchedBladeId.value = blade.id
     if (blade.ghostPending) spawnGhostTwin(blade)
@@ -2690,12 +3728,26 @@ export const useSpinnerGame = () => {
     // Flush per-frame statsFor cache
     _statsCache.clear()
 
-    if (pvpMode.value) pvpTickCount++
+    // PvP lockstep: the gameplay simulation (and its clock) advances ONLY
+    // while a launch is resolving. A launch reaches the remote peer a network
+    // round-trip later than it happens locally, so the idle turn phases last a
+    // different number of ticks on each client; letting those ticks move
+    // blades or age cooldowns (crit, spiky chip, contact re-arm, shock) was a
+    // desync. Turns also end only once EVERY blade rests (see below), so an
+    // idle tick has nothing to simulate. Single-player is always active.
+    const simActive = !pvpMode.value
+      || phase.value === 'player_launched'
+      || phase.value === 'npc_launched'
+    if (pvpMode.value && simActive) pvpTickCount++
+    if (simActive) simTickCount++
     // Meteor shower phase
     if (phase.value === 'meteor_intro') {
       updateMeteorParticles()
       meteorIntroTimer += 16
       if (meteorIntroTimer >= 1600) {
+        // Opening Salvo lands as the meteors do (§10.3 item 3), before the
+        // first turn is decided. Draws nothing from matchRng.
+        if (SKILLS_BUILD) fireOpeningSalvo()
         phase.value = 'deciding_turn'
         // Bias the starting turn based on the previous match outcome:
         // - After a loss (or losing streak), give the player an 80% chance to start
@@ -2708,8 +3760,9 @@ export const useSpinnerGame = () => {
         setTimeout(() => {
           phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
           turnAnnouncement.value = ''
+          traitTurnStart(startsWithPlayer ? 'player' : 'npc')
           // Auto-select first living player blade
-          const first = livingBlades(playerBlades.value)[0]
+          const first = firstPickable(playerBlades.value)
           if (first) selectedBladeId.value = first.id
         }, 500)
       }
@@ -2732,7 +3785,13 @@ export const useSpinnerGame = () => {
     // pair as "still in contact" and skips the damage roll. VFX timers
     // (hitFlash, sparks, damage numbers) and updatePowerups stay 1x
     // (handled outside this loop).
-    const subSteps = simSpeed.value
+    // PvP always runs 1x — the 2x switch must never change lockstep physics
+    // (the peer may be at 1x) — and not at all between launches.
+    const subSteps = !simActive ? 0 : pvpMode.value ? 1 : simSpeed.value
+    // Collision pairs in syncKey order, lower key always `a`: the pair order
+    // and resolveCollision's a/b asymmetries (anti-draw tie-break, crit draw
+    // order) are then the same on both PvP clients.
+    const ordered = bladesBySyncKey.value
     for (let s = 0; s < subSteps; s++) {
       for (const blade of all) {
         if (blade.hp <= 0) continue
@@ -2808,13 +3867,17 @@ export const useSpinnerGame = () => {
         bounceOffBouncers(blade)
       }
 
-      // All-pairs collision (including friendly fire!)
-      for (let i = 0; i < all.length; i++) {
-        for (let j = i + 1; j < all.length; j++) {
-          if (all[i]!.hp <= 0 || all[j]!.hp <= 0) continue
-          resolveCollision(all[i]!, all[j]!)
+      // All-pairs collision (including friendly fire!), canonical order.
+      for (let i = 0; i < ordered.length; i++) {
+        for (let j = i + 1; j < ordered.length; j++) {
+          if (ordered[i]!.hp <= 0 || ordered[j]!.hp <= 0) continue
+          resolveCollision(ordered[i]!, ordered[j]!)
         }
       }
+      // Boss traits (§12.2 item 2): the combat clock advances per SUBSTEP of
+      // a launched phase (identical novas at 1x / 2x), after the collisions.
+      if (BOSSES100_BUILD && traitsActive && bossPort!['tickBossClock'](bossClock!, FIXED_STEP_MS,
+        phase.value === 'player_launched' || phase.value === 'npc_launched')) fireEmberNova()
     }
 
     // Hit flash decay — VFX timer, ticks once per real frame regardless of
@@ -2843,7 +3906,7 @@ export const useSpinnerGame = () => {
     const THUNDER_DAMAGE = 1
     const nowThunder = gameTime()
     for (const src of all) {
-      if (!src.isThunder || src.hp <= 0) continue
+      if (!simActive || !src.isThunder || src.hp <= 0) continue
       if (!src.thunderLastHit) src.thunderLastHit = new Map()
       const hitRadius = src.radius * THUNDER_RADIUS_MUL
       for (const target of all) {
@@ -2855,17 +3918,34 @@ export const useSpinnerGame = () => {
         const lastHit = src.thunderLastHit.get(target.id) ?? -Infinity
         if (nowThunder - lastHit < THUNDER_COOLDOWN_MS) continue
         src.thunderLastHit.set(target.id, nowThunder)
-        target.hp = Math.max(0, target.hp - THUNDER_DAMAGE)
+        let thunderShown = THUNDER_DAMAGE
+        let thunderColor = '#ffee44'
+        if (!SKILLS_BUILD || target.skills === undefined) {
+          target.hp = Math.max(0, target.hp - THUNDER_DAMAGE)
+        } else {
+          applyHpLoss(target, THUNDER_DAMAGE, 'thunder', hpLossOut)
+          thunderShown = Math.round(THUNDER_DAMAGE - hpLossOut.absorbed - hpLossOut.warded)
+          if (hpLossOut.warded > 0) thunderColor = SKILL_COLOR_SHIELD
+          noteSkilledHpLoss(target)
+        }
         // Yellow floating damage number
         const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
         const hs = 0.06 + Math.random() * 0.03
-        damageNumbers.push({
-          x: target.x, y: target.y, value: THUNDER_DAMAGE,
-          vx: Math.cos(ha) * hs, vy: Math.sin(ha) * hs,
-          color: '#ffee44', life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE, isCrit: false
-        })
+        if (thunderShown > 0) {
+          damageNumbers.push({
+            x: target.x, y: target.y, value: thunderShown,
+            vx: Math.cos(ha) * hs, vy: Math.sin(ha) * hs,
+            color: thunderColor, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE, isCrit: false
+          })
+        }
       }
     }
+
+    // Homing Rockets land on game time (§10.3 item 11); only while the
+    // simulation runs, so PvP peers resolve them on the same tick.
+    if (SKILLS_BUILD && simActive && rocketsInFlight > 0) tickRockets()
+    if (SKILLS_BUILD && skillsActive && skillVfx !== null) skillPort?.['tickSkillVfx'](skillVfx, 16)
+    if (BOSSES100_BUILD && traitsActive) bossPort!['tickBossTraitVfx'](bossTraitFx!, 16)
 
     // Powerup spawn timer + lifecycle + collision (no-op when the stage
     // gate or test scene hasn't enabled the system).
@@ -2922,13 +4002,20 @@ export const useSpinnerGame = () => {
       return
     }
 
-    // Turn transitions — launched blade must come to rest (or be dead)
+    // Turn transitions — launched blade must come to rest (or be dead).
+    // PvP: EVERY living blade must rest. The next launch starts a network
+    // round-trip later on the receiving peer; a blade still sliding at that
+    // point would have moved a different number of ticks on each client.
     const launched = all.find(b => b.id === launchedBladeId.value)
-    const launchedStopped = !launched
-      || launched.hp <= 0
-      || (speed(launched) < STOP_THRESHOLD && launched.accelFramesLeft === 0)
+    const isResting = (b: SpinnerState) =>
+      b.hp <= 0 || (speed(b) < STOP_THRESHOLD && b.accelFramesLeft === 0)
+    // Rockets in flight hold the turn open (G7): they still deal damage.
+    const launchedStopped = (!launched || isResting(launched))
+      && (!pvpMode.value || all.every(isResting))
+      && rocketsInFlight === 0
 
     if (phase.value === 'player_launched' && launchedStopped) {
+      traitTurnEnd('player')
       phase.value = 'npc_turn'
       npcThinkingElapsed = 0
       launchedBladeId.value = null
@@ -2937,14 +4024,17 @@ export const useSpinnerGame = () => {
       for (const b of npcBlades.value) {
         if (b.statSwitchPhase) b.statSwitchPhase = 'attack'
       }
+      traitTurnStart('npc')
       // PvP state-check: send hash after our launch resolved
       if (pvpMode.value) {
         pvpTurnCounter++
         const hash = computeStateHash()
         onStateHash?.(hash, pvpTurnCounter)
       }
+      // Static Charge: the enemy team may be fully stunned for this turn.
+      if (SKILLS_BUILD && skillsActive) resolveStunSkips()
       // Replay buffered remote launch that arrived while our blade was still rolling
-      if (pvpMode.value && pendingRemoteLaunch) {
+      if (pvpMode.value && pendingRemoteLaunch && phase.value === 'npc_turn') {
         const p = pendingRemoteLaunch
         pendingRemoteLaunch = null
         executeRemoteLaunch(p.bladeIndex, p.ax, p.ay)
@@ -2952,6 +4042,7 @@ export const useSpinnerGame = () => {
     }
 
     if (phase.value === 'npc_launched' && launchedStopped) {
+      traitTurnEnd('npc')
       phase.value = 'player_turn'
       launchedBladeId.value = null
       comboState.clear()
@@ -2966,10 +4057,25 @@ export const useSpinnerGame = () => {
         const hash = computeStateHash()
         onStateHash?.(hash, pvpTurnCounter)
       }
+      traitTurnStart('player')
       // Auto-select first living player blade
-      const first = livingBlades(playerBlades.value)[0]
+      const first = firstPickable(playerBlades.value)
       if (first) selectedBladeId.value = first.id
+      // Static Charge: our whole team may be stunned for this turn → skip
+      // it (the peer skips the same turn at its matching transition).
+      if (SKILLS_BUILD && skillsActive) {
+        resolveStunSkips()
+        // (cast: TS narrowed `phase` to 'player_turn' above; the skip moved it)
+        if (pvpMode.value && pendingRemoteLaunch && (phase.value as GamePhase) === 'npc_turn') {
+          const p = pendingRemoteLaunch
+          pendingRemoteLaunch = null
+          executeRemoteLaunch(p.bladeIndex, p.ax, p.ay)
+        }
+      }
     }
+
+    if (SKILLS_BUILD && skillsActive) publishSkillHud()
+    if (BOSSES100_BUILD && traitsActive) publishTraitHud()
 
     // NPC thinking — in PvP mode the remote player controls the NPC blades,
     // so we skip the AI entirely and wait for launchRemoteBlade() calls.
@@ -3026,6 +4132,11 @@ export const useSpinnerGame = () => {
     blade.vx = (blade.vx - 2 * dot * nx) * effectiveBoost
     blade.vy = (blade.vy - 2 * dot * ny) * effectiveBoost
     blade.wallBounceCount++
+    // Momentum: +1 stack per rebound during the blade's own launch.
+    if (SKILLS_BUILD && blade.skills !== undefined) {
+      onOwnBounce(blade, launchedBladeId.value)
+      hudTouch(blade)
+    }
 
     // Reflect the remaining acceleration so the launch ramp doesn't
     // push the blade back into the wall it just bounced off of.
@@ -3040,17 +4151,31 @@ export const useSpinnerGame = () => {
     // Arena-specific wall effects
     if (arenaType.value === 'lava') {
       const lavaDmg = Math.ceil(blade.maxHp * 0.025)
-      blade.hp = Math.max(0, blade.hp - lavaDmg)
+      // Skilled blades lose HP through the runtime (Hazard Ward → Guard
+      // Shell → HP → Second Wind); the number is the post-ward, post-shield
+      // amount, tinted cyan when the ward reduced it.
+      let lavaShown = lavaDmg
+      let lavaColor = blade.owner === 'player' ? '#ff6666' : '#66aaff'
+      if (!SKILLS_BUILD || blade.skills === undefined) {
+        blade.hp = Math.max(0, blade.hp - lavaDmg)
+      } else {
+        applyHpLoss(blade, lavaDmg, 'lava', hpLossOut)
+        lavaShown = Math.round(lavaDmg - hpLossOut.absorbed - hpLossOut.warded)
+        if (hpLossOut.warded > 0) lavaColor = SKILL_COLOR_SHIELD
+        noteSkilledHpLoss(blade)
+      }
       blade.hitFlash = HIT_FLASH_FRAMES
-      const lavaAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
-      const lavaSpd = 0.06 + Math.random() * 0.03
-      damageNumbers.push({
-        x: blade.x, y: blade.y,
-        value: lavaDmg, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
-        vx: Math.cos(lavaAngle) * lavaSpd, vy: Math.sin(lavaAngle) * lavaSpd,
-        color: blade.owner === 'player' ? '#ff6666' : '#66aaff',
-        isCrit: false
-      })
+      const lavaAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng
+      const lavaSpd = 0.06 + Math.random() * 0.03 // vfx-rng
+      if (lavaShown > 0) {
+        damageNumbers.push({
+          x: blade.x, y: blade.y,
+          value: lavaShown, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+          vx: Math.cos(lavaAngle) * lavaSpd, vy: Math.sin(lavaAngle) * lavaSpd,
+          color: lavaColor,
+          isCrit: false
+        })
+      }
       // Flame-burn follows the spinner for ~1 s. Never restarts while it
       // plays: a re-contact holds it on the flicker frames (high tier) or
       // is ignored until the pass ends (low tier). A lethal touch skips it —
@@ -3060,15 +4185,14 @@ export const useSpinnerGame = () => {
         triggerBurn(borderFx, blade, burnCap(), !FX.low)
       }
     } else if (arenaType.value === 'forest') {
-      const healed = Math.round(Math.min(1, blade.maxHp - blade.hp))
       const hpBeforeForest = blade.hp
       blade.hp = Math.min(blade.maxHp, blade.hp + 1)
-      // Heal pulse whenever HP actually went up — including a sub-0.5 top-up
-      // whose rounded number is 0 and so shows no digit.
-      healFx(blade, hpBeforeForest)
+      // Pulse + number only when a full 1 HP landed (a sub-1 top-up to max
+      // still heals, silently) — see healFx.
+      const healed = healFx(blade, hpBeforeForest)
       if (healed > 0) {
-        const healAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
-        const healSpd = 0.06 + Math.random() * 0.03
+        const healAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng
+        const healSpd = 0.06 + Math.random() * 0.03 // vfx-rng
         damageNumbers.push({
           x: blade.x, y: blade.y,
           value: healed, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
@@ -3079,12 +4203,16 @@ export const useSpinnerGame = () => {
     } else if (arenaType.value === 'shock') {
       // Shock arena: remove 90% of blade speed on wall contact.
       // 250ms per-blade cooldown prevents zap spam (and the lag it caused)
-      // when a blade grinds along the wall over multiple frames.
-      const now = performance.now()
-      if (now - (blade.lastShockMs ?? 0) >= 250) {
+      // when a blade grinds along the wall over multiple frames. Sim clock,
+      // not wall clock: the cooldown gates physics, so PvP peers must agree
+      // and a pause must not open it.
+      const now = skillClock()
+      if (now - (blade.lastShockMs ?? -Infinity) >= 250) {
         blade.lastShockMs = now
-        blade.vx *= 0.1
-        blade.vy *= 0.1
+        // Speed kept: 10 % (SHOCK_BASE_KEEP), more with Hazard Ward.
+        const keep = hazardShockKeep(blade)
+        blade.vx *= keep
+        blade.vy *= keep
         blade.hitFlash = HIT_FLASH_FRAMES
         // Bolt originates at the actual wall contact point (shape-aware).
         spawnShockBolt(blade.x + nx * blade.radius, blade.y + ny * blade.radius, blade.x, blade.y)
@@ -3131,6 +4259,10 @@ export const useSpinnerGame = () => {
 
       blade.vx = (blade.vx - 2 * dot * nx) * effectiveBoost
       blade.vy = (blade.vy - 2 * dot * ny) * effectiveBoost
+      if (SKILLS_BUILD && blade.skills !== undefined) {
+        onOwnBounce(blade, launchedBladeId.value)
+        hudTouch(blade)
+      }
 
       bouncer.flash = 1
       triggerShake('small')
@@ -3138,11 +4270,12 @@ export const useSpinnerGame = () => {
       // Shock arena bouncers also drain 90% speed on impact (same 250ms
       // per-blade cooldown as the wall to avoid zap spam during overlap).
       if (arenaType.value === 'shock') {
-        const now = performance.now()
-        if (now - (blade.lastShockMs ?? 0) >= 250) {
+        const now = skillClock()
+        if (now - (blade.lastShockMs ?? -Infinity) >= 250) {
           blade.lastShockMs = now
-          blade.vx *= 0.1
-          blade.vy *= 0.1
+          const keep = hazardShockKeep(blade)
+          blade.vx *= keep
+          blade.vy *= keep
           blade.hitFlash = HIT_FLASH_FRAMES
           spawnShockBolt(bouncer.x + nx * bouncer.radius, bouncer.y + ny * bouncer.radius, blade.x, blade.y)
         }
@@ -3185,26 +4318,27 @@ export const useSpinnerGame = () => {
         const key = a.id < b.id ? `${a.id}_${b.id}` : `${b.id}_${a.id}`
         const last = healerHealCooldowns.get(key) ?? 0
         if (now_ally - last >= HEALER_HEAL_COOLDOWN_MS) {
-          const healA = Math.round(Math.min(HEALER_CONTACT_HEAL, a.maxHp - a.hp))
-          const healB = Math.round(Math.min(HEALER_CONTACT_HEAL, b.maxHp - b.hp))
-          if (healA > 0) {
+          // The full HEALER_CONTACT_HEAL applies unrounded, clamped at maxHp
+          // (0.3 missing → +0.3, 1.6 missing → +1.6). Pulse + number follow
+          // the HP actually applied (healFx: only ≥1, shown rounded).
+          if (a.hp < a.maxHp) {
             const hpBeforeA = a.hp
-            a.hp += healA
-            healFx(a, hpBeforeA)
-            damageNumbers.push({
+            a.hp = Math.min(a.maxHp, a.hp + HEALER_CONTACT_HEAL)
+            const shownA = healFx(a, hpBeforeA)
+            if (shownA > 0) damageNumbers.push({
               x: a.x, y: a.y,
-              value: healA, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+              value: shownA, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
               vx: 0, vy: -0.08,
               color: '#44ff88', isCrit: false
             })
           }
-          if (healB > 0) {
+          if (b.hp < b.maxHp) {
             const hpBeforeB = b.hp
-            b.hp += healB
-            healFx(b, hpBeforeB)
-            damageNumbers.push({
+            b.hp = Math.min(b.maxHp, b.hp + HEALER_CONTACT_HEAL)
+            const shownB = healFx(b, hpBeforeB)
+            if (shownB > 0) damageNumbers.push({
               x: b.x, y: b.y,
-              value: healB, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+              value: shownB, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
               vx: 0, vy: -0.08,
               color: '#44ff88', isCrit: false
             })
@@ -3356,8 +4490,8 @@ export const useSpinnerGame = () => {
     let aComboMul = 1
     let bComboMul = 1
     if (arenaType.value === 'thunder') {
-      const comboAngle = (Math.random() - 0.5) * (Math.PI / 3) // 60° cone pointing right (VFX only)
-      const comboSpd = 0.06 + Math.random() * 0.03
+      const comboAngle = (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng — 60° cone pointing right (VFX only)
+      const comboSpd = 0.06 + Math.random() * 0.03 // vfx-rng
       const now = gameTime()
       // Update combo for a hitting b (only if a is moving fast enough to attack)
       if (aSpeed > STOP_THRESHOLD) {
@@ -3427,7 +4561,8 @@ export const useSpinnerGame = () => {
           && aSpeed >= bSpeed * 2
           && bCritReady
         // Hidden star-top lucky crit: 8% chance when a is the faster attacker.
-        if (!aCrit && a.config.topPartId === 'star' && aSpeed > bSpeed && bCritReady && Math.random() < 0.08) {
+        // Match RNG (both PvP peers draw it, `a` first — pairs run in syncKey order).
+        if (!aCrit && a.config.topPartId === 'star' && aSpeed > bSpeed && bCritReady && matchRng() < 0.08) {
           aCrit = true
         }
         let defMul = aCrit ? 1 : bStats.defenseMultiplier
@@ -3447,7 +4582,7 @@ export const useSpinnerGame = () => {
           && bSpeed >= aSpeed * 2
           && aCritReady
         // Hidden star-top lucky crit: 8% chance when b is the faster attacker.
-        if (!bCrit && b.config.topPartId === 'star' && bSpeed > aSpeed && aCritReady && Math.random() < 0.08) {
+        if (!bCrit && b.config.topPartId === 'star' && bSpeed > aSpeed && aCritReady && matchRng() < 0.08) {
           bCrit = true
         }
         let defMul = bCrit ? 1 : aStats.defenseMultiplier
@@ -3460,9 +4595,44 @@ export const useSpinnerGame = () => {
           * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
       }
 
+      // ── Skills (§5 steps 2–3), per direction: attacker multiplier
+      // (Lucky Edge → Momentum, clamped) then defender (Phase Step negates;
+      // else Mirror Plate splits). Each blade rolls only its own stream, and
+      // pairs run in syncKey order → identical on both PvP peers.
+      let aLucky = false
+      let bLucky = false
+      let reflectOntoA = 0
+      let reflectOntoB = 0
+      const skilledPair = SKILLS_BUILD && (a.skills !== undefined || b.skills !== undefined)
+      if (skilledPair) {
+        const nowSkill = skillClock()
+        const lid = launchedBladeId.value
+        if (dmgAtoB > 0) {
+          dmgAtoB *= skillPort!['outgoingSkillMul'](a, b, dmgAtoB, 'hit', aCrit, lid, skillOut)
+          aLucky = skillOut.lucky
+          noteOutgoing(a, cx, cy)
+          skillPort!['incomingSkill'](b, a, dmgAtoB, 'hit', nowSkill, aStats.defenseMultiplier, skillIn)
+          dmgAtoB = skillIn.taken
+          reflectOntoA = skillIn.reflect
+          noteIncoming(b)
+        }
+        if (dmgBtoA > 0) {
+          dmgBtoA *= skillPort!['outgoingSkillMul'](b, a, dmgBtoA, 'hit', bCrit, lid, skillOut)
+          bLucky = skillOut.lucky
+          noteOutgoing(b, cx, cy)
+          skillPort!['incomingSkill'](a, b, dmgBtoA, 'hit', nowSkill, bStats.defenseMultiplier, skillIn)
+          dmgBtoA = skillIn.taken
+          reflectOntoB = skillIn.reflect
+          noteIncoming(a)
+        }
+      }
+
       // ── Anti-draw: if both would die, the stronger attacker survives ──
-      const aWouldDie = dmgBtoA > 0 && a.hp - dmgBtoA <= 0
-      const bWouldDie = dmgAtoB > 0 && b.hp - dmgAtoB <= 0
+      // Survivability counts a Guard Shell (`effectiveHp` = hp + shield).
+      const aEffHp = effectiveHp(a)
+      const bEffHp = effectiveHp(b)
+      const aWouldDie = dmgBtoA > 0 && aEffHp - dmgBtoA <= 0
+      const bWouldDie = dmgAtoB > 0 && bEffHp - dmgAtoB <= 0
       if (aWouldDie && bWouldDie) {
         // Determine winner: higher damage wins; ties broken by speed, then attack
         let aWins: boolean
@@ -3474,9 +4644,9 @@ export const useSpinnerGame = () => {
           aWins = aStats.damageMultiplier >= bStats.damageMultiplier
         }
         if (aWins) {
-          dmgBtoA = Math.max(0, a.hp - 1)
+          dmgBtoA = Math.max(0, aEffHp - 1)
         } else {
-          dmgAtoB = Math.max(0, b.hp - 1)
+          dmgAtoB = Math.max(0, bEffHp - 1)
         }
       }
 
@@ -3486,21 +4656,21 @@ export const useSpinnerGame = () => {
           hadCrit = true
           lastCritAt.set(b.id, nowCrit)
         }
-        if (applyBladeDamage(b, dmgAtoB, cx, cy, a.owner, aCrit)) hadKill = true
+        if (applyBladeDamage(b, dmgAtoB, cx, cy, a.owner, aCrit, 'hit', aLucky && !aCrit)) hadKill = true
         logCombatHit(a, b, dmgAtoB, aCrit, aSpeed, bSpeed)
         // Life-leech: attacker heals 30% of damage dealt
         if (a.isLifeLeech) {
           const heal = dmgAtoB * 0.3
           const hpBefore = a.hp
           a.hp = Math.min(a.maxHp, a.hp + heal)
-          // Same heal pulse as every other heal — only when HP actually went
-          // up; never stacks on a pulse still playing (see healFx).
-          healFx(a, hpBefore)
-          if (Math.round(heal) > 0) {
-            const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
-            const hs = 0.06 + Math.random() * 0.03
+          // Same pulse + number rule as every other heal: only when ≥1 HP
+          // actually landed after the clamp (see healFx).
+          const shownA = healFx(a, hpBefore)
+          if (shownA > 0) {
+            const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng
+            const hs = 0.06 + Math.random() * 0.03 // vfx-rng
             damageNumbers.push({
-              x: a.x, y: a.y, value: Math.round(heal),
+              x: a.x, y: a.y, value: shownA,
               vx: Math.cos(ha) * hs, vy: Math.sin(ha) * hs,
               color: '#44cc66', life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE, isCrit: false
             })
@@ -3513,26 +4683,53 @@ export const useSpinnerGame = () => {
           hadCrit = true
           lastCritAt.set(a.id, nowCrit)
         }
-        if (applyBladeDamage(a, dmgBtoA, cx, cy, b.owner, bCrit)) hadKill = true
+        if (applyBladeDamage(a, dmgBtoA, cx, cy, b.owner, bCrit, 'hit', bLucky && !bCrit)) hadKill = true
         logCombatHit(b, a, dmgBtoA, bCrit, bSpeed, aSpeed)
         // Life-leech: attacker heals 30% of damage dealt
         if (b.isLifeLeech) {
           const heal = dmgBtoA * 0.3
           const hpBefore = b.hp
           b.hp = Math.min(b.maxHp, b.hp + heal)
-          // Same heal pulse as every other heal — only when HP actually went
-          // up; never stacks on a pulse still playing (see healFx).
-          healFx(b, hpBefore)
-          if (Math.round(heal) > 0) {
-            const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
-            const hs = 0.06 + Math.random() * 0.03
+          // Same pulse + number rule as every other heal: only when ≥1 HP
+          // actually landed after the clamp (see healFx).
+          const shownB = healFx(b, hpBefore)
+          if (shownB > 0) {
+            const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng
+            const hs = 0.06 + Math.random() * 0.03 // vfx-rng
             damageNumbers.push({
-              x: b.x, y: b.y, value: Math.round(heal),
+              x: b.x, y: b.y, value: shownB,
               vx: Math.cos(ha) * hs, vy: Math.sin(ha) * hs,
               color: '#44cc66', life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE, isCrit: false
             })
           }
         }
+      }
+
+      if (skilledPair) {
+        // §5 step 6: Mirror Plate reflections onto a still-living attacker
+        // (kind 'reflect' never procs anything), then the contact skills of
+        // each skilled blade of an enemy pair (rocket counter, Static Charge).
+        if (reflectOntoA > 0 && a.hp > 0) {
+          if (applyBladeDamage(a, reflectOntoA, a.x, a.y, b.owner, false, 'reflect', false, 'mirror_plate')) hadKill = true
+        }
+        if (reflectOntoB > 0 && b.hp > 0) {
+          if (applyBladeDamage(b, reflectOntoB, b.x, b.y, a.owner, false, 'reflect', false, 'mirror_plate')) hadKill = true
+        }
+      }
+      // Boss traits (§12.2 item 3): cold touch / freeze / chill, both ways,
+      // after the hits and reflections, before the contact skills.
+      if (BOSSES100_BUILD && traitsActive && a.owner !== b.owner
+        && (a.config.bossTrait !== undefined || b.config.bossTrait !== undefined)) {
+        const nowTrait = skillClock()
+        const lid = launchedBladeId.value
+        if (a.config.bossTrait !== undefined) runTraitContact(a, b, nowTrait, lid)
+        if (b.config.bossTrait !== undefined) runTraitContact(b, a, nowTrait, lid)
+      }
+      if (skilledPair && a.owner !== b.owner) {
+        const nowContact = skillClock()
+        const lid = launchedBladeId.value
+        if (a.skills !== undefined) runContactSkills(a, b, nowContact, lid)
+        if (b.skills !== undefined) runContactSkills(b, a, nowContact, lid)
       }
     }
 
@@ -3545,13 +4742,14 @@ export const useSpinnerGame = () => {
           bl => bl.isEmittedChild && bl.owner === emitter.owner && bl.hp > 0
         ).length
         if (emittedCount >= 3) continue // max 3 active emitted children
-        const angle = Math.random() * Math.PI * 2
+        // Gameplay roll (spawn position + drift) — on the match RNG.
+        const angle = matchRng() * Math.PI * 2
         const spawnDist = emitter.radius + BLADE_RADIUS * 0.5 + 2
         const child = createBladeState(
           emitter.owner,
           emitter.x + Math.cos(angle) * spawnDist,
           emitter.y + Math.sin(angle) * spawnDist,
-          { ...emitter.config, bossAbility: undefined, isBoss: false },
+          { ...emitter.config, bossAbility: undefined, isBoss: false, bossTrait: undefined, shardTrait: undefined },
           false
         )
         child.radius = BLADE_RADIUS * 0.45
@@ -3561,6 +4759,7 @@ export const useSpinnerGame = () => {
         child.maxHp = 1 + bonusHp
         child.hp = child.maxHp
         child.isEmittedChild = true
+        child.syncKey = childSyncKey(emitter)
         // Own groupId so emitted children collide with the boss blade
         child.groupId = nextGroupId++
         // Small drift so it spreads out
@@ -3591,12 +4790,15 @@ export const useSpinnerGame = () => {
         const ffMul = friendlyFire ? FRIENDLY_FIRE_MUL : 1
         const chipFor = (victim: SpinnerState) =>
           Math.max(SPIKY_CHIP_MIN_DAMAGE, victim.maxHp * SPIKY_CHIP_HP_FRACTION) * ffMul
-        if (a.config.topPartId === 'triangle' && !aHitInBack && b.hp > 0) {
-          if (applyBladeDamage(b, chipFor(b), cx, cy, a.owner, false)) hadKill = true
+        // A blade inside a Phase Step window takes no chip from an enemy.
+        if (a.config.topPartId === 'triangle' && !aHitInBack && b.hp > 0
+          && !(b.skills !== undefined && blocksEnemyChip(b, a, skillClock()))) {
+          if (applyBladeDamage(b, chipFor(b), cx, cy, a.owner, false, 'chip')) hadKill = true
           chipped = true
         }
-        if (b.config.topPartId === 'triangle' && !bHitInBack && a.hp > 0) {
-          if (applyBladeDamage(a, chipFor(a), cx, cy, b.owner, false)) hadKill = true
+        if (b.config.topPartId === 'triangle' && !bHitInBack && a.hp > 0
+          && !(a.skills !== undefined && blocksEnemyChip(a, b, skillClock()))) {
+          if (applyBladeDamage(a, chipFor(a), cx, cy, b.owner, false, 'chip')) hadKill = true
           chipped = true
         }
         if (chipped) spikyChipCooldowns.set(spikyKey, nowChip)
@@ -3607,14 +4809,8 @@ export const useSpinnerGame = () => {
     // spawn its mini children right where it died. Done here (not at the
     // damage site) so only a single death pass runs per collision.
     if (hadKill) {
-      if (a.hp <= 0 && a.splitsOnDeath && !a.isSplitChild) {
-        a.splitsOnDeath = false
-        spawnSplitChildren(a)
-      }
-      if (b.hp <= 0 && b.splitsOnDeath && !b.isSplitChild) {
-        b.splitsOnDeath = false
-        spawnSplitChildren(b)
-      }
+      handleSplitDeath(a)
+      handleSplitDeath(b)
     }
 
     if (hadKill || hadCrit) triggerShake('big')
@@ -3640,7 +4836,7 @@ export const useSpinnerGame = () => {
     // Clash SFX (throttled per pair, capped to MAX_ACTIVE_VFX concurrent)
     const lastClash = clashSoundCooldowns.get(pairKey) ?? 0
     if (now - lastClash >= CLASH_SOUND_COOLDOWN_MS && activeClashSounds < MAX_ACTIVE_VFX) {
-      const idx = Math.floor(Math.random() * 5) + 1
+      const idx = Math.floor(Math.random() * 5) + 1 // vfx-rng (SFX variant)
       try {
         const audio = playSound(`clash-${idx}`)
         if (audio) {
@@ -3751,6 +4947,25 @@ export const useSpinnerGame = () => {
 
   // ─── Canvas Rendering ────────────────────────────────────────────────────
 
+  const renderTraitLayer = (ctx: CanvasRenderingContext2D): void => {
+    if (!BOSSES100_BUILD || bossPort === null || bossTraitFx === null || bossClock === null) return
+    const bp = bossPort
+    const fx = bossTraitFx
+    const now = skillClock()
+    const low = FX.low
+    const charge = bp['novaCharge'](bossClock)
+    const period = bp['BOSS_TRAIT_TUNING']['EMBER_PERIOD_MS']
+    const mul = bp['BOSS_TRAIT_TUNING']['EMBER_RADIUS_MUL']
+    for (const b of allBlades.value) {
+      if (b.hp <= 0) continue
+      if (b.config.bossTrait === 'ember') bp['renderEmberCharge'](ctx, fx, b, charge, period, mul * b.radius, now, low)
+      if (b.lockKind === 'frost' && bp['isFrostLockedFor'](b, turnIndexOf(b.owner) + 1)) bp['renderIceShell'](ctx, fx, b, now, low)
+      const n = b.chillN ?? 0
+      if (n > 0) bp['renderChillOverlay'](ctx, fx, b, n, now, low)
+    }
+    bp['renderBossTraitLayer'](ctx, fx, now, low)
+  }
+
   const render = (
     ctx: CanvasRenderingContext2D,
     canvasWidth: number,
@@ -3794,20 +5009,42 @@ export const useSpinnerGame = () => {
       for (const blade of allBlades.value) {
         if (blade.hp <= 0) continue
         renderAura(ctx, blade)
+        if (BOSSES100_BUILD && traitsActive && blade.config.bossTrait !== undefined) {
+          bossPort!['renderBossAura'](ctx, bossTraitFx!, blade, skillClock(), FX.low)
+        }
       }
     }
 
     // Render all models
+    const shakeLeft = tapShakeId >= 0 ? tapShakeUntil - performance.now() : 0
     for (const blade of allBlades.value) {
       if (blade.hp <= 0) continue
-      renderBlade(ctx, blade)
+      if (shakeLeft > 0 && blade.id === tapShakeId) {
+        // Refused tap on a frozen blade: a short damped side-to-side shake.
+        ctx.save()
+        ctx.translate(Math.sin(shakeLeft * 0.13) * 4 * (shakeLeft / TAP_SHAKE_MS), 0)
+        renderBlade(ctx, blade)
+        ctx.restore()
+      } else {
+        renderBlade(ctx, blade)
+      }
     }
+    if (tapShakeId >= 0 && shakeLeft <= 0) tapShakeId = -1
 
     // Arena-border contact VFX, over the spinner they follow: the flame ring
     // licks over the rim (the art keeps the HP digit clear), the heal pulse
     // rings out from it.
     renderBurns(ctx, borderFx, flameImg)
     renderHeals(ctx, borderFx, FX.low)
+
+    // Boss-trait layer (§7.3): ember charge arcs, ice shells on frozen
+    // blades, frost rims on chilled ones, then pooled transient effects.
+    if (BOSSES100_BUILD && traitsActive) renderTraitLayer(ctx)
+
+    // Skill layer (§8.2/§8.3): rockets, Second Wind rings, stun glyphs.
+    if (SKILLS_BUILD && skillsActive && skillVfx !== null) {
+      skillPort?.['renderSkillLayer'](ctx, skillVfx, rocketPool, allBlades.value, isStunnedForVfx, skillClock(), FX.low)
+    }
 
     // Spark VFX
     for (const spark of activeSparks) {
@@ -5124,7 +6361,11 @@ export const useSpinnerGame = () => {
     // Ghost bosses render at 80% opacity so they read as spectral — both
     // the parent and its mid-launch twin (twin inherits config.bossAbility).
     const ghostAlpha = blade.config.bossAbility === 'ghost' ? 0.5 : 1
-    const bladeAlpha = invulnAlpha * ghostAlpha
+    // Phase Step (§8.2): the bearer flickers at ~45 % for its 300 ms window.
+    const phaseAlpha = SKILLS_BUILD && blade.skills !== undefined && skillPort !== null
+      ? skillPort['skillBladeAlpha'](blade, skillClock(), FX.low)
+      : 1
+    const bladeAlpha = invulnAlpha * ghostAlpha * phaseAlpha
     const needsAlpha = bladeAlpha < 1
     if (needsAlpha) {
       ctx.save()
@@ -5171,6 +6412,11 @@ export const useSpinnerGame = () => {
     // touching the code or re-cutting a scenario (see `utils/cleanFeed.ts`).
     if (!CLEAN_FEED || CLEAN_HP_RINGS) {
       renderHealthRing(ctx, x, y, hp, maxHp, radius, isPlayer)
+    }
+
+    // Per-blade skill effects (Guard Shell arc, phase hint).
+    if (SKILLS_BUILD && blade.skills !== undefined && skillVfx !== null) {
+      skillPort?.['renderBladeSkillFx'](ctx, skillVfx, blade, skillClock(), FX.low)
     }
 
     if (needsAlpha) ctx.restore()
@@ -5701,6 +6947,43 @@ export const useSpinnerGame = () => {
     // PvP
     pvpMode,
     ghostMode,
+    /** Seed the running match's RNG started from (PvP: the host's broadcast). */
+    getMatchSeed: (): number => matchSeed,
+
+    // Skills (skills-feature.md §8.1 / §10.3)
+    /** Local side's HUD chips, `[playerBlades index][slot]`; ≤ 10 Hz. */
+    skillHud,
+    /** Visit skill events with seq > `sinceSeq` (oldest first, at most the
+     *  last SKILL_EVENT_BUFFER); returns the newest seq to pass next time. */
+    forEachSkillEvent,
+    /** Newest skill event seq (0 = none yet). */
+    skillEventSeq: (): number => skillEventSeq,
+    /** Rockets in flight (they hold the turn change). */
+    rocketsInFlight: (): number => rocketsInFlight,
+    /** Per-side turn counters (Static Charge); tests / QA. */
+    turnIndices: (): { player: number; npc: number } => ({ player: playerTurnIndex, npc: npcTurnIndex }),
+    /** Can this blade move on its team's next turn (alive, not stunned /
+     *  frozen)? Selection, drag, joystick and every auto-select use it. */
+    isBladePickable: isPickable,
+
+    // Boss traits (bosses-100-feature.md §7.3, §12.2)
+    /** Local blades' trait HUD rows ({ frozen, chill } per playerBlades
+     *  index); a new array only when a row changed. */
+    bossTraitHud,
+    /** Visit trait events with seq > `sinceSeq` (oldest first, at most the
+     *  last BOSS_TRAIT_EVENT_BUFFER); returns the newest seq. */
+    forEachBossTraitEvent,
+    /** Newest trait event seq (0 = none yet). */
+    bossTraitEventSeq: (): number => bossTraitEventSeq,
+    /** This match has a trait carrier. */
+    traitsActive: (): boolean => BOSSES100_BUILD && traitsActive,
+    /** A tap aimed at a frozen spinner: shake it + ice crack (render/SFX only). */
+    refuseFrozenTap,
+    /** Combat clock (ms) and the next nova's charge 0…1; tests / QA / HUD. */
+    bossClockMs: (): number => (BOSSES100_BUILD && bossClock !== null ? bossClock.clockMs : 0),
+    novaCharge: (): number => (BOSSES100_BUILD && bossPort !== null && bossClock !== null ? bossPort['novaCharge'](bossClock) : 0),
+    /** Peer-independent state hash (also sent as the PvP turn state-check). */
+    computeStateHash,
     launchRemoteBlade,
     setOnLocalLaunch: (cb: ((bladeIndex: number, ax: number, ay: number) => void) | null) => {
       onLocalLaunch = cb

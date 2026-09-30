@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astraaliareena',
     'stage_99': 'Omega-kujanjuoksu',
     'stage_100': 'Ikuinen kuoro',
+    'boss_cinder_tyrant': 'Tuhkatyranni',
+    'boss_glacier_warden': 'Jäätikön vartija',
+    'boss_frostbite_yeti': 'Paleltuma-jeti',
+    'boss_twin_pyres': 'Kaksoisroviot',
+    'boss_blizzard_choir': 'Lumimyrskyn kuoro',
+    'boss_shattering_glacier': 'Murtuva jäätikkö',
+    'boss_frostfire_pact': 'Tulen ja jään liitto',
+    'boss_magma_titan': 'Magmatitaani',
+    'boss_blizzard_twins': 'Lumimyrskyn kaksoset',
+    'boss_elemental_court': 'Elementtien hovi',
     'cheat_boss': 'Huijauspomo',
     'cheat_ghost': 'Aavekaksonen',
     'cheat_split': 'Pirstova parvi',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Kenttä',
   'bossStage': 'Pomokenttä',
+  'labBadge': 'LAB',
   'bossDefeated': 'Pomo kukistettu',
   'stageN': 'Kenttä {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': '{n} kenttää jäljellä',
     'nextUp': 'Seuraava kenttä!',
     'portraitAlt': 'Seuraava pomo: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Hiillosnova',
+      'frost': 'Jäälukko',
+      'chill': 'Paleltuma'
+    },
+    'frozenAria': 'Jäätynyt: jättää seuraavan vuoron väliin',
+    'frozenHint': 'Jäätynyt! Sulaa tämän vuoron jälkeen.',
+    'chillAria': 'Kohmeessa: vauhti −{pct}%',
+    'trophyUnlocked': '{name} avattu!'
+  },
+  'skills': {
+    'title': 'Taidot',
+    'slotEmpty': 'Tyhjä',
+    'slotAria': 'Taitopaikka {n}',
+    'slotChip': 'Paikka {n}',
+    'unlockAt': 'Kenttä {n}',
+    'teaser': 'Voita kentän {n} pomo avataksesi taidot!',
+    'lockedSkill': 'Avautuu kentän {n} pomon jälkeen',
+    'equip': 'Varusta',
+    'remove': 'Poista',
+    'equipped': 'Käytössä',
+    'max': 'MAKS',
+    'new': 'UUSI',
+    'now': 'Nyt',
+    'next': 'Seuraava',
+    'nextLine': 'Seuraava: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Taidot avattu!',
+    'newSkillTitle': 'Uusi taito!',
+    'newSlotTitle': 'Uusi taitopaikka!',
+    'bossDrop': 'Voita tämä pomo avataksesi taidon {name}',
+    'bossDropMystery': 'Voita tämä pomo avataksesi jotain uutta',
+    'learn': 'Opettele',
+    'manage': 'Varusta ja paranna',
+    'pickerTitle': 'Taidot · paikka {n}',
+    'opponentSkills': 'Vastustajan taidot',
+    'hint': 'Varustetut taidot toimivat molemmissa hyrrissä. Opettele ja paranna taitoja kolikoilla tasolle 10 asti.',
+    'learnAria': 'Opettele {name} hintaan {cost} kolikko | Opettele {name} hintaan {cost} kolikkoa',
+    'upgradeAria': 'Paranna taitoa {name} hintaan {cost} kolikko | Paranna taitoa {name} hintaan {cost} kolikkoa',
+    'topUpAria': 'Katso mainos ja saat {n} kolikon | Katso mainos ja saat {n} kolikkoa',
+    'hudAria': '{name}, taso {n}',
+    'intro': {
+      'kicker': 'Uusi voima',
+      'line1': 'Voita pomoja avataksesi taitoja.',
+      'line2': 'Opettele ja paranna niitä kolikoilla.',
+      'line3': 'Varusta enintään 2 – molemmat hyrrät käyttävät niitä.',
+      'line4': 'Taistelussa ne laukeavat itsestään.',
+      'cta': 'Valitse taitosi',
+      'demoAria': 'Esimerkki: {name} menee taitopaikkaan. Taistelussa se torjuu puolet vihollisen osumasta ja palauttaa sen.'
+    },
+    'names': {
+      'phase_step': 'Vaiheaskel',
+      'guard_shell': 'Suojakuori',
+      'second_wind': 'Toinen tuuli',
+      'lucky_edge': 'Onnenterä',
+      'homing_rockets': 'Hakeutuvat raketit',
+      'opening_salvo': 'Avauslaukaus',
+      'momentum': 'Vauhti',
+      'hazard_ward': 'Vaarasuoja',
+      'static_charge': 'Staattinen varaus',
+      'mirror_plate': 'Peililevy'
+    },
+    'desc': {
+      'phase_step': '{chance}% mahdollisuus liukua vihollisen osuman läpi ilman vahinkoa. Latausaika {cd} s.',
+      'guard_shell': 'Aloita jokainen taistelu kilvellä, joka on {pct}% maks. HP:stä. Se imee vahingon ennen HP:tä.',
+      'second_wind': 'Kerran taistelussa, kun HP laskee {threshold} prosenttiin tai alle: paranna {pct}% maks. HP:stä.',
+      'lucky_edge': '{chance}% mahdollisuus, että osumasta tulee onnekas kriittinen osuma, joka tekee ×{mult} vahinkoa.',
+      'homing_rockets': 'Joka {n}. törmäys vihollisiin: raketit osuvat enintään 3 viholliseen {pct}% kunnon osuman vahingolla, jaettuna.',
+      'opening_salvo': 'Taistelun alkaessa jokainen vihollinen menettää {pct}% maks. HP:staan.',
+      'momentum': 'Laukaisusi aikana jokainen seinäkimpoilu tai osuma antaa +{pct}% vahinkoa seuraaviin osumiin (enintään 3).',
+      'hazard_ward': 'Laava- ja ukkosaurat tekevät {hazard}% vähemmän vahinkoa, piikit {chip}% vähemmän; sähköseinät jättävät sinulle {shock}% vauhdista 10 prosentin sijaan.',
+      'static_charge': '{chance}% mahdollisuus antaa sähköisku viholliselle, joka törmää sinuun: se pysähtyy ja menettää seuraavan vuoronsa.',
+      'mirror_plate': '{chance}% mahdollisuus torjua puolet vihollisen osumasta ja lähettää se takaisin.'
+    }
   },
   'you': 'SINÄ',
   'prev': 'Edellinen',
@@ -193,7 +281,7 @@ export default {
     'free': 'ILMAINEN',
     'spinning': 'Pyörii...',
     'spinAgain': 'Pyöritä taas',
-    'tripleCoinsAria': 'Katso mainos ja saat yhteensä {count} kolikkoa',
+    'tripleCoinsAria': 'Katso mainos ja saat yhteensä {count} kolikon | Katso mainos ja saat yhteensä {count} kolikkoa',
     'skip': 'Ohita',
     'youWin': 'VOITIT!',
     'youLose': 'HÄVISIT!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kutsukoodi',
     'copy': 'Kopioi',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Liity PvP-taisteluuni Chaos Arenassa!'
+    'shareText': 'Liity PvP-taisteluuni Chaos Arenassa!',
+    'versionMismatch': 'Vastustajasi käyttää pelin eri versiota. Molempien pelaajien pitää ladata sivu uudelleen ja yrittää uudestaan.'
   },
   'parts': {
     'star': 'Tähtiterä',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Sarvivalas',
     'stag-beetle': 'Tammihärkä',
     'drill': 'Pora',
-    'lancer': 'Keihäsritari'
+    'lancer': 'Keihäsritari',
+    'cinder': 'Hiillos',
+    'frost-vault': 'Pakkasholvi',
+    'yeti': 'Jeti'
   },
   'skinChest': {
     'acquired': '{name} hankittu!'
+  },
+  'trophySkin': {
+    'label': 'Pomotrofee',
+    'hint': 'Ansaitaan kukistamalla pomo, jolla se on',
+    'beatStage': 'Voita kenttä {n}'
   },
   'tips': {
     'tankyBottom': 'Vinkki: Oletko kokeillut kestävää alaosaa? Se antaa paljon HP:ta, joten kestät useampia kierroksia!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Hanki timantteja',
-        'subtitle': 'Timanteilla avaat taustoja ja (pian) voimakkaita taitoja.',
+        'subtitle': 'Timanteilla avaat taustoja areenallesi.',
         'popular': 'Suosittu',
         'bestValue': 'Edullisin',
         'note': 'Ostokset tukevat peliä. Turvallinen maksu.'

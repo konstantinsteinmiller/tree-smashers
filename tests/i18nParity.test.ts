@@ -27,7 +27,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LANGUAGE_BY_CODE, LANGUAGE_REGISTRY, pluralCategoriesFor } from '@/i18n/languages'
 import { SHIPPED_LOCALES } from '@/i18n'
-import { BRAND_KEYS, KEEP_ENGLISH } from './i18nParity.allowlist'
+import { BRAND_KEYS, KEEP_ENGLISH, PENDING_TRANSLATION } from './i18nParity.allowlist'
 
 type Tree = Record<string, unknown>
 
@@ -117,7 +117,9 @@ const compare = (code: string, en: Record<string, unknown>, loc: Record<string, 
   for (const [k, enVal] of Object.entries(en)) {
     const key = keyPrefix + k
     if (!(k in loc)) {
-      problems.push({ key, issue: 'missing' })
+      // A key under a pending-translation prefix may be absent (the runtime
+      // falls back to English); once present it is held to every rule below.
+      if (!PENDING_TRANSLATION.some((p) => key.startsWith(p))) problems.push({ key, issue: 'missing' })
       continue
     }
     const val = loc[k]
@@ -130,8 +132,14 @@ const compare = (code: string, en: Record<string, unknown>, loc: Record<string, 
       continue
     }
     if (typeof enVal !== 'string') continue
-    const pe = placeholders(enVal).join(',')
-    const pl = placeholders(val).join(',')
+    // A plural message repeats its placeholders once per branch, and branch
+    // counts differ by language (ru 3, ar 6, ja 1) — compare the SET there;
+    // Arabic `one`/`two` may even spell the number out. Single-branch
+    // messages keep the exact multiset.
+    const plural = branches(enVal) > 1 || branches(val) > 1
+    const ph = (s: string) => (plural ? [...new Set(placeholders(s))] : placeholders(s))
+    const pe = ph(enVal).join(',')
+    const pl = ph(val).join(',')
     if (pe !== pl) problems.push({ key, issue: `placeholders {${pl}} ≠ en {${pe}}` })
     const le = links(enVal).join(',')
     const ll = links(val).join(',')

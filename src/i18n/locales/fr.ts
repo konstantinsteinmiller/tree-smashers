@@ -102,6 +102,16 @@ export default {
     'stage_98': 'Arène Astrale',
     'stage_99': 'Gantelet Omega',
     'stage_100': 'Le Chœur Éternel',
+    'boss_cinder_tyrant': 'Le Tyran de Cendres',
+    'boss_glacier_warden': 'Le Gardien des Glaces',
+    'boss_frostbite_yeti': 'Le Yéti Glacial',
+    'boss_twin_pyres': 'Les Bûchers Jumeaux',
+    'boss_blizzard_choir': 'Le Chœur du Blizzard',
+    'boss_shattering_glacier': 'Le Glacier Brisé',
+    'boss_frostfire_pact': 'Le Pacte Feu-Glace',
+    'boss_magma_titan': 'Le Titan de Magma',
+    'boss_blizzard_twins': 'Les Jumeaux du Blizzard',
+    'boss_elemental_court': 'La Cour Élémentaire',
     'cheat_boss': 'Boss Triche',
     'cheat_ghost': 'Jumeau Fantôme',
     'cheat_split': 'Essaim Fracassant',
@@ -167,6 +177,7 @@ export default {
   'vs': 'VS',
   'stage': 'Étape',
   'bossStage': 'Étape Boss',
+  'labBadge': 'LABO',
   'bossDefeated': 'Boss vaincu',
   'stageN': 'Étape {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -181,6 +192,83 @@ export default {
     'nextUp': 'Prochaine étape !',
     'portraitAlt': 'Prochain boss : {name}'
   },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova de Braise',
+      'frost': 'Verrou de Givre',
+      'chill': 'Morsure du Froid'
+    },
+    'frozenAria': 'Gelée : passe son prochain tour',
+    'frozenHint': 'Gelée ! Elle dégèle après ce tour.',
+    'chillAria': 'Refroidie : vitesse −{pct} %',
+    'trophyUnlocked': '{name} débloqué !'
+  },
+  'skills': {
+    'title': 'Compétences',
+    'slotEmpty': 'Vide',
+    'slotAria': 'Emplacement de compétence {n}',
+    'slotChip': 'Empl. {n}',
+    'unlockAt': 'Étape {n}',
+    'teaser': 'Bats le boss de l’étape {n} pour débloquer les compétences !',
+    'lockedSkill': 'Débloquée après le boss de l’étape {n}',
+    'equip': 'Équiper',
+    'remove': 'Retirer',
+    'equipped': 'Équipée',
+    'max': 'MAX',
+    'new': 'NOUVEAU',
+    'now': 'Actuel',
+    'next': 'Suivant',
+    'nextLine': 'Suivant : {values}',
+    'seconds': '{n} s',
+    'percent': '{n} %',
+    'unlockedTitle': 'Compétences débloquées !',
+    'newSkillTitle': 'Nouvelle compétence !',
+    'newSlotTitle': 'Nouvel emplacement !',
+    'bossDrop': 'Bats ce boss pour débloquer {name}',
+    'bossDropMystery': 'Bats ce boss pour débloquer une nouveauté',
+    'learn': 'Apprendre',
+    'manage': 'Équiper et améliorer',
+    'pickerTitle': 'Compétences · empl. {n}',
+    'opponentSkills': 'Compétences de l’adversaire',
+    'hint': 'Les compétences équipées agissent sur tes deux toupies. Apprends-les et améliore-les avec des pièces jusqu’au niveau 10.',
+    'learnAria': 'Apprendre {name} pour {cost} pièce | Apprendre {name} pour {cost} pièces',
+    'upgradeAria': 'Améliorer {name} pour {cost} pièce | Améliorer {name} pour {cost} pièces',
+    'topUpAria': 'Regarder une pub pour {n} pièce | Regarder une pub pour {n} pièces',
+    'hudAria': '{name}, niveau {n}',
+    'intro': {
+      'kicker': 'Nouveau pouvoir',
+      'line1': 'Bats les boss pour débloquer des compétences.',
+      'line2': 'Apprends-les et améliore-les avec des pièces.',
+      'line3': 'Équipes-en jusqu’à 2 : tes deux toupies les utilisent.',
+      'line4': 'En combat, elles se déclenchent toutes seules.',
+      'cta': 'Choisis ta compétence',
+      'demoAria': 'Exemple : {name} va dans un emplacement de compétence. En combat, elle bloque la moitié d’un coup ennemi et la renvoie.'
+    },
+    'names': {
+      'phase_step': 'Pas fantôme',
+      'guard_shell': 'Coque de garde',
+      'second_wind': 'Second souffle',
+      'lucky_edge': 'Lame chanceuse',
+      'homing_rockets': 'Roquettes guidées',
+      'opening_salvo': 'Salve d’ouverture',
+      'momentum': 'Élan',
+      'hazard_ward': 'Garde anti-danger',
+      'static_charge': 'Charge statique',
+      'mirror_plate': 'Plaque miroir'
+    },
+    'desc': {
+      'phase_step': '{chance} % de chances de traverser un coup ennemi sans dégâts. Recharge {cd} s.',
+      'guard_shell': 'Commence chaque combat avec un bouclier de {pct} % des PV max. Il absorbe les dégâts avant les PV.',
+      'second_wind': 'Une fois par combat, quand les PV tombent à {threshold} % ou moins : soigne {pct} % des PV max.',
+      'lucky_edge': '{chance} % de chances qu’un coup devienne un critique chanceux à ×{mult} dégâts.',
+      'homing_rockets': 'Tous les {n} chocs avec des ennemis : des roquettes frappent jusqu’à 3 ennemis pour {pct} % d’un coup franc, partagés.',
+      'opening_salvo': 'Au début du combat, chaque ennemi perd {pct} % de ses PV max.',
+      'momentum': 'Pendant ton lancer, chaque rebond sur un mur ou coup ajoute +{pct} % de dégâts à tes coups suivants (max. 3).',
+      'hazard_ward': 'La lave et les auras de foudre font {hazard} % de dégâts en moins, les piquants {chip} % en moins ; les murs électriques te laissent {shock} % de vitesse au lieu de 10 %.',
+      'static_charge': '{chance} % de chances d’électrocuter un ennemi qui te percute : il s’arrête et passe son prochain tour.',
+      'mirror_plate': '{chance} % de chances de bloquer la moitié d’un coup ennemi et de la renvoyer.'
+    }
+  },
   'you': 'TOI',
   'prev': 'Préc.',
   'next': 'Suiv.',
@@ -194,7 +282,7 @@ export default {
     'free': 'GRATUIT',
     'spinning': 'Rotation...',
     'spinAgain': 'Relancer',
-    'tripleCoinsAria': 'Regarde une pub pour obtenir {count} pièces au total',
+    'tripleCoinsAria': 'Regarde une pub pour obtenir {count} pièce au total | Regarde une pub pour obtenir {count} pièces au total',
     'skip': 'Passer',
     'youWin': 'VICTOIRE !',
     'youLose': 'DÉFAITE !',
@@ -256,7 +344,8 @@ export default {
     'inviteCode': 'Code d\'invitation',
     'copy': 'Copier',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Rejoins mon combat PvP Chaos Arena !'
+    'shareText': 'Rejoins mon combat PvP Chaos Arena !',
+    'versionMismatch': 'Ton adversaire utilise une autre version du jeu. Les deux joueurs doivent recharger la page et réessayer.'
   },
   'parts': {
     'star': 'Lame étoile',
@@ -364,10 +453,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Lucane',
     'drill': 'Foreuse',
-    'lancer': 'Lancier'
+    'lancer': 'Lancier',
+    'cinder': 'Braise',
+    'frost-vault': 'Voûte de Givre',
+    'yeti': 'Yéti'
   },
   'skinChest': {
     'acquired': '{name} obtenu !'
+  },
+  'trophySkin': {
+    'label': 'Trophée de boss',
+    'hint': 'Obtenu en battant le boss qui le porte',
+    'beatStage': 'Bats l’étape {n}'
   },
   'tips': {
     'tankyBottom': 'Astuce : As-tu essayé une pièce inférieure de type tank ? Elle donne beaucoup de PV pour tenir plus de manches !',
@@ -506,7 +603,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Obtenir des diamants',
-        'subtitle': 'Les diamants débloquent des fonds et (bientôt) de puissantes compétences.',
+        'subtitle': 'Les diamants débloquent des fonds pour ton arène.',
         'popular': 'Populaire',
         'bestValue': 'Meilleure offre',
         'note': 'Les achats soutiennent le jeu. Paiement sécurisé.'

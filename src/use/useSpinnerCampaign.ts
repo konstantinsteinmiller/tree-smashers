@@ -1,8 +1,19 @@
 import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
-import type { TopPartId, BottomPartId, BossAbility } from '@/types/spinner'
+import type { TopPartId, BottomPartId, BossAbility, BossTrait } from '@/types/spinner'
 import { STAGE_KEY, UPGRADES_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { BOSSES100_BUILD } from '@/bosses/bosses100Gate'
+// Pure, unobfuscated boundary data (bosses gate header): every runtime use
+// below sits behind BOSSES100_BUILD, so an off build drops the whole table.
+import {
+  buildBossEncounterStage,
+  encounterAppearance,
+  encounterForSlot,
+  layoutSlot,
+  shiftLevels,
+  type BossEncounterId
+} from '@/data/bossEncounters'
 
 // ─── Stage Enemy Config ─────────────────────────────────────────────────────
 
@@ -14,6 +25,10 @@ export interface StageBladeConfig {
   modelId?: string
   isBoss?: boolean
   bossAbility?: BossAbility
+  /** Stage-101+ boss mechanic (bosses-100-feature.md §4); encounters only. */
+  bossTrait?: BossTrait
+  /** Trait the split children inherit (Shattering Glacier). */
+  shardTrait?: BossTrait
 }
 
 export type ArenaType = 'default' | 'boss' | 'lava' | 'ice' | 'forest' | 'thunder' | 'shock'
@@ -39,6 +54,12 @@ export interface Stage {
    * 0 means no bouncers on this stage.
    */
   bouncers?: number
+  /**
+   * Set on the stage-101+ boss encounters (bosses-100-feature.md §5) — the
+   * `BOSS_ENCOUNTERS` row this stage was built from. Absent on every stage of
+   * the base table and its cycle copies.
+   */
+  bossEncounterId?: BossEncounterId
 }
 
 // ─── Compact authoring helpers ──────────────────────────────────────────────
@@ -672,8 +693,30 @@ export const getStageById = (id: number): Stage => {
   // on top of the already-tightened base — the mid-game squeeze persists
   // (and grows relatively tighter) in every cycle.
   const base = tightenMidGame(BASE_STAGES[baseIdx]!)
-  return scaleStage(base, id, cycle)
+  const scaled = scaleStage(base, id, cycle)
+  // Stage-101+ bosses (bosses-100-feature.md §3): the boss LAYOUT repeats
+  // every 200 stages, so in every odd cycle the x10 boss slots 110…200 field
+  // a new encounter instead of the cycle copy. It pays the replaced slot's
+  // reward (already trimmed + cycle-scaled above) and is authored at cycle-1
+  // levels, so it gains the level bonus of every cycle past the first.
+  // bosses100-off build (VITE_APP_FEATURE_BOSSES100=false): no encounter — the
+  // cycle copy exactly as before the feature (tests/fixtures/…preBosses100).
+  const encounter = BOSSES100_BUILD && cycle > 0 ? encounterForSlot(layoutSlot(id)) : null
+  if (!encounter) return scaled
+  return buildBossEncounterStage(encounter.id, shiftLevels(cycleLevelBonus(cycle) - cycleLevelBonus(1)), {
+    stageId: id,
+    rewardWin: scaled.rewardWin,
+    rewardLose: scaled.rewardLose,
+    cycleSuffix: newEncounterSuffix(cycle)
+  })
 }
+
+/**
+ * Name suffix of a new boss encounter in 100-cycle `cycle` (odd): its first
+ * appearance (101–200) has none, the second (301–400) reads "II", the third
+ * "III" — counted per appearance, not per cycle like the cycle copies.
+ */
+export const newEncounterSuffix = (cycle: number): string => cycleSuffix(encounterAppearance(cycle) - 1)
 
 /**
  * Legacy `STAGES` export — the campaign is now infinite, but some existing

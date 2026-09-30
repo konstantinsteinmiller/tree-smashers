@@ -27,7 +27,14 @@
  *      instead of a hundred, and the edge cache makes most views cost zero.
  *   3. Trust nothing. The id and name are re-sanitised here even though the
  *      client already did it, and an implausible score is refused outright.
+ *   4. The audience is 6–15. A name that hits the shared denylist
+ *      (`src/utils/nameDenylist.ts`, bundled in by Wrangler) is REPLACED with a
+ *      generated one on write — never rejected, which would silently lose the
+ *      player's score — and masked again when the board is published, so rows
+ *      written before the denylist existed never reach the table either.
  */
+
+import { sanitizeDisplayName } from '../../src/utils/nameDenylist'
 
 export interface Env {
   DB: D1Database
@@ -112,8 +119,10 @@ const validId = (id: unknown): id is string =>
 
 /**
  * Strip the characters that let a name break a table or impersonate a rank:
- * C0/C1 controls, zero-width joiners and spaces, bidi overrides, and the BOM.
- * No profanity filter — that is a moderation policy, not a parser.
+ * C0/C1 controls, zero-width joiners and spaces, bidi overrides, and the BOM —
+ * then swap a denylisted name for its deterministic generated stand-in (the
+ * same one the client and the snapshot baker compute, so the player's own row
+ * is still recognised as theirs).
  */
 const cleanName = (raw: unknown): string => {
   if (typeof raw !== 'string') return 'Anon'
@@ -122,7 +131,7 @@ const cleanName = (raw: unknown): string => {
     .replace(/[\u0000-\u001F\u007F\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
     .trim()
     .slice(0, 16)
-  return out.length > 0 ? out : 'Anon'
+  return out.length > 0 ? sanitizeDisplayName(out) : 'Anon'
 }
 
 const corsHeaders = (env: Env, origin: string | null): Record<string, string> => {
@@ -233,7 +242,9 @@ const rebuildBoard = async (env: Env): Promise<Board> => {
   const entries = (results ?? []).map((r, i) => {
     if (previousScore === null || r.score < previousScore) rank = i + 1
     previousScore = r.score
-    return { rank, name: r.name, score: r.score, power: r.power }
+    // Masked on the way out as well as on the way in: rows written before the
+    // denylist existed (or before a term was added to it) are still in D1.
+    return { rank, name: sanitizeDisplayName(String(r.name ?? '')), score: r.score, power: r.power }
   })
 
   const board: Board = {

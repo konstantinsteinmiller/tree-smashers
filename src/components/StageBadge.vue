@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import { registerChordTap } from '@/use/useVConsole'
+// Lazy, null on a skills-off build (skills gate).
+import { SkillDropChipUi } from '@/skills/skillsGate'
 
 const { t } = useI18n()
 
@@ -12,12 +14,26 @@ interface Props {
   cycleSuffix?: string
   isBoss?: boolean
   arenaType?: ArenaType
+  /** Show the boss-drop skill chip (§7.5). The arena passes it outside
+   *  battle only; the chip hides itself on stages that drop nothing. */
+  showSkillDrop?: boolean
+  /** A cheat / Boss Lab test fight (G2): the chip reads "LAB" instead of the
+   *  campaign stage number, which such a fight neither uses nor advances. */
+  lab?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   cycleSuffix: '',
   isBoss: false,
-  arenaType: 'default'
+  arenaType: 'default',
+  showSkillDrop: false,
+  lab: false
+})
+
+/** Number chip text: LAB for a test fight, else the (boss) stage number. */
+const chipText = computed(() => {
+  if (props.lab) return t('labBadge')
+  return props.isBoss ? `💀${props.stageId}` : String(props.stageId)
 })
 
 const displayName = computed(() => {
@@ -164,7 +180,7 @@ const stageTheme = computed<StageTheme>(() => {
         span.font-black.game-text.leading-none(
           :class="stageTheme.number"
           class="text-sm sm:text-base"
-        ) {{ isBoss ? `💀${stageId}` : stageId }}
+        ) {{ chipText }}
       //- Label + name stack
       div.flex.flex-col.leading-tight
         span.font-black.uppercase.tracking-wider.game-text.text-white(
@@ -174,4 +190,18 @@ const stageTheme = computed<StageTheme>(() => {
           :class="stageTheme.accent"
           class="text-[0.75rem] sm:text-xs"
         ) {{ displayName }}
+    //- Boss-drop skill chip at the badge's right edge (menu only).
+    component.stage-badge__drop.absolute(
+      v-if="SkillDropChipUi && isBoss && showSkillDrop && !lab"
+      :is="SkillDropChipUi"
+      :boss-stage-id="stageId"
+      :size="22"
+    )
 </template>
+
+<style scoped lang="sass">
+.stage-badge__drop
+  right: -0.7rem
+  top: -0.55rem
+  z-index: 2
+</style>

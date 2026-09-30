@@ -102,6 +102,17 @@ export default {
     'stage_98': 'Astral Arena',
     'stage_99': 'Omega Gauntlet',
     'stage_100': 'The Everlasting Choir',
+    // Stage-101+ boss encounters (bosses-100-feature.md §5, §10)
+    'boss_cinder_tyrant': 'The Cinder Tyrant',
+    'boss_glacier_warden': 'The Glacier Warden',
+    'boss_frostbite_yeti': 'The Frostbite Yeti',
+    'boss_twin_pyres': 'The Twin Pyres',
+    'boss_blizzard_choir': 'The Blizzard Choir',
+    'boss_shattering_glacier': 'The Shattering Glacier',
+    'boss_frostfire_pact': 'The Frostfire Pact',
+    'boss_magma_titan': 'The Magma Titan',
+    'boss_blizzard_twins': 'The Blizzard Twins',
+    'boss_elemental_court': 'The Elemental Court',
     'cheat_boss': 'Cheat Boss',
     'cheat_ghost': 'Phantom Twin',
     'cheat_split': 'Shattering Swarm',
@@ -167,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Stage',
   'bossStage': 'Boss Stage',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss Defeated',
   'stageN': 'Stage {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -181,6 +193,85 @@ export default {
     'nextUp': 'Next stage!',
     'portraitAlt': 'Next boss: {name}'
   },
+  // Stage-101+ boss mechanics (bosses-100-feature.md §7.2, §7.3, §10) —
+  // translations pending (BW8)
+  'bosses': {
+    'traits': {
+      'ember': 'Ember Nova',
+      'frost': 'Frost Lock',
+      'chill': 'Frostbite'
+    },
+    'frozenAria': 'Frozen — sits out its next turn',
+    'frozenHint': 'Frozen! It thaws after this turn.',
+    'chillAria': 'Chilled: speed −{pct}%',
+    'trophyUnlocked': '{name} unlocked!'
+  },
+  'skills': {
+    'title': 'Skills',
+    'slotEmpty': 'Empty',
+    'slotAria': 'Skill slot {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Stage {n}',
+    'teaser': 'Beat the Stage {n} boss to unlock skills!',
+    'lockedSkill': 'Unlocks after the Stage {n} boss',
+    'equip': 'Equip',
+    'remove': 'Remove',
+    'equipped': 'Equipped',
+    'max': 'MAX',
+    'new': 'NEW',
+    'now': 'Now',
+    'next': 'Next',
+    'nextLine': 'Next: {values}',
+    'seconds': '{n}s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Skills unlocked!',
+    'newSkillTitle': 'New skill!',
+    'newSlotTitle': 'New skill slot!',
+    'bossDrop': 'Beat this boss to unlock {name}',
+    'bossDropMystery': 'Beat this boss to unlock something new',
+    'learn': 'Learn',
+    'manage': 'Equip & upgrade',
+    'pickerTitle': 'Skills · slot {n}',
+    'opponentSkills': 'Opponent\'s skills',
+    'hint': 'Your equipped skills work on both spinners. Learn and upgrade skills with coins up to level 10.',
+    'learnAria': 'Learn {name} for {cost} coin | Learn {name} for {cost} coins',
+    'upgradeAria': 'Upgrade {name} for {cost} coin | Upgrade {name} for {cost} coins',
+    'topUpAria': 'Watch an ad for {n} coin | Watch an ad for {n} coins',
+    'hudAria': '{name}, level {n}',
+    'intro': {
+      'kicker': 'New power',
+      'line1': 'Beat bosses to unlock skills.',
+      'line2': 'Learn and upgrade them with coins.',
+      'line3': 'Equip up to 2 — both spinners use them.',
+      'line4': 'In battle they trigger on their own.',
+      'cta': 'Pick your skill',
+      'demoAria': 'Example: {name} goes into a skill slot. In battle it blocks half of an enemy hit and sends it back.'
+    },
+    'names': {
+      'phase_step': 'Phase Step',
+      'guard_shell': 'Guard Shell',
+      'second_wind': 'Second Wind',
+      'lucky_edge': 'Lucky Edge',
+      'homing_rockets': 'Homing Rockets',
+      'opening_salvo': 'Opening Salvo',
+      'momentum': 'Momentum',
+      'hazard_ward': 'Hazard Ward',
+      'static_charge': 'Static Charge',
+      'mirror_plate': 'Mirror Plate'
+    },
+    'desc': {
+      'phase_step': '{chance}% chance to phase through an enemy hit and take no damage. Cooldown {cd}s.',
+      'guard_shell': 'Start every battle with a shield worth {pct}% of max HP. It absorbs damage before HP.',
+      'second_wind': 'Once per battle, when HP drops to {threshold}% or less: heal {pct}% of max HP.',
+      'lucky_edge': '{chance}% chance for a hit to become a lucky crit dealing ×{mult} damage.',
+      'homing_rockets': 'Every {n} clashes with enemies: rockets hit up to 3 enemies for {pct}% of a solid hit, shared.',
+      'opening_salvo': 'When the battle starts, every enemy loses {pct}% of its max HP.',
+      'momentum': 'During your launch, each wall bounce or hit adds +{pct}% damage to your next hits (max 3).',
+      'hazard_ward': 'Lava and thunder auras hurt {hazard}% less, spikes {chip}% less; shock walls leave you {shock}% speed instead of 10%.',
+      'static_charge': '{chance}% chance to zap an enemy that rams you: it stops and skips its next turn.',
+      'mirror_plate': '{chance}% chance to block half of an enemy hit and send it back.'
+    }
+  },
   'you': 'YOU',
   'prev': 'Prev',
   'next': 'Next',
@@ -194,7 +285,7 @@ export default {
     'free': 'FREE',
     'spinning': 'Spinning...',
     'spinAgain': 'Spin Again',
-    'tripleCoinsAria': 'Watch an ad to get {count} coins in total',
+    'tripleCoinsAria': 'Watch an ad to get {count} coin in total | Watch an ad to get {count} coins in total',
     'skip': 'Skip',
     'youWin': 'YOU WIN!',
     'youLose': 'YOU LOSE!',
@@ -256,7 +347,8 @@ export default {
     'inviteCode': 'Invite Code',
     'copy': 'Copy',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Join my Chaos Arena PvP battle!'
+    'shareText': 'Join my Chaos Arena PvP battle!',
+    'versionMismatch': 'Your opponent is running a different game version. Both players should reload the page and try again.'
   },
   'parts': {
     'star': 'Star Blade',
@@ -364,10 +456,20 @@ export default {
     'narwhal': 'Narwhal',
     'stag-beetle': 'Stag Beetle',
     'drill': 'Drill',
-    'lancer': 'Lancer'
+    'lancer': 'Lancer',
+    // bosses 100+ trophy skins (earn-only) — translations pending (BW8)
+    'cinder': 'Cinder',
+    'frost-vault': 'Frost Vault',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} Acquired!'
+  },
+  // Skin-shop card of an earn-only boss trophy skin (bosses 100+; translations pending, BW8)
+  'trophySkin': {
+    'label': 'Boss trophy',
+    'hint': 'Earned by defeating the boss that wears it',
+    'beatStage': 'Beat stage {n}'
   },
   'tips': {
     'tankyBottom': 'Tip: Have you tried using a tanky bottom part? It gives you a lot of HP to survive more rounds!',
@@ -506,7 +608,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Get Diamonds',
-        'subtitle': 'Diamonds unlock backgrounds and (soon) powerful skills.',
+        'subtitle': 'Diamonds unlock background skins for your arena.',
         'popular': 'Popular',
         'bestValue': 'Best value',
         'note': 'Purchases support the game. Secure checkout.'

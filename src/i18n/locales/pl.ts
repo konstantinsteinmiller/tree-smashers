@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astralna Arena',
     'stage_99': 'Wyzwanie Omega',
     'stage_100': 'Wiekuisty Chór',
+    'boss_cinder_tyrant': 'Popielny Tyran',
+    'boss_glacier_warden': 'Strażnik Lodowca',
+    'boss_frostbite_yeti': 'Mroźny Yeti',
+    'boss_twin_pyres': 'Bliźniacze Stosy',
+    'boss_blizzard_choir': 'Chór Zamieci',
+    'boss_shattering_glacier': 'Pękający Lodowiec',
+    'boss_frostfire_pact': 'Pakt Ognia i Lodu',
+    'boss_magma_titan': 'Tytan Magmy',
+    'boss_blizzard_twins': 'Bliźnięta Zamieci',
+    'boss_elemental_court': 'Dwór Żywiołów',
     'cheat_boss': 'Boss-Oszust',
     'cheat_ghost': 'Widmowy Bliźniak',
     'cheat_split': 'Pękający Rój',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etap',
   'bossStage': 'Etap bossa',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss pokonany',
   'stageN': 'Etap {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Etapów do bossa: {n}',
     'nextUp': 'Następny etap!',
     'portraitAlt': 'Następny boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nowa Żaru',
+      'frost': 'Lodowa Blokada',
+      'chill': 'Odmrożenie'
+    },
+    'frozenAria': 'Zamrożony: traci następną turę',
+    'frozenHint': 'Zamrożony! Odtaje po tej turze.',
+    'chillAria': 'Wychłodzony: prędkość −{pct}%',
+    'trophyUnlocked': 'Odblokowano: {name}!'
+  },
+  'skills': {
+    'title': 'Umiejętności',
+    'slotEmpty': 'Pusty',
+    'slotAria': 'Slot umiejętności {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Etap {n}',
+    'teaser': 'Pokonaj bossa etapu {n}, aby odblokować umiejętności!',
+    'lockedSkill': 'Odblokowana po bossie etapu {n}',
+    'equip': 'Załóż',
+    'remove': 'Zdejmij',
+    'equipped': 'W użyciu',
+    'max': 'MAKS',
+    'new': 'NOWE',
+    'now': 'Teraz',
+    'next': 'Dalej',
+    'nextLine': 'Dalej: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Umiejętności odblokowane!',
+    'newSkillTitle': 'Nowa umiejętność!',
+    'newSlotTitle': 'Nowy slot umiejętności!',
+    'bossDrop': 'Pokonaj tego bossa, aby odblokować: {name}',
+    'bossDropMystery': 'Pokonaj tego bossa, aby odblokować coś nowego',
+    'learn': 'Naucz się',
+    'manage': 'Załóż i ulepsz',
+    'pickerTitle': 'Umiejętności · slot {n}',
+    'opponentSkills': 'Umiejętności rywala',
+    'hint': 'Założone umiejętności działają na oba bączki. Ucz się i ulepszaj umiejętności za monety do poziomu 10.',
+    'learnAria': 'Naucz się: {name} za {cost} monetę | Naucz się: {name} za {cost} monety | Naucz się: {name} za {cost} monet',
+    'upgradeAria': 'Ulepsz: {name} za {cost} monetę | Ulepsz: {name} za {cost} monety | Ulepsz: {name} za {cost} monet',
+    'topUpAria': 'Obejrzyj reklamę, aby dostać {n} monetę | Obejrzyj reklamę, aby dostać {n} monety | Obejrzyj reklamę, aby dostać {n} monet',
+    'hudAria': '{name}, poziom {n}',
+    'intro': {
+      'kicker': 'Nowa moc',
+      'line1': 'Pokonuj bossów, aby odblokować umiejętności.',
+      'line2': 'Ucz się ich i ulepszaj je za monety.',
+      'line3': 'Załóż do 2 — używają ich oba bączki.',
+      'line4': 'W walce aktywują się same.',
+      'cta': 'Wybierz umiejętność',
+      'demoAria': 'Przykład: {name} trafia do slotu umiejętności. W walce blokuje połowę ciosu wroga i odsyła ją z powrotem.'
+    },
+    'names': {
+      'phase_step': 'Krok fazowy',
+      'guard_shell': 'Osłona strażnika',
+      'second_wind': 'Drugi oddech',
+      'lucky_edge': 'Szczęśliwe ostrze',
+      'homing_rockets': 'Rakiety naprowadzane',
+      'opening_salvo': 'Salwa otwarcia',
+      'momentum': 'Rozpęd',
+      'hazard_ward': 'Tarcza żywiołów',
+      'static_charge': 'Ładunek statyczny',
+      'mirror_plate': 'Lustrzana płyta'
+    },
+    'desc': {
+      'phase_step': '{chance}% szansy na przeniknięcie przez cios wroga bez obrażeń. Odnowienie {cd} s.',
+      'guard_shell': 'Zaczynasz każdą walkę z tarczą równą {pct}% maks. PŻ. Pochłania obrażenia przed PŻ.',
+      'second_wind': 'Raz na walkę, gdy PŻ spadną do {threshold}% lub niżej: leczy {pct}% maks. PŻ.',
+      'lucky_edge': '{chance}% szansy, że cios stanie się szczęśliwym trafieniem krytycznym z obrażeniami ×{mult}.',
+      'homing_rockets': 'Co {n} zderzeń z wrogami: rakiety trafiają do 3 wrogów za {pct}% mocnego ciosu, podzielone.',
+      'opening_salvo': 'Na początku walki każdy wróg traci {pct}% maks. PŻ.',
+      'momentum': 'Podczas twojego wystrzału każde odbicie od ściany lub trafienie dodaje +{pct}% obrażeń kolejnym ciosom (maks. 3).',
+      'hazard_ward': 'Lawa i aury burzy zadają o {hazard}% mniej obrażeń, kolce o {chip}% mniej; ściany elektryczne zostawiają ci {shock}% prędkości zamiast 10%.',
+      'static_charge': '{chance}% szansy na porażenie prądem wroga, który w ciebie uderza: zatrzymuje się i traci następną turę.',
+      'mirror_plate': '{chance}% szansy na zablokowanie połowy ciosu wroga i odesłanie jej z powrotem.'
+    }
   },
   'you': 'TY',
   'prev': 'Wstecz',
@@ -193,7 +281,7 @@ export default {
     'free': 'ZA DARMO',
     'spinning': 'Losowanie...',
     'spinAgain': 'Zakręć ponownie',
-    'tripleCoinsAria': 'Obejrzyj reklamę, aby otrzymać łącznie {count} monet',
+    'tripleCoinsAria': 'Obejrzyj reklamę, aby otrzymać łącznie {count} monetę | Obejrzyj reklamę, aby otrzymać łącznie {count} monety | Obejrzyj reklamę, aby otrzymać łącznie {count} monet',
     'skip': 'Pomiń',
     'youWin': 'ZWYCIĘSTWO!',
     'youLose': 'PORAŻKA!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kod zaproszenia',
     'copy': 'Kopiuj',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Dołącz do mojej walki PvP w Chaos Arena!'
+    'shareText': 'Dołącz do mojej walki PvP w Chaos Arena!',
+    'versionMismatch': 'Twój przeciwnik ma inną wersję gry. Obaj gracze powinni odświeżyć stronę i spróbować ponownie.'
   },
   'parts': {
     'star': 'Gwiazda',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narwal',
     'stag-beetle': 'Jelonek Rogacz',
     'drill': 'Wiertło',
-    'lancer': 'Kopijnik'
+    'lancer': 'Kopijnik',
+    'cinder': 'Popiół',
+    'frost-vault': 'Lodowy Skarbiec',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Zdobyto: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Trofeum bossa',
+    'hint': 'Zdobywasz, pokonując bossa, który go nosi',
+    'beatStage': 'Pokonaj etap {n}'
   },
   'tips': {
     'tankyBottom': 'Wskazówka: Wypróbuj wytrzymałą dolną część! Daje mnóstwo HP, więc przetrwasz więcej rund.',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Zdobądź diamenty',
-        'subtitle': 'Diamenty odblokowują tła i (wkrótce) potężne umiejętności.',
+        'subtitle': 'Diamenty odblokowują tła dla twojej areny.',
         'popular': 'Popularne',
         'bestValue': 'Super cena',
         'note': 'Zakupy wspierają grę. Bezpieczna płatność.'

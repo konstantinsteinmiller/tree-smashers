@@ -1,0 +1,19 @@
+per skill (buy L1 + upgrades to L10): 2650  all 10: 26500
+campaignOnly: income stage 10→80 = 42494; all-10 cost = 62% of it
+  share 25% → 2 maxed @ stage 55, 4 maxed @ 80, all 10 @ 162
+  share 30% → 2 maxed @ stage 50, 4 maxed @ 74, all 10 @ 142
+  share 35% → 2 maxed @ stage 45, 4 maxed @ 67, all 10 @ 121
+  share 40% → 2 maxed @ stage 42, 4 maxed @ 63, all 10 @ 100
+  share 50% → 2 maxed @ stage 37, 4 maxed @ 55, all 10 @ 90
+typical: income stage 10→80 = 75791; all-10 cost = 35% of it
+  share 25% → 2 maxed @ stage 40, 4 maxed @ 59, all 10 @ 95
+  share 30% → 2 maxed @ stage 36, 4 maxed @ 53, all 10 @ 88
+  share 35% → 2 maxed @ stage 33, 4 maxed @ 49, all 10 @ 80
+  share 40% → 2 maxed @ stage 30, 4 maxed @ 45, all 10 @ 75
+  share 50% → 2 maxed @ stage 27, 4 maxed @ 40, all 10 @ 66
+engaged: income stage 10→80 = 101141; all-10 cost = 26% of it
+  share 25% → 2 maxed @ stage 35, 4 maxed @ 50, all 10 @ 83
+  share 30% → 2 maxed @ stage 31, 4 maxed @ 45, all 10 @ 75
+  share 35% → 2 maxed @ stage 29, 4 maxed @ 41, all 10 @ 69
+  share 40% → 2 maxed @ stage 27, 4 maxed @ 39, all 10 @ 64
+  share 50% → 2 maxed @ stage 24, 4 maxed @ 35, all 10 @ 56

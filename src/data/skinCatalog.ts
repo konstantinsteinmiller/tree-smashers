@@ -29,7 +29,11 @@ export const SPINNER_MODEL_IDS = [
   'kraken', 'taiko', 'toadstool', 'full-moon',
   'monarch', 'pyramid', 'compass', 'checkmate',
   'armadillo', 'anvil', 'mammoth', 'deep-diver',
-  'narwhal', 'stag-beetle', 'drill', 'lancer'
+  'narwhal', 'stag-beetle', 'drill', 'lancer',
+  // Bosses 100+ trophy skins (bosses-100-feature.md §3.5) — EARN-ONLY, see
+  // TROPHY_SKINS below. Worn by the Cinder Tyrant, the Glacier Warden and the
+  // Frostbite Yeti; granted by the first win over an encounter that wears it.
+  'cinder', 'frost-vault', 'yeti'
 ] as const
 
 export type SpinnerModelId = (typeof SPINNER_MODEL_IDS)[number]
@@ -40,9 +44,9 @@ export type SpinnerModelId = (typeof SPINNER_MODEL_IDS)[number]
  *  keep their default, and persisted reward offers keep resolving). */
 export const SKINS_PER_TOP: Record<TopPartId, SpinnerModelId[]> = {
   star: ['blades', 'ice', 'wasp', 'reddragon', 'chain', 'axe', 'tornado', 'cheetah', 'jester', 'ninja', 'pirate'],
-  triangle: ['thunder', 'snake', 'phoenix', 'eagle', 'spiky-eagle', 'salamaner', 'thunderstorm', 'porcupine', 'lionfish', 'morningstar', 'cactus'],
-  round: ['nature', 'turtle', 'piranha', 'bear', 'galaxy', 'golden-eagle', 'wolf-demon', 'dark', 'kraken', 'taiko', 'toadstool', 'full-moon'],
-  quadratic: ['chip', 'mysticaleye', 'bluedragon', 'angelic', 'tsunami', 'prisma', 'forest-dragon', 'rainbow', 'monarch', 'pyramid', 'compass', 'checkmate'],
+  triangle: ['thunder', 'snake', 'phoenix', 'eagle', 'spiky-eagle', 'salamaner', 'thunderstorm', 'porcupine', 'lionfish', 'morningstar', 'cactus', 'yeti'],
+  round: ['nature', 'turtle', 'piranha', 'bear', 'galaxy', 'golden-eagle', 'wolf-demon', 'dark', 'kraken', 'taiko', 'toadstool', 'full-moon', 'cinder'],
+  quadratic: ['chip', 'mysticaleye', 'bluedragon', 'angelic', 'tsunami', 'prisma', 'forest-dragon', 'rainbow', 'monarch', 'pyramid', 'compass', 'checkmate', 'frost-vault'],
   cushioned: ['shell', 'shield', 'castle', 'mountain', 'gear', 'sandstorm', 'diamond', 'boulder', 'armadillo', 'anvil', 'mammoth', 'deep-diver'],
   piercer: ['scorpion', 'wulf', 'demon', 'hawk', 'rhino', 'ape', 'teleporter', 'narwhal', 'stag-beetle', 'drill', 'lancer']
 }
@@ -57,6 +61,31 @@ export const SPECIAL_SKINS: ReadonlySet<SpinnerModelId> = new Set([
   'rainbow', 'dark', 'tornado', 'diamond', 'thunderstorm',
   'boulder', 'teleporter', 'sandstorm', 'forest-dragon'
 ])
+
+/** EARN-ONLY boss trophy skins (bosses-100-feature.md §3.5, decision B2).
+ *  The ONE flag every offer path checks: they are never sold (coins or
+ *  ads), never in the Skin Chest, the roulette wheel, the Battle Pass, Daily
+ *  Rewards or any other random draw — the only way in is `grantTrophySkin`
+ *  (useModels) on a boss win. Must equal `BOSS_TROPHY_SKIN_IDS` in
+ *  `@/data/bossEncounters` (tests/trophySkins.test.ts). Cosmetic only. */
+export const TROPHY_SKINS: ReadonlySet<SpinnerModelId> = new Set<SpinnerModelId>(['cinder', 'frost-vault', 'yeti'])
+
+/** True for a skin no shop, chest, wheel, pass, daily reward or ad may hand out. */
+export const isEarnOnlySkin = (modelId: string): boolean => TROPHY_SKINS.has(modelId as SpinnerModelId)
+
+/** The top part that lists a skin (every catalog skin is under exactly one). */
+export const topPartOfSkin = (modelId: SpinnerModelId): TopPartId | null => {
+  for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
+    if (SKINS_PER_TOP[topPartId].includes(modelId)) return topPartId
+  }
+  return null
+}
+
+/** `SKINS_PER_TOP[topPartId]` minus the earn-only skins — the list every
+ *  RANDOM or PURCHASABLE skin draw must use (random NPC skins, the daily
+ *  challenge, chest / wheel pools). */
+export const offerableSkinsForTop = (topPartId: TopPartId): SpinnerModelId[] =>
+  SKINS_PER_TOP[topPartId].filter(id => !isEarnOnlySkin(id))
 
 export const SKIN_COST = 300
 export const SPECIAL_SKIN_COST = 1500
@@ -92,12 +121,12 @@ export const AD_SKIN_COIN_COST = SPECIAL_SKIN_COST * 3
  *  `AD_UNLOCK_SKINS` skin, and only on a build that serves rewarded ads.
  *  `adsBuild` exists for tests; production always uses the build constant. */
 export const isAdUnlockSkin = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
-  adsBuild && AD_UNLOCK_SKINS.has(modelId)
+  adsBuild && AD_UNLOCK_SKINS.has(modelId) && !isEarnOnlySkin(modelId)
 
 /** False for skins the shop never sells for coins: `AD_UNLOCK_SKINS` on an
  *  ad build. Without rewarded ads every skin is coin-purchasable. */
 export const isCoinPurchasable = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
-  !isAdUnlockSkin(modelId, adsBuild)
+  !isEarnOnlySkin(modelId) && !isAdUnlockSkin(modelId, adsBuild)
 
 /** Coin cost for a given skin. For `AD_UNLOCK_SKINS` it is only offered on a
  *  build without rewarded ads — check `isCoinPurchasable` first. */
@@ -110,6 +139,7 @@ export const skinCost = (modelId: SpinnerModelId): number =>
  *  (Daily Rewards, Battle Pass, Honor Track, Skin Chest). Skins are
  *  excluded when:
  *    • They appear in `SPECIAL_SKINS` (those are pay-to-own only).
+ *    • They are earn-only boss trophies (`TROPHY_SKINS`).
  *    • The caller's `isFullyOwned` predicate reports them already owned
  *      across every top part they appear under.
  *
@@ -126,6 +156,7 @@ export const getOfferableSkinPool = (
       if (seen.has(modelId)) continue
       seen.add(modelId)
       if (SPECIAL_SKINS.has(modelId)) continue
+      if (isEarnOnlySkin(modelId)) continue
       if (isFullyOwned(modelId)) continue
       result.push(modelId)
     }

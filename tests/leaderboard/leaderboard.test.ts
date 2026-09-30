@@ -126,6 +126,34 @@ describe('a personal record costs exactly one write', () => {
     expect(lb.playerRank.value).toBe(7)
   })
 
+  it('N2: a denylisted name is swapped for its guest stand-in BEFORE it is posted', async () => {
+    const { safeNameFor, isDenylistedName } = await import('@/utils/nameDenylist')
+    const lb = await load(ENDPOINT, async () =>
+      reply({ rank: 7, best: 42, total: 250, board: BOARD }))
+    lb.state.setState(PLAYER_NAME_KEY, 'Dipshit')
+
+    await lb.reportRun(42, 900)
+
+    const post = posts()[0]!
+    // The exact stand-in the Worker and the snapshot baker compute.
+    expect(post.body!.name).toBe(safeNameFor('Dipshit'))
+    expect(isDenylistedName(post.body!.name)).toBe(false)
+    expect(JSON.stringify(post.body)).not.toMatch(/dipshit/i)
+    // The player's own typed choice is left as it was in storage.
+    expect(lb.state.getState(PLAYER_NAME_KEY, '')).toBe('Dipshit')
+  })
+
+  it('N2: resolveIdentity hands out the stand-in; a clean name passes through', async () => {
+    vi.resetModules()
+    const state = await import('@/use/persistedState')
+    const { resolveIdentity } = await import('@/use/usePlayerIdentity')
+    const { safeNameFor } = await import('@/utils/nameDenylist')
+    state.setState(PLAYER_NAME_KEY, 'H1tler')
+    expect((await resolveIdentity()).name).toBe(safeNameFor('H1tler'))
+    state.setState(PLAYER_NAME_KEY, 'Tester')
+    expect((await resolveIdentity()).name).toBe('Tester')
+  })
+
   it('forgets a write the server refused, so the next run retries it', async () => {
     const lb = await load(ENDPOINT, async () => reply({ error: 'implausible' }, false))
     lb.state.setState(PLAYER_NAME_KEY, 'Tester')

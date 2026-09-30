@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Đấu trường Tinh tú',
     'stage_99': 'Ải Omega',
     'stage_100': 'Ca đoàn Bất diệt',
+    'boss_cinder_tyrant': 'Bạo chúa Tro tàn',
+    'boss_glacier_warden': 'Hộ vệ Sông băng',
+    'boss_frostbite_yeti': 'Yeti Tê cóng',
+    'boss_twin_pyres': 'Hỏa đàn Song sinh',
+    'boss_blizzard_choir': 'Ca đoàn Bão tuyết',
+    'boss_shattering_glacier': 'Sông băng Vỡ vụn',
+    'boss_frostfire_pact': 'Khế ước Băng Hỏa',
+    'boss_magma_titan': 'Titan Dung nham',
+    'boss_blizzard_twins': 'Song sinh Bão tuyết',
+    'boss_elemental_court': 'Triều đình Nguyên tố',
     'cheat_boss': 'Trùm Gian lận',
     'cheat_ghost': 'Song sinh Bóng ma',
     'cheat_split': 'Bầy Phân tách',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Màn',
   'bossStage': 'Màn Trùm',
+  'labBadge': 'LAB',
   'bossDefeated': 'Đã hạ Trùm',
   'stageN': 'Màn {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Còn {n} màn',
     'nextUp': 'Màn tiếp theo!',
     'portraitAlt': 'Trùm kế tiếp: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova Than hồng',
+      'frost': 'Khóa Băng',
+      'chill': 'Tê cóng'
+    },
+    'frozenAria': 'Đóng băng: mất lượt kế tiếp',
+    'frozenHint': 'Đóng băng! Sẽ tan sau lượt này.',
+    'chillAria': 'Bị lạnh: tốc độ −{pct}%',
+    'trophyUnlocked': 'Đã mở khóa {name}!'
+  },
+  'skills': {
+    'title': 'Kỹ năng',
+    'slotEmpty': 'Trống',
+    'slotAria': 'Ô kỹ năng {n}',
+    'slotChip': 'Ô {n}',
+    'unlockAt': 'Màn {n}',
+    'teaser': 'Hạ trùm màn {n} để mở khóa kỹ năng!',
+    'lockedSkill': 'Mở khóa sau trùm màn {n}',
+    'equip': 'Trang bị',
+    'remove': 'Gỡ',
+    'equipped': 'Đang dùng',
+    'max': 'TỐI ĐA',
+    'new': 'MỚI',
+    'now': 'Hiện tại',
+    'next': 'Tiếp',
+    'nextLine': 'Cấp sau: {values}',
+    'seconds': '{n} giây',
+    'percent': '{n}%',
+    'unlockedTitle': 'Đã mở khóa kỹ năng!',
+    'newSkillTitle': 'Kỹ năng mới!',
+    'newSlotTitle': 'Ô kỹ năng mới!',
+    'bossDrop': 'Hạ trùm này để mở khóa {name}',
+    'bossDropMystery': 'Hạ trùm này để mở khóa điều mới',
+    'learn': 'Học',
+    'manage': 'Trang bị & nâng cấp',
+    'pickerTitle': 'Kỹ năng · ô {n}',
+    'opponentSkills': 'Kỹ năng đối thủ',
+    'hint': 'Kỹ năng đã trang bị có tác dụng cho cả hai con quay. Học và nâng cấp kỹ năng bằng xu, tối đa cấp 10.',
+    'learnAria': 'Học {name} với {cost} xu',
+    'upgradeAria': 'Nâng cấp {name} với {cost} xu',
+    'topUpAria': 'Xem quảng cáo để nhận {n} xu',
+    'hudAria': '{name}, cấp {n}',
+    'intro': {
+      'kicker': 'Sức mạnh mới',
+      'line1': 'Hạ trùm để mở khóa kỹ năng.',
+      'line2': 'Học và nâng cấp bằng xu.',
+      'line3': 'Trang bị tối đa 2 — cả hai con quay đều dùng.',
+      'line4': 'Trong trận, kỹ năng tự kích hoạt.',
+      'cta': 'Chọn kỹ năng',
+      'demoAria': 'Ví dụ: {name} được đặt vào ô kỹ năng. Trong trận, nó chặn một nửa đòn đánh của địch và phản lại.'
+    },
+    'names': {
+      'phase_step': 'Bước Pha',
+      'guard_shell': 'Vỏ Hộ Vệ',
+      'second_wind': 'Hồi Sức',
+      'lucky_edge': 'Lưỡi May Mắn',
+      'homing_rockets': 'Tên Lửa Dẫn Đường',
+      'opening_salvo': 'Loạt Bắn Mở Màn',
+      'momentum': 'Đà Lao',
+      'hazard_ward': 'Kháng Hiểm Họa',
+      'static_charge': 'Tích Điện',
+      'mirror_plate': 'Giáp Gương'
+    },
+    'desc': {
+      'phase_step': '{chance}% cơ hội xuyên qua đòn đánh của địch mà không nhận sát thương. Hồi chiêu {cd} giây.',
+      'guard_shell': 'Bắt đầu mỗi trận với khiên bằng {pct}% máu tối đa. Khiên hấp thụ sát thương trước máu.',
+      'second_wind': 'Một lần mỗi trận, khi máu còn {threshold}% hoặc thấp hơn: hồi {pct}% máu tối đa.',
+      'lucky_edge': '{chance}% cơ hội để đòn đánh thành chí mạng may mắn gây ×{mult} sát thương.',
+      'homing_rockets': 'Mỗi {n} lần va chạm với địch: tên lửa bắn tối đa 3 địch với {pct}% một đòn mạnh, chia đều.',
+      'opening_salvo': 'Khi trận đấu bắt đầu, mỗi kẻ địch mất {pct}% máu tối đa.',
+      'momentum': 'Trong lúc phóng, mỗi lần bật tường hoặc trúng đòn cộng +{pct}% sát thương cho các đòn sau (tối đa 3).',
+      'hazard_ward': 'Hào quang dung nham và sấm gây ít hơn {hazard}% sát thương, gai ít hơn {chip}%; tường điện để lại cho bạn {shock}% tốc độ thay vì 10%.',
+      'static_charge': '{chance}% cơ hội giật điện kẻ địch húc vào bạn: nó dừng lại và mất lượt kế tiếp.',
+      'mirror_plate': '{chance}% cơ hội chặn một nửa đòn đánh của địch và phản lại.'
+    }
   },
   'you': 'BẠN',
   'prev': 'Trước',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Mã mời',
     'copy': 'Chép',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Vào đấu PvP Chaos Arena với mình nào!'
+    'shareText': 'Vào đấu PvP Chaos Arena với mình nào!',
+    'versionMismatch': 'Đối thủ của bạn đang dùng phiên bản trò chơi khác. Cả hai người chơi nên tải lại trang rồi thử lại.'
   },
   'parts': {
     'star': 'Lưỡi Sao',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Kỳ lân biển',
     'stag-beetle': 'Bọ kẹp kìm',
     'drill': 'Mũi khoan',
-    'lancer': 'Kỵ sĩ thương'
+    'lancer': 'Kỵ sĩ thương',
+    'cinder': 'Than hồng',
+    'frost-vault': 'Hầm Băng',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Đã nhận {name}!'
+  },
+  'trophySkin': {
+    'label': 'Cúp Trùm',
+    'hint': 'Nhận được khi hạ Trùm mang skin này',
+    'beatStage': 'Vượt màn {n}'
   },
   'tips': {
     'tankyBottom': 'Mẹo: Bạn đã thử phần đế Chống chịu chưa? Nó cho rất nhiều máu để trụ thêm nhiều hiệp!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Nhận Kim cương',
-        'subtitle': 'Kim cương mở khóa hình nền và (sắp có) kỹ năng mạnh mẽ.',
+        'subtitle': 'Kim cương mở khóa hình nền cho đấu trường của bạn.',
         'popular': 'Phổ biến',
         'bestValue': 'Hời nhất',
         'note': 'Mua hàng giúp ủng hộ game. Thanh toán an toàn.'

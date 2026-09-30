@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astralarenaen',
     'stage_99': 'Omega-spidsroden',
     'stage_100': 'Det evige kor',
+    'boss_cinder_tyrant': 'Asketyrannen',
+    'boss_glacier_warden': 'Gletsjervogteren',
+    'boss_frostbite_yeti': 'Frostbid-yetien',
+    'boss_twin_pyres': 'Tvillingbålene',
+    'boss_blizzard_choir': 'Snestormskoret',
+    'boss_shattering_glacier': 'Den splintrede gletsjer',
+    'boss_frostfire_pact': 'Ild- og ispagten',
+    'boss_magma_titan': 'Magmatitanen',
+    'boss_blizzard_twins': 'Snestormstvillingerne',
+    'boss_elemental_court': 'Elementernes hof',
     'cheat_boss': 'Snydeboss',
     'cheat_ghost': 'Fantomtvilling',
     'cheat_split': 'Knusende sværm',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etape',
   'bossStage': 'Bossetape',
+  'labBadge': 'LAB',
   'bossDefeated': 'Boss besejret',
   'stageN': 'Etape {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': '{n} etaper tilbage',
     'nextUp': 'Næste etape!',
     'portraitAlt': 'Næste boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Glødnova',
+      'frost': 'Frostlås',
+      'chill': 'Frostbid'
+    },
+    'frozenAria': 'Frosset: springer næste tur over',
+    'frozenHint': 'Frosset! Tør op efter denne tur.',
+    'chillAria': 'Nedkølet: fart −{pct}%',
+    'trophyUnlocked': '{name} låst op!'
+  },
+  'skills': {
+    'title': 'Evner',
+    'slotEmpty': 'Tom',
+    'slotAria': 'Evneplads {n}',
+    'slotChip': 'Plads {n}',
+    'unlockAt': 'Etape {n}',
+    'teaser': 'Besejr bossen på etape {n} for at låse op for evner!',
+    'lockedSkill': 'Låses op efter bossen på etape {n}',
+    'equip': 'Udstyr',
+    'remove': 'Fjern',
+    'equipped': 'Udstyret',
+    'max': 'MAKS',
+    'new': 'NY',
+    'now': 'Nu',
+    'next': 'Næste',
+    'nextLine': 'Næste: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Evner låst op!',
+    'newSkillTitle': 'Ny evne!',
+    'newSlotTitle': 'Ny evneplads!',
+    'bossDrop': 'Besejr denne boss for at låse op for {name}',
+    'bossDropMystery': 'Besejr denne boss for at låse op for noget nyt',
+    'learn': 'Lær',
+    'manage': 'Udstyr og opgrader',
+    'pickerTitle': 'Evner · plads {n}',
+    'opponentSkills': 'Modstanderens evner',
+    'hint': 'Dine udstyrede evner virker på begge snurretoppe. Lær og opgrader evner med mønter op til niveau 10.',
+    'learnAria': 'Lær {name} for {cost} mønt | Lær {name} for {cost} mønter',
+    'upgradeAria': 'Opgrader {name} for {cost} mønt | Opgrader {name} for {cost} mønter',
+    'topUpAria': 'Se en reklame for {n} mønt | Se en reklame for {n} mønter',
+    'hudAria': '{name}, niveau {n}',
+    'intro': {
+      'kicker': 'Ny kraft',
+      'line1': 'Besejr bosser for at låse op for evner.',
+      'line2': 'Lær og opgrader dem med mønter.',
+      'line3': 'Udstyr op til 2 — begge snurretoppe bruger dem.',
+      'line4': 'I kamp udløses de af sig selv.',
+      'cta': 'Vælg din evne',
+      'demoAria': 'Eksempel: {name} sættes i en evneplads. I kamp blokerer den halvdelen af et fjendtligt slag og sender det tilbage.'
+    },
+    'names': {
+      'phase_step': 'Fasetrin',
+      'guard_shell': 'Skjoldskal',
+      'second_wind': 'Andet pust',
+      'lucky_edge': 'Lykkeklinge',
+      'homing_rockets': 'Målsøgende raketter',
+      'opening_salvo': 'Åbningssalve',
+      'momentum': 'Fart',
+      'hazard_ward': 'Fareværn',
+      'static_charge': 'Statisk ladning',
+      'mirror_plate': 'Spejlplade'
+    },
+    'desc': {
+      'phase_step': '{chance}% chance for at glide gennem et fjendtligt slag uden skade. Nedkøling {cd} s.',
+      'guard_shell': 'Start hver kamp med et skjold på {pct}% af maks-HP. Det tager skade før HP.',
+      'second_wind': 'Én gang pr. kamp, når HP falder til {threshold}% eller mindre: helbred {pct}% af maks-HP.',
+      'lucky_edge': '{chance}% chance for at et slag bliver et heldigt kritisk slag med ×{mult} skade.',
+      'homing_rockets': 'Hvert {n}. sammenstød med fjender: raketter rammer op til 3 fjender for {pct}% af et solidt slag, delt.',
+      'opening_salvo': 'Når kampen starter, mister hver fjende {pct}% af sin maks-HP.',
+      'momentum': 'Under din affyring giver hvert vægprel eller slag +{pct}% skade til dine næste slag (maks 3).',
+      'hazard_ward': 'Lava- og tordenauraer gør {hazard}% mindre skade, pigge {chip}% mindre; chokvægge efterlader dig {shock}% fart i stedet for 10%.',
+      'static_charge': '{chance}% chance for at give en fjende, der vælter ind i dig, stød: den stopper og springer sin næste tur over.',
+      'mirror_plate': '{chance}% chance for at blokere halvdelen af et fjendtligt slag og sende det tilbage.'
+    }
   },
   'you': 'DIG',
   'prev': 'Forrige',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Snurrer...',
     'spinAgain': 'Snur igen',
-    'tripleCoinsAria': 'Se en reklame for at få {count} mønter i alt',
+    'tripleCoinsAria': 'Se en reklame for at få {count} mønt i alt | Se en reklame for at få {count} mønter i alt',
     'skip': 'Spring over',
     'youWin': 'DU VANDT!',
     'youLose': 'DU TABTE!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Invitationskode',
     'copy': 'Kopiér',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Vær med i min PvP-kamp i Chaos Arena!'
+    'shareText': 'Vær med i min PvP-kamp i Chaos Arena!',
+    'versionMismatch': 'Din modstander kører en anden version af spillet. Begge spillere skal genindlæse siden og prøve igen.'
   },
   'parts': {
     'star': 'Stjerneklinge',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narhval',
     'stag-beetle': 'Eghjort',
     'drill': 'Bor',
-    'lancer': 'Lansenér'
+    'lancer': 'Lansenér',
+    'cinder': 'Glød',
+    'frost-vault': 'Frosthvælving',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Du fik {name}!'
+  },
+  'trophySkin': {
+    'label': 'Bossetrofæ',
+    'hint': 'Fås ved at besejre bossen, der bærer den',
+    'beatStage': 'Klar etape {n}'
   },
   'tips': {
     'tankyBottom': 'Tip: Har du prøvet en robust bunddel? Den giver dig masser af HP, så du klarer flere runder!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Få diamanter',
-        'subtitle': 'Diamanter låser op for baggrunde og (snart) stærke evner.',
+        'subtitle': 'Diamanter låser op for baggrunde til din arena.',
         'popular': 'Populær',
         'bestValue': 'Mest værdi',
         'note': 'Køb støtter spillet. Sikker betaling.'

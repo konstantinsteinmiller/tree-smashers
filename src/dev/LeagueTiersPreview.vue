@@ -2,13 +2,15 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import LeagueTierIcon from '@/components/atoms/LeagueTierIcon.vue'
+import LeagueRankBadge from '@/components/atoms/LeagueRankBadge.vue'
 import { LEAGUE_TIERS, type LeagueDivision } from '@/use/leagueTiers'
 
 /**
  * DEV-ONLY eyeballing sheet for LeagueTierIcon: every tier at 24 / 40 / 48 /
  * 128 px on a dark and a light plate. `?div=1|2|3` sets the division, `?pos=12`
  * the Champion's leaderboard position (plus a strip of short-to-long positions),
- * `?still` stops the idle motion. Copy here is developer-facing (exempt from
+ * `?still` stops the idle motion. The last sheet is LeagueRankBadge across the
+ * 64 → 65px switch (numeral as text beside the icon, then on the plaque). Copy here is developer-facing (exempt from
  * i18n); the tier names under the icons come from the locale files.
  */
 
@@ -21,6 +23,8 @@ const division = ref<LeagueDivision | null>(params.has('div') ? (Number(params.g
 const position = ref(params.get('pos') ?? '')
 /** Short to long positions, to check the plaque grows and still fits. */
 const POSITION_STRIP = ['1', '12', '123', '1234', '99999']
+/** LeagueRankBadge sizes, straddling the 64 → 65px text/plaque switch. */
+const BADGE_SIZES = [24, 32, 48, 64, 65, 96]
 const PLATES = [
   { id: 'dark', cls: 'bg-[#0f1420] text-white' },
   { id: 'light', cls: 'bg-[#eef1f5] text-[#1b2230]' }
@@ -66,4 +70,18 @@ const PLATES = [
           div.flex.w-14.justify-center
             LeagueTierIcon(tier="champion" :size="48" :position="p" :animated="animated")
           LeagueTierIcon(tier="champion" :size="128" :position="p" :animated="animated")
+    //- LeagueRankBadge: numeral / #N as text up to 64px, on the plaque from 65px.
+    div.mt-4.flex.flex-wrap.gap-4(data-testid="league-rank-badges")
+      div.rounded-xl.px-5.py-3(v-for="plate in PLATES" :key="plate.id" :class="plate.cls")
+        div.mb-1.text-xs.font-bold.uppercase(class="tracking-[0.08em]") LeagueRankBadge {{ BADGE_SIZES.join(' / ') }}px
+        div.flex.items-center.gap-4.py-1(v-for="tier in LEAGUE_TIERS" :key="tier")
+          span.w-24.text-xs.font-bold.uppercase(class="tracking-[0.08em]") {{ t(`league.tiers.${tier}`) }}
+          div.flex.w-20.justify-start(v-for="size in BADGE_SIZES" :key="size")
+            LeagueRankBadge(
+              :tier="tier"
+              :size="size"
+              :division="division ?? 2"
+              :position="position || 12"
+              :animated="animated"
+            )
 </template>

@@ -125,6 +125,70 @@ frame of every match played with the default drag-to-aim scheme.
 
 ---
 
+## 2026-09-30 — Skills on vs off (WP11 release gate)
+
+`perf/ab.mjs --stage 91 --init <seed> --a perfskills=0 --b perfskills=1` on a
+production build with `VITE_APP_FEATURE_SKILLS=true`. B equips Homing Rockets
+L10 + Static Charge L10 (rockets, zap, stun glyphs — the heaviest skill VFX);
+A has the same build and save with an empty loadout. The `--init` flag was
+added to the runner for exactly this: a save-shape A/B that stays interleaved.
+
+| throttle | reps | deltaP50 A → B         | fps A → B   | baseline spread | reading                   |
+|----------|------|------------------------|-------------|-----------------|---------------------------|
+| 4×       | 4    | 16.70 → 16.80 (+0.6 %) | 41.0 → 39.4 | 33.4 ms         | within the ≤ 3 % budget   |
+| 8×       | 4    | 50.15 → 74.90 (+49 %)  | 16.4 → 13.5 | 50.0 ms         | noise — inside the spread |
+| 8×       | 6    | 50.10 → 41.75 (−17 %)  | 15.1 → 15.1 | 66.6 ms         | noise — inside the spread |
+
+Measured while another project's perf harness was loading the machine, so the
+8× runs swing both ways by more than the effect: **no verdict at 8×**; re-run
+on an idle machine before quoting it. 4× shows no measurable regression.
+
+---
+
+## 2026-09-30 — Boss-trait VFX on vs off (bosses BW4 gate)
+
+The real engine (`useSpinnerGame` + `render()`) auto-playing the **Elemental
+Court** (Cinder + Warden + Yeti — the worst trait frame: 3 aura sprites, charge
+arc + reach ring, frost rims, nova rings, shards, embers) in the dev scene
+`dev/boss-vfx.html?engine=1&quality=high&bench=20000`, A = `traits=0` (same
+roster with `bossTrait` stripped), B = `traits=1`. Interleaved A B A B, one
+fresh headless Chrome per run, 412×915 dpr 1, **4× CPU throttle**, 6 s warm-up
+then 20 s of frame deltas. Served by the Vite dev server (unminified), so the
+absolute numbers sit below a production build; the A/B difference is what
+counts. Runner: the session's `boss-vfx-shots.mjs ab 4` (CDP
+`Emulation.setCPUThrottlingRate`).
+
+| throttle | reps | deltaP50 A → B | fps A → B     | frames > 33 ms A → B | trait events / run (B)           | reading                                                   |
+|----------|------|----------------|---------------|----------------------|----------------------------------|-----------------------------------------------------------|
+| 4×       | 4    | 16.7 → 16.7    | 53.90 → 53.87 | 4.0 % → 3.2 %        | ~40 (novas, burns, chill, frost) | no measurable cost (−0.05 % fps, within ±1 pp run spread) |
+
+The layer is ≤ 20 primitives on the worst frame (unit-tested,
+`tests/bossTraitVfx.test.ts`) against hundreds for the arena itself; FX.low
+drops the aura blits and every transient except the nova stroke. Not re-run at
+8× (the WP11 note above: 8× on this machine is noise-dominated).
+
+---
+
+## 2026-09-30 — Stage 200 (Elemental Court) vs a classic boss (bosses BW9 gate)
+
+`perf/ab.mjs --stage 195 --init <seed> --a st=195 --b st=200` on the shipped
+(obfuscated) production build, both arms at part level 40, interleaved A B A B,
+4 reps × 30 s. A = stage 195 (Final Guard II, classic cycle copy), B = stage 200
+(Elemental Court, all three boss traits).
+
+| throttle | reps        | deltaP50 A → B          | fps A → B   | baseline spread | reading                                           |
+|----------|-------------|-------------------------|-------------|-----------------|---------------------------------------------------|
+| 4×       | 4           | 41.75 → 25.15 (−39.8 %) | 18.9 → 30.0 | 83.6 ms         | noise — spread is 2–3× the medians                |
+| 8×       | 2 (aborted) | —                       | 1.4–4.3     | —               | run aborted: a rep never reached a canvas in 30 s |
+
+**No verdict.** Both runs overlapped other sessions' jobs (a full vitest run and
+screenshot harnesses held 18–20 of 20 budget workers), and one 4× A rep collapsed
+to 7.9 fps. The direction is B no slower than A, which agrees with the BW4
+trait-on/off A/B above (no measurable cost at 4×). Re-run on an idle machine
+before quoting a number.
+
+---
+
 ## Adaptive quality tier (`src/use/useQuality.ts`)
 
 A per-device tier, not an experiment flag — it stays. `high` is the full look;

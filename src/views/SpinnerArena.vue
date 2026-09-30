@@ -17,10 +17,47 @@ const HudCoinsAdButton = ADS_BUILD_FLAG ? AdRewardButton : null
 const WinCoinsAdButton = ADS_BUILD_FLAG ? RewardedAdButton : null
 /** 100-coin price sticker on the 2x switch — builds without rewarded ads only. */
 const SpeedBoostCoinBadge = ADS_BUILD_FLAG ? null : SpeedCoinBadge
+
+// Skills surfaces (skills-feature.md §7–§9, WP7): lazy handles from the skills
+// flag boundary (src/skills/skillsGate.ts) — each is null on a skills-off
+// build, so none can render and no skill component is even bundled; the arena
+// shows exactly what it showed before skills (tests/skillsFlagBoundary.test.ts).
+import {
+  SkillsIntroUi,
+  SkillRevealUi,
+  SkillPickerUi,
+  SkillHudChipUi as SkillHudChip,
+  PvpVsCardUi as PvpVsCard
+} from '@/skills/skillsGate'
+
+// Bosses 100+ surfaces (bosses-100-feature.md §3.5, §7.2, §7.3, §11): lazy
+// handles from the bosses flag boundary (src/bosses/bosses100Gate.ts) — each
+// is null on a bosses100-off build, so no intro card, trait chip, trophy card
+// or Boss Lab can render and none is bundled (tests/bosses100FlagBoundary).
+// The Boss Lab is additionally DEV-only (the cheat gate sits on top).
+import {
+  BossIntroCardUi,
+  BossTraitGlyphUi,
+  BossTrophyCardUi,
+  BossLabUi
+} from '@/bosses/bosses100Gate'
 </script>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick, defineAsyncComponent, h } from 'vue'
+import {
+  ref,
+  onMounted,
+  onUnmounted,
+  computed,
+  watch,
+  nextTick,
+  defineAsyncComponent,
+  h,
+  toRaw,
+  effectScope,
+  reactive,
+  shallowRef
+} from 'vue'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -36,12 +73,21 @@ import useSpinnerGame, {
   BLADE_RADIUS,
   MAX_PULL_DISTANCE,
   simSpeed,
-  countdownText
+  countdownText,
+  installSkillEngine,
+  installBossTraitEngine,
+  type InitGameOptions
 } from '@/use/useSpinnerGame'
-import { seedMatchRng } from '@/use/useDeterministicRng'
+import { currentMatchSeed, seedMatchRng } from '@/use/useDeterministicRng'
 import { STAGE_KEY } from '@/keys'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
-import useSpinnerCampaign, { noteCampaignBossLoss, noteCampaignBossWin, getStageById } from '@/use/useSpinnerCampaign'
+import useSpinnerCampaign, {
+  noteCampaignBossLoss,
+  noteCampaignBossWin,
+  getStageById,
+  loadCheatStage,
+  type Stage
+} from '@/use/useSpinnerCampaign'
 import useTips from '@/use/useTips'
 import type { TipId } from '@/use/useTips'
 import TipBadge from '@/components/atoms/TipBadge.vue'
@@ -81,14 +127,36 @@ import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/use
 import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
 import RankBadge from '@/components/atoms/RankBadge.vue'
 import BossPeekBadge from '@/components/atoms/BossPeekBadge.vue'
-import { getBossPeek, battleModeOf, type BossPeek } from '@/use/bossPeek'
+import { getBossPeek, battleModeOf, type BattleMode, type BossPeek } from '@/use/bossPeek'
 import { shouldShowBossDefeated } from '@/use/bossDefeated'
 import BossDefeatedBanner from '@/components/atoms/BossDefeatedBanner.vue'
+import { stageEnemyConfigs } from '@/use/stageBladeConfig'
+import { fmtFixed } from '@/utils/localeNumber'
+import type { BossTrophyInput, TraitCardView } from '@/use/bosses/bossArenaUi'
+import type { TraitHudRow } from '@/use/bosses/bossTraits'
+import { BOSSES100_BUILD, loadBossArenaUi, loadBossTraitEngine, type BossArenaUiModule } from '@/bosses/bosses100Gate'
+// Pure boundary data (bosses gate header): used only behind BOSSES100_BUILD.
+import { bossTraitsOf, type BossTrophySkinId } from '@/data/bossEncounters'
+import { bossPreviewModelId } from '@/use/bossPeek'
 import { leaderboardVisible, reportRun } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
 import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
-import { isRewardedReady, isInterstitialReady, showRewardedAd, showMidgameAd } from '@/use/useAds'
+import {
+  adsInFlight,
+  isAdsBlockedModalShown,
+  isRewardedReady,
+  isInterstitialReady,
+  showRewardedAd,
+  showMidgameAd
+} from '@/use/useAds'
+import {
+  firstMidgameAdShown,
+  incrementAdCounter,
+  isMidgameAdDue,
+  markFirstMidgameAdShown,
+  resetAdCounter
+} from '@/use/midgameCadence'
 import { hasAnyFreeSpeedGift, claimFreeSpeedBoost, refreshFreeSpeedGiftDay } from '@/use/useFreeSpeedGift'
 import { DAILY_SPEED_GIFT_DURATION_MS } from '@/use/speedGiftGate'
 import {
@@ -98,16 +166,17 @@ import {
   isSpeedSwitchOffered
 } from '@/use/speedBoostPurchase'
 import useBottomSafe from '@/use/useBottomSafe'
-import { getSelectedSkin, modelImgPath } from '@/use/useModels'
+import { getSelectedSkin, grantTrophySkins, modelImgPath } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
 import { spawnCoinExplosion, flyDiamondsToBadge, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
 import useCheats from '@/use/useCheats'
-import { cheatRouletteSignal } from '@/use/useCheats'
+import { cheatRouletteSignal, bossLabSignal, cheatsEnabled } from '@/use/useCheats'
 import RouletteWheel from '@/components/organisms/RouletteWheel.vue'
 import type { RouletteResult } from '@/components/organisms/RouletteWheel.vue'
 import { preloadRouletteArt } from '@/use/useRouletteArt'
 import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
 import { showsWinCoinsAd } from '@/use/winCoinsAd'
+import { settleLabBattle } from '@/use/labBattle'
 import { rouletteGrantFor, type RouletteGrant } from '@/use/rouletteGrants'
 import {
   introPlaying,
@@ -117,6 +186,16 @@ import {
   finishIntro
 } from '@/use/useIntroCutscene'
 import { loadIntroCutscene } from '@/use/introCutsceneLoader'
+// Skills: everything goes through the skills gate — the arena glue, the
+// engine's skill port and the useSkills API are lazy chunks of a skills build
+// and do not exist on a skills-off build.
+import { SKILLS_BUILD, loadArenaSkills, loadSkillEngine, loadSkillsApi } from '@/skills/skillsGate'
+import type { ArenaSkills } from '@/use/skills/arenaSkills'
+import { isGamePaused } from '@/use/useGamePause'
+import { isRewardedIntroOpen } from '@/use/useRewardedIntro'
+// Stub-swapped on every non-Poki build (vite.config alias), so this never
+// pulls the SDK into another portal's bundle; a no-op until the SDK is live.
+import { pokiMeasure } from '@/utils/pokiPlugin'
 
 useCheats()
 
@@ -179,7 +258,10 @@ const {
   launchRemoteBlade,
   setOnLocalLaunch,
   setOnStateHash,
-  statsFor
+  statsFor,
+  skillHud,
+  bossTraitHud,
+  refuseFrozenTap
 } = useSpinnerGame()
 
 const {
@@ -215,6 +297,8 @@ const {
   gameConfig: pvpGameConfig,
   hostTeam: pvpHostTeam,
   guestTeam: pvpGuestTeam,
+  hostSkills: pvpHostSkills,
+  guestSkills: pvpGuestSkills,
   registerCallbacks: pvpRegisterCallbacks,
   sendLaunch: pvpSendLaunch,
   sendSurrender: pvpSendSurrender,
@@ -300,7 +384,7 @@ const clearTipCycle = () => {
 
 const { showHint, startHintTimer, clearHint } = useHint(2500)
 const { shakeStyle } = useScreenshake()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { playSound } = useSounds()
 const { startBattleMusic, stopBattleMusic } = useMusic()
 
@@ -317,6 +401,21 @@ const beginBattle = async () => {
   // both 'ad_break' (ad in progress) and any later phase (already in
   // gameplay).
   if (phase.value !== 'tap_to_start') return
+  // Skills build: the skill glue + engine port load right after mount; a tap
+  // that beats them waits (the board is rebuilt with the loadout on arrival).
+  if (SKILLS_BUILD && !skillsLoaded) {
+    await skillsReady
+    if (phase.value !== 'tap_to_start') return
+  }
+  // Bosses 100+ build: same for the boss glue + the engine's trait port.
+  if (BOSSES100_BUILD && !bossesLoaded) {
+    await bossesReady
+    if (phase.value !== 'tap_to_start') return
+  }
+  // Skills intro / reveal (WP7, G13): an open surface blocks the battle, and
+  // a pending one whose gate is open takes this tap instead — so it can never
+  // land mid-battle or over the interstitial below.
+  if (sk.value?.takesBattleTap()) return
 
   if (shouldShowMidgameAdNow()) {
     phase.value = 'ad_break'
@@ -376,18 +475,10 @@ const ghostEnemy: Ref<LeaderboardEntry | null> = ref(null)
 
 // ─── NPC Team from Campaign Stage ─────────────────────────────────────────
 
-const stageNpcTeam = (): SpinnerConfig[] =>
-  currentStage.value.enemyTeam.map(e => ({
-    topPartId: e.topPartId,
-    bottomPartId: e.bottomPartId,
-    topLevel: e.topLevel,
-    bottomLevel: e.bottomLevel,
-    modelId: e.modelId,
-    isBoss: e.isBoss,
-    // Forward the special boss ability so ghost/split/partners/healers
-    // actually activate when their stage loads.
-    bossAbility: e.bossAbility
-  }))
+// Forwards every boss mechanic field — the special ability (ghost / split /
+// partners / healers …) AND the stage-101+ traits (bossTrait / shardTrait,
+// bosses-100-feature.md §4); see `stageBladeToConfig` (unit-tested).
+const stageNpcTeam = (): SpinnerConfig[] => stageEnemyConfigs(currentStage.value)
 
 /** Player team with current upgrade levels applied.
  *  While a cheat boss stage is active the player's blades are temporarily
@@ -398,8 +489,14 @@ const stageNpcTeam = (): SpinnerConfig[] =>
  *  top of the matched peak — localStorage upgrades are never touched.
  *  There is no upgrade max level, so this is safe to stack arbitrarily. */
 const CHEAT_PLAYER_BONUS_LEVELS = 25
+/** The cheat stage the Boss Lab launched last (raw object) and whether that
+ *  fight gives the player the cheat bonus above (level mode "matched"). */
+let bossLabStage: Stage | null = null
+let bossLabBoost = true
 const playerTeamWithUpgrades = (): SpinnerConfig[] => {
-  if (cheatStage.value) {
+  // A Boss Lab fight at campaign levels fights with the real team (no boost).
+  const labUnboosted = bossLabStage !== null && !bossLabBoost && toRaw(cheatStage.value) === bossLabStage
+  if (cheatStage.value && !labUnboosted) {
     const tops = playerUpgrades.value.tops
     const bots = playerUpgrades.value.bottoms
     const peakTop = Math.max(0, ...Object.values(tops))
@@ -450,7 +547,7 @@ watch(pvpStatus, (s) => {
     stopPhysics()
     stopBattleMusic()
     gamePvpMode.value = false
-    initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+    initCampaignGame()
   }
 })
 
@@ -463,7 +560,7 @@ watch(stageReinitSignal, () => {
   showReward.value = false
   ghostMode.value = false
   ghostEnemy.value = null
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
 })
 
 // ─── Computed ──────────────────────────────────────────────────────────────
@@ -501,6 +598,12 @@ const rouletteRewardReady = ref(false) // tap-to-continue unlocked
 // plus the "Spin Again" respin when the player watched the ad. The respin is
 // an ADDITIONAL reward — both are granted and both are shown.
 const rouletteGrants: Ref<RouletteGrant[]> = ref([])
+// The coin base BOTH roulette spins multiply: the defeated BOSS stage's
+// `rewardWin`, snapshotted before `advanceStage()` — after it `rewardAmount`
+// already reads the NEXT (non-boss) stage, which paid e.g. 140 x mult for
+// boss 5 instead of its 200. The respin lands after the advance too, so it
+// must read this snapshot, never the live `rewardAmount`.
+const rouletteBaseCoins = ref(0)
 
 // ─── Skin Chest (20h) ───────────────────────────────────────────────────────
 const skinChestReward = ref<GrantedSkin | null>(null)
@@ -535,6 +638,8 @@ const winAdBusy = ref(false)
 // reaches the ordinary win screen; this keeps the 3x button off it even if a
 // future flow sends one there — the roulette already carries its own ad.
 const lastWinWasBoss = ref(false)
+/** This result screen settles a cheat-stage / Boss Lab fight (G1): no 3x (G5). */
+const lastResultWasLab = ref(false)
 const winAdBaseCoins = computed(() => {
   if (pvpMode.value) return PVP_COIN_REWARD
   if (dailyChallengeMode.value) return dailyCoinReward.value
@@ -544,6 +649,8 @@ const showWinCoinsAd = computed(() => showsWinCoinsAd({
   adsBuild: HAS_REWARDED_ADS,
   result: gameResult.value,
   bossWin: lastWinWasBoss.value,
+  pvp: pvpMode.value,
+  labWin: lastResultWasLab.value,
   baseCoins: winAdBaseCoins.value
 }))
 const onWinAdCoins = (sourceEl: HTMLElement, extra: number) => {
@@ -638,8 +745,11 @@ watch(isGameplayActive, (active) => {
 
 // Live stats for the blade HUD — always show all blades (even dead ones)
 // so the cards stay pinned to their corners.
-const bladeStats = computed(() =>
-  playerBlades.value.map(b => {
+const bladeStats = computed(() => {
+  // Boss-trait rows (frozen / chill per playerBlades index, §7.3) — a new
+  // array only on trait events, so this recomputes then too.
+  const traitRows = bossTraitHud.value
+  return playerBlades.value.map((b, i) => {
     const s = statsFor(b)
     return {
       id: b.id,
@@ -648,10 +758,11 @@ const bladeStats = computed(() =>
       atk: s.damageMultiplier,
       def: s.defenseMultiplier,
       spd: s.speedMultiplier,
-      dead: b.hp <= 0
+      dead: b.hp <= 0,
+      trait: traitCardView(traitRows[i], b.hp <= 0)
     }
   })
-)
+})
 
 const onSurrender = () => {
   stopPhysics()
@@ -681,7 +792,8 @@ const onSurrender = () => {
   // check in `beginBattle`).
   incrementAdCounter()
   // Re-init the (now campaign) stage with no rewards — player stays on current stage
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
+  maybeReopenBossLab()
 }
 
 // Handle incoming surrender from opponent — force a win and show notification
@@ -937,6 +1049,15 @@ const onPointerDown = (e: PointerEvent) => {
     canvasRef.value?.setPointerCapture?.(e.pointerId)
     return
   }
+  // Frost Lock: a tap aimed at a frozen spinner is answered (shake + crack +
+  // hint) instead of silently ignored; the other spinner stays selected.
+  if (phase.value === 'player_turn' && bossTraitHud.value.length > 0) {
+    const frozenIdx = frozenBladeAtTap(playerBlades.value, bossTraitHud.value, coords.x, coords.y)
+    if (frozenIdx >= 0) {
+      onFrozenTap(frozenIdx)
+      return
+    }
+  }
   beginDrag(coords.x, coords.y)
   // Capture the pointer so move/up keep firing on the canvas even when
   // the cursor leaves the game frame — lets players keep aiming smoothly
@@ -994,6 +1115,106 @@ const onPointerCancel = () => {
   if (canvasRef.value) canvasRef.value.style.cursor = ''
 }
 
+// ─── Boss traits: refused tap on a frozen spinner (§7.3) ───────────────────
+// The blade shakes 150 ms on the canvas with the ice-crack SFX (engine,
+// throttled 400 ms), its stat card shakes too and a short hint says why —
+// the freeze must never read as a bug.
+const FROZEN_SHAKE_MS = 150
+const FROZEN_HINT_MS = 1800
+const frozenShakeIdx = ref(-1)
+const frozenHintIdx = ref(-1)
+let frozenShakeTimer: number | null = null
+let frozenHintTimer: number | null = null
+const onFrozenTap = (idx: number) => {
+  const blade = playerBlades.value[idx]
+  if (!blade) return
+  refuseFrozenTap(blade)
+  // Restart the card shake even on a quick second tap.
+  frozenShakeIdx.value = -1
+  if (frozenShakeTimer !== null) clearTimeout(frozenShakeTimer)
+  void nextTick(() => {
+    frozenShakeIdx.value = idx
+    frozenShakeTimer = window.setTimeout(() => {
+      frozenShakeIdx.value = -1
+      frozenShakeTimer = null
+    }, FROZEN_SHAKE_MS)
+  })
+  frozenHintIdx.value = idx
+  if (frozenHintTimer !== null) clearTimeout(frozenHintTimer)
+  frozenHintTimer = window.setTimeout(() => {
+    frozenHintIdx.value = -1
+    frozenHintTimer = null
+  }, FROZEN_HINT_MS)
+}
+watch(phase, (p) => {
+  if (p !== 'player_turn') frozenHintIdx.value = -1
+})
+
+// ─── Boss intro card (§7.2) ────────────────────────────────────────────────
+// A stage-101+ encounter introduces itself inside the 1,600 ms meteor intro
+// (crest, name, trait glyphs). Campaign and cheat / Boss Lab stages only.
+const bossIntro = computed(() => {
+  const stage = currentStage.value
+  if (!BOSSES100_BUILD || !stage.bossEncounterId) return null
+  return {
+    nameKey: stage.name,
+    cycleSuffix: stage.cycleSuffix ?? '',
+    modelId: bossPreviewModelId(stage.enemyTeam),
+    traits: bossTraitsOf(stage.enemyTeam)
+  }
+})
+const bossIntroShown = ref(false)
+watch(phase, (p) => {
+  bossIntroShown.value = p === 'meteor_intro'
+    && bossIntro.value !== null
+    && !pvpMode.value && !ghostMode.value && !dailyChallengeMode.value
+})
+
+// ─── Boss trophies (§3.5) ──────────────────────────────────────────────────
+// Granted on the boss win itself (persisted at once, like the roulette's
+// skin), shown as an extra card on the roulette reward screen. Only a real
+// campaign win of an encounter stage grants (never cheat / Boss Lab, ghost,
+// daily, PvP, league); the grant is idempotent, so a replay shows nothing.
+const trophyGrants: Ref<BossTrophySkinId[]> = ref([])
+
+// ─── Boss Lab (§11, BW7) — dev cheat ───────────────────────────────────────
+const cheatsOn = cheatsEnabled()
+const bossLabOpen = ref(false)
+/** A Lab fight is running: re-open the Lab after its result screen. */
+const bossLabReopen = ref(false)
+const bossLabPeak = computed(() => ({
+  top: Math.max(0, ...Object.values(playerUpgrades.value.tops)),
+  bottom: Math.max(0, ...Object.values(playerUpgrades.value.bottoms))
+}))
+const openBossLab = () => {
+  if (!BossLabUi || !cheatsOn) return
+  bossLabOpen.value = true
+}
+watch(bossLabSignal, openBossLab)
+const onBossLabLaunch = (stage: Stage, _index: number, boostPlayer: boolean) => {
+  bossLabStage = stage
+  bossLabBoost = boostPlayer
+  bossLabReopen.value = true
+  loadCheatStage(stage)
+}
+/** After a Lab fight's result screen (or a surrender): the Lab again, with
+ *  the next entry focused. */
+const maybeReopenBossLab = () => {
+  if (!bossLabReopen.value || bossLabStage === null) return
+  if (toRaw(cheatStage.value) !== bossLabStage) {
+    bossLabReopen.value = false
+    return
+  }
+  openBossLab()
+}
+watch(cheatStage, (stage) => {
+  if (bossLabStage !== null && toRaw(stage) !== bossLabStage) {
+    bossLabReopen.value = false
+    bossLabStage = null
+    bossLabBoost = true
+  }
+})
+
 // ─── Game Over ─────────────────────────────────────────────────────────────
 
 watch(isGameOver, (over) => {
@@ -1014,6 +1235,7 @@ watch(isGameOver, (over) => {
     if (gameResult.value === 'win') spawnMeteorShower(80, 50, 65)
     // A fresh result screen: nothing from the last one's 3x ad carries over.
     lastWinWasBoss.value = false
+    lastResultWasLab.value = false
     winAdExtra.value = 0
     winAdBusy.value = false
 
@@ -1024,8 +1246,16 @@ watch(isGameOver, (over) => {
         const enemyTeam = pvpRole.value === 'host' ? pvpGuestTeam.value : pvpHostTeam.value
         const sumLevels = (team: SpinnerConfig[]) =>
           team.reduce((s, c) => s + (c.topLevel ?? 1) + (c.bottomLevel ?? 1), 0)
+        // Skill levels count toward honour (§9.1): 0.8 part level per skill
+        // level — both 0 on a skills-off build.
+        const honorSkills = sk.value?.pvpHonorSkillLevels() ?? { mine: 0, theirs: 0 }
         if (gameResult.value === 'win') {
-          const hp = calcHonorPoints(sumLevels(myTeam), sumLevels(enemyTeam))
+          const hp = calcHonorPoints(
+            sumLevels(myTeam),
+            sumLevels(enemyTeam),
+            honorSkills.mine,
+            honorSkills.theirs
+          )
           recordPvpWin(hp)
           lastHonorEarned.value = hp
         } else {
@@ -1069,6 +1299,20 @@ watch(isGameOver, (over) => {
       return
     }
 
+    // Cheat / Boss Lab fight (G1): a test fight, never a campaign battle. It
+    // pays the stage's own fixed coins (Lab 500/100, cheat bosses 500/100)
+    // and returns BEFORE every campaign branch below — no stage advance, no
+    // first-win flag, no battle-pass xp, no roulette, no trophy, no rubber
+    // band, no tip counters. Win and loss alike.
+    if (cheatStage.value && !ghostMode.value) {
+      grantedCoins.value = settleLabBattle(cheatStage.value, gameResult.value, addCoins)
+      lastResultWasLab.value = true
+      coinsAwarded.value = true
+      showReward.value = true
+      stopBattleMusic()
+      return
+    }
+
     // Boss rubber-banding: count consecutive campaign-boss losses so the
     // next attempt spawns the boss with reduced HP (see
     // bossHpRubberBandMul in useSpinnerCampaign). Win resets the streak.
@@ -1090,7 +1334,15 @@ watch(isGameOver, (over) => {
     const isBossWin = gameResult.value === 'win' && !ghostMode.value && currentStage.value.isBoss
     lastWinWasBoss.value = isBossWin === true
     if (isBossWin) {
-      // Advance stage + BP immediately, but defer coin award until roulette resolves
+      // Advance stage + BP immediately, but defer coin award until roulette resolves.
+      // Snapshot the boss stage's reward BEFORE advancing — see `rouletteBaseCoins`.
+      rouletteBaseCoins.value = rewardAmount.value
+      // Trophy skins — decided on the stage just FOUGHT (before the advance).
+      trophyGrants.value = grantBossTrophies({
+        stage: currentStage.value,
+        result: gameResult.value,
+        mode: battleModeOf({ ghost: ghostMode.value, cheat: !!cheatStage.value })
+      }, grantTrophySkins)
       if (!hasFirstWin.value) markFirstWin()
       advanceStage()
       recordPlayerStage(currentStageId.value)
@@ -1143,7 +1395,7 @@ watch(isGameOver, (over) => {
 const onRouletteResult = (result: RouletteResult) => {
   // Boss win uses the multiplied reward; a skin pays the 1x coins beside it;
   // the ultra-rare jackpot pays diamonds INSTEAD of coins.
-  const grant = rouletteGrantFor(result, rewardAmount.value)
+  const grant = rouletteGrantFor(result, rouletteBaseCoins.value)
   if (grant.diamonds > 0) addDiamonds(grant.diamonds)
   if (grant.coins > 0) addCoins(grant.coins)
   rouletteGrants.value = [...rouletteGrants.value, grant]
@@ -1188,13 +1440,19 @@ const onRouletteRewardContinue = async () => {
   if (!rouletteRewardReady.value) return
   showRouletteReward.value = false
   rouletteGrants.value = []
+  trophyGrants.value = []
 
   // Boss-win path is campaign-only (never PvP/ghost) and never surrendered,
   // so the counter always ticks. The actual ad fires before the next
   // battle's meteor-shower intro (see `beginBattle`).
   incrementAdCounter()
   coinsAwarded.value = false
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
+  // Skills intro, new player: the stage-10 boss win finishes HERE (boss card
+  // → roulette → roulette reward → continue), so it is queued after the
+  // reward closed and opens on the tap_to_start that initCampaignGame set.
+  sk.value?.queueIntro('win', battleModeOf({ cheat: !!cheatStage.value }))
+  maybeReopenBossLab()
 }
 
 // The roulette only opens after a BOSS win, so its painted rim/pointer/hub are
@@ -1207,6 +1465,8 @@ watch(() => currentStage.value.isBoss, (isBoss) => {
 watch(cheatRouletteSignal, () => {
   preloadRouletteArt()
   rouletteGrants.value = []
+  trophyGrants.value = []
+  rouletteBaseCoins.value = rewardAmount.value
   pendingBossReward.value = false // no coins in cheat mode
   showRoulette.value = true
 })
@@ -1214,7 +1474,8 @@ watch(cheatRouletteSignal, () => {
 // Coin explosion VFX when the reward overlay appears
 watch(showReward, async (show) => {
   // Ad first, overlay up, THEN the board — see `reportLeaderboardRun`.
-  if (show) reportLeaderboardRun()
+  // A cheat / Lab fight is not a campaign run: nothing to post (G1).
+  if (show && !cheatStage.value) reportLeaderboardRun()
   // Always tear down any prior cycle when the overlay state changes — both
   // closing the overlay and opening a new battle's overlay need to start
   // fresh.
@@ -1279,38 +1540,8 @@ watch(showReward, async (show) => {
 // pre-match ads — pre-match delays would desync the two clients. The
 // counter still increments after a PvP battle, so any backlog is consumed
 // on the player's next non-PvP battle.
-const AD_BATTLES_KEY = 'ca_battles_since_ad'
-const AD_FIRST_KEY = 'ca_first_midgame_ad_shown'
-
-const loadCount = (key: string, defaultVal: number): number => {
-  try {
-    const raw = localStorage.getItem(key)
-    if (raw === null) return defaultVal
-    return parseInt(raw, 10) || 0
-  } catch {
-    return defaultVal
-  }
-}
-
-const battlesSinceAd: Ref<number> = ref(loadCount(AD_BATTLES_KEY, 1))
-const firstMidgameAdShown: Ref<boolean> = ref(
-  localStorage.getItem(AD_FIRST_KEY) === '1'
-)
-
-const resetAdCounter = () => {
-  battlesSinceAd.value = 0
-  localStorage.setItem(AD_BATTLES_KEY, '0')
-}
-
-const incrementAdCounter = () => {
-  battlesSinceAd.value += 1
-  localStorage.setItem(AD_BATTLES_KEY, String(battlesSinceAd.value))
-}
-
-const markFirstMidgameAdShown = () => {
-  firstMidgameAdShown.value = true
-  localStorage.setItem(AD_FIRST_KEY, '1')
-}
+// State + persistence live in `@/use/midgameCadence` (shared with the
+// rewarded-ad seam in `useAds`: a completed rewarded ad resets the counter).
 
 /**
  * Pure predicate — does the current cadence + provider state warrant a
@@ -1325,8 +1556,7 @@ const markFirstMidgameAdShown = () => {
  */
 const shouldShowMidgameAdNow = (): boolean => {
   if (!isInterstitialReady.value) return false
-  const threshold = firstMidgameAdShown.value ? 3 : 2
-  return battlesSinceAd.value >= threshold
+  return isMidgameAdDue()
 }
 
 /**
@@ -1338,7 +1568,7 @@ const shouldShowMidgameAdNow = (): boolean => {
  */
 const runMidgameAdBeforeBattle = async (): Promise<void> => {
   resetAdCounter()
-  if (!firstMidgameAdShown.value) markFirstMidgameAdShown()
+  if (!firstMidgameAdShown()) markFirstMidgameAdShown()
   await showMidgameAd()
 }
 
@@ -1349,6 +1579,8 @@ const onRewardContinue = async () => {
   const wasPvp = pvpMode.value
   const wasGhost = ghostMode.value
   const wasDaily = dailyChallengeMode.value
+  const closedResult = gameResult.value
+  const closedMode = battleModeOf({ pvp: wasPvp, daily: wasDaily, ghost: wasGhost, cheat: !!cheatStage.value })
 
   // Every battle attempt counts toward the cadence — including
   // surrendered ones. A player who quits a tough match still committed
@@ -1378,7 +1610,12 @@ const onRewardContinue = async () => {
   // cannot re-fire while phase is still 'game_over' (which would cause a
   // phantom second reward screen).
   coinsAwarded.value = false
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
+  // Skills intro: an existing player's next non-PvP WIN-screen close (a
+  // new player's comes through the boss roulette below). Opens on this
+  // tap_to_start once the gate allows it.
+  sk.value?.queueIntro(closedResult, closedMode)
+  maybeReopenBossLab()
 }
 
 // ─── Leaderboard / Ghost Fight ────────────────────────────────────────────
@@ -1396,7 +1633,14 @@ const onGhostFight = (entry: LeaderboardEntry) => {
     bottomLevel: b.bottomLevel ?? 0,
     modelId: b.modelId
   })
-  initGame(myTeam, [toConfig(entry.blade), toConfig(entry.blade2)], false, 'default')
+  const enemies = [toConfig(entry.blade), toConfig(entry.blade2)]
+  // The ghost fights with its derived loadout (§9.1) — none on a skills-off build.
+  lastBattleInit = () => {
+    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, 'circle', false,
+      battleSkillOptions('ghost', entry))
+  }
+  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, 'circle', false,
+    battleSkillOptions('ghost', entry))
 }
 
 // ─── Daily Challenge ────────────────────────────────────────────────────────
@@ -1418,7 +1662,13 @@ const startDailyChallenge = () => {
   // marks this as a daily match, which is what lets the virtual joystick tell
   // "against an inscribed wall with room to spare" from "against the screen
   // edge" (see `isJoystickVisible`).
-  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape, true)
+  // Re-init (a loadout change on tap_to_start) re-uses this roster + shape and
+  // never records another attempt.
+  lastBattleInit = () => {
+    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, shape, true,
+      battleSkillOptions('daily'))
+  }
+  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape, true, battleSkillOptions('daily'))
 }
 
 const onOpenConfig = () => {
@@ -1431,8 +1681,161 @@ const onOpenConfig = () => {
 
 const onConfigSave = (team: SpinnerConfig[]) => {
   saveTeam(team)
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
 }
+
+// ─── Bosses 100+ (bosses-100-feature.md §3.5, §7.3) ─────────────────────────
+//
+// The arena's boss glue (`use/bosses/bossArenaUi.ts`: trophies, the frozen-tap
+// test, the stat-card view) and the engine's trait port load through the
+// bosses gate right after mount. `bossUi` stays null until then — and forever
+// on a bosses100-off build, where no stage carries a trait, nothing is granted
+// and every wrapper below answers "none". A tap that beats the load waits
+// (beginBattle), and a board already waiting is rebuilt with its traits.
+const bossUi = shallowRef<BossArenaUiModule | null>(null)
+let bossesLoaded = false
+let bossesUnmounted = false
+const bossesReady: Promise<void> = BOSSES100_BUILD
+  ? Promise.all([loadBossArenaUi(), loadBossTraitEngine()])
+    .then(([ui, port]) => {
+      if (bossesUnmounted || !ui) return
+      bossUi.value = ui
+      installBossTraitEngine(port)
+      const traitBoard = currentStage.value.enemyTeam.some(c => c.bossTrait !== undefined || c.shardTrait !== undefined)
+      if (phase.value === 'tap_to_start' && !pvpMode.value && traitBoard) lastBattleInit?.()
+    })
+    .catch((e) => {
+      console.error('[bosses] failed to load:', e)
+    })
+    .finally(() => {
+      bossesLoaded = true
+    })
+  : Promise.resolve()
+
+/** Stat-card multiplier in the active language's decimals ("1.5" / "1,5", T3). */
+const statNum = (n: number): string => fmtFixed(n, 1, locale.value)
+
+const NO_TRAIT_CARD: TraitCardView = Object.freeze({ frozen: false, chill: 0, chillPct: 0 })
+/** Stat-card frozen / chill view of one blade (none until the glue loaded). */
+const traitCardView = (row: TraitHudRow | undefined, dead: boolean): TraitCardView =>
+  (BOSSES100_BUILD && bossUi.value ? bossUi.value.traitCardView(row, dead) : NO_TRAIT_CARD)
+/** Index of the frozen spinner a tap aimed at, or −1. */
+const frozenBladeAtTap = (
+  blades: Parameters<BossArenaUiModule['frozenBladeAtTap']>[0],
+  hud: readonly Pick<TraitHudRow, 'frozen'>[],
+  x: number,
+  y: number
+): number => (BOSSES100_BUILD && bossUi.value ? bossUi.value.frozenBladeAtTap(blades, hud, x, y) : -1)
+/** Trophy skins this finished battle newly unlocked ([] on an off build). */
+const grantBossTrophies = (
+  input: BossTrophyInput,
+  grant: (ids: readonly BossTrophySkinId[]) => readonly string[]
+): BossTrophySkinId[] => (BOSSES100_BUILD && bossUi.value ? bossUi.value.grantBossTrophies(input, grant) : [])
+
+// ─── Skills (skills-feature.md §7–§10, WP7) ───────────────────────────────
+//
+// The arena's skill glue lives in `use/skills/arenaSkills.ts`, loaded through
+// the skills gate together with the engine's skill port and the useSkills API
+// and run inside this component's own effect scope. `sk` stays null until
+// then — and forever on a skills-off build, where every call below is a no-op,
+// every loadout is empty (the engine runs its pre-skills code path) and every
+// surface handle is null.
+const sk = shallowRef<ArenaSkills | null>(null)
+const skillsScope = effectScope()
+let skillsLoaded = false
+let skillsUnmounted = false
+const skillsReady: Promise<void> = SKILLS_BUILD
+  ? Promise.all([loadArenaSkills(), loadSkillEngine(), loadSkillsApi()])
+    .then(([mod, port, api]) => {
+      if (skillsUnmounted || !mod || !api) return
+      installSkillEngine(port)
+      const glue = skillsScope.run(() => mod.useArenaSkills(api, {
+        phase,
+        pvpMode,
+        pvpRole,
+        pvpHostSkills,
+        pvpGuestSkills,
+        skillHud,
+        isBattleActive,
+        gateBlockers: skillGateBlockers,
+        rebuildBoard: () => lastBattleInit?.(),
+        openTeam: onOpenConfig
+      }))
+      if (!glue) return
+      sk.value = reactive(glue) as unknown as ArenaSkills
+      // The board waiting on tap_to_start was built before the glue and the
+      // engine's skill port had loaded — rebuild it with the player's loadout.
+      if (phase.value === 'tap_to_start' && !pvpMode.value && glue.hasEquippedSkill()) lastBattleInit?.()
+    })
+    .catch((e) => {
+      console.error('[skills] failed to load:', e)
+    })
+    .finally(() => {
+      skillsLoaded = true
+    })
+  : Promise.resolve()
+
+/** The trailing initGame options for a non-PvP battle: the team's loadout for
+ *  `mode` and, in a ghost fight, the ghost's derived loadout. Empty until the
+ *  skill glue loaded (the board is rebuilt when it does) and on a skills-off
+ *  build. */
+const battleSkillOptions = (mode: BattleMode, ghost?: LeaderboardEntry): InitGameOptions => {
+  const glue = sk.value
+  if (!glue) return {}
+  return glue.battleSkillOptions(mode, ghost ? glue.ghostLoadout(ghost) : [])
+}
+
+/** Re-runs the current tap_to_start board with a fresh loadout (set by every
+ *  non-PvP init; the skill glue calls it when the loadout changes). */
+let lastBattleInit: (() => void) | null = null
+
+/** Every campaign (and cheat-stage) init goes through here. */
+function initCampaignGame() {
+  lastBattleInit = initCampaignGame
+  initGame(
+    playerTeamWithUpgrades(),
+    stageNpcTeam(),
+    !hasFirstWin.value,
+    currentStage.value.arenaType,
+    currentStage.value.bouncers ?? 0,
+    currentStageId.value >= 2,
+    undefined,
+    null,
+    'circle',
+    false,
+    battleSkillOptions(battleModeOf({ cheat: !!cheatStage.value }))
+  )
+}
+
+// ── PvP VS card ─────────────────────────────────────────────────────────────
+const pvpVsShow = ref(false)
+watch(phase, (p) => {
+  if (p !== 'deciding_turn') pvpVsShow.value = false
+})
+
+/** Boss-drop chip on the StageBadge — outside battle only (§7.5). */
+const showSkillDropChip = computed(() =>
+  SKILLS_BUILD && (phase.value === 'idle' || phase.value === 'tap_to_start' || phase.value === 'game_over')
+)
+
+/** Any FModal on screen (Daily Rewards, Battle Pass, the rewarded-ad intro,
+ *  the fake leaderboard, …) — those own their open state internally, but
+ *  every one of them renders `.modal-overlay` into <body>. */
+const anyModalOverlayOpen = (): boolean =>
+  typeof document !== 'undefined' && document.querySelector('.modal-overlay') !== null
+
+/** The arena-side blockers of the skills reveal gate (G13). */
+const skillGateBlockers = () => ({
+  pvp: pvpMode.value || pvpModalOpen.value,
+  adActive: phase.value === 'ad_break' || adsInFlight.value > 0 || isGamePaused.value
+    || isRewardedIntroOpen.value || isAdsBlockedModalShown.value,
+  // The first-launch cutscene, or the boot loader still up.
+  cutscene: introPlaying.value || !introAssetsReady.value,
+  modalOpen: showReward.value || showRoulette.value || showRouletteReward.value
+    || showBossDefeated.value || showSkinChestReward.value || showEnemySurrender.value
+    || configModalOpen.value || showOptions.value || leaderboardModalOpen.value
+    || surrenderModalOpen.value || anyModalOverlayOpen()
+})
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -1519,8 +1922,11 @@ onMounted(() => {
   window.visualViewport?.addEventListener('resize', onViewportChange)
   window.visualViewport?.addEventListener('scroll', onViewportChange)
 
-  initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+  initCampaignGame()
   renderRafId = requestAnimationFrame(renderLoop)
+  // Boss Lab: `?bosslab` opens it once on a dev build with cheats on (touch
+  // devices have no ctrl+shift+9).
+  if (BossLabUi && cheatsOn && new URLSearchParams(window.location.search).has('bosslab')) openBossLab()
 
   // The stage-1 board exists; the moment the loader is gone the intro gate
   // may decide (it waits on an unsettled cloud save — see introGate.ts).
@@ -1571,14 +1977,7 @@ onMounted(() => {
           releaseDrag,
           beginBattle,
           reinit: () => {
-            initGame(
-              playerTeamWithUpgrades(),
-              stageNpcTeam(),
-              !hasFirstWin.value,
-              currentStage.value.arenaType,
-              currentStage.value.bouncers ?? 0,
-              currentStageId.value >= 2
-            )
+            initCampaignGame()
           },
           seedRng: seedMatchRng,
           startPhysics,
@@ -1648,16 +2047,27 @@ onMounted(() => {
         }
         pvpModalOpen.value = false
         startBattleMusic()
+        // Both loadouts come from the player-ready exchange (usePVP, already
+        // sanitised); `role` + the host's broadcast seed keep both peers on the
+        // same streams (WP0/WP4). Skills off → no loadouts, pre-skills engine.
+        const pvpSkillOptions = sk.value?.pvpBattleSkillOptions() ?? {}
+        lastBattleInit = null
         initGame(myTeam, enemyTeam, false, pvpGameConfig.value.arenaType, 0, false, undefined, {
           enabled: true,
-          myTurnFirst: isMyTurn
+          myTurnFirst: isMyTurn,
+          role: pvpRole.value ?? undefined
+        }, 'circle', false, {
+          seed: currentMatchSeed(),
+          ...pvpSkillOptions
         })
+        // VS card inside the engine's 1200 ms deciding_turn window (no timing change).
+        pvpVsShow.value = PvpVsCard !== null
       } catch (e) {
         console.error('[PvP] Game start failed:', e)
         leavePvP()
         pvpMode.value = false
         pvpModalOpen.value = false
-        initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+        initCampaignGame()
       }
     },
     (bladeIndex, ax, ay) => {
@@ -1675,7 +2085,7 @@ onMounted(() => {
       gamePvpMode.value = false
       pvpModalOpen.value = true
       coinsAwarded.value = false
-      initGame(playerTeamWithUpgrades(), stageNpcTeam(), !hasFirstWin.value, currentStage.value.arenaType, currentStage.value.bouncers ?? 0, currentStageId.value >= 2)
+      initCampaignGame()
     }
   )
 
@@ -1706,6 +2116,8 @@ onUnmounted(() => {
   window.removeEventListener('orientationchange', onViewportChange)
   window.visualViewport?.removeEventListener('resize', onViewportChange)
   window.visualViewport?.removeEventListener('scroll', onViewportChange)
+  if (frozenShakeTimer !== null) clearTimeout(frozenShakeTimer)
+  if (frozenHintTimer !== null) clearTimeout(frozenHintTimer)
   // Also drops this instance's syncer from the platform pause registry.
   disposePhysics()
   if (renderRafId !== null) cancelAnimationFrame(renderRafId)
@@ -1720,6 +2132,10 @@ onUnmounted(() => {
     disposePreviewSeam = null
   }
   if (speedBoostIntervalId !== null) clearInterval(speedBoostIntervalId)
+  skillsUnmounted = true
+  bossesUnmounted = true
+  sk.value?.dispose()
+  skillsScope.stop()
   clearTipCycle()
   // Always leave the arena at normal speed so other views aren't affected
   simSpeed.value = 1
@@ -1784,6 +2200,8 @@ onUnmounted(() => {
           :cycle-suffix="currentStage.cycleSuffix"
           :is-boss="currentStage.isBoss"
           :arena-type="currentStage.arenaType"
+          :show-skill-drop="showSkillDropChip"
+          :lab="!!cheatStage"
         )
         //- Spacer to keep coins right-aligned when StageBadge is hidden
         div(v-else)
@@ -1839,7 +2257,7 @@ onUnmounted(() => {
 
         //- Turn Announcement
         div(
-          v-else-if="phase === 'deciding_turn' && turnAnnouncement"
+          v-else-if="phase === 'deciding_turn' && turnAnnouncement && !pvpVsShow"
           class="text-center"
         )
           div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(
@@ -1871,8 +2289,41 @@ onUnmounted(() => {
             maxWidth: 'min(28rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem))'\
           }"
         )
-          div.drag-hint-text.text-white.italic.game-text.leading-tight(class="text-xs sm:text-sm opacity-50")
+          //- A tap on a frozen spinner swaps the hint for why (Frost Lock).
+          div.drag-hint-text.drag-hint-frozen.italic.game-text.leading-tight.font-bold(
+            v-if="frozenHintIdx >= 0"
+            class="text-xs sm:text-sm"
+            role="status"
+            data-frozen-hint
+          ) {{ t('bosses.frozenHint') }}
+          div.drag-hint-text.text-white.italic.game-text.leading-tight(v-else class="text-xs sm:text-sm opacity-50")
             | {{ t('spinner.dragHint') }}
+
+        //- PvP VS card — both teams + skill loadouts, inside the engine's
+        //- 1200 ms deciding_turn window (it never changes that timing).
+        component(
+          v-if="PvpVsCard && pvpVsShow && phase === 'deciding_turn'"
+          :is="PvpVsCard"
+          :host-team="pvpHostTeam"
+          :guest-team="pvpGuestTeam"
+          :host-skills="pvpHostSkills"
+          :guest-skills="pvpGuestSkills"
+          :my-role="pvpRole === 'guest' ? 'guest' : 'host'"
+          :announcement="turnAnnouncement"
+          @done="pvpVsShow = false"
+        )
+
+      //- Boss intro card — stage-101+ encounters, inside the meteor intro.
+      component(
+        v-if="BossIntroCardUi && bossIntroShown && bossIntro"
+        :is="BossIntroCardUi"
+        class="z-[11]"
+        :name-key="bossIntro.nameKey"
+        :cycle-suffix="bossIntro.cycleSuffix"
+        :model-id="bossIntro.modelId"
+        :traits="bossIntro.traits"
+        @done="bossIntroShown = false"
+      )
 
       //- Blade Stats HUD — bottom corners during active battle
       div(
@@ -1888,7 +2339,11 @@ onUnmounted(() => {
           v-for="(bs, idx) in bladeStats"
           :key="bs.id"
           class="blade-stat-card relative"
-          :class="{ 'blade-stat-dead': bs.dead }"
+          :class="{ 'blade-stat-dead': bs.dead, 'blade-stat-frozen': bs.trait.frozen, 'blade-stat-chilled': bs.trait.chill > 0, 'blade-stat-shake': frozenShakeIdx === idx }"
+          :role="bs.trait.frozen || bs.trait.chill > 0 ? 'group' : undefined"
+          :aria-label="bs.trait.frozen ? t('bosses.frozenAria') : (bs.trait.chill > 0 ? t('bosses.chillAria', { pct: bs.trait.chillPct }) : undefined)"
+          :data-trait-frozen="bs.trait.frozen ? '' : undefined"
+          :data-trait-chill="bs.trait.chill > 0 ? bs.trait.chill : undefined"
           :style="{\
             transform: `scale(${uiStatScale})`,\
             transformOrigin: idx === 0 ? 'bottom left' : 'bottom right'\
@@ -1902,19 +2357,36 @@ onUnmounted(() => {
           div.absolute.right-0(v-if="idx === 1" class="bottom-full mb-1")
             CombatLog
           div.blade-stat-label.game-text {{ t('spinner.spinnerLabel', { n: idx + 1 }) }}
+          //- Frozen (Frost Lock): an ice block over the card's corner.
+          component.blade-stat-ice(v-if="BossTraitGlyphUi && bs.trait.frozen" :is="BossTraitGlyphUi" trait="frost" :size="18" decorative)
           div.blade-stat-grid
             div.blade-stat-row
               IconHp.blade-stat-icon.text-green-400
               span.text-green-400 {{ bs.hp }}
             div.blade-stat-row
               IconAttack.blade-stat-icon.text-red-400
-              span.text-red-400 {{ bs.atk.toFixed(1) }}
+              span.text-red-400 {{ statNum(bs.atk) }}
             div.blade-stat-row
               IconDefense.blade-stat-icon.text-purple-400
-              span.text-purple-400 {{ bs.def.toFixed(1) }}
+              span.text-purple-400 {{ statNum(bs.def) }}
             div.blade-stat-row
               IconSpeed.blade-stat-icon.text-cyan-400
-              span.text-cyan-400 {{ bs.spd.toFixed(1) }}
+              span(:class="bs.trait.chill > 0 ? 'blade-stat-spd-chilled' : 'text-cyan-400'") {{ statNum(bs.spd) }}
+          //- Chilled (Frostbite): one snowflake pip per live stack, under SPD.
+          div.blade-chill-pips(v-if="BossTraitGlyphUi && bs.trait.chill > 0" aria-hidden="true")
+            component(v-for="n in bs.trait.chill" :key="n" :is="BossTraitGlyphUi" trait="chill" :size="10" decorative)
+          //- Equipped skills of THIS spinner (its own shield / cooldown /
+          //- counters) — only in a battle where skills are live (§8.1).
+          div.blade-skill-row(v-if="SkillHudChip && sk && sk.hudRows[idx]?.length")
+            component(
+              v-for="chip in sk.hudRows[idx]"
+              :key="chip.id"
+              :is="SkillHudChip"
+              :id="chip.id"
+              :level="chip.level"
+              :state="chip.state"
+              :breathe="sk.hudBreathe"
+            )
 
       //- Bottom-left column: mute → settings → daily/ad/battlepass row
       //-
@@ -2045,14 +2517,22 @@ onUnmounted(() => {
             :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
             @click="leaderboardModalOpen = true"
           )
-          FIconButton(
-            v-if="hasFirstWin || currentStageId >= 2"
-            type="secondary"
-            :class="{ 'instant-bounce': showConfigSpotlight }"
-            size="md"
-            :img-src="prependBaseUrl('images/icons/team_128x128.webp')"
-            @click="onOpenConfig"
-          )
+          div.relative(v-if="hasFirstWin || currentStageId >= 2")
+            FIconButton(
+              type="secondary"
+              :class="{ 'instant-bounce': showConfigSpotlight }"
+              size="md"
+              :img-src="prependBaseUrl('images/icons/team_128x128.webp')"
+              @click="onOpenConfig"
+            )
+            //- NEW dot: an unlocked skill not viewed yet / the slot-2
+            //- reveal is pending (§7.1). Decorative — the Team
+            //- modal's SKILLS row carries the labelled NEW badge.
+            span.team-new-dot.absolute.pointer-events-none.rounded-full(
+              v-if="sk?.teamNew"
+              aria-hidden="true"
+              data-testid="team-new-dot"
+            )
 
     //- First-config spotlight — darkens everything except the team button
     Transition(name="fade")
@@ -2184,12 +2664,19 @@ onUnmounted(() => {
       //- One reward per granted spin. With the "Spin Again" respin there are
       //- TWO — the respin ADDS to the first, it never replaces it — shown side
       //- by side with a "+" between them and the second tagged "Spin Again".
-      div.roulette-reward-enter.flex.flex-wrap.items-center.justify-center(
+      //- Each "+" lives in the SAME no-wrap slot as the grant it precedes, so
+      //- when the row wraps (360 px with three trophies) the "+" moves down
+      //- with its grant instead of dangling at the end of the first line (V1).
+      div.roulette-reward-enter.w-full.flex.flex-wrap.items-center.justify-center(
         class="gap-x-3 gap-y-4 sm:gap-x-6"
-        :class="{ 'is-double': rouletteGrants.length > 1 }"
+        :class="{ 'is-double': rouletteGrants.length + trophyGrants.length > 1 }"
       )
-        template(v-for="(g, i) in rouletteGrants" :key="i")
-          div.font-black.game-text.text-white(
+        div.roulette-grant-slot.shrink-0.flex.flex-nowrap.items-center(
+          v-for="(g, i) in rouletteGrants"
+          :key="i"
+          class="gap-x-3 sm:gap-x-6"
+        )
+          div.roulette-grant-plus.font-black.game-text.text-white(
             v-if="i > 0"
             class="text-4xl sm:text-6xl"
             aria-hidden="true"
@@ -2232,6 +2719,31 @@ onUnmounted(() => {
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
                 IconCoin(class="w-8 h-8 text-yellow-300")
                 span.roulette-grant-amount.text-yellow-400.font-black.game-text +{{ g.coins }}
+        //- Boss trophy (§3.5): the earn-only skin(s) this encounter win just
+        //- unlocked — already owned, the card only celebrates it (bosses gate
+        //- handle: null on a bosses100-off build, where nothing is granted).
+        template(v-if="BossTrophyCardUi")
+          div.roulette-grant-slot.shrink-0.flex.flex-nowrap.items-center(
+            v-for="(id, ti) in trophyGrants"
+            :key="`trophy-${id}`"
+            class="gap-x-3 sm:gap-x-6"
+          )
+            div.roulette-grant-plus.font-black.game-text.text-white(
+              v-if="rouletteGrants.length > 0 || ti > 0"
+              class="text-4xl sm:text-6xl"
+              aria-hidden="true"
+            ) +
+            component(:is="BossTrophyCardUi" :skin-id="id")
+
+    //- Boss Lab — DEV-only cheat modal (ctrl+shift+9 / ?bosslab), async chunk.
+    component(
+      v-if="BossLabUi && cheatsOn && bossLabOpen"
+      :is="BossLabUi"
+      v-model="bossLabOpen"
+      :peak-top="bossLabPeak.top"
+      :peak-bottom="bossLabPeak.bottom"
+      @launch="onBossLabLaunch"
+    )
 
     //- 20h Skin Chest reward
     FReward(
@@ -2291,6 +2803,39 @@ onUnmounted(() => {
           class="px-8 py-3 text-lg sm:text-xl bg-gradient-to-b from-green-500 to-green-700 border-2 border-green-300 text-white hover:from-green-400 hover:to-green-600 active:scale-95"
           @click="showEnemySurrender = false"
         ) {{ t('pvp.okay') }}
+
+    //- ── Skills surfaces (WP7) — opened only through the reveal gate ──────
+    //- Intro: first unlock (drum roll → panel → "Pick your skill").
+    component(
+      v-if="SkillsIntroUi && sk?.introOpen"
+      :is="SkillsIntroUi"
+      :model-value="sk.introOpen"
+      :skill-ids="sk.introIds"
+      :build-up-ms="sk.introBuildUpMs"
+      @drumroll="sk.onIntroDrumroll"
+      @open-picker="sk.onIntroPicker"
+      @close="sk.onIntroClose"
+    )
+    //- Later unlocks / slot 2 / catch-up: the light reveal.
+    component(
+      v-if="SkillRevealUi && sk?.reveal"
+      :is="SkillRevealUi"
+      :model-value="true"
+      :variant="sk.revealVariant"
+      :skill-ids="sk.reveal.ids"
+      :auto-equipped-slot="sk.revealAutoSlot"
+      @continue="sk.onRevealContinue"
+      @open-team="sk.onRevealOpenTeam"
+      @coins-awarded="fireCoinExplosion"
+    )
+    //- Picker straight from the intro's CTA (learn + equip into a slot).
+    component(
+      v-if="SkillPickerUi && sk"
+      :is="SkillPickerUi"
+      v-model="sk.pickerOpen"
+      :slot-index="sk.pickerSlot"
+      @coins-awarded="fireCoinExplosion"
+    )
 
     //- First-launch intro cutscene — above every HUD element, lazily loaded.
     IntroCutscene(v-if="introPlaying" @done="onIntroDone")
@@ -2488,6 +3033,34 @@ onUnmounted(() => {
   text-wrap: balance
   overflow-wrap: anywhere
 
+// ── Team button NEW dot (skills) ─────────────────────────────────────────
+.team-new-dot
+  top: 0.1rem
+  right: 0.1rem
+  width: 0.7rem
+  height: 0.7rem
+  background: #ff3b3b
+  border: 2px solid #0f1a30
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6)
+  animation: team-new-pulse 1.4s ease-in-out infinite
+
+@keyframes team-new-pulse
+  0%, 100%
+    transform: scale(1)
+  50%
+    transform: scale(1.2)
+
+@media (prefers-reduced-motion: reduce)
+  .team-new-dot
+    animation: none
+
+// ── Blade skill chips (skills §8.1) ──────────────────────────────────────
+.blade-skill-row
+  display: flex
+  justify-content: center
+  gap: 0.2rem
+  margin-top: 0.15rem
+
 // ── Blade Stats HUD ──────────────────────────────────────────────────────
 .blade-stat-card
   background: rgba(0, 0, 0, 0.55)
@@ -2499,6 +3072,56 @@ onUnmounted(() => {
 
 .blade-stat-dead
   opacity: 0.35
+
+// ── Boss traits on the stat card (bosses-100-feature.md §7.3) ─────────────
+// Frozen: ice-blue tint + frosted rim; an ice-block glyph on the corner.
+.blade-stat-card.blade-stat-frozen
+  background: linear-gradient(to bottom, rgba(120, 200, 255, 0.55), rgba(40, 110, 180, 0.6))
+  border-color: rgba(210, 240, 255, 0.95)
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35)
+
+.blade-stat-ice
+  position: absolute
+  top: -0.5rem
+  right: -0.45rem
+
+// Chilled: the SPD value in ice-blue and one snowflake pip per stack.
+.blade-stat-card.blade-stat-chilled
+  border-color: rgba(174, 230, 255, 0.7)
+
+.blade-stat-spd-chilled
+  color: #aee6ff
+
+.blade-chill-pips
+  display: flex
+  justify-content: center
+  gap: 0.1rem
+  margin-top: 0.1rem
+
+// Refused tap on a frozen spinner: a 150 ms side shake. It animates the
+// `translate` property so it composes with the card's inline scale transform.
+.blade-stat-shake
+  animation: blade-stat-shake 150ms linear
+
+@keyframes blade-stat-shake
+  0%, 100%
+    translate: 0 0
+  25%
+    translate: -3px 0
+  50%
+    translate: 3px 0
+  75%
+    translate: -2px 0
+
+@media (prefers-reduced-motion: reduce)
+  .blade-stat-shake
+    animation: none
+
+// Frozen-tap hint (replaces the drag hint for a moment).
+.drag-hint-frozen
+  color: #bfeaff
+
+// The boss trophy card's own sizes live in BossTrophyCard.vue (bosses gate).
 
 .blade-stat-label
   font-size: 0.6rem
@@ -2562,6 +3185,37 @@ onUnmounted(() => {
 @media (orientation: landscape) and (max-height: 500px)
   .reward-column
     gap: 0.5rem
+
+  // Roulette reward row with several grants (Spin Again and/or boss trophy
+  // cards, BossTrophyCard.vue shrinks its own parts): tighter gaps, a smaller
+  // "+" and smaller grants so up to three trophies stay above the fold at
+  // 740x360 instead of wrapping onto a second row below it.
+  .is-double
+    column-gap: 0.5rem
+    row-gap: 0.25rem
+
+    .roulette-grant-slot
+      column-gap: 0.5rem
+
+    .roulette-grant-plus
+      font-size: 1.75rem
+      line-height: 1
+
+    .roulette-grant
+      gap: 0.25rem
+
+    .roulette-grant-icon
+      width: 2.75rem
+      height: 2.75rem
+
+    .roulette-grant-skin
+      font-size: 0.875rem
+
+    .roulette-grant-mult
+      font-size: 1.75rem
+
+    .roulette-grant-amount
+      font-size: 1.125rem
 
   .reward-result-text
     font-size: 1.875rem

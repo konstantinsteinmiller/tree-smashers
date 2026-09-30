@@ -5,7 +5,7 @@ import type { LocalStorageAccessor, SaveStrategy } from '@/utils/save/types'
 import { resetAllProgress } from '@/use/useResetProgress'
 import { refreshSaveBackedState, saveDataVersion } from '@/use/useSaveStatus'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
-import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY } from '@/keys'
+import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY, SKILLS_KEY, SKILL_LOADOUT_KEY, SKILL_UI_KEY } from '@/keys'
 
 // ─── Full-progress reset ───────────────────────────────────────────────────
 //
@@ -25,7 +25,12 @@ import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY } from '@/keys'
 //     save-backed refs in place instead, so the wipe has to be observable
 //     on the campaign composable without any navigation.
 
-const PROGRESS_KEYS = [STAGE_KEY, COINS_KEY, UPGRADES_KEY, 'spinner_battle_pass', 'spinner_daily_rewards']
+// Skills are progress: wiped by the reset (not in KEEP_KEYS), so the skills
+// intro can show again once the player re-clears stage 10.
+const PROGRESS_KEYS = [
+  STAGE_KEY, COINS_KEY, UPGRADES_KEY, 'spinner_battle_pass', 'spinner_daily_rewards',
+  SKILLS_KEY, SKILL_LOADOUT_KEY, SKILL_UI_KEY
+]
 const KEPT_KEYS = [SKINS_KEY, 'spinner_user_language', 'spinner_bg_skin_selected']
 
 const makeSpyStrategy = (): SaveStrategy & {

@@ -3,6 +3,7 @@ import { getState, setState } from '@/use/persistedState'
 import { POSTED_NAME_KEY, SUBMITTED_STAGE_KEY } from '@/keys'
 import { resolveIdentity, type PlayerIdentity } from '@/use/usePlayerIdentity'
 import { boardSnapshot, rankFromDist } from '@/use/leaderboardSnapshot'
+import { sanitizeDisplayName } from '@/utils/nameDenylist'
 
 /**
  * ─── The global board, client side ──────────────────────────────────────────
@@ -259,7 +260,10 @@ const adoptBoard = (next: unknown): boolean => {
       .filter((e): e is BoardEntry => !!e && typeof e === 'object')
       .map((e, i) => ({
         rank: Number(e.rank) || i + 1,
-        name: typeof e.name === 'string' ? e.name : '',
+        // The Worker masks denylisted names on write and on publish, but a board
+        // banked in the local cache or baked into an older build predates that —
+        // so every source is masked again here, the one place they all pass.
+        name: typeof e.name === 'string' ? sanitizeDisplayName(e.name) : '',
         score: Number(e.score) || 0,
         power: Number(e.power) || 0
       })),

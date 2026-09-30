@@ -80,7 +80,7 @@ const claim = async () => {
     v-if="isVisible"
     type="button"
     :disabled="isDisabled"
-    :aria-label="t('spinner.tripleCoinsAria', { count: total })"
+    :aria-label="t('spinner.tripleCoinsAria', { count: total }, total)"
     :class="isDisabled ? 'cursor-default opacity-50 grayscale' : 'cursor-pointer hover:scale-[103%] active:scale-90'"
     @click.stop="claim"
   )

@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Arena Astral',
     'stage_99': 'Tantangan Omega',
     'stage_100': 'Kor Abadi',
+    'boss_cinder_tyrant': 'Tiran Abu',
+    'boss_glacier_warden': 'Penjaga Gletser',
+    'boss_frostbite_yeti': 'Yeti Beku',
+    'boss_twin_pyres': 'Unggun Kembar',
+    'boss_blizzard_choir': 'Paduan Badai Salju',
+    'boss_shattering_glacier': 'Gletser Retak',
+    'boss_frostfire_pact': 'Pakta Api dan Es',
+    'boss_magma_titan': 'Titan Magma',
+    'boss_blizzard_twins': 'Kembar Badai Salju',
+    'boss_elemental_court': 'Istana Elemen',
     'cheat_boss': 'Bos Curang',
     'cheat_ghost': 'Kembaran Hantu',
     'cheat_split': 'Kawanan Pemecah',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Tahap',
   'bossStage': 'Tahap Bos',
+  'labBadge': 'LAB',
   'bossDefeated': 'Bos dikalahkan',
   'stageN': 'Tahap {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': '{n} tahap lagi',
     'nextUp': 'Tahap berikutnya!',
     'portraitAlt': 'Bos berikutnya: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova Bara',
+      'frost': 'Kunci Es',
+      'chill': 'Gigitan Es'
+    },
+    'frozenAria': 'Membeku: melewatkan giliran berikutnya',
+    'frozenHint': 'Membeku! Mencair setelah giliran ini.',
+    'chillAria': 'Kedinginan: kecepatan −{pct}%',
+    'trophyUnlocked': '{name} terbuka!'
+  },
+  'skills': {
+    'title': 'Skill',
+    'slotEmpty': 'Kosong',
+    'slotAria': 'Slot skill {n}',
+    'slotChip': 'Slot {n}',
+    'unlockAt': 'Tahap {n}',
+    'teaser': 'Kalahkan bos tahap {n} untuk membuka skill!',
+    'lockedSkill': 'Terbuka setelah bos tahap {n}',
+    'equip': 'Pakai',
+    'remove': 'Lepas',
+    'equipped': 'Dipakai',
+    'max': 'MAKS',
+    'new': 'BARU',
+    'now': 'Kini',
+    'next': 'Berikutnya',
+    'nextLine': 'Berikutnya: {values}',
+    'seconds': '{n} dtk',
+    'percent': '{n}%',
+    'unlockedTitle': 'Skill terbuka!',
+    'newSkillTitle': 'Skill baru!',
+    'newSlotTitle': 'Slot skill baru!',
+    'bossDrop': 'Kalahkan bos ini untuk membuka {name}',
+    'bossDropMystery': 'Kalahkan bos ini untuk membuka sesuatu yang baru',
+    'learn': 'Pelajari',
+    'manage': 'Pakai & tingkatkan',
+    'pickerTitle': 'Skill · slot {n}',
+    'opponentSkills': 'Skill lawan',
+    'hint': 'Skill yang kamu pakai berlaku untuk kedua gasing. Pelajari dan tingkatkan skill dengan koin sampai level 10.',
+    'learnAria': 'Pelajari {name} seharga {cost} koin',
+    'upgradeAria': 'Tingkatkan {name} seharga {cost} koin',
+    'topUpAria': 'Tonton iklan untuk {n} koin',
+    'hudAria': '{name}, level {n}',
+    'intro': {
+      'kicker': 'Kekuatan baru',
+      'line1': 'Kalahkan bos untuk membuka skill.',
+      'line2': 'Pelajari dan tingkatkan dengan koin.',
+      'line3': 'Pakai hingga 2 — kedua gasing memakainya.',
+      'line4': 'Dalam pertarungan, skill aktif sendiri.',
+      'cta': 'Pilih skill-mu',
+      'demoAria': 'Contoh: {name} masuk ke slot skill. Dalam pertarungan, skill ini menahan separuh serangan musuh dan memantulkannya.'
+    },
+    'names': {
+      'phase_step': 'Langkah Fase',
+      'guard_shell': 'Cangkang Pelindung',
+      'second_wind': 'Napas Kedua',
+      'lucky_edge': 'Mata Pisau Hoki',
+      'homing_rockets': 'Roket Pelacak',
+      'opening_salvo': 'Salvo Pembuka',
+      'momentum': 'Daya Dorong',
+      'hazard_ward': 'Penangkal Bahaya',
+      'static_charge': 'Muatan Statis',
+      'mirror_plate': 'Pelat Cermin'
+    },
+    'desc': {
+      'phase_step': 'Peluang {chance}% menembus serangan musuh tanpa menerima kerusakan. Jeda {cd} dtk.',
+      'guard_shell': 'Mulai setiap pertarungan dengan perisai sebesar {pct}% HP maks. Perisai menyerap kerusakan sebelum HP.',
+      'second_wind': 'Sekali per pertarungan, saat HP turun ke {threshold}% atau kurang: pulihkan {pct}% HP maks.',
+      'lucky_edge': 'Peluang {chance}% sebuah serangan menjadi kritikal hoki dengan kerusakan ×{mult}.',
+      'homing_rockets': 'Setiap {n} benturan dengan musuh: roket mengenai hingga 3 musuh sebesar {pct}% serangan telak, dibagi.',
+      'opening_salvo': 'Saat pertarungan dimulai, setiap musuh kehilangan {pct}% HP maksnya.',
+      'momentum': 'Selama peluncuranmu, setiap pantulan dinding atau serangan menambah +{pct}% kerusakan untuk serangan berikutnya (maks. 3).',
+      'hazard_ward': 'Aura lava dan petir memberi {hazard}% lebih sedikit kerusakan, duri {chip}% lebih sedikit; dinding kejut menyisakan {shock}% kecepatanmu, bukan 10%.',
+      'static_charge': 'Peluang {chance}% menyetrum musuh yang menabrakmu: musuh berhenti dan melewatkan giliran berikutnya.',
+      'mirror_plate': 'Peluang {chance}% menahan separuh serangan musuh dan memantulkannya kembali.'
+    }
   },
   'you': 'KAMU',
   'prev': 'Mundur',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kode Undangan',
     'copy': 'Salin',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Ayo gabung duel PvP Chaos Arena-ku!'
+    'shareText': 'Ayo gabung duel PvP Chaos Arena-ku!',
+    'versionMismatch': 'Lawanmu memakai versi game yang berbeda. Kedua pemain perlu memuat ulang halaman lalu mencoba lagi.'
   },
   'parts': {
     'star': 'Bilah Bintang',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narwal',
     'stag-beetle': 'Kumbang Rusa',
     'drill': 'Bor',
-    'lancer': 'Penombak'
+    'lancer': 'Penombak',
+    'cinder': 'Bara',
+    'frost-vault': 'Brankas Es',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '{name} didapat!'
+  },
+  'trophySkin': {
+    'label': 'Trofi bos',
+    'hint': 'Didapat dengan mengalahkan bos yang memakainya',
+    'beatStage': 'Kalahkan tahap {n}'
   },
   'tips': {
     'tankyBottom': 'Tips: Sudah coba bagian bawah Tangguh? HP-nya besar, jadi kamu bisa bertahan lebih banyak ronde!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Dapatkan Berlian',
-        'subtitle': 'Berlian membuka latar dan (segera) skill yang kuat.',
+        'subtitle': 'Berlian membuka latar untuk arenamu.',
         'popular': 'Populer',
         'bestValue': 'Terhemat',
         'note': 'Pembelian mendukung game ini. Pembayaran aman.'

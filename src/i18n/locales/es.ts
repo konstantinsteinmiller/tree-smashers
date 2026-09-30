@@ -102,6 +102,16 @@ export default {
     'stage_98': 'Arena Astral',
     'stage_99': 'Guantelete Omega',
     'stage_100': 'El Coro Eterno',
+    'boss_cinder_tyrant': 'El Tirano de Ceniza',
+    'boss_glacier_warden': 'El Guardián Glaciar',
+    'boss_frostbite_yeti': 'El Yeti Gélido',
+    'boss_twin_pyres': 'Las Piras Gemelas',
+    'boss_blizzard_choir': 'El Coro de Ventisca',
+    'boss_shattering_glacier': 'El Glaciar Quebrado',
+    'boss_frostfire_pact': 'El Pacto de Hielo y Fuego',
+    'boss_magma_titan': 'El Titán de Magma',
+    'boss_blizzard_twins': 'Los Gemelos de Ventisca',
+    'boss_elemental_court': 'La Corte Elemental',
     'cheat_boss': 'Jefe Trampa',
     'cheat_ghost': 'Gemelo Fantasma',
     'cheat_split': 'Enjambre Destructor',
@@ -167,6 +177,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa Jefe',
+  'labBadge': 'LAB',
   'bossDefeated': 'Jefe derrotado',
   'stageN': 'Etapa {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -181,6 +192,83 @@ export default {
     'nextUp': '¡Siguiente etapa!',
     'portraitAlt': 'Próximo jefe: {name}'
   },
+  'bosses': {
+    'traits': {
+      'ember': 'Nova de Brasas',
+      'frost': 'Bloqueo Gélido',
+      'chill': 'Congelación'
+    },
+    'frozenAria': 'Congelada: pierde su siguiente turno',
+    'frozenHint': '¡Congelada! Se descongela tras este turno.',
+    'chillAria': 'Helada: velocidad −{pct}%',
+    'trophyUnlocked': '¡{name} desbloqueado!'
+  },
+  'skills': {
+    'title': 'Habilidades',
+    'slotEmpty': 'Vacío',
+    'slotAria': 'Espacio de habilidad {n}',
+    'slotChip': 'Espacio {n}',
+    'unlockAt': 'Etapa {n}',
+    'teaser': '¡Vence al jefe de la etapa {n} para desbloquear habilidades!',
+    'lockedSkill': 'Se desbloquea tras el jefe de la etapa {n}',
+    'equip': 'Equipar',
+    'remove': 'Quitar',
+    'equipped': 'Equipada',
+    'max': 'MÁX',
+    'new': 'NUEVO',
+    'now': 'Ahora',
+    'next': 'Siguiente',
+    'nextLine': 'Siguiente: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': '¡Habilidades desbloqueadas!',
+    'newSkillTitle': '¡Nueva habilidad!',
+    'newSlotTitle': '¡Nuevo espacio!',
+    'bossDrop': 'Vence a este jefe para desbloquear {name}',
+    'bossDropMystery': 'Vence a este jefe para desbloquear algo nuevo',
+    'learn': 'Aprender',
+    'manage': 'Equipar y mejorar',
+    'pickerTitle': 'Habilidades · espacio {n}',
+    'opponentSkills': 'Habilidades del rival',
+    'hint': 'Las habilidades equipadas funcionan en ambas peonzas. Apréndelas y mejóralas con monedas hasta el nivel 10.',
+    'learnAria': 'Aprender {name} por {cost} moneda | Aprender {name} por {cost} monedas',
+    'upgradeAria': 'Mejorar {name} por {cost} moneda | Mejorar {name} por {cost} monedas',
+    'topUpAria': 'Mira un anuncio para ganar {n} moneda | Mira un anuncio para ganar {n} monedas',
+    'hudAria': '{name}, nivel {n}',
+    'intro': {
+      'kicker': 'Nuevo poder',
+      'line1': 'Vence jefes para desbloquear habilidades.',
+      'line2': 'Apréndelas y mejóralas con monedas.',
+      'line3': 'Equipa hasta 2: las usan ambas peonzas.',
+      'line4': 'En combate se activan solas.',
+      'cta': 'Elige tu habilidad',
+      'demoAria': 'Ejemplo: {name} va a un espacio de habilidad. En combate bloquea la mitad de un golpe enemigo y lo devuelve.'
+    },
+    'names': {
+      'phase_step': 'Paso fantasma',
+      'guard_shell': 'Escudo guardián',
+      'second_wind': 'Segundo aliento',
+      'lucky_edge': 'Filo afortunado',
+      'homing_rockets': 'Cohetes teledirigidos',
+      'opening_salvo': 'Salva inicial',
+      'momentum': 'Impulso',
+      'hazard_ward': 'Guarda de peligros',
+      'static_charge': 'Carga estática',
+      'mirror_plate': 'Placa espejo'
+    },
+    'desc': {
+      'phase_step': '{chance}% de probabilidad de atravesar un golpe enemigo sin recibir daño. Recarga {cd} s.',
+      'guard_shell': 'Empieza cada combate con un escudo del {pct}% de la vida máxima. Absorbe daño antes que la vida.',
+      'second_wind': 'Una vez por combate, cuando la vida baja al {threshold}% o menos: cura el {pct}% de la vida máxima.',
+      'lucky_edge': '{chance}% de probabilidad de que un golpe sea un crítico afortunado de ×{mult} daño.',
+      'homing_rockets': 'Cada {n} choques con enemigos: cohetes golpean hasta 3 enemigos con el {pct}% de un golpe fuerte, repartido.',
+      'opening_salvo': 'Al empezar el combate, cada enemigo pierde el {pct}% de su vida máxima.',
+      'momentum': 'Durante tu lanzamiento, cada rebote en la pared o golpe añade +{pct}% de daño a tus siguientes golpes (máx. 3).',
+      'hazard_ward': 'La lava y las auras de trueno dañan un {hazard}% menos, los pinchos un {chip}% menos; las paredes eléctricas te dejan un {shock}% de velocidad en vez del 10%.',
+      'static_charge': '{chance}% de probabilidad de electrocutar a un enemigo que te embiste: se detiene y pierde su siguiente turno.',
+      'mirror_plate': '{chance}% de probabilidad de bloquear la mitad de un golpe enemigo y devolverla.'
+    }
+  },
   'you': 'TÚ',
   'prev': 'Ant.',
   'next': 'Sig.',
@@ -194,7 +282,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Girando...',
     'spinAgain': 'Girar de nuevo',
-    'tripleCoinsAria': 'Mira un anuncio para conseguir {count} monedas en total',
+    'tripleCoinsAria': 'Mira un anuncio para conseguir {count} moneda en total | Mira un anuncio para conseguir {count} monedas en total',
     'skip': 'Saltar',
     'youWin': '¡GANASTE!',
     'youLose': '¡PERDISTE!',
@@ -256,7 +344,8 @@ export default {
     'inviteCode': 'Código de invitación',
     'copy': 'Copiar',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': '¡Únete a mi batalla PvP de Chaos Arena!'
+    'shareText': '¡Únete a mi batalla PvP de Chaos Arena!',
+    'versionMismatch': 'Tu rival usa otra versión del juego. Los dos jugadores tenéis que recargar la página y volver a intentarlo.'
   },
   'parts': {
     'star': 'Cuchilla estelar',
@@ -364,10 +453,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Ciervo Volante',
     'drill': 'Taladro',
-    'lancer': 'Lancero'
+    'lancer': 'Lancero',
+    'cinder': 'Ceniza',
+    'frost-vault': 'Bóveda Gélida',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': '¡{name} conseguido!'
+  },
+  'trophySkin': {
+    'label': 'Trofeo de jefe',
+    'hint': 'Se gana al derrotar al jefe que lo lleva',
+    'beatStage': 'Supera la etapa {n}'
   },
   'tips': {
     'tankyBottom': 'Consejo: ¿Has probado a usar una pieza inferior tipo tanque? ¡Te da mucha vida para aguantar más rondas!',
@@ -506,7 +603,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Conseguir diamantes',
-        'subtitle': 'Los diamantes desbloquean fondos y (pronto) habilidades poderosas.',
+        'subtitle': 'Los diamantes desbloquean fondos para tu arena.',
         'popular': 'Popular',
         'bestValue': 'Mejor valor',
         'note': 'Las compras apoyan el juego. Pago seguro.'

@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astralinė arena',
     'stage_99': 'Omega iššūkis',
     'stage_100': 'Amžinasis choras',
+    'boss_cinder_tyrant': 'Pelenų tironas',
+    'boss_glacier_warden': 'Ledyno sargas',
+    'boss_frostbite_yeti': 'Nušalimo jetis',
+    'boss_twin_pyres': 'Laužų dvyniai',
+    'boss_blizzard_choir': 'Pūgos choras',
+    'boss_shattering_glacier': 'Skylantis ledynas',
+    'boss_frostfire_pact': 'Ugnies ir ledo paktas',
+    'boss_magma_titan': 'Magmos titanas',
+    'boss_blizzard_twins': 'Pūgos dvyniai',
+    'boss_elemental_court': 'Stichijų dvaras',
     'cheat_boss': 'Sukčius bosas',
     'cheat_ghost': 'Vaiduoklis dvynys',
     'cheat_split': 'Byrantis spiečius',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapas',
   'bossStage': 'Boso etapas',
+  'labBadge': 'LAB',
   'bossDefeated': 'Bosas nugalėtas',
   'stageN': '{n} etapas',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': 'Liko etapų: {n}',
     'nextUp': 'Kitas etapas!',
     'portraitAlt': 'Kitas bosas: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Žarijų nova',
+      'frost': 'Ledo pančiai',
+      'chill': 'Nušalimas'
+    },
+    'frozenAria': 'Užšalęs: praleidžia kitą ėjimą',
+    'frozenHint': 'Užšalo! Atitirps po šio ėjimo.',
+    'chillAria': 'Atšalęs: greitis −{pct}%',
+    'trophyUnlocked': 'Atrakinta: {name}!'
+  },
+  'skills': {
+    'title': 'Įgūdžiai',
+    'slotEmpty': 'Tuščia',
+    'slotAria': 'Įgūdžio vieta {n}',
+    'slotChip': 'Vieta {n}',
+    'unlockAt': 'Etapas {n}',
+    'teaser': 'Nugalėk {n} etapo bosą ir atrakink įgūdžius!',
+    'lockedSkill': 'Atrakinama nugalėjus {n} etapo bosą',
+    'equip': 'Naudoti',
+    'remove': 'Nuimti',
+    'equipped': 'Naudojama',
+    'max': 'MAKS.',
+    'new': 'NAUJA',
+    'now': 'Dabar',
+    'next': 'Kitas',
+    'nextLine': 'Kitas: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Įgūdžiai atrakinti!',
+    'newSkillTitle': 'Naujas įgūdis!',
+    'newSlotTitle': 'Nauja įgūdžio vieta!',
+    'bossDrop': 'Nugalėk šį bosą ir atrakink: {name}',
+    'bossDropMystery': 'Nugalėk šį bosą ir atrakink kažką naujo',
+    'learn': 'Išmokti',
+    'manage': 'Naudoti ir tobulinti',
+    'pickerTitle': 'Įgūdžiai · vieta {n}',
+    'opponentSkills': 'Varžovo įgūdžiai',
+    'hint': 'Naudojami įgūdžiai veikia abu vilkelius. Mokykis ir tobulink įgūdžius už monetas iki 10 lygio.',
+    'learnAria': 'Išmokti {name} už {cost} monetą | Išmokti {name} už {cost} monetas | Išmokti {name} už {cost} monetų',
+    'upgradeAria': 'Patobulinti {name} už {cost} monetą | Patobulinti {name} už {cost} monetas | Patobulinti {name} už {cost} monetų',
+    'topUpAria': 'Žiūrėk reklamą ir gauk {n} monetą | Žiūrėk reklamą ir gauk {n} monetas | Žiūrėk reklamą ir gauk {n} monetų',
+    'hudAria': '{name}, lygis {n}',
+    'intro': {
+      'kicker': 'Nauja galia',
+      'line1': 'Nugalėk bosus ir atrakink įgūdžius.',
+      'line2': 'Mokykis ir tobulink juos už monetas.',
+      'line3': 'Naudok iki 2 — juos naudoja abu vilkeliai.',
+      'line4': 'Kovoje jie suveikia patys.',
+      'cta': 'Rinkis įgūdį',
+      'demoAria': 'Pavyzdys: {name} dedamas į įgūdžio vietą. Kovoje jis blokuoja pusę priešo smūgio ir grąžina ją atgal.'
+    },
+    'names': {
+      'phase_step': 'Fazės žingsnis',
+      'guard_shell': 'Apsauginis kiautas',
+      'second_wind': 'Antras kvėpavimas',
+      'lucky_edge': 'Sėkmės ašmenys',
+      'homing_rockets': 'Nusitaikančios raketos',
+      'opening_salvo': 'Pradžios salvė',
+      'momentum': 'Įsibėgėjimas',
+      'hazard_ward': 'Pavojų skydas',
+      'static_charge': 'Statinis krūvis',
+      'mirror_plate': 'Veidrodinė plokštė'
+    },
+    'desc': {
+      'phase_step': '{chance}% tikimybė praslysti pro priešo smūgį be žalos. Atsinaujinimas {cd} s.',
+      'guard_shell': 'Kiekvieną kovą pradėk su skydu, lygiu {pct}% maks. HP. Jis sugeria žalą prieš HP.',
+      'second_wind': 'Kartą per kovą, kai HP nukrenta iki {threshold}% ar mažiau: pagydo {pct}% maks. HP.',
+      'lucky_edge': '{chance}% tikimybė, kad smūgis taps sėkmingu kritiniu smūgiu su ×{mult} žala.',
+      'homing_rockets': 'Kas {n} susidūrimų su priešais: raketos pataiko iki 3 priešų už {pct}% stipraus smūgio, padalyta.',
+      'opening_salvo': 'Kovos pradžioje kiekvienas priešas netenka {pct}% maks. HP.',
+      'momentum': 'Tavo paleidimo metu kiekvienas atšokimas nuo sienos ar smūgis prideda +{pct}% žalos kitiems smūgiams (maks. 3).',
+      'hazard_ward': 'Lavos ir perkūnijos auros daro {hazard}% mažiau žalos, spygliai {chip}% mažiau; šoko sienos palieka tau {shock}% greičio vietoj 10%.',
+      'static_charge': '{chance}% tikimybė nutrenkti srove priešą, kuris į tave rėžiasi: jis sustoja ir praleidžia kitą ėjimą.',
+      'mirror_plate': '{chance}% tikimybė užblokuoti pusę priešo smūgio ir grąžinti ją atgal.'
+    }
   },
   'you': 'TU',
   'prev': 'Atgal',
@@ -193,7 +281,7 @@ export default {
     'free': 'NEMOKAMAI',
     'spinning': 'Sukasi...',
     'spinAgain': 'Sukti dar kartą',
-    'tripleCoinsAria': 'Pažiūrėk reklamą ir gauk iš viso {count} monetų',
+    'tripleCoinsAria': 'Pažiūrėk reklamą ir gauk iš viso {count} monetą | Pažiūrėk reklamą ir gauk iš viso {count} monetas | Pažiūrėk reklamą ir gauk iš viso {count} monetų',
     'skip': 'Praleisti',
     'youWin': 'LAIMĖJAI!',
     'youLose': 'PRALAIMĖJAI!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Kvietimo kodas',
     'copy': 'Kopijuoti',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Prisijunk prie mano PvP kovos žaidime Chaos Arena!'
+    'shareText': 'Prisijunk prie mano PvP kovos žaidime Chaos Arena!',
+    'versionMismatch': 'Tavo priešininkas naudoja kitą žaidimo versiją. Abu žaidėjai turi iš naujo įkelti puslapį ir bandyti dar kartą.'
   },
   'parts': {
     'star': 'Žvaigždė',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narvalas',
     'stag-beetle': 'Elniavabalis',
     'drill': 'Grąžtas',
-    'lancer': 'Ietininkas'
+    'lancer': 'Ietininkas',
+    'cinder': 'Žarija',
+    'frost-vault': 'Šalčio skliautas',
+    'yeti': 'Jetis'
   },
   'skinChest': {
     'acquired': 'Gauta: {name}!'
+  },
+  'trophySkin': {
+    'label': 'Boso trofėjus',
+    'hint': 'Gaunamas nugalėjus bosą, kuris jį dėvi',
+    'beatStage': 'Įveik {n} etapą'
   },
   'tips': {
     'tankyBottom': 'Patarimas: Ar bandei tvirtą apatinę dalį? Ji suteikia daug HP, kad išgyventum daugiau raundų!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Gauk deimantų',
-        'subtitle': 'Deimantai atrakina fonus ir (netrukus) galingus įgūdžius.',
+        'subtitle': 'Deimantai atrakina fonus tavo arenai.',
         'popular': 'Populiaru',
         'bestValue': 'Top kaina',
         'note': 'Pirkiniai remia žaidimą. Saugus mokėjimas.'

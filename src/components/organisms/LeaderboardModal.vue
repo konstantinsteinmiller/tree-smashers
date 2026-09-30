@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 // board below is just a grid; it does not care what frames it.
 import FModal from '@/components/molecules/FModal.vue'
 import { playerDisplayName } from '@/use/usePlayerIdentity'
+import { sanitizeDisplayName } from '@/utils/nameDenylist'
 import {
   ensureBoard, leaderboard, leaderboardFailed,
   leaderboardPending, playerTotal, rankFor
@@ -84,7 +85,9 @@ watch(model, (open) => {
   if (!open) return
   void ensureBoard()
   void playerDisplayName().then((name) => {
-    ownName.value = name
+    // Masked the same way the board's rows are (deterministically), so a player
+    // whose own name was masked still finds their row.
+    ownName.value = sanitizeDisplayName(name)
   })
 }, { immediate: true })
 </script>

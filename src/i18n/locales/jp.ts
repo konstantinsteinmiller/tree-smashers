@@ -102,6 +102,16 @@ export default {
     'stage_98': '星界アリーナ',
     'stage_99': 'オメガガントレット',
     'stage_100': '永遠の聖歌隊',
+    'boss_cinder_tyrant': '灰燼の暴君',
+    'boss_glacier_warden': '氷河の番人',
+    'boss_frostbite_yeti': '凍傷のイエティ',
+    'boss_twin_pyres': '双子の業火',
+    'boss_blizzard_choir': 'ブリザード聖歌隊',
+    'boss_shattering_glacier': '砕けゆく氷河',
+    'boss_frostfire_pact': '氷炎の盟約',
+    'boss_magma_titan': 'マグマタイタン',
+    'boss_blizzard_twins': 'ブリザードの双子',
+    'boss_elemental_court': '元素の宮廷',
     'cheat_boss': 'チートボス',
     'cheat_ghost': 'ファントムツイン',
     'cheat_split': '粉砕の群れ',
@@ -167,6 +177,7 @@ export default {
   'vs': 'VS',
   'stage': 'ステージ',
   'bossStage': 'ボスステージ',
+  'labBadge': 'ラボ',
   'bossDefeated': 'ボス撃破',
   'stageN': 'ステージ {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
@@ -180,6 +191,83 @@ export default {
     'stagesAway': 'あと{n}ステージ',
     'nextUp': '次のステージ！',
     'portraitAlt': '次のボス：{name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': '残り火ノヴァ',
+      'frost': 'フロストロック',
+      'chill': '凍傷'
+    },
+    'frozenAria': '凍結中：次のターンは休み',
+    'frozenHint': '凍結中！このターンの後に解ける。',
+    'chillAria': '冷気：速度−{pct}%',
+    'trophyUnlocked': '{name}を解放！'
+  },
+  'skills': {
+    'title': 'スキル',
+    'slotEmpty': '空き',
+    'slotAria': 'スキルスロット{n}',
+    'slotChip': 'スロット{n}',
+    'unlockAt': 'ステージ{n}',
+    'teaser': 'ステージ{n}のボスを倒してスキルを解放しよう！',
+    'lockedSkill': 'ステージ{n}のボスを倒すと解放',
+    'equip': '装備',
+    'remove': '外す',
+    'equipped': '装備中',
+    'max': 'MAX',
+    'new': 'NEW',
+    'now': '現在',
+    'next': '次',
+    'nextLine': '次：{values}',
+    'seconds': '{n}秒',
+    'percent': '{n}%',
+    'unlockedTitle': 'スキル解放！',
+    'newSkillTitle': '新しいスキル！',
+    'newSlotTitle': '新しいスキルスロット！',
+    'bossDrop': 'このボスを倒すと{name}が解放',
+    'bossDropMystery': 'このボスを倒すと新要素が解放',
+    'learn': '習得',
+    'manage': '装備・強化',
+    'pickerTitle': 'スキル · スロット{n}',
+    'opponentSkills': '相手のスキル',
+    'hint': '装備したスキルは両方のスピナーに効果があります。コインで習得し、レベル10まで強化できます。',
+    'learnAria': '{cost}コインで{name}を習得',
+    'upgradeAria': '{cost}コインで{name}を強化',
+    'topUpAria': '広告を見て{n}コインを獲得',
+    'hudAria': '{name}、レベル{n}',
+    'intro': {
+      'kicker': '新たな力',
+      'line1': 'ボスを倒してスキルを解放。',
+      'line2': 'コインで習得・強化しよう。',
+      'line3': '最大2つ装備でき、両方のスピナーが使う。',
+      'line4': 'バトル中は自動で発動する。',
+      'cta': 'スキルを選ぼう',
+      'demoAria': '例：{name}をスキルスロットにセット。バトル中、敵の攻撃の半分を防いで跳ね返す。'
+    },
+    'names': {
+      'phase_step': 'ファントムステップ',
+      'guard_shell': 'ガードシェル',
+      'second_wind': 'セカンドウィンド',
+      'lucky_edge': 'ラッキーエッジ',
+      'homing_rockets': 'ホーミングロケット',
+      'opening_salvo': '開幕砲撃',
+      'momentum': 'モメンタム',
+      'hazard_ward': 'ハザードガード',
+      'static_charge': 'スタティックチャージ',
+      'mirror_plate': 'ミラープレート'
+    },
+    'desc': {
+      'phase_step': '{chance}%の確率で敵の攻撃をすり抜け、ダメージを受けない。クールダウン{cd}秒。',
+      'guard_shell': 'バトル開始時に最大HPの{pct}%のシールドを得る。HPより先にダメージを吸収する。',
+      'second_wind': 'バトル中1回、HPが{threshold}%以下になると最大HPの{pct}%を回復。',
+      'lucky_edge': '{chance}%の確率で攻撃がラッキークリティカルになり、×{mult}のダメージ。',
+      'homing_rockets': '敵と{n}回ぶつかるごとに、ロケットが最大3体の敵に強打の{pct}%分のダメージを分配。',
+      'opening_salvo': 'バトル開始時、すべての敵が最大HPの{pct}%を失う。',
+      'momentum': '自分の発射中、壁での跳ね返りや攻撃ごとに以降の攻撃ダメージ+{pct}%（最大3回）。',
+      'hazard_ward': '溶岩と雷のオーラのダメージ-{hazard}%、トゲ-{chip}%。電撃壁でも速度が10%ではなく{shock}%残る。',
+      'static_charge': '体当たりしてきた敵を{chance}%の確率で感電させる：敵は止まり、次のターンを休む。',
+      'mirror_plate': '{chance}%の確率で敵の攻撃の半分を防ぎ、相手に跳ね返す。'
+    }
   },
   'you': 'あなた',
   'prev': '前へ',
@@ -256,7 +344,8 @@ export default {
     'inviteCode': '招待コード',
     'copy': 'コピー',
     'shareTitle': 'カオスアリーナ PvP',
-    'shareText': 'カオスアリーナPvPバトルに参加しよう！'
+    'shareText': 'カオスアリーナPvPバトルに参加しよう！',
+    'versionMismatch': '対戦相手は別のバージョンのゲームを使っています。両方のプレイヤーがページを再読み込みして、もう一度お試しください。'
   },
   'parts': {
     'star': 'スターブレード',
@@ -364,10 +453,18 @@ export default {
     'narwhal': 'ナーワル',
     'stag-beetle': 'スタッグビートル',
     'drill': 'ドリル',
-    'lancer': 'ランサー'
+    'lancer': 'ランサー',
+    'cinder': 'シンダー',
+    'frost-vault': 'フロストヴォールト',
+    'yeti': 'イエティ'
   },
   'skinChest': {
     'acquired': '{name}を獲得！'
+  },
+  'trophySkin': {
+    'label': 'ボストロフィー',
+    'hint': 'これを身につけたボスを倒すと手に入る',
+    'beatStage': 'ステージ{n}をクリア'
   },
   'tips': {
     'tankyBottom': 'ヒント：タンク型の下部パーツを試しましたか？HPが大きく上がり、より長くラウンドを生き延びられます！',
@@ -506,7 +603,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'ダイヤを入手',
-        'subtitle': 'ダイヤで背景や（近日）強力なスキルを解放。',
+        'subtitle': 'ダイヤでアリーナの背景を解放。',
         'popular': '人気',
         'bestValue': 'お得',
         'note': '購入はゲームを支援します。安全な決済。'

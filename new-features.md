@@ -4,7 +4,7 @@
   with coins anymore.
 - [x] Add fancy "Boss defeated" label in reddish big letters after each boss like in Elden Ring or GTA,
   adjusted font size to language locale and font.
-- [ ] build the new skill system
+- [x] build the new skill system
 - [x] gift every first-time player a free 2x speedup once showing a fancy "Free"-label instead of the usual MovieIcon on
   AdProvider builds.
 - [x] create new videos using the video-pipeline with a preview of 3 different arenas, fire arena (showing burn vfx and

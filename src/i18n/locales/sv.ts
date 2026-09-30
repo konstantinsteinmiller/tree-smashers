@@ -103,6 +103,16 @@ export default {
     'stage_98': 'Astralarenan',
     'stage_99': 'Omegagatloppet',
     'stage_100': 'Den eviga kören',
+    'boss_cinder_tyrant': 'Asktyrannen',
+    'boss_glacier_warden': 'Glaciärväktaren',
+    'boss_frostbite_yeti': 'Köldbettsyetin',
+    'boss_twin_pyres': 'Tvillingbålen',
+    'boss_blizzard_choir': 'Snöstormskören',
+    'boss_shattering_glacier': 'Den spruckna glaciären',
+    'boss_frostfire_pact': 'Eld- och ispakten',
+    'boss_magma_titan': 'Magmatitanen',
+    'boss_blizzard_twins': 'Snöstormstvillingarna',
+    'boss_elemental_court': 'Elementens hov',
     'cheat_boss': 'Fuskboss',
     'cheat_ghost': 'Fantomtvilling',
     'cheat_split': 'Splittrande svärm',
@@ -168,6 +178,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapp',
   'bossStage': 'Bossetapp',
+  'labBadge': 'LABB',
   'bossDefeated': 'Boss besegrad',
   'stageN': 'Etapp {n}',
   'intro': {
@@ -179,6 +190,83 @@ export default {
     'stagesAway': '{n} etapper kvar',
     'nextUp': 'Nästa etapp!',
     'portraitAlt': 'Nästa boss: {name}'
+  },
+  'bosses': {
+    'traits': {
+      'ember': 'Glödnova',
+      'frost': 'Frostlås',
+      'chill': 'Köldbett'
+    },
+    'frozenAria': 'Frusen: står över nästa tur',
+    'frozenHint': 'Frusen! Tinar efter den här turen.',
+    'chillAria': 'Nedkyld: fart −{pct}%',
+    'trophyUnlocked': '{name} upplåst!'
+  },
+  'skills': {
+    'title': 'Förmågor',
+    'slotEmpty': 'Tom',
+    'slotAria': 'Förmågeplats {n}',
+    'slotChip': 'Plats {n}',
+    'unlockAt': 'Etapp {n}',
+    'teaser': 'Besegra bossen på etapp {n} för att låsa upp förmågor!',
+    'lockedSkill': 'Låses upp efter bossen på etapp {n}',
+    'equip': 'Utrusta',
+    'remove': 'Ta bort',
+    'equipped': 'Utrustad',
+    'max': 'MAX',
+    'new': 'NY',
+    'now': 'Nu',
+    'next': 'Nästa',
+    'nextLine': 'Nästa: {values}',
+    'seconds': '{n} s',
+    'percent': '{n}%',
+    'unlockedTitle': 'Förmågor upplåsta!',
+    'newSkillTitle': 'Ny förmåga!',
+    'newSlotTitle': 'Ny förmågeplats!',
+    'bossDrop': 'Besegra den här bossen för att låsa upp {name}',
+    'bossDropMystery': 'Besegra den här bossen för att låsa upp något nytt',
+    'learn': 'Lär dig',
+    'manage': 'Utrusta & uppgradera',
+    'pickerTitle': 'Förmågor · plats {n}',
+    'opponentSkills': 'Motståndarens förmågor',
+    'hint': 'Dina utrustade förmågor verkar på båda snurrorna. Lär dig och uppgradera förmågor med mynt upp till nivå 10.',
+    'learnAria': 'Lär dig {name} för {cost} mynt | Lär dig {name} för {cost} mynt',
+    'upgradeAria': 'Uppgradera {name} för {cost} mynt | Uppgradera {name} för {cost} mynt',
+    'topUpAria': 'Titta på en annons för {n} mynt | Titta på en annons för {n} mynt',
+    'hudAria': '{name}, nivå {n}',
+    'intro': {
+      'kicker': 'Ny kraft',
+      'line1': 'Besegra bossar för att låsa upp förmågor.',
+      'line2': 'Lär dig och uppgradera dem med mynt.',
+      'line3': 'Utrusta upp till 2 — båda snurrorna använder dem.',
+      'line4': 'I strid aktiveras de av sig själva.',
+      'cta': 'Välj din förmåga',
+      'demoAria': 'Exempel: {name} placeras i en förmågeplats. I strid blockerar den halva fiendens träff och skickar tillbaka den.'
+    },
+    'names': {
+      'phase_step': 'Fassteg',
+      'guard_shell': 'Skyddsskal',
+      'second_wind': 'Andra andningen',
+      'lucky_edge': 'Lyckoklinga',
+      'homing_rockets': 'Målsökande raketer',
+      'opening_salvo': 'Öppningssalva',
+      'momentum': 'Fart',
+      'hazard_ward': 'Faroskydd',
+      'static_charge': 'Statisk laddning',
+      'mirror_plate': 'Spegelplåt'
+    },
+    'desc': {
+      'phase_step': '{chance}% chans att glida igenom en fiendeträff utan skada. Nedkylning {cd} s.',
+      'guard_shell': 'Börja varje strid med en sköld på {pct}% av max-HP. Den tar skada före HP.',
+      'second_wind': 'En gång per strid, när HP sjunker till {threshold}% eller lägre: läk {pct}% av max-HP.',
+      'lucky_edge': '{chance}% chans att en träff blir en kritisk turträff med ×{mult} skada.',
+      'homing_rockets': 'Var {n}:e krock med fiender: raketer träffar upp till 3 fiender för {pct}% av en rejäl träff, delat.',
+      'opening_salvo': 'När striden börjar förlorar varje fiende {pct}% av sin max-HP.',
+      'momentum': 'Under din uppskjutning ger varje studs mot väggen eller träff +{pct}% skada på dina nästa träffar (max 3).',
+      'hazard_ward': 'Lava- och åskauror gör {hazard}% mindre skada, taggar {chip}% mindre; chockväggar lämnar dig {shock}% fart i stället för 10%.',
+      'static_charge': '{chance}% chans att ge en fiende som rammar dig en stöt: den stannar och missar sin nästa tur.',
+      'mirror_plate': '{chance}% chans att blockera halva fiendens träff och skicka tillbaka den.'
+    }
   },
   'you': 'DU',
   'prev': 'Förra',
@@ -193,7 +281,7 @@ export default {
     'free': 'GRATIS',
     'spinning': 'Snurrar...',
     'spinAgain': 'Snurra igen',
-    'tripleCoinsAria': 'Titta på en reklam för att få {count} mynt totalt',
+    'tripleCoinsAria': 'Titta på en reklam för att få {count} mynt totalt | Titta på en reklam för att få {count} mynt totalt',
     'skip': 'Hoppa över',
     'youWin': 'DU VANN!',
     'youLose': 'DU FÖRLORADE!',
@@ -255,7 +343,8 @@ export default {
     'inviteCode': 'Inbjudningskod',
     'copy': 'Kopiera',
     'shareTitle': 'Chaos Arena PvP',
-    'shareText': 'Gå med i min PvP-strid i Chaos Arena!'
+    'shareText': 'Gå med i min PvP-strid i Chaos Arena!',
+    'versionMismatch': 'Din motståndare kör en annan version av spelet. Båda spelarna behöver ladda om sidan och försöka igen.'
   },
   'parts': {
     'star': 'Stjärnklinga',
@@ -363,10 +452,18 @@ export default {
     'narwhal': 'Narval',
     'stag-beetle': 'Ekoxe',
     'drill': 'Borr',
-    'lancer': 'Lansiär'
+    'lancer': 'Lansiär',
+    'cinder': 'Glöd',
+    'frost-vault': 'Frostvalv',
+    'yeti': 'Yeti'
   },
   'skinChest': {
     'acquired': 'Du fick {name}!'
+  },
+  'trophySkin': {
+    'label': 'Bosstrofé',
+    'hint': 'Fås genom att besegra bossen som bär den',
+    'beatStage': 'Klara etapp {n}'
   },
   'tips': {
     'tankyBottom': 'Tips: Har du testat en tålig underdel? Den ger dig massor av HP så att du klarar fler rundor!',
@@ -505,7 +602,7 @@ export default {
     'InAppPurchaseShop': {
       'shop': {
         'title': 'Skaffa diamanter',
-        'subtitle': 'Diamanter låser upp bakgrunder och (snart) kraftfulla förmågor.',
+        'subtitle': 'Diamanter låser upp bakgrunder till din arena.',
         'popular': 'Populär',
         'bestValue': 'Bäst värde',
         'note': 'Dina köp stöder spelet. Säker betalning.'
