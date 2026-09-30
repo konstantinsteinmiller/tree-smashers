@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Es o #{n}',
     'of': 'de {n} xogadores'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Madeira',
+      'bronze': 'Bronce',
+      'silver': 'Prata',
+      'gold': 'Ouro',
+      'platinum': 'Platino',
+      'diamond': 'Diamante',
+      'champion': 'Campión'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'No automático, os efectos baixan se o dispositivo cae por baixo de 25 FPS.',
   'qualityAuto': 'Automático',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase do xefe',
+  'bossDefeated': 'Xefe derrotado',
   'stageN': 'Fase {n}',
   'intro': {
     'reclaim': 'Recupérao todo!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Anuncio',
+    'free': 'GRATIS',
     'spinning': 'Xirando...',
     'spinAgain': 'Xirar de novo',
+    'tripleCoinsAria': 'Mira un anuncio para conseguir {count} moedas en total',
     'skip': 'Saltar',
     'youWin': 'GAÑACHES!',
     'youLose': 'PERDICHES!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamantes',
         'rewardSpeed': 'velocidade de batalla x2',
         'rewardRespin': 'outro xiro',
+        'rewardSkinAd': 'unha aparencia nova',
         'watch': 'Ver anuncio',
         'decline': 'Non, grazas'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'EQUIPADO',
       'selectButton': 'ESCOLLER',
       'hintSelectCards': 'Toca unha carta para escoller a configuración da túa buxaina. Toca o botón de mellora para mellorala.',
-      'hintPlusIcon': 'A icona + na parte de arriba de cada carta de peza superior abre a tenda de aspectos desa peza (p. ex. tenda de aspectos Perforador), onde podes conseguir aspectos novos.'
+      'hintPlusIcon': 'A icona + na parte de arriba de cada carta de peza superior abre a tenda de aspectos desa peza (p. ex. tenda de aspectos Perforador), onde podes conseguir aspectos novos.',
+      'watchAdsToUnlock': 'Mira un anuncio para desbloquear'
     }
   }
 }

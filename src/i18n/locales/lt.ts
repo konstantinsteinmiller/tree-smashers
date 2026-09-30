@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Tavo vieta: #{n}',
     'of': 'iš {n}'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Mediena',
+      'bronze': 'Bronza',
+      'silver': 'Sidabras',
+      'gold': 'Auksas',
+      'platinum': 'Platina',
+      'diamond': 'Deimantas',
+      'champion': 'Čempionas'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatinis režimas sumažina efektus, kai įrenginys nukrenta žemiau 25 FPS.',
   'qualityAuto': 'Automatinė',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapas',
   'bossStage': 'Boso etapas',
+  'bossDefeated': 'Bosas nugalėtas',
   'stageN': '{n} etapas',
   'intro': {
     'reclaim': 'Susigrąžink viską!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklama',
+    'free': 'NEMOKAMAI',
     'spinning': 'Sukasi...',
     'spinAgain': 'Sukti dar kartą',
+    'tripleCoinsAria': 'Pažiūrėk reklamą ir gauk iš viso {count} monetų',
     'skip': 'Praleisti',
     'youWin': 'LAIMĖJAI!',
     'youLose': 'PRALAIMĖJAI!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'deimantai ×{count}',
         'rewardSpeed': 'kovos greitis ×2',
         'rewardRespin': 'dar vienas sukimas',
+        'rewardSkinAd': 'nauja išvaizda',
         'watch': 'Žiūrėti',
         'decline': 'Ne, ačiū'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'NAUDOJAMA',
       'selectButton': 'RINKTIS',
       'hintSelectCards': 'Bakstelk kortelę ir pasirink vilkelio konfigūraciją. Bakstelk patobulinimo mygtuką, kad ją patobulintum.',
-      'hintPlusIcon': 'Piktograma + kiekvienos viršutinės dalies kortelės viršuje atidaro tos dalies skinų parduotuvę (pvz., Pramušėjo skinų parduotuvę), kur gali gauti naujų skinų.'
+      'hintPlusIcon': 'Piktograma + kiekvienos viršutinės dalies kortelės viršuje atidaro tos dalies skinų parduotuvę (pvz., Pramušėjo skinų parduotuvę), kur gali gauti naujų skinų.',
+      'watchAdsToUnlock': 'Žiūrėk reklamą, kad atrakintum'
     }
   }
 }

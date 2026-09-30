@@ -8,6 +8,7 @@ import { SKINS_PER_TOP, type SpinnerModelId } from '@/data/skinCatalog'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { NON_CIRCLE_SHAPES, type ArenaShape } from '@/use/arenaShapes'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { utcDayKey } from '@/utils/dayKey'
 
 // ─── Daily Challenge ─────────────────────────────────────────────────────────
 //
@@ -61,7 +62,7 @@ const randInt = (min: number, max: number) => Math.floor(min + Math.random() * (
  *  but sourced from the pure catalogue to keep this module cycle-free). */
 const randomSkinForTop = (topPartId: TopPartId): SpinnerModelId => rand(SKINS_PER_TOP[topPartId])
 
-const todayStr = (): string => new Date().toISOString().slice(0, 10)
+const todayStr = (): string => utcDayKey()
 
 const loadState = (): DailyChallengeState => {
   try {

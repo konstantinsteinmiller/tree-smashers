@@ -141,6 +141,19 @@ export default {
     'yourRank': '현재 #{n}위',
     'of': '/ {n}명 중'
   },
+  'league': {
+    'tiers': {
+      'wood': '우드',
+      'bronze': '브론즈',
+      'silver': '실버',
+      'gold': '골드',
+      'platinum': '플래티넘',
+      'diamond': '다이아몬드',
+      'champion': '챔피언'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} {position}위'
+  },
   'graphicsQuality': '그래픽',
   'graphicsQualityNote': '자동 모드는 기기가 25FPS 아래로 떨어지면 효과를 줄입니다.',
   'qualityAuto': '자동',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': '스테이지',
   'bossStage': '보스 스테이지',
+  'bossDefeated': '보스 격파',
   'stageN': '스테이지 {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': '광고',
+    'free': '무료',
     'spinning': '회전 중...',
     'spinAgain': '다시 돌리기',
+    'tripleCoinsAria': '광고를 보고 총 {count}코인 받기',
     'skip': '건너뛰기',
     'youWin': '승리!',
     'youLose': '패배!',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '다이아 {count}개',
         'rewardSpeed': '전투 속도 2배',
         'rewardRespin': '한 번 더 돌리기',
+        'rewardSkinAd': '새 스킨',
         'watch': '광고 보기',
         'decline': '괜찮아요'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': '장착됨',
       'selectButton': '선택',
       'hintSelectCards': '카드를 탭하여 블레이드 구성을 선택하고, 업그레이드 버튼으로 강화하세요.',
-      'hintPlusIcon': '상단 파츠 카드 위쪽의 \'+\' 아이콘을 누르면 해당 파츠의 스킨 상점(예: 관통자 상점)이 열려 새 스킨을 구매할 수 있습니다.'
+      'hintPlusIcon': '상단 파츠 카드 위쪽의 \'+\' 아이콘을 누르면 해당 파츠의 스킨 상점(예: 관통자 상점)이 열려 새 스킨을 구매할 수 있습니다.',
+      'watchAdsToUnlock': '광고를 보고 잠금 해제'
     }
   }
 }

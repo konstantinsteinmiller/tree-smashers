@@ -157,13 +157,17 @@ try {
   }
 } catch { /* harmless */
 }
-const LEGACY_KEY_RE = /^(card|chaosArena)/i
+// `chaosArena*` is matched CASE-SENSITIVELY: the live device-local keys
+// (`chaosarena_uid`, `chaosarena_quality_*`, `chaosarena_board_cache`, the
+// free-2x gift mirrors) are lowercase + underscore and must survive a reload —
+// an `/i` match here silently wiped them on every boot.
+const isLegacyKey = (k: string): boolean => /^card/i.test(k) || k.startsWith('chaosArena')
 const sweepLegacyKeys = (storage: Storage) => {
   try {
     const toRemove: string[] = []
     for (let i = 0; i < storage.length; i++) {
       const k = storage.key(i)
-      if (k && LEGACY_KEY_RE.test(k)) toRemove.push(k)
+      if (k && isLegacyKey(k)) toRemove.push(k)
     }
     for (const k of toRemove) storage.removeItem(k)
   } catch { /* harmless */

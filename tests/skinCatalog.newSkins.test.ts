@@ -11,7 +11,7 @@
 //      public/images/models, so a skin can never be listed (shop, rewards,
 //      NPC pick, leaderboard avatar) before it is painted.
 //   3. Every catalog id has a display name in EVERY locale file.
-//   4. The expansion skins are REGULAR (SKIN_COST, not SPECIAL_SKINS), so they
+//   4. The expansion skins are REGULAR (not SPECIAL_SKINS), so they
 //      join the free reward pools.
 //   5. Offers already shown to an existing save stay valid: every legacy skin
 //      that was offerable is still offerable with the expanded catalog, so the
@@ -28,8 +28,9 @@ import {
   SKINS_PER_TOP,
   SPINNER_MODEL_IDS,
   SPECIAL_SKINS,
-  SKIN_COST,
+  SPECIAL_SKIN_COST,
   skinCost,
+  isCoinPurchasable,
   getOfferableSkinPool,
   type SpinnerModelId
 } from '@/data/skinCatalog'
@@ -129,10 +130,12 @@ describe('skin catalog — nothing ships unpainted or unnamed', () => {
 })
 
 describe('skin catalog — expansion skins are regular and offerable', () => {
-  it('new skins cost SKIN_COST and are not special', () => {
+  it('new skins are regular (not special): ad-unlock on ad builds, 3x special price otherwise', () => {
     for (const id of newIds()) {
       expect(SPECIAL_SKINS.has(id), `${id} should be a regular skin`).toBe(false)
-      expect(skinCost(id)).toBe(SKIN_COST)
+      expect(skinCost(id)).toBe(SPECIAL_SKIN_COST * 3)
+      expect(isCoinPurchasable(id, true), `${id} must not be coin-purchasable on an ad build`).toBe(false)
+      expect(isCoinPurchasable(id, false), `${id} must be coin-purchasable without ads`).toBe(true)
     }
   })
 

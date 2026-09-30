@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Yerin: #{n}',
     'of': '{n} oyunçu arasında'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Taxta',
+      'bronze': 'Bürünc',
+      'silver': 'Gümüş',
+      'gold': 'Qızıl',
+      'platinum': 'Platin',
+      'diamond': 'Almaz',
+      'champion': 'Çempion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Qrafika',
   'graphicsQualityNote': 'Avtomatik rejim cihazın 25 FPS-dən aşağı düşəndə effektləri azaldır.',
   'qualityAuto': 'Avtomatik',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Mərhələ',
   'bossStage': 'Boss mərhələsi',
+  'bossDefeated': 'Boss məğlub edildi',
   'stageN': 'Mərhələ {n}',
   'intro': {
     'reclaim': 'Hamısını geri qazan!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklam',
+    'free': 'PULSUZ',
     'spinning': 'Fırlanır...',
     'spinAgain': 'Yenə fırlat',
+    'tripleCoinsAria': 'Cəmi {count} sikkə almaq üçün reklama bax',
     'skip': 'Keç',
     'youWin': 'QALİB GƏLDİN!',
     'youLose': 'MƏĞLUB OLDUN!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} almaz',
         'rewardSpeed': '2x döyüş sürəti',
         'rewardRespin': 'daha bir fırlatma',
+        'rewardSkinAd': 'yeni dəri',
         'watch': 'Reklama bax',
         'decline': 'Yox, sağ ol'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'TAXILIB',
       'selectButton': 'SEÇ',
       'hintSelectCards': 'Fırfıra quruluşunu seçmək üçün karta toxun. Gücləndirmək üçün təkmilləşdirmə düyməsinə toxun.',
-      'hintPlusIcon': 'Hər üst hissə kartının yuxarısındakı + işarəsi həmin hissənin görünüş mağazasını açır (məs. Zireh Deşən görünüş mağazası); orada yeni görünüşlər əldə edə bilərsən.'
+      'hintPlusIcon': 'Hər üst hissə kartının yuxarısındakı + işarəsi həmin hissənin görünüş mağazasını açır (məs. Zireh Deşən görünüş mağazası); orada yeni görünüşlər əldə edə bilərsən.',
+      'watchAdsToUnlock': 'Açmaq üçün reklam izlə'
     }
   }
 }

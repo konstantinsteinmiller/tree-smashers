@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   createBorderFx, resetBorderFx, tickBorderFx, triggerBurn, triggerHeal,
   countActiveBurns, countActiveHeals, renderBurns,
-  FLAME_FRAMES, FLAME_FRAME_MS, FLAME_REKINDLE_FRAME, HEAL_LIFE_MS, HEAL_RETRIGGER_MS,
+  FLAME_FRAMES, FLAME_FRAME_MS, FLAME_REKINDLE_FRAME, HEAL_LIFE_MS, HEAL_POOL_SIZE,
   BORDER_FX_POOL_SIZE, type BorderFxState, type BorderFxBlade
 } from '@/use/borderFx'
 
@@ -119,43 +119,74 @@ describe('border fx — lava flame-burn', () => {
 
   it('reset clears every slot', () => {
     triggerBurn(s, blade(1), 6, true)
-    triggerHeal(s, blade(2), 6)
+    triggerHeal(s, blade(2))
     resetBorderFx(s)
     expect(countActiveBurns(s)).toBe(0)
     expect(countActiveHeals(s)).toBe(0)
   })
 })
 
-describe('border fx — forest heal pulse', () => {
+describe('border fx — heal pulse', () => {
   let s: BorderFxState
   beforeEach(() => {
     s = createBorderFx()
   })
 
   it('plays for HEAL_LIFE_MS then frees the slot', () => {
-    triggerHeal(s, blade(1), 6)
+    triggerHeal(s, blade(1))
     run(s, HEAL_LIFE_MS - 32)
     expect(countActiveHeals(s)).toBe(1)
     run(s, 48)
     expect(countActiveHeals(s)).toBe(0)
   })
 
-  it('throttles per spinner: ignored inside the retrigger window, restarted after it', () => {
+  it('no stacking: a heal while the pulse plays neither restarts it nor adds one', () => {
     const b = blade(1)
-    const slot = triggerHeal(s, b, 6)!
-    run(s, HEAL_RETRIGGER_MS - 48)
-    expect(triggerHeal(s, b, 6)).toBeNull()
-    expect(slot.t).toBeGreaterThan(0)
-    run(s, 64)
-    expect(triggerHeal(s, b, 6)).toBe(slot)
-    expect(slot.t).toBe(0)
+    const slot = triggerHeal(s, b)!
+    // Heal again at many points across the pulse's life, every tick even.
+    for (let t = 16; t < HEAL_LIFE_MS - 16; t += 16) {
+      tickBorderFx(s, 16)
+      expect(triggerHeal(s, b)).toBe(slot)
+      expect(slot.t).toBe(t)
+      expect(countActiveHeals(s)).toBe(1)
+    }
+  })
+
+  it('once the pulse has finished, the next heal starts a fresh one from t=0', () => {
+    const b = blade(1)
+    triggerHeal(s, b)
+    run(s, HEAL_LIFE_MS + 16)
+    expect(countActiveHeals(s)).toBe(0)
+    const fresh = triggerHeal(s, b)!
+    expect(fresh.active).toBe(true)
+    expect(fresh.t).toBe(0)
+    expect(fresh.blade).toBe(b)
     expect(countActiveHeals(s)).toBe(1)
   })
 
-  it('different spinners heal independently, up to the cap', () => {
-    expect(triggerHeal(s, blade(1), 2)).not.toBeNull()
-    expect(triggerHeal(s, blade(2), 2)).not.toBeNull()
-    expect(triggerHeal(s, blade(3), 2)).toBeNull()
-    expect(countActiveHeals(s)).toBe(2)
+  it('never drops a heal for being crowded: every blade gets its own pulse up to the pool', () => {
+    for (let id = 1; id <= HEAL_POOL_SIZE; id++) expect(triggerHeal(s, blade(id))).not.toBeNull()
+    expect(countActiveHeals(s)).toBe(HEAL_POOL_SIZE)
+    // The pool is the only bound (a pure safety net — no match fields this many).
+    expect(triggerHeal(s, blade(999))).toBeNull()
+  })
+
+  it('a dead blade gets no pulse, and a pulse ends when its blade dies', () => {
+    expect(triggerHeal(s, blade(1, 0))).toBeNull()
+    const b = blade(2)
+    triggerHeal(s, b)
+    b.hp = 0
+    tickBorderFx(s, 16)
+    expect(countActiveHeals(s)).toBe(0)
+  })
+
+  it('reuses pooled heal slots — triggering allocates nothing new', () => {
+    const slots = [...s.heals]
+    for (let i = 0; i < 60; i++) {
+      triggerHeal(s, blade(i % 20))
+      run(s, 100)
+    }
+    expect(s.heals).toHaveLength(slots.length)
+    s.heals.forEach((slot, i) => expect(slot).toBe(slots[i]))
   })
 })

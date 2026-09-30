@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Ти си #{n}',
     'of': 'от {n} играчи'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Дърво',
+      'bronze': 'Бронз',
+      'silver': 'Сребро',
+      'gold': 'Злато',
+      'platinum': 'Платина',
+      'diamond': 'Диамант',
+      'champion': 'Шампион'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Графика',
   'graphicsQualityNote': 'Автоматичният режим намалява ефектите, когато устройството падне под 25 FPS.',
   'qualityAuto': 'Автоматично',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Етап',
   'bossStage': 'Бос етап',
+  'bossDefeated': 'Босът е победен',
   'stageN': 'Етап {n}',
   'intro': {
     'reclaim': 'Върни си всичко!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Реклама',
+    'free': 'БЕЗПЛАТНО',
     'spinning': 'Въртене...',
     'spinAgain': 'Завърти пак',
+    'tripleCoinsAria': 'Гледай реклама, за да получиш общо {count} монети',
     'skip': 'Пропусни',
     'youWin': 'ПОБЕДА!',
     'youLose': 'ЗАГУБА!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'диаманти ×{count}',
         'rewardSpeed': 'двойна скорост в битката',
         'rewardRespin': 'още едно завъртане',
+        'rewardSkinAd': 'нов скин',
         'watch': 'Гледай рекламата',
         'decline': 'Не, благодаря'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ИЗБРАН',
       'selectButton': 'ИЗБЕРИ',
       'hintSelectCards': 'Докосни карта, за да избереш конфигурацията на пумпала. Докосни бутона за подобрение, за да го подобриш.',
-      'hintPlusIcon': 'Иконата „+“ горе на всяка карта за горна част отваря магазина за скинове на тази част (напр. за „Бронебоец“), където можеш да вземеш нови скинове.'
+      'hintPlusIcon': 'Иконата „+“ горе на всяка карта за горна част отваря магазина за скинове на тази част (напр. за „Бронебоец“), където можеш да вземеш нови скинове.',
+      'watchAdsToUnlock': 'Гледай реклама, за да отключиш'
     }
   }
 }

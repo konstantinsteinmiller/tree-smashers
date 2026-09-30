@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Peringkatmu #{n}',
     'of': 'dari {n} pemain'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Kayu',
+      'bronze': 'Perunggu',
+      'silver': 'Perak',
+      'gold': 'Emas',
+      'platinum': 'Platinum',
+      'diamond': 'Berlian',
+      'champion': 'Juara'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafis',
   'graphicsQualityNote': 'Otomatis mengurangi efek saat perangkatmu turun di bawah 25 FPS.',
   'qualityAuto': 'Otomatis',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Tahap',
   'bossStage': 'Tahap Bos',
+  'bossDefeated': 'Bos dikalahkan',
   'stageN': 'Tahap {n}',
   'intro': {
     'reclaim': 'Rebut kembali semuanya!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Iklan',
+    'free': 'GRATIS',
     'spinning': 'Berputar...',
     'spinAgain': 'Putar Lagi',
+    'tripleCoinsAria': 'Tonton iklan untuk mendapatkan total {count} koin',
     'skip': 'Lewati',
     'youWin': 'KAMU MENANG!',
     'youLose': 'KAMU KALAH!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} berlian',
         'rewardSpeed': 'kecepatan tempur 2x',
         'rewardRespin': 'satu putaran lagi',
+        'rewardSkinAd': 'skin baru',
         'watch': 'Tonton Iklan',
         'decline': 'Lain kali'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'DIPAKAI',
       'selectButton': 'PILIH',
       'hintSelectCards': 'Ketuk kartu untuk memilih konfigurasi gasingmu. Ketuk tombol upgrade untuk meningkatkannya.',
-      'hintPlusIcon': 'Ikon + di atas setiap kartu bilah atas membuka toko skin bagian itu (mis. toko skin Penembus Tank), tempat kamu bisa mendapatkan skin baru.'
+      'hintPlusIcon': 'Ikon + di atas setiap kartu bilah atas membuka toko skin bagian itu (mis. toko skin Penembus Tank), tempat kamu bisa mendapatkan skin baru.',
+      'watchAdsToUnlock': 'Tonton iklan untuk membuka'
     }
   }
 }

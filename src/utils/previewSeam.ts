@@ -34,7 +34,7 @@
 // collisions and the clip needs to SHOW it. A scenario aims, waits ~600 ms
 // of virtual time so the slingshot line is visible, then fires.
 
-import type { Ref } from 'vue'
+import { watch, type Ref } from 'vue'
 import type { GamePhase, GameResult, SpinnerState } from '@/types/spinner'
 
 /** Everything `SpinnerArena.vue` has to hand the seam. Passing it in keeps
@@ -195,6 +195,50 @@ export const installPreviewSeam = (deps: PreviewSeamDeps): (() => void) => {
         for (const b of list) b.hp = b.maxHp * fraction
         return list.length
       },
+
+    /** Move a living blade to a point in GAME units and stop it dead.
+     *
+     *  Composition, not outcome: the showreel scenes need the target of a
+     *  shot sitting where the camera shows its signature moment (an enemy
+     *  one bounce from the lava wall, a boss mid-arena so its split has
+     *  room). Clamped inside the arena so a bad coordinate cannot park a
+     *  blade in the wall. Call it in setup, while frozen. */
+    place(side: 'player' | 'npc', index: number, x: number, y: number) {
+      const blade = pick(side, index)
+      if (!blade) return false
+      const lim = deps.arenaRadius - blade.radius - 2
+      const r = Math.hypot(x, y)
+      const k = r > lim ? lim / r : 1
+      blade.x = x * k
+      blade.y = y * k
+      blade.vx = 0
+      blade.vy = 0
+      return true
+    },
+
+    /** Stop the physics tick the instant `target` is entered — synchronously,
+     *  inside the tick that enters it, so no think-time elapses first.
+     *
+     *  This is how a scene opens on the ENEMY's turn: the player's shot
+     *  resolves in unrecorded setup, the game freezes on the first frame of
+     *  `npc_turn`, and the recording then sees the full think delay and the
+     *  enemy's launch (the ghost boss's split into two halves happens on
+     *  that launch). Resolves with the phase once frozen. */
+    freezeOnPhase(target: GamePhase) {
+      return new Promise<GamePhase>((resolve) => {
+        if (deps.phase.value === target) {
+          deps.stopPhysics()
+          resolve(target)
+          return
+        }
+        const stop = watch(deps.phase, (p) => {
+          if (p !== target) return
+          deps.stopPhysics()
+          stop()
+          resolve(p)
+        }, { flush: 'sync' })
+      })
+    },
 
       // ── Drive the input ─────────────────────────────────────────────────
 

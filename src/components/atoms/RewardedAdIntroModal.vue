@@ -60,6 +60,8 @@ const rewardText = computed(() => {
       return t('rewardedIntro.rewardSpeed')
     case 'respin':
       return t('rewardedIntro.rewardRespin')
+    case 'skinAd':
+      return t('rewardedIntro.rewardSkinAd')
     default:
       return ''
   }

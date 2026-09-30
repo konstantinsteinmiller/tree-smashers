@@ -10,6 +10,8 @@ import {
 import type { TopPartId } from '@/types/spinner'
 import { resetHonorTrack } from '@/use/usePvpStats'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { utcDayKey, utcDaysSince, msUntilNextUtcMidnight } from '@/utils/dayKey'
+import { isGamePaused } from '@/use/useGamePause'
 
 /**
  * Battle Pass progression. 50 stages, 100 xp per stage. Win/loss events
@@ -67,7 +69,8 @@ interface BattlePassState {
   claimedSkins: Record<number, SpinnerModelId>
   /** Maps stage number → skin model id previewed (persisted across sessions). */
   offeredSkins: Record<number, SpinnerModelId>
-  /** ISO date string when the current season started (first XP gain). */
+  /** UTC day key ('YYYY-MM-DD', see utils/dayKey) of the current season's
+   *  first XP gain. */
   seasonStartedAt: string | null
 }
 
@@ -83,9 +86,8 @@ const defaultState = (): BattlePassState => ({
 /** Days remaining until the current season resets (null if no season active). */
 const daysUntilSeasonReset = (startedAt: string | null): number | null => {
   if (!startedAt) return null
-  const start = new Date(startedAt).getTime()
-  const now = Date.now()
-  const elapsed = Math.floor((now - start) / (1000 * 60 * 60 * 24))
+  // Season clock runs on the shared UTC calendar day (see utils/dayKey).
+  const elapsed = utcDaysSince(startedAt)
   const remaining = BP_SEASON_DAYS - elapsed
   return remaining > 0 ? remaining : 0
 }
@@ -177,18 +179,25 @@ const unlockSkinEverywhere = (modelId: SpinnerModelId) => {
 
 const { addCoins, addDiamonds } = useSpinnerConfig()
 
+/** End the current season: wipe the pass and the honor track together and
+ *  persist. The eager reset (addXp, the open-screen clock below) runs this
+ *  directly; the load-time reset runs the same two steps deferred through
+ *  `seasonResetPending` because `resetHonorTrack` cannot be called while the
+ *  modules are still being evaluated. */
+const resetSeason = () => {
+  state.value = defaultState()
+  resetHonorTrack()
+  saveState()
+}
+
 const addXp = (amount: number) => {
   if (amount <= 0) return
   // Check for season expiry before adding XP
-  if (isSeasonExpired(state.value.seasonStartedAt)) {
-    state.value = defaultState()
-    resetHonorTrack()
-    saveState()
-  }
+  if (isSeasonExpired(state.value.seasonStartedAt)) resetSeason()
   if (state.value.unlockedStages >= BP_TOTAL_STAGES) return
   // Start season clock on first XP gain
   if (!state.value.seasonStartedAt) {
-    state.value.seasonStartedAt = new Date().toISOString().slice(0, 10)
+    state.value.seasonStartedAt = utcDayKey()
   }
   state.value.xp += amount
   while (
@@ -274,8 +283,89 @@ const pendingClaimCount = computed(() => {
 
 const hasUnclaimedReward = computed(() => pendingClaimCount.value > 0)
 
-/** Days remaining until the season resets (null if season not started yet). */
-const daysUntilReset = computed(() => daysUntilSeasonReset(state.value.seasonStartedAt))
+// ─── Season clock ───────────────────────────────────────────────────────────
+//
+// `daysUntilReset` depends on the wall clock, which Vue cannot track. Left
+// alone it only recomputes when battle-pass STATE changes, so a screen left
+// open across 00:00 UTC (or a tab backgrounded overnight) keeps showing
+// yesterday's count — and a season that ended while open never resets until
+// the next XP event. `clockTick` is the dependency that stands in for "the
+// clock moved"; `refreshSeasonClock` bumps it.
+
+const clockTick = ref(0)
+
+/** Re-read the clock: refresh the days-left count and, if the season ran out
+ *  meanwhile, run the same reset a load would have run. */
+export const refreshSeasonClock = (): void => {
+  clockTick.value++
+  if (isSeasonExpired(state.value.seasonStartedAt)) resetSeason()
+}
+
+/**
+ * Keep the season clock current while a battle-pass screen is mounted:
+ *   - one timeout to the next 00:00 UTC (re-armed after it fires — never a
+ *     polling loop), and
+ *   - a refresh when the game comes back to the foreground, because a
+ *     backgrounded tab's timers are throttled or frozen.
+ *
+ * The foreground signal is `visibilitychange` everywhere except the YouTube
+ * Playables build, whose certification forbids the Page Visibility API
+ * ("MUST only use Playables SDK onPause and onResume"). There the resume
+ * edge of the platform pause gate is used instead — App.vue feeds it from
+ * the Bridge's PAUSE_STATE_CHANGED, which the youtube adapter drives from
+ * `onPause`/`onResume`. The branch is an env literal so Rollup drops the
+ * visibility listener from the youtube bundle entirely. This is UI-only, so
+ * refreshing on resume never touches the (paused) game loop.
+ *
+ * Returns a stop function — call it on unmount; it clears the timer and
+ * removes the listener.
+ */
+export const startSeasonClock = (): (() => void) => {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const arm = () => {
+    if (timer !== null) clearTimeout(timer)
+    // +1 s so the timer lands safely on the new UTC day even if the host
+    // fires a hair early or the clock was nudged.
+    timer = setTimeout(onTick, msUntilNextUtcMidnight() + 1000)
+  }
+  const onTick = () => {
+    timer = null
+    refreshSeasonClock()
+    arm()
+  }
+  // A resume also re-arms: after a sleep the old timer's deadline is stale.
+  const onForeground = () => {
+    refreshSeasonClock()
+    arm()
+  }
+
+  let unlisten: () => void
+  if (import.meta.env.VITE_APP_YOUTUBE === 'true') {
+    unlisten = watch(isGamePaused, (paused) => {
+      if (!paused) onForeground()
+    }, { flush: 'sync' })
+  } else {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') onForeground()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    unlisten = () => document.removeEventListener('visibilitychange', onVisibility)
+  }
+
+  arm()
+  return () => {
+    if (timer !== null) clearTimeout(timer)
+    timer = null
+    unlisten()
+  }
+}
+
+/** Days remaining until the season resets (null if season not started yet).
+ *  Reads `clockTick` so the season clock above can force a recompute. */
+const daysUntilReset = computed(() => {
+  void clockTick.value
+  return daysUntilSeasonReset(state.value.seasonStartedAt)
+})
 
 const isStageClaimed = (stage: number): boolean =>
   state.value.claimedStages.includes(stage)

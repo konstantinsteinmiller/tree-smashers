@@ -31,6 +31,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // ── The original eight — reviewed legacy values (cognates, loanwords,
   //    gaming abbreviations) when the parity test was introduced ──
   de: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze', 'league.tiers.gold', 'league.tiers.champion',
     'ok', 'pvp.okay', 'pvp.arena', 'pvp.host', 'lv', 'stages.stage_43', 'spinner.spinnerLabel',
     'arenas.lava', 'elements.psi', 'elements.neutral',
     'skins.chip', 'skins.wulf', 'skins.prisma', 'skins.tornado', 'skins.salamaner', 'skins.piranha',
@@ -49,6 +51,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.OptionsModal.audio'
   ],
   fr: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze', 'league.tiers.champion',
     'options', 'page', 'elements.nature', 'elements.air', 'skins.nature', 'skins.scorpion', 'skins.pirate',
     'skins.piranha', 'skins.cactus', 'skins.kraken', 'ok', 'stages.stage_43', 'elements.psi', 'skins.chip',
     'skins.wulf', 'skins.prisma', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.taiko',
@@ -108,18 +112,24 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.max', 'sfc.OptionsModal.audio', 'sfc.CombatLog.short'
   ],
   'pt-BR': [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze',
     'pvp.arena', 'arenas.lava', 'elements.psi', 'elements.metal', 'skins.chip', 'skins.wulf', 'skins.prisma',
     'skins.tornado', 'skins.piranha', 'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
   'pt-PT': [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze',
     'pvp.arena', 'arenas.lava', 'elements.psi', 'elements.metal', 'skins.chip', 'skins.wulf', 'skins.prisma',
     'skins.tornado', 'skins.piranha', 'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
   ca: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze',
     'pvp.arena', 'pvp.honor', 'arenas.lava', 'elements.psi', 'skins.wulf', 'skins.prisma', 'skins.tornado',
     'skins.tsunami', 'skins.ninja', 'skins.cactus', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
@@ -163,6 +173,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     "HP" (hederspoäng / honorpoentoj), "Log" (da/id), "Lv." and "Battle Pass" (id — the terms
   //     Indonesian players use)
   sv: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.silver',
     'pvp.arena', 'arenas.lava', 'elements.psi', 'elements.neutral', 'skins.prisma', 'skins.demon',
     'skins.tornado', 'skins.salamaner', 'skins.dark', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja',
     'skins.kraken', 'skins.taiko', 'skins.pyramid', 'sfc.BGSkinModal.bg.skins.fidget',
@@ -175,6 +187,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
   da: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.bronze',
     'pvp.arena', 'arenas.lava', 'elements.psi', 'elements.metal', 'elements.neutral', 'skins.tornado',
     'skins.salamaner', 'skins.dark', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.kraken',
     'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
@@ -185,6 +199,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.cosmos'
   ],
   id: [
+    // league tier names: the native word is spelled as in English
+    'league.tiers.platinum',
     'lv', 'pvp.arena', 'elements.psi', 'skins.prisma', 'skins.salamaner', 'skins.piranha', 'skins.teleporter',
     'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.battlePass',

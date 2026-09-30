@@ -141,6 +141,19 @@ export default {
     'yourRank': 'Ты на #{n} месте',
     'of': 'из {n} игроков'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Дерево',
+      'bronze': 'Бронза',
+      'silver': 'Серебро',
+      'gold': 'Золото',
+      'platinum': 'Платина',
+      'diamond': 'Алмаз',
+      'champion': 'Чемпион'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Графика',
   'graphicsQualityNote': 'Автоматический режим снижает эффекты, если устройство опускается ниже 25 FPS.',
   'qualityAuto': 'Автоматически',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': 'Этап',
   'bossStage': 'Этап Босса',
+  'bossDefeated': 'Босс повержен',
   'stageN': 'Этап {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': 'Реклама',
+    'free': 'БЕСПЛАТНО',
     'spinning': 'Вращение...',
     'spinAgain': 'Крутить снова',
+    'tripleCoinsAria': 'Посмотри рекламу и получи всего {count} монет',
     'skip': 'Пропустить',
     'youWin': 'ПОБЕДА!',
     'youLose': 'ПОРАЖЕНИЕ!',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '{count} алмазов',
         'rewardSpeed': 'двойная скорость боя',
         'rewardRespin': 'ещё один спин',
+        'rewardSkinAd': 'новый скин',
         'watch': 'Смотреть рекламу',
         'decline': 'Нет, спасибо'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': 'ЭКИПИРОВАНО',
       'selectButton': 'ВЫБРАТЬ',
       'hintSelectCards': 'Нажми на карточку, чтобы выбрать конфигурацию волчка. Нажми кнопку улучшения, чтобы прокачать её.',
-      'hintPlusIcon': 'Значок «+» сверху каждой карточки верхней части открывает магазин скинов этой детали (например, для Бронебоя), где можно купить новые скины.'
+      'hintPlusIcon': 'Значок «+» сверху каждой карточки верхней части открывает магазин скинов этой детали (например, для Бронебоя), где можно купить новые скины.',
+      'watchAdsToUnlock': 'Смотри рекламу, чтобы открыть'
     }
   }
 }

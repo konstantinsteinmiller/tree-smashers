@@ -142,6 +142,19 @@ export default {
     'yourRank': 'คุณอยู่อันดับ #{n}',
     'of': 'จากผู้เล่น {n} คน'
   },
+  'league': {
+    'tiers': {
+      'wood': 'ไม้',
+      'bronze': 'ทองแดง',
+      'silver': 'เงิน',
+      'gold': 'ทอง',
+      'platinum': 'แพลทินัม',
+      'diamond': 'เพชร',
+      'champion': 'แชมเปี้ยน'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} อันดับ {position}'
+  },
   'graphicsQuality': 'กราฟิก',
   'graphicsQualityNote': 'โหมดอัตโนมัติจะลดเอฟเฟกต์เมื่ออุปกรณ์ของคุณเล่นได้ต่ำกว่า 25 FPS',
   'qualityAuto': 'อัตโนมัติ',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'ด่าน',
   'bossStage': 'ด่านบอส',
+  'bossDefeated': 'ปราบบอสสำเร็จ',
   'stageN': 'ด่าน {n}',
   'intro': {
     'reclaim': 'ทวงคืนทุกอย่าง!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'โฆษณา',
+    'free': 'ฟรี',
     'spinning': 'กำลังหมุน...',
     'spinAgain': 'หมุนอีกครั้ง',
+    'tripleCoinsAria': 'ดูโฆษณาเพื่อรับเหรียญรวม {count} เหรียญ',
     'skip': 'ข้าม',
     'youWin': 'ชนะ!',
     'youLose': 'แพ้!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} เพชร',
         'rewardSpeed': 'ความเร็วการต่อสู้ 2 เท่า',
         'rewardRespin': 'การหมุนอีกครั้ง',
+        'rewardSkinAd': 'สกินใหม่',
         'watch': 'ดูโฆษณา',
         'decline': 'ไม่เป็นไร'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'สวมใส่อยู่',
       'selectButton': 'เลือก',
       'hintSelectCards': 'แตะการ์ดเพื่อเลือกชุดใบมีดสปินเนอร์ แตะปุ่มอัปเกรดเพื่ออัปเกรด',
-      'hintPlusIcon': 'ไอคอน + ด้านบนการ์ดใบมีดบนแต่ละใบจะเปิดร้านสกินของชิ้นส่วนนั้น (เช่น ร้านสกินเจาะเกราะ) ให้คุณหาสกินใหม่ได้'
+      'hintPlusIcon': 'ไอคอน + ด้านบนการ์ดใบมีดบนแต่ละใบจะเปิดร้านสกินของชิ้นส่วนนั้น (เช่น ร้านสกินเจาะเกราะ) ให้คุณหาสกินใหม่ได้',
+      'watchAdsToUnlock': 'ดูโฆษณาเพื่อปลดล็อก'
     }
   }
 }

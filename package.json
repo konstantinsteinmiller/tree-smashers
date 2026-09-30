@@ -29,6 +29,7 @@
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "preview:video": "node tools/preview-video/record.mjs",
+    "preview:reel": "node tools/preview-video/showreel.mjs",
     "art:paint": "node tools/art-desk/paint.mjs",
     "art:slice": "node tools/art-desk/slice.mjs",
     "art:desk": "node tools/art-desk/server.mjs",

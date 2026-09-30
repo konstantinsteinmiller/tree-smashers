@@ -142,6 +142,19 @@ export default {
     'yourRank': 'ترتيبك #{n}',
     'of': 'من أصل {n} لاعب'
   },
+  'league': {
+    'tiers': {
+      'wood': 'خشب',
+      'bronze': 'برونز',
+      'silver': 'فضة',
+      'gold': 'ذهب',
+      'platinum': 'بلاتين',
+      'diamond': 'ماس',
+      'champion': 'بطل'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'الرسومات',
   'graphicsQualityNote': 'الوضع التلقائي يخفّف المؤثرات عندما ينخفض أداء جهازك عن 25 إطارًا في الثانية.',
   'qualityAuto': 'تلقائي',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'المرحلة',
   'bossStage': 'مرحلة الزعيم',
+  'bossDefeated': 'هُزم الزعيم',
   'stageN': 'المرحلة {n}',
   'intro': {
     'reclaim': 'استعِد كل شيء!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'إعلان',
+    'free': 'مجاناً',
     'spinning': 'جارٍ الدوران...',
     'spinAgain': 'أدِر مجددًا',
+    'tripleCoinsAria': 'شاهد إعلانًا لتحصل على {count} عملة إجمالًا',
     'skip': 'تخطي',
     'youWin': 'لقد فزت!',
     'youLose': 'لقد خسرت!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} ماسة',
         'rewardSpeed': 'سرعة المعركة ×2',
         'rewardRespin': 'دورة إضافية',
+        'rewardSkinAd': 'جلدًا جديدًا',
         'watch': 'شاهد الإعلان',
         'decline': 'لا، شكرًا'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'مجهّز',
       'selectButton': 'اختيار',
       'hintSelectCards': 'المس بطاقة لاختيار تشكيلة شفرة السبينر. المس زر الترقية لترقيتها.',
-      'hintPlusIcon': 'أيقونة + أعلى كل بطاقة شفرة علوية تفتح متجر مظاهر تلك القطعة (مثل متجر مظاهر «خارق الدروع») حيث يمكنك الحصول على مظاهر جديدة.'
+      'hintPlusIcon': 'أيقونة + أعلى كل بطاقة شفرة علوية تفتح متجر مظاهر تلك القطعة (مثل متجر مظاهر «خارق الدروع») حيث يمكنك الحصول على مظاهر جديدة.',
+      'watchAdsToUnlock': 'شاهد إعلانًا لفتح الجلد'
     }
   }
 }

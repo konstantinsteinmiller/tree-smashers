@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Tava vieta: #{n}',
     'of': 'no {n}'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Koks',
+      'bronze': 'Bronza',
+      'silver': 'Sudrabs',
+      'gold': 'Zelts',
+      'platinum': 'Platīns',
+      'diamond': 'Dimants',
+      'champion': 'Čempions'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automātiskais režīms samazina efektus, ja ierīce nokrītas zem 25 FPS.',
   'qualityAuto': 'Automātiski',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Posms',
   'bossStage': 'Bosa posms',
+  'bossDefeated': 'Boss sakauts',
   'stageN': '{n}. posms',
   'intro': {
     'reclaim': 'Atgūsti visu!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklāma',
+    'free': 'BEZMAKSAS',
     'spinning': 'Griežas...',
     'spinAgain': 'Griezt vēlreiz',
+    'tripleCoinsAria': 'Noskaties reklāmu un saņem kopā {count} monētas',
     'skip': 'Izlaist',
     'youWin': 'TU UZVARĒJI!',
     'youLose': 'TU ZAUDĒJI!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} dimanti',
         'rewardSpeed': '2x kaujas ātrums',
         'rewardRespin': 'vēl viens griziens',
+        'rewardSkinAd': 'jauns skins',
         'watch': 'Skatīties',
         'decline': 'Nē, paldies'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'UZLIKTS',
       'selectButton': 'IZVĒLĒTIES',
       'hintSelectCards': 'Pieskaries kārtij, lai izvēlētos vilciņa konfigurāciju. Pieskaries uzlabošanas pogai, lai to uzlabotu.',
-      'hintPlusIcon': 'Ikona + katras augšdaļas kārts augšā atver šīs daļas izskatu veikalu (piem., Caurdurēja izskatu veikalu), kur vari iegūt jaunus izskatus.'
+      'hintPlusIcon': 'Ikona + katras augšdaļas kārts augšā atver šīs daļas izskatu veikalu (piem., Caurdurēja izskatu veikalu), kur vari iegūt jaunus izskatus.',
+      'watchAdsToUnlock': 'Skaties reklāmu, lai atbloķētu'
     }
   }
 }

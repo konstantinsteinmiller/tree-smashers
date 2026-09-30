@@ -7,6 +7,7 @@ import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resourceCache, getCachedImage } from '@/use/useAssets'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
+import { flushSaveNow } from '@/use/persistedState'
 import { isNative } from '@/use/useUser'
 import { isLowQuality } from '@/use/useQuality'
 import { preloadRouletteArt, rouletteArtReady as art, rouletteArtSrc as artSrc } from '@/use/useRouletteArt'
@@ -28,8 +29,14 @@ interface Segment {
   weight: number
 }
 
+// `result` fires ONCE PER SPIN, the moment that spin stops — the parent grants
+// it right there. The first spin is therefore paid (and flushed to the save)
+// BEFORE the "Spin Again" ad is even offered, and the respin, when watched,
+// emits a SECOND result that is paid on top: a respin adds, never replaces.
+// `done` fires once, when the wheel has nothing more to give.
 const emit = defineEmits<{
   (e: 'result', value: RouletteResult): void
+  (e: 'done'): void
 }>()
 
 const { t } = useI18n()
@@ -670,14 +677,21 @@ const canShowAd = () => isRewardedReady.value
  *  enough for the win highlight and burst to register. */
 const RESULT_HOLD_MS = 1000
 
-/** Emit the stored result and finalize. */
-const finalizeResult = () => {
-  if (!lastResult.value) return
-  const result = lastResult.value
+/** Grant a landed spin: the skin through `buySkin` (the save path), the rest
+ *  by the parent on `result`. Called exactly once per spin. */
+const grantResult = (result: RouletteResult) => {
   if (result.type === 'skin' && result.skin) {
     buySkin(result.skin.topPartId, result.skin.modelId)
   }
   emit('result', result)
+}
+
+let finished = false
+/** The wheel is done — hand over to the celebration. Idempotent. */
+const finish = () => {
+  if (finished) return
+  finished = true
+  emit('done')
 }
 
 const spin = () => {
@@ -720,16 +734,20 @@ const spin = () => {
       setPointerDeg(0)
       isSpinning.value = false
       spinCount.value++
-      lastResult.value = segments.value[outcomeIndex]!.result
+      const landed = segments.value[outcomeIndex]!.result
+      lastResult.value = landed
       showWin.value = true
 
-      // After first spin, offer ad respin if SDK available
+      // Paid NOW, before any ad is offered — see the note on `emit`.
+      grantResult(landed)
+
+      // After the first spin, offer the ad respin if an ad is ready.
       if (spinCount.value === 1 && canShowAd()) {
         showAdButton.value = true
-        // Don't emit yet — wait for user decision
       } else {
-        // Final spin (either first without SDK, or respin) — emit after brief pause
-        setTimeout(finalizeResult, RESULT_HOLD_MS)
+        // Last spin (the first with no ad on offer, or the respin) — hand
+        // over after the win highlight has registered.
+        setTimeout(finish, RESULT_HOLD_MS)
       }
     }
   }
@@ -737,15 +755,26 @@ const spin = () => {
   requestAnimationFrame(animate)
 }
 
-/** User declines ad — finalize with current result. */
+/** User declines the respin — the first reward is already granted. */
 const onSkipAd = () => {
   showAdButton.value = false
-  setTimeout(finalizeResult, 300)
+  setTimeout(finish, 300)
 }
 
-/** User watches ad — respin the wheel with fresh segments. */
+let respinRequested = false
+/** User watches an ad — respin the wheel with fresh segments for a SECOND,
+ *  additional reward. The first spin was granted when it landed; its skin is
+ *  now owned, so the rebuilt wheel no longer offers it (skin segments are only
+ *  ever drawn from unowned skins — the wheel's duplicate rule). */
 const onAdRespin = async () => {
+  // One respin per boss win, and a double tap must not start two ads.
+  if (respinRequested || !showAdButton.value) return
+  respinRequested = true
   showAdButton.value = false
+  // The first reward is already in localStorage; push it to the platform's
+  // cloud store too before the ad, so a crash or reload during the ad
+  // cannot lose it.
+  await flushSaveNow()
   const ok = await showRewardedAd({ kind: 'respin' })
   if (ok) {
     segments.value = buildSegments()
@@ -756,8 +785,8 @@ const onAdRespin = async () => {
       setTimeout(spin, 300)
     })
   } else {
-    // Ad failed/cancelled — finalize with first result
-    setTimeout(finalizeResult, 300)
+    // Skipped / unfilled / declined — no second reward; keep the first.
+    setTimeout(finish, 300)
   }
 }
 

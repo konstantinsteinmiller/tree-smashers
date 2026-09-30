@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Olet #{n}',
     'of': '{n} pelaajasta'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Puu',
+      'bronze': 'Pronssi',
+      'silver': 'Hopea',
+      'gold': 'Kulta',
+      'platinum': 'Platina',
+      'diamond': 'Timantti',
+      'champion': 'Mestari'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafiikka',
   'graphicsQualityNote': 'Automaattinen vähentää tehosteita, kun laitteesi putoaa alle 25 FPS:n.',
   'qualityAuto': 'Automaattinen',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Kenttä',
   'bossStage': 'Pomokenttä',
+  'bossDefeated': 'Pomo kukistettu',
   'stageN': 'Kenttä {n}',
   'intro': {
     'reclaim': 'Voita kaikki takaisin!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Mainos',
+    'free': 'ILMAINEN',
     'spinning': 'Pyörii...',
     'spinAgain': 'Pyöritä taas',
+    'tripleCoinsAria': 'Katso mainos ja saat yhteensä {count} kolikkoa',
     'skip': 'Ohita',
     'youWin': 'VOITIT!',
     'youLose': 'HÄVISIT!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} timanttia',
         'rewardSpeed': '2x taistelunopeuden',
         'rewardRespin': 'uuden pyöräytyksen',
+        'rewardSkinAd': 'uuden skinin',
         'watch': 'Katso mainos',
         'decline': 'Ei kiitos'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'KÄYTÖSSÄ',
       'selectButton': 'VALITSE',
       'hintSelectCards': 'Valitse hyrräsi osat napauttamalla korttia. Päivitä osa napauttamalla päivityspainiketta.',
-      'hintPlusIcon': 'Jokaisen yläteräkortin yläreunan +-kuvake avaa osan skinikaupan (esim. Läpäisijän skinikaupan), josta voit hankkia uusia skinejä.'
+      'hintPlusIcon': 'Jokaisen yläteräkortin yläreunan +-kuvake avaa osan skinikaupan (esim. Läpäisijän skinikaupan), josta voit hankkia uusia skinejä.',
+      'watchAdsToUnlock': 'Katso mainos avataksesi'
     }
   }
 }

@@ -1,3 +1,24 @@
+<script lang="ts">
+// ─── Build-only UI, picked at module scope ─────────────────────────────────
+// A template `v-if` on the build flag does NOT drop the dead branch: an
+// imported constant compiles to `unref(FLAG)`, and even a plain `const` is
+// not folded by Rollup inside this render function, so both branches (and
+// every component they render) shipped in every build. A module-scope ternary
+// on the `import.meta.env`-derived flag does fold: the unused component is
+// never referenced, so its module drops out of the bundle.
+import { HAS_REWARDED_ADS as ADS_BUILD_FLAG } from '@/platforms/rewardedAdsBuild'
+import AdRewardButton from '@/components/organisms/AdRewardButton.vue'
+import RewardedAdButton from '@/components/organisms/RewardedAdButton.vue'
+import SpeedCoinBadge from '@/components/atoms/SpeedCoinBadge.vue'
+
+/** "[movie] +N [coin]" HUD button — ad builds only. */
+const HudCoinsAdButton = ADS_BUILD_FLAG ? AdRewardButton : null
+/** "[movie] 3x [coin]" win-screen button — ad builds only. */
+const WinCoinsAdButton = ADS_BUILD_FLAG ? RewardedAdButton : null
+/** 100-coin price sticker on the 2x switch — builds without rewarded ads only. */
+const SpeedBoostCoinBadge = ADS_BUILD_FLAG ? null : SpeedCoinBadge
+</script>
+
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick, defineAsyncComponent, h } from 'vue'
 import { saveDataVersion } from '@/use/useSaveStatus'
@@ -42,7 +63,6 @@ import useBattlePass from '@/use/useBattlePass'
 import TreasureChest from '@/components/organisms/TreasureChest.vue'
 import SkinChestTimer from '@/components/organisms/SkinChestTimer.vue'
 import type { GrantedSkin } from '@/use/useSkinChest'
-import AdRewardButton from '@/components/organisms/AdRewardButton.vue'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
 import ChallengeIcon from '@/components/organisms/ChallengeIcon.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
@@ -62,11 +82,21 @@ import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
 import RankBadge from '@/components/atoms/RankBadge.vue'
 import BossPeekBadge from '@/components/atoms/BossPeekBadge.vue'
 import { getBossPeek, battleModeOf, type BossPeek } from '@/use/bossPeek'
+import { shouldShowBossDefeated } from '@/use/bossDefeated'
+import BossDefeatedBanner from '@/components/atoms/BossDefeatedBanner.vue'
 import { leaderboardVisible, reportRun } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
 import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
 import { isRewardedReady, isInterstitialReady, showRewardedAd, showMidgameAd } from '@/use/useAds'
+import { hasAnyFreeSpeedGift, claimFreeSpeedBoost, refreshFreeSpeedGiftDay } from '@/use/useFreeSpeedGift'
+import { DAILY_SPEED_GIFT_DURATION_MS } from '@/use/speedGiftGate'
+import {
+  IS_COIN_SPEED_BOOST_BUILD,
+  handleSpeedSwitchTap,
+  isSpeedBoostUnaffordable,
+  isSpeedSwitchOffered
+} from '@/use/speedBoostPurchase'
 import useBottomSafe from '@/use/useBottomSafe'
 import { getSelectedSkin, modelImgPath } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
@@ -76,6 +106,9 @@ import { cheatRouletteSignal } from '@/use/useCheats'
 import RouletteWheel from '@/components/organisms/RouletteWheel.vue'
 import type { RouletteResult } from '@/components/organisms/RouletteWheel.vue'
 import { preloadRouletteArt } from '@/use/useRouletteArt'
+import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
+import { showsWinCoinsAd } from '@/use/winCoinsAd'
+import { rouletteGrantFor, type RouletteGrant } from '@/use/rouletteGrants'
 import {
   introPlaying,
   introRevealArena,
@@ -149,7 +182,15 @@ const {
   statsFor
 } = useSpinnerGame()
 
-const { playerTeam, hasFirstWin, saveTeam, addCoins, addDiamonds, markFirstWin } = useSpinnerConfig()
+const {
+  playerTeam,
+  coins: walletCoins,
+  hasFirstWin,
+  saveTeam,
+  addCoins,
+  addDiamonds,
+  markFirstWin
+} = useSpinnerConfig()
 const {
   hasWonToday: dailyWonToday,
   canPlayToday: dailyCanPlay,
@@ -438,19 +479,28 @@ const bossPeek: Ref<BossPeek | null> = ref(null)
 
 // ─── Boss Roulette ──────────────────────────────────────────────────────────
 const showRoulette = ref(false)
-const rouletteMultiplier = ref(1)
-const rouletteSkinResult = ref<RouletteResult | null>(null)
-// Diamonds won on the ultra-rare roulette jackpot (0 = not a diamond outcome).
-const rouletteDiamonds = ref(0)
 
-// Presentation for the two diamond payouts this view renders. Both keep
-// their diamond-denominated source values (the grant path converts); these
-// only decide what the reward screen SAYS.
-const rouletteJackpot = computed(() => displayDiamondReward(rouletteDiamonds.value))
+// Presentation for the diamond payouts this view renders. They keep their
+// diamond-denominated source values (the grant path converts); these only
+// decide what the reward screen SAYS. The roulette jackpot is rendered per
+// grant with `displayDiamondReward` in the template.
 const dailyBonus = displayDiamondReward(1)
 const pendingBossReward = ref(false)
+// "BOSS DEFEATED" title card between the boss kill and the roulette.
+const showBossDefeated = ref(false)
+const onBossDefeatedDone = () => {
+  if (!showBossDefeated.value) return
+  showBossDefeated.value = false
+  // A reset / mode switch while the card was up cleared the pending reward —
+  // then there is no roulette to open.
+  if (pendingBossReward.value) showRoulette.value = true
+}
 const showRouletteReward = ref(false)
 const rouletteRewardReady = ref(false) // tap-to-continue unlocked
+// Every roulette result granted this boss win, in spin order: the first spin,
+// plus the "Spin Again" respin when the player watched the ad. The respin is
+// an ADDITIONAL reward — both are granted and both are shown.
+const rouletteGrants: Ref<RouletteGrant[]> = ref([])
 
 // ─── Skin Chest (20h) ───────────────────────────────────────────────────────
 const skinChestReward = ref<GrantedSkin | null>(null)
@@ -467,6 +517,41 @@ const onSkinChestCollected = (granted: GrantedSkin) => {
 
 const onSkinChestRewardContinue = () => {
   skinChestReward.value = null
+}
+
+// ─── Win-screen "3x coins" ad ───────────────────────────────────────────────
+// Coins the ordinary result screen granted, snapshotted in the game-over
+// watcher BEFORE `advanceStage()` — after it `rewardAmount` already reads the
+// NEXT stage's reward, so binding the label to it showed a number the player
+// was never paid. The label and the 3x ad both anchor to this.
+const grantedCoins = ref(0)
+// Coins the 3x ad added on the current result screen (0 until it pays).
+const winAdExtra = ref(0)
+// A 3x ad is in flight: hold tap-to-continue so a stray tap can neither
+// close the screen under the ad nor start the next battle (and its
+// interstitial) while the rewarded flow is still running.
+const winAdBusy = ref(false)
+// The last result was a campaign BOSS win (roulette path). Such a win never
+// reaches the ordinary win screen; this keeps the 3x button off it even if a
+// future flow sends one there — the roulette already carries its own ad.
+const lastWinWasBoss = ref(false)
+const winAdBaseCoins = computed(() => {
+  if (pvpMode.value) return PVP_COIN_REWARD
+  if (dailyChallengeMode.value) return dailyCoinReward.value
+  return grantedCoins.value
+})
+const showWinCoinsAd = computed(() => showsWinCoinsAd({
+  adsBuild: HAS_REWARDED_ADS,
+  result: gameResult.value,
+  bossWin: lastWinWasBoss.value,
+  baseCoins: winAdBaseCoins.value
+}))
+const onWinAdCoins = (sourceEl: HTMLElement, extra: number) => {
+  winAdExtra.value = extra
+  fireCoinExplosion(sourceEl)
+}
+const onWinAdBusy = (busy: boolean) => {
+  winAdBusy.value = busy
 }
 
 const resultText = computed(() => {
@@ -664,6 +749,7 @@ const is2xAvailable = computed(() => speedNow.value < speedBoostExpiresAt.value)
 
 const updateSpeedBoost = () => {
   speedNow.value = Date.now()
+  refreshFreeSpeedGiftDay()
   // Auto-revert to 1x once the boost runs out
   if (simSpeed.value === 2 && speedNow.value >= speedBoostExpiresAt.value) {
     simSpeed.value = 1
@@ -677,29 +763,54 @@ const onSpeedSwitchClick = (value: 1 | 2) => {
   //   simSpeed.value = 2
   //   return
   // }
-  if (value === 1) {
-    simSpeed.value = 1
-    return
-  }
-  // Player tapped 2x. If a boost is already active (paid for in a
-  // previous session and still inside its duration window), just flip
-  // the sim — no ad. Otherwise charge an ad for a fresh boost.
-  if (is2xAvailable.value) {
-    simSpeed.value = 2
-    return
-  }
-  triggerSpeedBoostAd()
+  // Tap rules live in speedBoostPurchase.ts: a running boost just flips the
+  // sim; else a free gift (first-time full length / daily 1 minute, every
+  // build); else a coin buy on builds without rewarded ads; else the
+  // rewarded ad.
+  handleSpeedSwitchTap(value, {
+    isBoostActive: () => is2xAvailable.value,
+    setSpeed: (v) => {
+      simSpeed.value = v
+    },
+    claimFree: claimFreeSpeedBoost,
+    grant: (kind) => grantSpeedBoost(kind === 'daily' ? DAILY_SPEED_GIFT_DURATION_MS : SPEED_BOOST_DURATION_MS),
+    showAd: () => {
+      void triggerSpeedBoostAd()
+    },
+    coins: () => walletCoins.value,
+    spendCoins: (amount) => addCoins(-amount)
+  })
 }
 
-// Shows a rewarded video via the CrazyGames SDK. On successful completion
+// Whether the 2x switch has anything to offer (see speedBoostPurchase.ts).
+const speedSwitchOffered = computed(() => isSpeedSwitchOffered({
+  rewardedReady: isRewardedReady.value,
+  boostActive: is2xAvailable.value,
+  freeGift: hasAnyFreeSpeedGift.value
+}))
+
+// Coin build only: the price can't be paid and no free gift is on offer —
+// the 2x button shows disabled.
+const speedBoostUnaffordable = computed(() => isSpeedBoostUnaffordable({
+  coins: walletCoins.value,
+  boostActive: is2xAvailable.value,
+  freeGift: hasAnyFreeSpeedGift.value
+}))
+
+const grantSpeedBoost = (durationMs: number = SPEED_BOOST_DURATION_MS) => {
+  speedBoostExpiresAt.value = Date.now() + durationMs
+  localStorage.setItem(SPEED_BOOST_KEY, String(speedBoostExpiresAt.value))
+  simSpeed.value = 2
+}
+
+// Shows a rewarded video via the active ad provider (ad builds only — a
+// no-ad build buys the boost for coins instead). On successful completion
 // we unlock the 2x speed boost for SPEED_BOOST_DURATION_MS and flip the
 // sim to 2x immediately so the reward is felt right away.
 const triggerSpeedBoostAd = async () => {
   const ok = await showRewardedAd({ kind: 'speed' })
   if (!ok) return
-  speedBoostExpiresAt.value = Date.now() + SPEED_BOOST_DURATION_MS
-  localStorage.setItem(SPEED_BOOST_KEY, String(speedBoostExpiresAt.value))
-  simSpeed.value = 2
+  grantSpeedBoost()
 }
 
 // Reference to the CoinBadge component — TreasureChest reads its `rootEl`
@@ -709,8 +820,11 @@ const coinBadgeEl = computed(() => coinBadgeRef.value?.rootEl ?? null)
 const rewardCoinRef = ref<HTMLElement | null>(null)
 const rewardDiamondRef = ref<HTMLElement | null>(null)
 const rewardDailyCoinRef = ref<HTMLElement | null>(null)
-const rouletteRewardCoinRef = ref<HTMLElement | null>(null)
-const rouletteRewardDiamondRef = ref<HTMLElement | null>(null)
+// One amount row per granted roulette spin (first spin, then the respin).
+const rouletteRewardRowRefs = ref<HTMLElement[]>([])
+const setRouletteRowRef = (el: unknown, i: number) => {
+  if (el instanceof HTMLElement) rouletteRewardRowRefs.value[i] = el
+}
 
 /** Fire coin explosion from any source element toward the HUD coin badge. */
 const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
@@ -898,6 +1012,10 @@ watch(isGameOver, (over) => {
     })
     playSound(gameResult.value === 'win' ? 'win' : 'lose')
     if (gameResult.value === 'win') spawnMeteorShower(80, 50, 65)
+    // A fresh result screen: nothing from the last one's 3x ad carries over.
+    lastWinWasBoss.value = false
+    winAdExtra.value = 0
+    winAdBusy.value = false
 
     // PvP matches — small coin reward + honor points tracking
     if (pvpMode.value) {
@@ -970,6 +1088,7 @@ watch(isGameOver, (over) => {
 
     // Boss win (campaign only) — show roulette before awarding coins
     const isBossWin = gameResult.value === 'win' && !ghostMode.value && currentStage.value.isBoss
+    lastWinWasBoss.value = isBossWin === true
     if (isBossWin) {
       // Advance stage + BP immediately, but defer coin award until roulette resolves
       if (!hasFirstWin.value) markFirstWin()
@@ -977,14 +1096,25 @@ watch(isGameOver, (over) => {
       recordPlayerStage(currentStageId.value)
       bpAwardCampaignWin()
       pendingBossReward.value = true
-      rouletteMultiplier.value = 1
-      rouletteSkinResult.value = null
-      showRoulette.value = true
+      rouletteGrants.value = []
+      // "BOSS DEFEATED" title card first, then the roulette (see
+      // onBossDefeatedDone). Everything above is already granted, so the card
+      // only delays when the roulette appears — never what the player owns.
+      // The midgame interstitial fires before the NEXT battle, so no ad can
+      // land between this card and the result screen.
+      if (shouldShowBossDefeated({
+        result: gameResult.value,
+        isBossStage: true,
+        mode: battleModeOf({ ghost: ghostMode.value, cheat: !!cheatStage.value })
+      })) showBossDefeated.value = true
+      else showRoulette.value = true
       stopBattleMusic()
       return
     }
 
-    addCoins(rewardAmount.value)
+    // Snapshot BEFORE advanceStage() — see `grantedCoins`.
+    grantedCoins.value = rewardAmount.value
+    addCoins(grantedCoins.value)
     if (gameResult.value === 'win' && !ghostMode.value) {
       if (!hasFirstWin.value) markFirstWin()
       advanceStage()
@@ -1003,31 +1133,31 @@ watch(isGameOver, (over) => {
   }
 })
 
+/**
+ * One roulette spin landed: grant it NOW. The wheel emits this the moment a
+ * spin stops — before it offers the "Spin Again" ad — so the first reward is
+ * in the save before any ad plays, and a respin can only ever ADD a second
+ * one. Each spin is emitted exactly once, so each is paid exactly once.
+ * (A skin was already granted by the wheel itself through `buySkin`.)
+ */
 const onRouletteResult = (result: RouletteResult) => {
-  rouletteDiamonds.value = 0
-  if (result.type === 'diamonds') {
-    // Ultra-rare jackpot: grant diamonds INSTEAD of the multiplied coins.
-    rouletteDiamonds.value = result.diamonds ?? 0
-    rouletteMultiplier.value = 1
-    rouletteSkinResult.value = null
-    addDiamonds(rouletteDiamonds.value)
-  } else if (result.type === 'multiplier') {
-    rouletteMultiplier.value = result.multiplier ?? 1
-    rouletteSkinResult.value = null
-  } else {
-    rouletteSkinResult.value = result
-    rouletteMultiplier.value = 1
-  }
-  showRoulette.value = false
-  // Award coins — boss win uses multiplied reward, cheat uses base reward.
-  // The diamond jackpot pays diamonds (above) and no coins.
-  if (rouletteDiamonds.value === 0) {
-    const coins = Math.round(rewardAmount.value * rouletteMultiplier.value)
-    addCoins(coins)
-  }
+  // Boss win uses the multiplied reward; a skin pays the 1x coins beside it;
+  // the ultra-rare jackpot pays diamonds INSTEAD of coins.
+  const grant = rouletteGrantFor(result, rewardAmount.value)
+  if (grant.diamonds > 0) addDiamonds(grant.diamonds)
+  if (grant.coins > 0) addCoins(grant.coins)
+  rouletteGrants.value = [...rouletteGrants.value, grant]
   coinsAwarded.value = true
   pendingBossReward.value = false
-  // Show celebration overlay with VFX
+}
+
+/** The wheel is finished (no respin, respin declined / unfilled, or the
+ *  respin landed): close it and celebrate everything that was granted. */
+const onRouletteDone = () => {
+  if (!showRoulette.value) return
+  showRoulette.value = false
+  coinsAwarded.value = true
+  pendingBossReward.value = false
   rouletteRewardReady.value = false
   showRouletteReward.value = true
   // A boss win NEVER reaches the ordinary reward overlay — it detours through
@@ -1040,10 +1170,13 @@ const onRouletteResult = (result: RouletteResult) => {
   // the platform uses these events to time featured-game highlights.
   // No-op outside a crazy-web build thanks to the isSdkActive guard inside.
   triggerHappytime()
-  // Fire the matching explosion once the overlay renders.
+  // Fire the matching explosion(s) once the overlay renders.
   nextTick(() => {
-    if (rouletteDiamonds.value > 0) fireDiamondExplosion(rouletteRewardDiamondRef.value, rouletteDiamonds.value)
-    else fireCoinExplosion(rouletteRewardCoinRef.value)
+    rouletteGrants.value.forEach((g, i) => {
+      const el = rouletteRewardRowRefs.value[i] ?? null
+      if (g.diamonds > 0) fireDiamondExplosion(el, g.diamonds)
+      else fireCoinExplosion(el)
+    })
   })
   // Enable "tap to continue" after VFX settles
   setTimeout(() => {
@@ -1054,7 +1187,7 @@ const onRouletteResult = (result: RouletteResult) => {
 const onRouletteRewardContinue = async () => {
   if (!rouletteRewardReady.value) return
   showRouletteReward.value = false
-  rouletteDiamonds.value = 0
+  rouletteGrants.value = []
 
   // Boss-win path is campaign-only (never PvP/ghost) and never surrendered,
   // so the counter always ticks. The actual ad fires before the next
@@ -1073,8 +1206,7 @@ watch(() => currentStage.value.isBoss, (isBoss) => {
 // Cheat: trigger roulette on demand (same flow as boss win)
 watch(cheatRouletteSignal, () => {
   preloadRouletteArt()
-  rouletteMultiplier.value = 1
-  rouletteSkinResult.value = null
+  rouletteGrants.value = []
   pendingBossReward.value = false // no coins in cheat mode
   showRoulette.value = true
 })
@@ -1813,8 +1945,9 @@ onUnmounted(() => {
         )
         div.flex.items-end(class="gap-0 sm:gap-2")
           DailyRewards(v-if="currentStageId >= 3" @coins-awarded="fireCoinExplosion")
-          AdRewardButton(
-            v-if="currentStageId >= 3"
+          component(
+            v-if="HudCoinsAdButton && currentStageId >= 3"
+            :is="HudCoinsAdButton"
             @coins-awarded="fireCoinExplosion"
           )
           BattlePass(v-if="currentStageId >= 6" @coins-awarded="fireCoinExplosion" @diamonds-awarded="fireDiamondExplosion")
@@ -1852,21 +1985,42 @@ onUnmounted(() => {
         //- not part of the brand-new-player onboarding (it would crowd
         //- the bottom-right HUD before the player has even completed
         //- their first match).
-        FButtonSwitch.speedup-switch.scale-90(
-          v-if="currentStageId >= 2 && (isRewardedReady || is2xAvailable) && !showConfigSpotlight"
-          class="sm:scale-100"
-          :model-value="simSpeed"
-          :options="[{ value: 1 }, { value: 2 }]"
-          @click="onSpeedSwitchClick"
+        div.relative(
+          v-if="currentStageId >= 2 && speedSwitchOffered && !showConfigSpotlight"
         )
-          template(#default="{ option }") {{ option.value }}x
-          template(#hint="{ option }")
-            //- Movie hint icon — only under the 2x button when boost not yet earned
-            img.absolute.object-contain.pointer-events-none(
-              v-if="option.value === 2 && simSpeed === 1 && !is2xAvailable"
-              src="/images/icons/movie_128x96.webp"
-              class="right-0 top-1/2 -translate-y-[50%] h-3 w-3 mr-1.5"
-            )
+          FButtonSwitch.speedup-switch.scale-90(
+            class="sm:scale-100"
+            :model-value="simSpeed"
+            :options="[{ value: 1 }, { value: 2 }]"
+            :disabled-values="speedBoostUnaffordable ? [2] : []"
+            @click="onSpeedSwitchClick"
+          )
+            template(#default="{ option }") {{ option.value }}x
+            template(#hint="{ option }")
+              //- Movie hint icon — only under the 2x button when boost not yet
+              //- earned AND the first-time gift is spent (else: FREE badge)
+              img.absolute.object-contain.pointer-events-none(
+                v-if="!IS_COIN_SPEED_BOOST_BUILD && option.value === 2 && simSpeed === 1 && !is2xAvailable && !hasAnyFreeSpeedGift"
+                src="/images/icons/movie_128x96.webp"
+                class="right-0 top-1/2 -translate-y-[50%] h-3 w-3 mr-1.5"
+              )
+          //- Free boost (useFreeSpeedGift — first-time gift or today's daily
+          //- one): a shiny FREE sticker on the 2x corner instead of the movie
+          //- icon while an ad-free boost is unspent. Hidden while a boost runs. Outside the switch — its pill clips overflow — and
+          //- right-anchored so long locales grow left across the switch.
+          span.speed-free-badge.absolute.pointer-events-none.whitespace-nowrap.font-black.game-text.leading-none.rounded-full.border.text-white(
+            v-if="simSpeed === 1 && !is2xAvailable && hasAnyFreeSpeedGift"
+            class="right-0 -top-2 px-1.5 py-0.5 text-[8px] sm:text-[9px] border-[#0f1a30] bg-gradient-to-b from-[#6dff8a] to-[#16b84a]"
+          ) {{ t('spinner.free') }}
+          //- Builds without rewarded ads (CG basic launch, itch, GamePix, …):
+          //- once no free gift is left the boost costs coins — SpeedCoinBadge in
+          //- the FREE badge's slot. Hidden while a boost runs; `null` (and not
+          //- in the bundle) on ad builds, see the module script above.
+          component(
+            v-if="SpeedBoostCoinBadge && simSpeed === 1 && !is2xAvailable && !hasAnyFreeSpeedGift"
+            :is="SpeedBoostCoinBadge"
+            :unaffordable="speedBoostUnaffordable"
+          )
 
         //- Row 2: pvp → leaderboard → team
         div.flex.items-end(class="gap-0 sm:gap-1")
@@ -1910,7 +2064,7 @@ onUnmounted(() => {
     //- Reward Overlay
     FReward(
       v-model="showReward"
-      :show-continue="true"
+      :show-continue="!winAdBusy"
       @continue="onRewardContinue"
     )
       template(#ribbon)
@@ -1930,7 +2084,7 @@ onUnmounted(() => {
         template(v-if="pvpMode")
           div.flex.items-center.gap-3(ref="rewardCoinRef")
             IconCoin(class="w-8 h-8 text-yellow-300")
-            span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ PVP_COIN_REWARD }}
+            span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ PVP_COIN_REWARD + winAdExtra }}
           div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
             span.text-purple-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
             span.text-purple-400.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
@@ -1940,7 +2094,7 @@ onUnmounted(() => {
             //- Coin bonus (every win)
             div.flex.items-center.gap-3(v-if="dailyCoinReward > 0" ref="rewardDailyCoinRef")
               IconCoin(class="w-8 h-8 text-yellow-300")
-              span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ dailyCoinReward }}
+              span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ dailyCoinReward + winAdExtra }}
             //- Daily bonus, first win of the day only. Diamonds normally;
             //- coins at the diamond rate on a single-currency build (Poki
             //- allows exactly one currency) — see useCurrency.
@@ -1964,7 +2118,7 @@ onUnmounted(() => {
             div.reward-meta__stack
               div.flex.items-center.gap-3(ref="rewardCoinRef")
                 IconCoin(class="w-8 h-8 text-yellow-300")
-                span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ rewardAmount }}
+                span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ grantedCoins + winAdExtra }}
               //- "#1130 of 2345" — where this player stands globally. Shown on the
               //- win AND the lose screen: it is the one number on the overlay that
               //- is not about this battle, and after a loss it is the reason to
@@ -1976,6 +2130,15 @@ onUnmounted(() => {
             //- every other result, so this never shows on a lose screen, a
             //- ghost fight or a boss's own win (that one is the roulette).
             BossPeekBadge(v-if="bossPeek && gameResult === 'win'" :peek="bossPeek")
+        //- "[movie] 3x [coin]" — non-boss win screens, ad builds only. Pays
+        //- the base twice more so the label above ends on 3x of it.
+        component(
+          v-if="WinCoinsAdButton && showWinCoinsAd"
+          :is="WinCoinsAdButton"
+          :base-coins="winAdBaseCoins"
+          @coins-awarded="onWinAdCoins"
+          @busy="onWinAdBusy"
+        )
         //- Player tip — kept in the flex column so it always renders
         //- BELOW the reward (no chance of covering it) and ABOVE the
         //- tap-to-continue prompt (which is absolutely docked to the
@@ -1987,6 +2150,10 @@ onUnmounted(() => {
           v-if="currentTip"
           :text-key="`tips.${currentTip}`"
         )
+
+    //- "BOSS DEFEATED" title card — boss win only, before the roulette.
+    Transition(name="fade")
+      BossDefeatedBanner(v-if="showBossDefeated" @done="onBossDefeatedDone")
 
     //- Boss Roulette Overlay (wheel spinning)
     FReward(
@@ -2004,7 +2171,7 @@ onUnmounted(() => {
         div.font-black.uppercase.tracking-wider.game-text.text-green-400.roulette-result-text(
           class="text-2xl sm:text-4xl"
         ) {{ resultText }}
-        RouletteWheel(@result="onRouletteResult")
+        RouletteWheel(@result="onRouletteResult" @done="onRouletteDone")
 
     //- Roulette Reward Celebration
     FReward(
@@ -2014,37 +2181,57 @@ onUnmounted(() => {
     )
       template(#ribbon)
         span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
-      div.flex.flex-col.items-center.gap-6.roulette-reward-enter
-        //- Jackpot (ultra-rare). Denominated in whichever currency the build
-        //- actually pays — `addDiamonds` did the conversion already.
-        template(v-if="rouletteDiamonds > 0")
-          div.roulette-reward-glow.flex.flex-col.items-center.gap-2
-            IconDiamond(v-if="rouletteJackpot.currency === 'diamonds'" class="w-20 h-20 sm:w-28 sm:h-28")
-            IconCoin(v-else class="w-20 h-20 sm:w-28 sm:h-28 text-yellow-300")
-          div.flex.items-center.gap-3(ref="rouletteRewardDiamondRef")
-            IconDiamond(v-if="rouletteJackpot.currency === 'diamonds'" class="w-8 h-8")
-            IconCoin(v-else class="w-8 h-8 text-yellow-300")
-            span.font-black.game-text(
-              :class="[rouletteJackpot.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-3xl sm:text-5xl']"
-            ) +{{ rouletteJackpot.amount }}
-        //- Skin reward
-        template(v-else-if="rouletteSkinResult?.skin")
-          div.roulette-reward-glow.flex.flex-col.items-center.gap-3
-            img.object-contain.drop-shadow-lg(
-              :src="modelImgPath(rouletteSkinResult.skin.modelId)"
-              class="w-24 h-24 sm:w-32 sm:h-32"
-            )
-            span.text-purple-300.font-black.game-text.uppercase(class="text-xl sm:text-3xl") {{ t(`skins.${rouletteSkinResult.skin.modelId}`) }}
-          div.flex.items-center.gap-3(ref="rouletteRewardCoinRef")
-            IconCoin(class="w-6 h-6 text-yellow-300")
-            span.text-yellow-400.font-black.game-text(class="text-xl sm:text-2xl") +{{ rewardAmount }}
-        //- Coin multiplier reward
-        template(v-else)
-          div.roulette-reward-glow.flex.flex-col.items-center.gap-2
-            span.text-yellow-300.font-black.game-text(class="text-5xl sm:text-7xl") {{ rouletteMultiplier }}x
-          div.flex.items-center.gap-3(ref="rouletteRewardCoinRef")
-            IconCoin(class="w-8 h-8 text-yellow-300")
-            span.text-yellow-400.font-black.game-text(class="text-3xl sm:text-5xl") +{{ Math.round(rewardAmount * rouletteMultiplier) }}
+      //- One reward per granted spin. With the "Spin Again" respin there are
+      //- TWO — the respin ADDS to the first, it never replaces it — shown side
+      //- by side with a "+" between them and the second tagged "Spin Again".
+      div.roulette-reward-enter.flex.flex-wrap.items-center.justify-center(
+        class="gap-x-3 gap-y-4 sm:gap-x-6"
+        :class="{ 'is-double': rouletteGrants.length > 1 }"
+      )
+        template(v-for="(g, i) in rouletteGrants" :key="i")
+          div.font-black.game-text.text-white(
+            v-if="i > 0"
+            class="text-4xl sm:text-6xl"
+            aria-hidden="true"
+          ) +
+          div.roulette-grant.flex.flex-col.items-center(
+            class="gap-3 sm:gap-4"
+            :data-roulette-grant="g.type"
+          )
+            div.roulette-grant-tag.font-black.uppercase.game-text.text-yellow-200(
+              v-if="i > 0"
+              class="text-xs sm:text-sm tracking-[0.15em]"
+            ) {{ t('spinner.spinAgain') }}
+            //- Jackpot (ultra-rare). Denominated in whichever currency the build
+            //- actually pays — `addDiamonds` did the conversion already.
+            template(v-if="g.type === 'diamonds'")
+              div.roulette-reward-glow.flex.flex-col.items-center.gap-2
+                IconDiamond.roulette-grant-icon(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'")
+                IconCoin.roulette-grant-icon.text-yellow-300(v-else)
+              div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
+                IconDiamond(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'" class="w-8 h-8")
+                IconCoin(v-else class="w-8 h-8 text-yellow-300")
+                span.roulette-grant-amount.font-black.game-text(
+                  :class="displayDiamondReward(g.diamonds).currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400'"
+                ) +{{ displayDiamondReward(g.diamonds).amount }}
+            //- Skin reward (plus the 1x coins that come with it)
+            template(v-else-if="g.skin")
+              div.roulette-reward-glow.flex.flex-col.items-center.gap-3
+                img.roulette-grant-icon.object-contain.drop-shadow-lg(
+                  :src="modelImgPath(g.skin.modelId)"
+                  :alt="t(`skins.${g.skin.modelId}`)"
+                )
+                span.roulette-grant-skin.text-purple-300.font-black.game-text.uppercase {{ t(`skins.${g.skin.modelId}`) }}
+              div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
+                IconCoin(class="w-6 h-6 text-yellow-300")
+                span.text-yellow-400.font-black.game-text(class="text-xl sm:text-2xl") +{{ g.coins }}
+            //- Coin multiplier reward
+            template(v-else)
+              div.roulette-reward-glow.flex.flex-col.items-center.gap-2
+                span.roulette-grant-mult.text-yellow-300.font-black.game-text {{ g.multiplier }}x
+              div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
+                IconCoin(class="w-8 h-8 text-yellow-300")
+                span.roulette-grant-amount.text-yellow-400.font-black.game-text +{{ g.coins }}
 
     //- 20h Skin Chest reward
     FReward(
@@ -2133,6 +2320,55 @@ onUnmounted(() => {
   animation: roulette-glow 2s ease-in-out infinite
   filter: drop-shadow(0 0 16px rgba(255, 200, 50, 0.6))
 
+// Per-grant sizes. One grant keeps the original large celebration; two
+// (first spin + "Spin Again") sit side by side, so each is scaled down to fit
+// a portrait phone and a short landscape viewport without scrolling.
+.roulette-grant-icon
+  width: 5rem
+  height: 5rem
+  @media (min-width: 640px)
+    width: 7rem
+    height: 7rem
+
+.roulette-grant-skin
+  font-size: 1.25rem
+  @media (min-width: 640px)
+    font-size: 1.875rem
+
+.roulette-grant-mult
+  font-size: 3rem
+  line-height: 1
+  @media (min-width: 640px)
+    font-size: 4.5rem
+
+.roulette-grant-amount
+  font-size: 1.875rem
+  @media (min-width: 640px)
+    font-size: 3rem
+
+.is-double
+  .roulette-grant-icon
+    width: 3.5rem
+    height: 3.5rem
+    @media (min-width: 640px)
+      width: 5rem
+      height: 5rem
+
+  .roulette-grant-skin
+    font-size: 1rem
+    @media (min-width: 640px)
+      font-size: 1.5rem
+
+  .roulette-grant-mult
+    font-size: 2.25rem
+    @media (min-width: 640px)
+      font-size: 3.75rem
+
+  .roulette-grant-amount
+    font-size: 1.5rem
+    @media (min-width: 640px)
+      font-size: 2.25rem
+
 @keyframes roulette-pop
   0%
     opacity: 0
@@ -2150,6 +2386,39 @@ onUnmounted(() => {
 .speedup-switch
   :deep(.button-wrap:last-of-type button)
     margin-right: 0.5rem
+
+// FREE gift sticker on the speed switch: gentle pulse + a light sheen
+// sweeping across. Scales from its right edge, where it is anchored.
+.speed-free-badge
+  z-index: 1
+  overflow: hidden
+  transform-origin: right center
+  box-shadow: 0 0 6px rgba(109, 255, 138, 0.8)
+  animation: speed-free-pulse 1.4s ease-in-out infinite
+
+  &::after
+    content: ''
+    position: absolute
+    inset: 0
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%)
+    transform: translateX(-120%)
+    animation: speed-free-sheen 2.4s ease-in-out infinite
+
+@keyframes speed-free-pulse
+  0%, 100%
+    transform: scale(1)
+  50%
+    transform: scale(1.12)
+
+@keyframes speed-free-sheen
+  0%, 55%
+    transform: translateX(-120%)
+  100%
+    transform: translateX(120%)
+
+@media (prefers-reduced-motion: reduce)
+  .speed-free-badge, .speed-free-badge::after
+    animation: none
 
 .animate-pulse
   animation: pulse 2s ease-in-out infinite

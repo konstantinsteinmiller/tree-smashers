@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Sei il #{n}',
     'of': 'su {n} giocatori'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Legno',
+      'bronze': 'Bronzo',
+      'silver': 'Argento',
+      'gold': 'Oro',
+      'platinum': 'Platino',
+      'diamond': 'Diamante',
+      'champion': 'Campione'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafica',
   'graphicsQualityNote': 'In automatico gli effetti calano se il dispositivo scende sotto i 25 FPS.',
   'qualityAuto': 'Automatica',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase Boss',
+  'bossDefeated': 'Boss sconfitto',
   'stageN': 'Fase {n}',
   'intro': {
     'reclaim': 'Riprenditi tutto!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Spot',
+    'free': 'GRATIS',
     'spinning': 'In rotazione...',
     'spinAgain': 'Gira ancora',
+    'tripleCoinsAria': 'Guarda una pubblicità per ottenere {count} monete in totale',
     'skip': 'Salta',
     'youWin': 'HAI VINTO!',
     'youLose': 'HAI PERSO!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamanti',
         'rewardSpeed': 'velocità di battaglia x2',
         'rewardRespin': 'un altro giro',
+        'rewardSkinAd': 'una nuova skin',
         'watch': 'Guarda il video',
         'decline': 'No, grazie'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'IN USO',
       'selectButton': 'SCEGLI',
       'hintSelectCards': 'Tocca una carta per scegliere la configurazione della trottola. Tocca il pulsante di potenziamento per potenziarla.',
-      'hintPlusIcon': 'L\'icona + in cima a ogni carta della parte superiore apre il negozio di skin di quella parte (es. negozio skin Perforacorazze), dove puoi ottenere nuove skin.'
+      'hintPlusIcon': 'L\'icona + in cima a ogni carta della parte superiore apre il negozio di skin di quella parte (es. negozio skin Perforacorazze), dove puoi ottenere nuove skin.',
+      'watchAdsToUnlock': 'Guarda un annuncio per sbloccare'
     }
   }
 }

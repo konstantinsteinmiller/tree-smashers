@@ -12,9 +12,11 @@ interface Option {
 interface Props {
   modelValue: T
   options: Option[]
+  /** Options shown but not tappable (e.g. a price the player can't pay). */
+  disabledValues?: T[]
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), { disabledValues: () => [] })
 const emit = defineEmits<{
   (e: 'update:modelValue', value: T): void
   (e: 'click', value: T): void
@@ -36,10 +38,13 @@ const onClick = (value: T) => {
     )
       div.relative.button-wrap(v-for="option in options" :key="option.value")
         button.relative.cursor-pointer.transition-all.font-black.game-text.leading-none(
-          class="px-3 py-1.5 text-xs sm:text-sm active:scale-95"
+          class="px-3 py-1.5 text-xs sm:text-sm active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100"
           :class="modelValue === option.value \
             ? 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000] text-white shadow-inner' \
-            : 'text-white/60 hover:text-white'"
+            : disabledValues.includes(option.value) \
+              ? 'text-white/30' \
+              : 'text-white/60 hover:text-white'"
+          :disabled="disabledValues.includes(option.value)"
           @click="onClick(option.value)"
         )
           slot(name="default" :option="option" :is-active="modelValue === option.value") {{ option.value }}

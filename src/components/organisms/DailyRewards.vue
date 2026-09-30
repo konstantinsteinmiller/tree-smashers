@@ -4,6 +4,7 @@ import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FButton from '@/components/atoms/FButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
+import IconGift from '@/components/icons/IconGift.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
   SKINS_PER_TOP,
@@ -17,6 +18,7 @@ import type { TopPartId } from '@/types/spinner'
 import useSounds from '@/use/useSound.ts'
 import { stopGameplay } from '@/use/useCrazyGames'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { previousUtcDayKey, utcDayKey } from '@/utils/dayKey'
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -86,13 +88,11 @@ const saveState = (state: DailyState) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10)
+// Shared game day (00:00 UTC), same as the daily challenge and the daily
+// free speed-up — see utils/dayKey.ts.
+const todayStr = () => utcDayKey()
 
-const yesterdayStr = () => {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().slice(0, 10)
-}
+const yesterdayStr = () => previousUtcDayKey()
 
 // ─── Reactive State ──────────────────────────────────────────────────────────
 
@@ -256,20 +256,31 @@ const collect = (dayIndex: number) => {
 
 <template lang="pug">
   //- Open-modal button (positioned by parent flex row in SpinnerArena)
+  //-
+  //- Free reward, no ad — so it must NOT look like the yellow rewarded-ad
+  //- "+N coins" button that sits right next to it (D21: players read it as
+  //- an ad). Green body = the game's "free" colour (same as the FREE sticker
+  //- on the 2x switch), a gift glyph where the ad button has its film reel,
+  //- and never a movie icon. The translated title rides on aria-label.
   div.daily-rewards
     button.group.cursor-pointer.z-10.transition-transform(
       ref="dailyBtnRef"
+      type="button"
+      :aria-label="t('dailyRewards')"
+      :title="t('dailyRewards')"
       class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-110"
       :class="{ 'hint-bounce': hasDailyRewardReady }"
       @click="isModalOpen = true"
     )
       div.relative
         div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-        div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-3.py-1(
-          class="bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30] pt-2 sm:pt-1"
+        div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-2.py-1(
+          class="bg-gradient-to-b from-[#5ee87c] to-[#149a3f] border-[#0f1a30]"
         )
-          span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
-          IconCoin(class="w-5 h-5 text-yellow-300")
+          IconGift.text-white(class="w-5 h-5 drop-shadow-[1px_1px_0_#000]")
+          div.flex.items-center(class="gap-0.5")
+            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
+            IconCoin(class="w-4 h-4 text-yellow-300")
 
   //- Daily Rewards Modal
   FModal(

@@ -141,6 +141,19 @@ export default {
     'yourRank': 'あなたは #{n} 位',
     'of': '/ {n} 人中'
   },
+  'league': {
+    'tiers': {
+      'wood': 'ウッド',
+      'bronze': 'ブロンズ',
+      'silver': 'シルバー',
+      'gold': 'ゴールド',
+      'platinum': 'プラチナ',
+      'diamond': 'ダイヤモンド',
+      'champion': 'チャンピオン'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} {position}位'
+  },
   'graphicsQuality': 'グラフィック',
   'graphicsQualityNote': '自動モードでは、25FPSを下回るとエフェクトを軽減します。',
   'qualityAuto': '自動',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': 'ステージ',
   'bossStage': 'ボスステージ',
+  'bossDefeated': 'ボス撃破',
   'stageN': 'ステージ {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': '広告',
+    'free': '無料',
     'spinning': '回転中...',
     'spinAgain': 'もう一度回す',
+    'tripleCoinsAria': '広告を見て合計{count}コインをゲット',
     'skip': 'スキップ',
     'youWin': '勝利！',
     'youLose': '敗北！',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': 'ダイヤ {count} 個',
         'rewardSpeed': 'バトル速度2倍',
         'rewardRespin': 'もう1回スピン',
+        'rewardSkinAd': '新しいスキン',
         'watch': '広告を見る',
         'decline': '見ない'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': '装備中',
       'selectButton': '選択',
       'hintSelectCards': 'カードをタップしてブレード構成を選び、アップグレードボタンで強化しよう。',
-      'hintPlusIcon': 'アッパー カード上部の「+」をタップすると、そのパーツのスキンショップ（例：アーマーブレイク用）が開き、新スキンを入手できます。'
+      'hintPlusIcon': 'アッパー カード上部の「+」をタップすると、そのパーツのスキンショップ（例：アーマーブレイク用）が開き、新スキンを入手できます。',
+      'watchAdsToUnlock': '広告を見てアンロック'
     }
   }
 }

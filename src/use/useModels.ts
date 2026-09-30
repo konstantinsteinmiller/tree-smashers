@@ -5,7 +5,7 @@ import useUser from '@/use/useUser'
 import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { TopPartId } from '@/types/spinner'
-import { SKINS_KEY } from '@/keys'
+import { SKINS_KEY, SKIN_AD_PROGRESS_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import {
   SKINS_PER_TOP,
@@ -13,6 +13,11 @@ import {
   SKIN_COST,
   SPECIAL_SKIN_COST,
   SPINNER_MODEL_IDS,
+  AD_UNLOCK_SKINS,
+  SKIN_AD_UNLOCK_ADS,
+  AD_SKIN_COIN_COST,
+  isAdUnlockSkin,
+  isCoinPurchasable,
   skinCost,
   getOfferableSkinPool as buildOfferableSkinPool,
   type SpinnerModelId
@@ -32,6 +37,11 @@ export {
   SKIN_COST,
   SPECIAL_SKIN_COST,
   SPINNER_MODEL_IDS,
+  AD_UNLOCK_SKINS,
+  SKIN_AD_UNLOCK_ADS,
+  AD_SKIN_COIN_COST,
+  isAdUnlockSkin,
+  isCoinPurchasable,
   skinCost
 }
 export type { SpinnerModelId }
@@ -75,15 +85,29 @@ const loadPickerOpened = (): Set<string> => {
   return new Set()
 }
 
+const loadSkinAdProgress = (): Record<string, number> => {
+  try {
+    const raw = localStorage.getItem(SKIN_AD_PROGRESS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+    }
+  } catch { /* fall through */
+  }
+  return {}
+}
+
 const ownedSkins: Ref<Set<string>> = ref(loadOwnedSkins())
 const selectedSkins: Ref<Record<string, string>> = ref(loadSelectedSkins())
 const pickerOpenedParts: Ref<Set<string>> = ref(loadPickerOpened())
+const skinAdProgress: Ref<Record<string, number>> = ref(loadSkinAdProgress())
 
 // Re-read on hydrate-success bump (see useSpinnerCampaign for rationale).
 watch(saveDataVersion, () => {
   ownedSkins.value = loadOwnedSkins()
   selectedSkins.value = loadSelectedSkins()
   pickerOpenedParts.value = loadPickerOpened()
+  skinAdProgress.value = loadSkinAdProgress()
 })
 
 const saveOwnedSkins = () => {
@@ -145,6 +169,71 @@ export const buySkin = (topPartId: TopPartId, modelId: SpinnerModelId): boolean 
   ownedSkins.value = new Set([...ownedSkins.value, `${topPartId}:${modelId}`])
   saveOwnedSkins()
   return true
+}
+
+/** Shop purchase with coins. On a build with rewarded ads it refuses the
+ *  ad-unlock skins (`AD_UNLOCK_SKINS`) so no coin path can grant them; on a
+ *  build without rewarded ads they sell for `AD_SKIN_COIN_COST` (see
+ *  `skinCost`). The caller deducts the coins only after this returns true.
+ *  Reward systems (chest, wheel, BP, daily) grant through `buySkin` directly
+ *  and are unaffected. `adsBuild` exists for tests. */
+export const purchaseSkinWithCoins = (
+  topPartId: TopPartId,
+  modelId: SpinnerModelId,
+  adsBuild?: boolean
+): boolean => {
+  if (!isCoinPurchasable(modelId, adsBuild)) return false
+  return buySkin(topPartId, modelId)
+}
+
+/** Settle ad progress saved under the old 3-ad rule. With ONE ad per skin,
+ *  any stored watch already pays for the skin, so every ad-unlock skin with
+ *  progress is granted (under each top part that lists it) and its entry is
+ *  cleared; entries for owned / unknown skins are dropped too. Called when
+ *  the skin shop opens — an explicit player moment, never mid-hydrate — and
+ *  `recordSkinAdWatch` unlocks on the next ad regardless. Returns the model
+ *  ids it granted. */
+export const settleSkinAdProgress = (): SpinnerModelId[] => {
+  const entries = Object.keys(skinAdProgress.value)
+  if (entries.length === 0) return []
+  const granted: SpinnerModelId[] = []
+  for (const id of entries) {
+    const modelId = id as SpinnerModelId
+    if (!AD_UNLOCK_SKINS.has(modelId) || skinAdProgressFor(modelId) < SKIN_AD_UNLOCK_ADS) continue
+    for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
+      if (SKINS_PER_TOP[topPartId].includes(modelId) && buySkin(topPartId, modelId)) {
+        if (!granted.includes(modelId)) granted.push(modelId)
+      }
+    }
+  }
+  skinAdProgress.value = {}
+  localStorage.setItem(SKIN_AD_PROGRESS_KEY, JSON.stringify({}))
+  return granted
+}
+
+/** Rewarded ads already watched towards an ad-unlock skin (0 … SKIN_AD_UNLOCK_ADS). */
+export const skinAdProgressFor = (modelId: SpinnerModelId): number =>
+  Math.max(0, Math.min(SKIN_AD_UNLOCK_ADS, Math.floor(Number(skinAdProgress.value[modelId]) || 0)))
+
+/** Credit ONE completed rewarded ad to an ad-unlock skin. Call it only after
+ *  `showRewardedAd` resolved true. Unlocks the skin on the
+ *  `SKIN_AD_UNLOCK_ADS`-th watch (today: the first; legacy partial progress
+ *  never delays it) and returns true then; a non-ad skin or an already-owned
+ *  one is a no-op returning false. */
+export const recordSkinAdWatch = (topPartId: TopPartId, modelId: SpinnerModelId): boolean => {
+  if (!AD_UNLOCK_SKINS.has(modelId)) return false
+  if (isSkinOwned(topPartId, modelId)) return false
+  const next = skinAdProgressFor(modelId) + 1
+  if (next >= SKIN_AD_UNLOCK_ADS) {
+    const rest = { ...skinAdProgress.value }
+    delete rest[modelId]
+    skinAdProgress.value = rest
+    localStorage.setItem(SKIN_AD_PROGRESS_KEY, JSON.stringify(rest))
+    return buySkin(topPartId, modelId)
+  }
+  skinAdProgress.value = { ...skinAdProgress.value, [modelId]: next }
+  localStorage.setItem(SKIN_AD_PROGRESS_KEY, JSON.stringify(skinAdProgress.value))
+  return false
 }
 
 /** Skins eligible to be OFFERED as a free reward (Daily Rewards, Battle

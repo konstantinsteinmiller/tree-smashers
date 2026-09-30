@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Você é o #{n}',
     'of': 'de {n} jogadores'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Madeira',
+      'bronze': 'Bronze',
+      'silver': 'Prata',
+      'gold': 'Ouro',
+      'platinum': 'Platina',
+      'diamond': 'Diamante',
+      'champion': 'Campeão'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'No automático, os efeitos diminuem quando seu aparelho cai abaixo de 25 FPS.',
   'qualityAuto': 'Automático',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase do Chefe',
+  'bossDefeated': 'Chefe derrotado',
   'stageN': 'Fase {n}',
   'intro': {
     'reclaim': 'Recupere tudo!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Anúncio',
+    'free': 'GRÁTIS',
     'spinning': 'Girando...',
     'spinAgain': 'Girar de novo',
+    'tripleCoinsAria': 'Assista a um anúncio para ganhar {count} moedas no total',
     'skip': 'Pular',
     'youWin': 'VOCÊ VENCEU!',
     'youLose': 'VOCÊ PERDEU!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamantes',
         'rewardSpeed': 'velocidade de batalha 2x',
         'rewardRespin': 'mais um giro',
+        'rewardSkinAd': 'uma nova skin',
         'watch': 'Assistir anúncio',
         'decline': 'Não, valeu'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'EQUIPADO',
       'selectButton': 'ESCOLHER',
       'hintSelectCards': 'Toque em uma carta para escolher a configuração do seu pião. Toque no botão de melhoria para melhorá-la.',
-      'hintPlusIcon': 'O ícone + no topo de cada carta de peça superior abre a loja de skins daquela peça (ex.: loja de skins Perfura-Tanque), onde você pode conseguir novas skins.'
+      'hintPlusIcon': 'O ícone + no topo de cada carta de peça superior abre a loja de skins daquela peça (ex.: loja de skins Perfura-Tanque), onde você pode conseguir novas skins.',
+      'watchAdsToUnlock': 'Assista a um anúncio para desbloquear'
     }
   }
 }

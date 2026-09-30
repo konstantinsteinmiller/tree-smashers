@@ -30,6 +30,10 @@ vi.mock('@/platforms/resolveAdProvider', () => ({
 
 const importAds = async () => {
   vi.resetModules()
+  // An ad build: on a build without rewarded ads `useAds` refuses every
+  // rewarded placement regardless of the provider (rewardedPlacementsBuildGate
+  // test), so the throttle is only observable on an ad build.
+  vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
   // Reset spy call counts and the provider readiness defaults between
   // tests so each `await import` starts from a clean slate.
   mockProvider.isRewardedReady.value = true
@@ -45,6 +49,7 @@ describe('useAds + rewarded throttle', () => {
   })
   afterEach(() => {
     window.localStorage.clear()
+    vi.unstubAllEnvs()
   })
 
   it('isRewardedReady is true when provider is ready and throttle is open', async () => {

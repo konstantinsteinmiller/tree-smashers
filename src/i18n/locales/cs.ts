@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Tvé pořadí: #{n}',
     'of': 'z {n} hráčů'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Dřevo',
+      'bronze': 'Bronz',
+      'silver': 'Stříbro',
+      'gold': 'Zlato',
+      'platinum': 'Platina',
+      'diamond': 'Diamant',
+      'champion': 'Šampion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatický režim sníží efekty, když zařízení klesne pod 25 FPS.',
   'qualityAuto': 'Automatická',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa s bossem',
+  'bossDefeated': 'Boss poražen',
   'stageN': 'Etapa {n}',
   'intro': {
     'reclaim': 'Získej vše zpět!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklama',
+    'free': 'ZDARMA',
     'spinning': 'Točí se...',
     'spinAgain': 'Točit znovu',
+    'tripleCoinsAria': 'Podívej se na reklamu a získej celkem {count} mincí',
     'skip': 'Přeskočit',
     'youWin': 'VÍTĚZSTVÍ!',
     'youLose': 'PROHRA!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'diamanty ×{count}',
         'rewardSpeed': 'rychlost bitvy ×2',
         'rewardRespin': 'další zatočení',
+        'rewardSkinAd': 'nový skin',
         'watch': 'Přehrát',
         'decline': 'Ne, díky'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'NASAZENO',
       'selectButton': 'VYBRAT',
       'hintSelectCards': 'Klepnutím na kartu vybereš konfiguraci káči. Tlačítkem vylepšení ji vylepšíš.',
-      'hintPlusIcon': 'Ikona + nahoře na každé kartě horního dílu otevře obchod se skiny daného dílu (např. obchod se skiny Průrazníku), kde získáš nové skiny.'
+      'hintPlusIcon': 'Ikona + nahoře na každé kartě horního dílu otevře obchod se skiny daného dílu (např. obchod se skiny Průrazníku), kde získáš nové skiny.',
+      'watchAdsToUnlock': 'Sleduj reklamu a odemkni'
     }
   }
 }

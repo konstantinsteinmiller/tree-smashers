@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Oʻrning: #{n}',
     'of': '{n} oʻyinchi ichida'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Yogʻoch',
+      'bronze': 'Bronza',
+      'silver': 'Kumush',
+      'gold': 'Oltin',
+      'platinum': 'Platina',
+      'diamond': 'Olmos',
+      'champion': 'Chempion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Avtomatik rejim qurilmang 25 FPS dan pastga tushsa, effektlarni kamaytiradi.',
   'qualityAuto': 'Avtomatik',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Bosqich',
   'bossStage': 'Boss bosqichi',
+  'bossDefeated': 'Boss yengildi',
   'stageN': '{n}-bosqich',
   'intro': {
     'reclaim': 'Hammasini qaytarib ol!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklama',
+    'free': 'BEPUL',
     'spinning': 'Aylanmoqda...',
     'spinAgain': 'Yana aylantir',
+    'tripleCoinsAria': 'Jami {count} tanga olish uchun reklama ko‘ring',
     'skip': 'Oʻtkazish',
     'youWin': 'YUTDING!',
     'youLose': 'YUTQAZDING!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} olmos',
         'rewardSpeed': '2x jang tezligi',
         'rewardRespin': 'yana bir aylantirish',
+        'rewardSkinAd': 'yangi skin',
         'watch': 'Tomosha qilish',
         'decline': 'Kerak emas'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'TANLANGAN',
       'selectButton': 'TANLASH',
       'hintSelectCards': 'Pildiroq tuzilmasini tanlash uchun kartani bos. Kuchaytirish uchun yaxshilash tugmasini bos.',
-      'hintPlusIcon': 'Har bir ustki qism kartasi tepasidagi + belgisi shu qismning skin doʻkonini ochadi (masalan, Zirhteshar skin doʻkoni) — u yerda yangi skinlar olishing mumkin.'
+      'hintPlusIcon': 'Har bir ustki qism kartasi tepasidagi + belgisi shu qismning skin doʻkonini ochadi (masalan, Zirhteshar skin doʻkoni) — u yerda yangi skinlar olishing mumkin.',
+      'watchAdsToUnlock': 'Ochish uchun reklama ko\'ring'
     }
   }
 }

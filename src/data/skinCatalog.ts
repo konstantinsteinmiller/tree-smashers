@@ -6,6 +6,7 @@
 // so existing imports keep compiling.
 
 import type { TopPartId } from '@/types/spinner'
+import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
 
 /** Set of all spinner model IDs across every top part. The exhaustive
  *  list lets us key into per-skin metadata without picking a top. */
@@ -60,9 +61,50 @@ export const SPECIAL_SKINS: ReadonlySet<SpinnerModelId> = new Set([
 export const SKIN_COST = 300
 export const SPECIAL_SKIN_COST = 1500
 
-/** Coin cost for a given skin. */
+/** The 2026-09 expansion — the newest 4 skins of every top part. On a build
+ *  that serves rewarded ads (`HAS_REWARDED_ADS`) they are NOT sold for coins:
+ *  the skin shop unlocks each with ONE rewarded ad. On a build without
+ *  rewarded ads the ad button is hidden and they sell for
+ *  `AD_SKIN_COIN_COST` coins instead. Either way they stay regular skins, so
+ *  the Skin Chest, the roulette wheel, the Battle Pass and Daily Rewards keep
+ *  handing them out (`getOfferableSkinPool` does not exclude them). A player
+ *  who bought one with coins before this rule keeps it — ownership lives in
+ *  `spinner_owned_skins` and nothing here revokes it. */
+export const AD_UNLOCK_SKINS: ReadonlySet<SpinnerModelId> = new Set<SpinnerModelId>([
+  'cheetah', 'jester', 'ninja', 'pirate',
+  'porcupine', 'lionfish', 'morningstar', 'cactus',
+  'kraken', 'taiko', 'toadstool', 'full-moon',
+  'monarch', 'pyramid', 'compass', 'checkmate',
+  'armadillo', 'anvil', 'mammoth', 'deep-diver',
+  'narwhal', 'stag-beetle', 'drill', 'lancer'
+])
+
+/** Completed rewarded ads needed to unlock one `AD_UNLOCK_SKINS` skin in the
+ *  shop. Was 3; progress saved under the old rule (1–2 watches, see
+ *  `SKIN_AD_PROGRESS_KEY`) already meets it and is settled into ownership. */
+export const SKIN_AD_UNLOCK_ADS = 1
+
+/** Coin price of an `AD_UNLOCK_SKINS` skin on a build WITHOUT rewarded ads:
+ *  3x the special-skin price. */
+export const AD_SKIN_COIN_COST = SPECIAL_SKIN_COST * 3
+
+/** True when the shop offers the rewarded-ad unlock for this skin — only an
+ *  `AD_UNLOCK_SKINS` skin, and only on a build that serves rewarded ads.
+ *  `adsBuild` exists for tests; production always uses the build constant. */
+export const isAdUnlockSkin = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
+  adsBuild && AD_UNLOCK_SKINS.has(modelId)
+
+/** False for skins the shop never sells for coins: `AD_UNLOCK_SKINS` on an
+ *  ad build. Without rewarded ads every skin is coin-purchasable. */
+export const isCoinPurchasable = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
+  !isAdUnlockSkin(modelId, adsBuild)
+
+/** Coin cost for a given skin. For `AD_UNLOCK_SKINS` it is only offered on a
+ *  build without rewarded ads — check `isCoinPurchasable` first. */
 export const skinCost = (modelId: SpinnerModelId): number =>
-  SPECIAL_SKINS.has(modelId) ? SPECIAL_SKIN_COST : SKIN_COST
+  AD_UNLOCK_SKINS.has(modelId)
+    ? AD_SKIN_COIN_COST
+    : SPECIAL_SKINS.has(modelId) ? SPECIAL_SKIN_COST : SKIN_COST
 
 /** Build the pool of skins eligible to be OFFERED as a free reward
  *  (Daily Rewards, Battle Pass, Honor Track, Skin Chest). Skins are

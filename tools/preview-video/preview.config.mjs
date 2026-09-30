@@ -82,6 +82,64 @@ export default {
         landscape: { width: 1920, height: 1080, dpr: 1, isMobile: false, hasTouch: false }
       },
       scenarios: { success: 'success-30s', fail: 'fail-30s' }
+    },
+    // ── The 12 s showreel's raw scenes ──
+    //
+    // NOT a deliverable on its own: `pnpm preview:reel` (showreel.mjs)
+    // records these and cuts them into one 12 s reel per orientation with
+    // ~0.27 s transitions. `onDemand` keeps a bare `pnpm preview:video` from
+    // recording them; `scenarioIds` is this format's own scene list.
+    //
+    // 2.8 s per scene, of which the reel uses ~2.4-2.67 s (showreel.mjs picks
+    // each scene's in-point) — the slack is what lets a cut land on the
+    // signature moment rather than on the clip's first frame.
+    // Lossless only: the scenes are an intermediate, re-encoded once by the
+    // assembly into the upload copy. 1080p because a showreel is a trailer.
+    reel: {
+      onDemand: true,
+      durationMs: 2_800,
+      quality: ['lossless'],
+      orientations: {
+        portrait: { width: 1080, height: 1920, dpr: 1, isMobile: true, hasTouch: true },
+        landscape: { width: 1920, height: 1080, dpr: 1, isMobile: false, hasTouch: false }
+      },
+      scenarioIds: ['lava', 'forest', 'ice', 'bear', 'piranha', 'phantom'],
+      scenarios: {
+        lava: 'reel-lava',
+        forest: 'reel-forest',
+        ice: 'reel-ice',
+        bear: 'reel-bear',
+        piranha: 'reel-piranha',
+        phantom: 'reel-phantom'
+      },
+      // The cuts `pnpm preview:reel` assembles from those scenes (read by
+      // showreel.mjs, not by the recorder). Scene order, preferred lengths and
+      // the transition OUT of each scene; the last scene is fitted so the
+      // reel is exactly 12 s. `showreel` is the canonical upload and ends on
+      // the Phantom Twin phasing into two halves (chosen over the Piranha
+      // ending). The Piranha ending stays available behind `--piranha`; an
+      // `optional` reel and any scene only it uses are skipped by default.
+      reels: {
+        showreel: {
+          scenes: [
+            { id: 'lava', frames: 80, transition: 'flash' },
+            { id: 'forest', frames: 80, transition: 'whipLeft' },
+            { id: 'ice', frames: 80, transition: 'sweep' },
+            { id: 'bear', frames: 80, transition: 'whipUp' },
+            { id: 'phantom' }
+          ]
+        },
+        'showreel-piranha': {
+          optional: '--piranha',
+          scenes: [
+            { id: 'lava', frames: 80, transition: 'flash' },
+            { id: 'forest', frames: 80, transition: 'whipLeft' },
+            { id: 'ice', frames: 80, transition: 'sweep' },
+            { id: 'bear', frames: 80, transition: 'whipUp' },
+            { id: 'piranha' }
+          ]
+        }
+      }
     }
     // Portal shapes are formats too — see the skill's reference/portal-specs.md.
     // CrazyGames portrait is 2:3 (1080x1620), NOT 9:16:

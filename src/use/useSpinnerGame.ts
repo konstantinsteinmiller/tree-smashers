@@ -1054,10 +1054,11 @@ export const useSpinnerGame = () => {
   const activeShockBolts: ShockBolt[] = []
   let activeClashSounds = 0
 
-  // ── Arena-border contact VFX (lava flame-burn, forest heal pulse) ──────
+  // ── Contact VFX (lava flame-burn, heal pulse) ──────────────────────────
   // Pooled state + draw code live in `@/use/borderFx` (unit-tested there).
-  // Caps: low tier / Firefox get fewer concurrent instances, and on low a
-  // burn plays one pass per contact instead of being held alight.
+  // Burn caps: low tier / Firefox get fewer concurrent instances, and on low
+  // a burn plays one pass per contact instead of being held alight. Heals are
+  // never capped — every heal reads; low tier draws the cheap pulse instead.
   const borderFx = createBorderFx()
   // Dev-only read handle for QA scripts (capture a screenshot while a burn /
   // heal is actually live). Never runs in a production build — DEV is false
@@ -1065,7 +1066,16 @@ export const useSpinnerGame = () => {
   // though the obfuscator can leave the dead branch's string in the bundle.
   if (import.meta.env.DEV) (window as unknown as { __borderFx?: unknown }).__borderFx = borderFx
   const burnCap = (): number => (FX.low ? 2 : isFirefox ? 3 : BORDER_FX_POOL_SIZE)
-  const healCap = (): number => (FX.low ? 2 : isFirefox ? 3 : BORDER_FX_POOL_SIZE)
+  /**
+   * The ONE hook every HP-raising code path calls after it changed `hp`:
+   * plays the heal pulse on that blade iff HP actually went up (and it is
+   * alive). No stacking — a pulse already running on the blade keeps playing
+   * untouched (see `triggerHeal`). VFX only: reads hp, never writes physics
+   * state and never draws from matchRng. Heal numbers stay at the call site.
+   */
+  const healFx = (blade: SpinnerState, hpBefore: number): void => {
+    if (blade.hp > hpBefore && blade.hp > 0) triggerHeal(borderFx, blade)
+  }
   // The flame strip is only fetched where it can be drawn: warmed by
   // initGame for a lava arena (and by the deferred preload tier when the
   // current stage is lava), or on the first burn if the arena was switched
@@ -3051,7 +3061,11 @@ export const useSpinnerGame = () => {
       }
     } else if (arenaType.value === 'forest') {
       const healed = Math.round(Math.min(1, blade.maxHp - blade.hp))
+      const hpBeforeForest = blade.hp
       blade.hp = Math.min(blade.maxHp, blade.hp + 1)
+      // Heal pulse whenever HP actually went up — including a sub-0.5 top-up
+      // whose rounded number is 0 and so shows no digit.
+      healFx(blade, hpBeforeForest)
       if (healed > 0) {
         const healAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
         const healSpd = 0.06 + Math.random() * 0.03
@@ -3061,9 +3075,6 @@ export const useSpinnerGame = () => {
           vx: Math.cos(healAngle) * healSpd, vy: Math.sin(healAngle) * healSpd,
           color: '#44cc66', isCrit: false
         })
-        // Heal pulse only when HP actually went up (same rule as the
-        // number), throttled per spinner inside triggerHeal.
-        triggerHeal(borderFx, blade, healCap())
       }
     } else if (arenaType.value === 'shock') {
       // Shock arena: remove 90% of blade speed on wall contact.
@@ -3177,7 +3188,9 @@ export const useSpinnerGame = () => {
           const healA = Math.round(Math.min(HEALER_CONTACT_HEAL, a.maxHp - a.hp))
           const healB = Math.round(Math.min(HEALER_CONTACT_HEAL, b.maxHp - b.hp))
           if (healA > 0) {
+            const hpBeforeA = a.hp
             a.hp += healA
+            healFx(a, hpBeforeA)
             damageNumbers.push({
               x: a.x, y: a.y,
               value: healA, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
@@ -3186,7 +3199,9 @@ export const useSpinnerGame = () => {
             })
           }
           if (healB > 0) {
+            const hpBeforeB = b.hp
             b.hp += healB
+            healFx(b, hpBeforeB)
             damageNumbers.push({
               x: b.x, y: b.y,
               value: healB, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
@@ -3478,9 +3493,9 @@ export const useSpinnerGame = () => {
           const heal = dmgAtoB * 0.3
           const hpBefore = a.hp
           a.hp = Math.min(a.maxHp, a.hp + heal)
-          // Same heal pulse as the forest border — only when HP actually
-          // went up (throttled per spinner inside triggerHeal).
-          if (a.hp > hpBefore && a.hp > 0) triggerHeal(borderFx, a, healCap())
+          // Same heal pulse as every other heal — only when HP actually went
+          // up; never stacks on a pulse still playing (see healFx).
+          healFx(a, hpBefore)
           if (Math.round(heal) > 0) {
             const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
             const hs = 0.06 + Math.random() * 0.03
@@ -3505,9 +3520,9 @@ export const useSpinnerGame = () => {
           const heal = dmgBtoA * 0.3
           const hpBefore = b.hp
           b.hp = Math.min(b.maxHp, b.hp + heal)
-          // Same heal pulse as the forest border — only when HP actually
-          // went up (throttled per spinner inside triggerHeal).
-          if (b.hp > hpBefore && b.hp > 0) triggerHeal(borderFx, b, healCap())
+          // Same heal pulse as every other heal — only when HP actually went
+          // up; never stacks on a pulse still playing (see healFx).
+          healFx(b, hpBefore)
           if (Math.round(heal) > 0) {
             const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
             const hs = 0.06 + Math.random() * 0.03

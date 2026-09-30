@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Estás em #{n}',
     'of': 'de {n} jogadores'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Madeira',
+      'bronze': 'Bronze',
+      'silver': 'Prata',
+      'gold': 'Ouro',
+      'platinum': 'Platina',
+      'diamond': 'Diamante',
+      'champion': 'Campeão'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'No automático, os efeitos baixam se o teu dispositivo descer abaixo dos 25 FPS.',
   'qualityAuto': 'Automático',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase do Chefe',
+  'bossDefeated': 'Chefe derrotado',
   'stageN': 'Fase {n}',
   'intro': {
     'reclaim': 'Recupera tudo!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Anúncio',
+    'free': 'GRÁTIS',
     'spinning': 'A rodar...',
     'spinAgain': 'Rodar outra vez',
+    'tripleCoinsAria': 'Vê um anúncio para ganhar {count} moedas no total',
     'skip': 'Saltar',
     'youWin': 'GANHASTE!',
     'youLose': 'PERDESTE!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamantes',
         'rewardSpeed': 'velocidade de batalha 2x',
         'rewardRespin': 'mais uma volta',
+        'rewardSkinAd': 'uma nova skin',
         'watch': 'Ver anúncio',
         'decline': 'Não, obrigado'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'EQUIPADO',
       'selectButton': 'ESCOLHER',
       'hintSelectCards': 'Toca numa carta para escolher a configuração do teu pião. Toca no botão de melhoria para o melhorar.',
-      'hintPlusIcon': 'O ícone + no topo de cada carta de peça superior abre a loja de skins dessa peça (p. ex. loja de skins Fura-Tanques), onde podes obter novas skins.'
+      'hintPlusIcon': 'O ícone + no topo de cada carta de peça superior abre a loja de skins dessa peça (p. ex. loja de skins Fura-Tanques), onde podes obter novas skins.',
+      'watchAdsToUnlock': 'Vê um anúncio para desbloquear'
     }
   }
 }

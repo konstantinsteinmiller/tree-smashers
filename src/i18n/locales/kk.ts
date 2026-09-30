@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Сенің орның: #{n}',
     'of': '{n} ойыншының ішінен'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Ағаш',
+      'bronze': 'Қола',
+      'silver': 'Күміс',
+      'gold': 'Алтын',
+      'platinum': 'Платина',
+      'diamond': 'Гауһар',
+      'champion': 'Чемпион'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Графика',
   'graphicsQualityNote': 'Құрылғыда FPS 25-тен төмен түссе, автоматты режим эффектілерді азайтады.',
   'qualityAuto': 'Автоматты',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Кезең',
   'bossStage': 'Босс кезеңі',
+  'bossDefeated': 'Босс жеңілді',
   'stageN': '{n}-кезең',
   'intro': {
     'reclaim': 'Бәрін қайтарып ал!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Жарнама',
+    'free': 'ТЕГІН',
     'spinning': 'Айналуда...',
     'spinAgain': 'Қайта айналдыр',
+    'tripleCoinsAria': 'Барлығы {count} тиын алу үшін жарнама көріңіз',
     'skip': 'Өткізу',
     'youWin': 'ЖЕҢІС!',
     'youLose': 'ЖЕҢІЛІС!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} алмаз',
         'rewardSpeed': 'шайқастың 2 есе жылдамдығын',
         'rewardRespin': 'тағы бір айналдыруды',
+        'rewardSkinAd': 'жаңа скинді',
         'watch': 'Жарнаманы көру',
         'decline': 'Жоқ, рақмет'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ТАҢДАЛДЫ',
       'selectButton': 'ТАҢДАУ',
       'hintSelectCards': 'Спиннер жинағын таңдау үшін картаны түрт. Жақсарту үшін жақсарту батырмасын түрт.',
-      'hintPlusIcon': 'Әр жоғарғы бөлік картасының үстіндегі «+» белгісі сол бөліктің скин дүкенін ашады (мысалы, «Сауыт тескіш» скин дүкені) — онда жаңа скиндер алуға болады.'
+      'hintPlusIcon': 'Әр жоғарғы бөлік картасының үстіндегі «+» белгісі сол бөліктің скин дүкенін ашады (мысалы, «Сауыт тескіш» скин дүкені) — онда жаңа скиндер алуға болады.',
+      'watchAdsToUnlock': 'Ашу үшін жарнама көріңіз'
     }
   }
 }

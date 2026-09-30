@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Sıran: #{n}',
     'of': '{n} oyuncu arasında'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Tahta',
+      'bronze': 'Bronz',
+      'silver': 'Gümüş',
+      'gold': 'Altın',
+      'platinum': 'Platin',
+      'diamond': 'Elmas',
+      'champion': 'Şampiyon'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Otomatik mod, cihazın 25 FPS\'nin altına düşünce efektleri azaltır.',
   'qualityAuto': 'Otomatik',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Bölüm',
   'bossStage': 'Boss Bölümü',
+  'bossDefeated': 'Boss yenildi',
   'stageN': '{n}. Bölüm',
   'intro': {
     'reclaim': 'Hepsini geri kazan!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklam',
+    'free': 'ÜCRETSİZ',
     'spinning': 'Dönüyor...',
     'spinAgain': 'Tekrar Çevir',
+    'tripleCoinsAria': 'Toplam {count} jeton almak için reklam izle',
     'skip': 'Geç',
     'youWin': 'KAZANDIN!',
     'youLose': 'KAYBETTİN!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} elmas',
         'rewardSpeed': '2x savaş hızı',
         'rewardRespin': 'bir çevirme hakkı daha',
+        'rewardSkinAd': 'yeni bir kostüm',
         'watch': 'Reklamı İzle',
         'decline': 'Hayır, sağ ol'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'TAKILI',
       'selectButton': 'SEÇ',
       'hintSelectCards': 'Topaç dizilimini seçmek için bir karta dokun. Geliştirmek için yükseltme düğmesine dokun.',
-      'hintPlusIcon': 'Her üst parça kartının üstündeki + simgesi o parçanın kostüm mağazasını açar (ör. Zırh Delici kostüm mağazası); orada yeni kostümler edinebilirsin.'
+      'hintPlusIcon': 'Her üst parça kartının üstündeki + simgesi o parçanın kostüm mağazasını açar (ör. Zırh Delici kostüm mağazası); orada yeni kostümler edinebilirsin.',
+      'watchAdsToUnlock': 'Açmak için reklam izle'
     }
   }
 }

@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Helyezésed: #{n}',
     'of': '{n} játékosból'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Fa',
+      'bronze': 'Bronz',
+      'silver': 'Ezüst',
+      'gold': 'Arany',
+      'platinum': 'Platina',
+      'diamond': 'Gyémánt',
+      'champion': 'Bajnok'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Az automatikus mód csökkenti az effekteket, ha az eszköz 25 FPS alá esik.',
   'qualityAuto': 'Automatikus',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Pálya',
   'bossStage': 'Bosspálya',
+  'bossDefeated': 'Boss legyőzve',
   'stageN': '{n}. pálya',
   'intro': {
     'reclaim': 'Szerezz vissza mindent!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklám',
+    'free': 'INGYEN',
     'spinning': 'Pörgés...',
     'spinAgain': 'Pörgess újra',
+    'tripleCoinsAria': 'Nézz meg egy hirdetést, és összesen {count} érmét kapsz',
     'skip': 'Kihagyás',
     'youWin': 'GYŐZTÉL!',
     'youLose': 'VESZTETTÉL!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} gyémánt',
         'rewardSpeed': '2× csatasebesség',
         'rewardRespin': 'még egy pörgetés',
+        'rewardSkinAd': 'egy új skin',
         'watch': 'Megnézem',
         'decline': 'Nem, kösz'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'HASZNÁLVA',
       'selectButton': 'KIVÁLASZT',
       'hintSelectCards': 'Koppints egy kártyára a pörgettyű összeállításának kiválasztásához. A fejlesztés gombbal fejlesztheted.',
-      'hintPlusIcon': 'A felső részek kártyáinak tetején lévő + ikon megnyitja az adott rész skinboltját (pl. a Páncéltörő skinboltját), ahol új skineket szerezhetsz.'
+      'hintPlusIcon': 'A felső részek kártyáinak tetején lévő + ikon megnyitja az adott rész skinboltját (pl. a Páncéltörő skinboltját), ahol új skineket szerezhetsz.',
+      'watchAdsToUnlock': 'Nézz meg egy hirdetést a feloldáshoz'
     }
   }
 }

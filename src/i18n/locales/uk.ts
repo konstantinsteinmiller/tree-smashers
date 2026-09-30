@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Твоє місце: #{n}',
     'of': 'з {n}'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Дерево',
+      'bronze': 'Бронза',
+      'silver': 'Срібло',
+      'gold': 'Золото',
+      'platinum': 'Платина',
+      'diamond': 'Діамант',
+      'champion': 'Чемпіон'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Графіка',
   'graphicsQualityNote': 'Автоматичний режим зменшує ефекти, коли FPS на пристрої падає нижче 25.',
   'qualityAuto': 'Автоматично',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Етап',
   'bossStage': 'Етап боса',
+  'bossDefeated': 'Боса переможено',
   'stageN': 'Етап {n}',
   'intro': {
     'reclaim': 'Відвоюй усе назад!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Реклама',
+    'free': 'БЕЗКОШТОВНО',
     'spinning': 'Обертання...',
     'spinAgain': 'Крутити ще',
+    'tripleCoinsAria': 'Переглянь рекламу й отримай загалом {count} монет',
     'skip': 'Пропустити',
     'youWin': 'ПЕРЕМОГА!',
     'youLose': 'ПОРАЗКА!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'алмази ×{count}',
         'rewardSpeed': 'подвійну швидкість бою',
         'rewardRespin': 'ще одне обертання',
+        'rewardSkinAd': 'новий скін',
         'watch': 'Дивитися рекламу',
         'decline': 'Ні, дякую'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ОБРАНО',
       'selectButton': 'ОБРАТИ',
       'hintSelectCards': 'Торкнись картки, щоб обрати конфігурацію дзиґи. Торкнись кнопки покращення, щоб прокачати її.',
-      'hintPlusIcon': 'Значок «+» угорі кожної картки верхньої частини відкриває магазин скінів цієї деталі (напр., магазин скінів «Бронебій»), де можна придбати нові скіни.'
+      'hintPlusIcon': 'Значок «+» угорі кожної картки верхньої частини відкриває магазин скінів цієї деталі (напр., магазин скінів «Бронебій»), де можна придбати нові скіни.',
+      'watchAdsToUnlock': 'Дивись рекламу, щоб відкрити'
     }
   }
 }

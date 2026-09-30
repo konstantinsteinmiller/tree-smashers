@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Du bist #{n}',
     'of': 'von {n} Spielern'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Holz',
+      'bronze': 'Bronze',
+      'silver': 'Silber',
+      'gold': 'Gold',
+      'platinum': 'Platin',
+      'diamond': 'Diamant',
+      'champion': 'Champion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Automatisch reduziert Effekte, wenn dein Gerät unter 25 FPS fällt.',
   'qualityAuto': 'Automatisch',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etappe',
   'bossStage': 'Boss-Etappe',
+  'bossDefeated': 'Boss besiegt',
   'stageN': 'Etappe {n}',
   'intro': {
     'reclaim': 'Hol dir alles zurück!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Werbung',
+    'free': 'GRATIS',
     'spinning': 'Dreht...',
     'spinAgain': 'Nochmal drehen',
+    'tripleCoinsAria': 'Sieh dir eine Werbung an und erhalte insgesamt {count} Münzen',
     'skip': 'Überspringen',
     'youWin': 'DU GEWINNST!',
     'youLose': 'DU VERLIERST!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} Diamanten',
         'rewardSpeed': '2x Kampftempo',
         'rewardRespin': 'einen weiteren Dreh',
+        'rewardSkinAd': 'einen neuen Skin',
         'watch': 'Werbung ansehen',
         'decline': 'Nein, danke'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'AUSGERÜSTET',
       'selectButton': 'WÄHLEN',
       'hintSelectCards': 'Tippe eine Karte an, um deine Spinner-Klingen-Konfiguration zu wählen. Tippe auf den Upgrade-Knopf, um sie zu verbessern.',
-      'hintPlusIcon': 'Das + oben auf jeder oberen Klinge öffnet den Skin-Shop dieses Teils (z. B. Panzerbrecher-Shop), wo du neue Skins kaufen kannst.'
+      'hintPlusIcon': 'Das + oben auf jeder oberen Klinge öffnet den Skin-Shop dieses Teils (z. B. Panzerbrecher-Shop), wo du neue Skins kaufen kannst.',
+      'watchAdsToUnlock': 'Werbung ansehen zum Freischalten'
     }
   }
 }

@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Je staat op #{n}',
     'of': 'van {n} spelers'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Hout',
+      'bronze': 'Brons',
+      'silver': 'Zilver',
+      'gold': 'Goud',
+      'platinum': 'Platina',
+      'diamond': 'Diamant',
+      'champion': 'Kampioen'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Beeldkwaliteit',
   'graphicsQualityNote': 'Automatisch verlaagt de effecten als je apparaat onder de 25 FPS zakt.',
   'qualityAuto': 'Automatisch',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Level',
   'bossStage': 'Baaslevel',
+  'bossDefeated': 'Baas verslagen',
   'stageN': 'Level {n}',
   'intro': {
     'reclaim': 'Win alles terug!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reclame',
+    'free': 'GRATIS',
     'spinning': 'Draait...',
     'spinAgain': 'Opnieuw draaien',
+    'tripleCoinsAria': 'Bekijk een advertentie voor {count} munten in totaal',
     'skip': 'Overslaan',
     'youWin': 'GEWONNEN!',
     'youLose': 'VERLOREN!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamanten',
         'rewardSpeed': '2x gevechtssnelheid',
         'rewardRespin': 'nog een draai',
+        'rewardSkinAd': 'een nieuwe skin',
         'watch': 'Bekijk reclame',
         'decline': 'Nee, bedankt'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'IN GEBRUIK',
       'selectButton': 'KIES',
       'hintSelectCards': 'Tik op een kaart om de configuratie van je tol te kiezen. Tik op de upgradeknop om hem te upgraden.',
-      'hintPlusIcon': 'Het +-icoon bovenaan elke bovenstukkaart opent de skinwinkel van dat onderdeel (bijv. de Pantserbreker-skinwinkel), waar je nieuwe skins kunt krijgen.'
+      'hintPlusIcon': 'Het +-icoon bovenaan elke bovenstukkaart opent de skinwinkel van dat onderdeel (bijv. de Pantserbreker-skinwinkel), waar je nieuwe skins kunt krijgen.',
+      'watchAdsToUnlock': 'Bekijk een advertentie om te ontgrendelen'
     }
   }
 }

@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Vi estas #{n}',
     'of': 'el {n} ludantoj'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Ligno',
+      'bronze': 'Bronzo',
+      'silver': 'Arĝento',
+      'gold': 'Oro',
+      'platinum': 'Plateno',
+      'diamond': 'Diamanto',
+      'champion': 'Ĉampiono'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafiko',
   'graphicsQualityNote': 'Aŭtomata reĝimo malpliigas efektojn, kiam via aparato falas sub 25 FPS.',
   'qualityAuto': 'Aŭtomata',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapo',
   'bossStage': 'Estro-etapo',
+  'bossDefeated': 'Estro venkita',
   'stageN': 'Etapo {n}',
   'intro': {
     'reclaim': 'Regajnu ĉion!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklamo',
+    'free': 'SENPAGE',
     'spinning': 'Turniĝas...',
     'spinAgain': 'Turnu denove',
+    'tripleCoinsAria': 'Spektu reklamon por ricevi entute {count} monerojn',
     'skip': 'Preterlasi',
     'youWin': 'VI VENKIS!',
     'youLose': 'VI MALVENKIS!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamantojn',
         'rewardSpeed': 'duoblan batalrapidon',
         'rewardRespin': 'plian turnon',
+        'rewardSkinAd': 'novan haŭton',
         'watch': 'Spekti reklamon',
         'decline': 'Ne, dankon'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'UZATA',
       'selectButton': 'ELEKTI',
       'hintSelectCards': 'Tuŝetu karton por elekti la agordon de via turbo. Tuŝetu la plibonigan butonon por plibonigi ĝin.',
-      'hintPlusIcon': 'La ikono + supre de ĉiu supraklinga karto malfermas la haŭtobutikon de tiu parto (ekz. la haŭtobutikon de Kirasrompilo), kie vi povas akiri novajn haŭtojn.'
+      'hintPlusIcon': 'La ikono + supre de ĉiu supraklinga karto malfermas la haŭtobutikon de tiu parto (ekz. la haŭtobutikon de Kirasrompilo), kie vi povas akiri novajn haŭtojn.',
+      'watchAdsToUnlock': 'Spektu reklamon por malŝlosi'
     }
   }
 }

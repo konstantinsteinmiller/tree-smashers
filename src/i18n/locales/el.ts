@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Είσαι #{n}',
     'of': 'από {n} παίκτες'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Ξύλο',
+      'bronze': 'Χάλκινο',
+      'silver': 'Ασήμι',
+      'gold': 'Χρυσό',
+      'platinum': 'Πλατίνα',
+      'diamond': 'Διαμάντι',
+      'champion': 'Πρωταθλητής'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Γραφικά',
   'graphicsQualityNote': 'Η Αυτόματη ρύθμιση μειώνει τα εφέ όταν η συσκευή σου πέφτει κάτω από 25 FPS.',
   'qualityAuto': 'Αυτόματη',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Πίστα',
   'bossStage': 'Πίστα Boss',
+  'bossDefeated': 'Ο Boss ηττήθηκε',
   'stageN': 'Πίστα {n}',
   'intro': {
     'reclaim': 'Πάρε τα πάντα πίσω!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Διαφ.',
+    'free': 'ΔΩΡΕΑΝ',
     'spinning': 'Γυρίζει...',
     'spinAgain': 'Γύρνα ξανά',
+    'tripleCoinsAria': 'Δες μια διαφήμιση για να πάρεις συνολικά {count} νομίσματα',
     'skip': 'Παράλειψη',
     'youWin': 'ΝΙΚΗΣΕΣ!',
     'youLose': 'ΕΧΑΣΕΣ!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} διαμάντια',
         'rewardSpeed': '2x ταχύτητα μάχης',
         'rewardRespin': 'ένα ακόμα γύρισμα',
+        'rewardSkinAd': 'μια νέα εμφάνιση',
         'watch': 'Δες τη διαφήμιση',
         'decline': 'Όχι, ευχαριστώ'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ΣΕ ΧΡΗΣΗ',
       'selectButton': 'ΕΠΙΛΟΓΗ',
       'hintSelectCards': 'Πάτα μια κάρτα για να τη διαλέξεις και το κουμπί αναβάθμισης για να την αναβαθμίσεις.',
-      'hintPlusIcon': 'Το + πάνω σε κάθε κάρτα πάνω μέρους ανοίγει το κατάστημα εμφανίσεών του (π.χ. του Διατρητή) για νέες εμφανίσεις.'
+      'hintPlusIcon': 'Το + πάνω σε κάθε κάρτα πάνω μέρους ανοίγει το κατάστημα εμφανίσεών του (π.χ. του Διατρητή) για νέες εμφανίσεις.',
+      'watchAdsToUnlock': 'Δες μια διαφήμιση για ξεκλείδωμα'
     }
   }
 }

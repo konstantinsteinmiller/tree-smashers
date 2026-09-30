@@ -142,6 +142,19 @@ export default {
     'yourRank': '你的名次：#{n}',
     'of': '/ 共 {n} 名玩家'
   },
+  'league': {
+    'tiers': {
+      'wood': '木頭',
+      'bronze': '青銅',
+      'silver': '白銀',
+      'gold': '黃金',
+      'platinum': '白金',
+      'diamond': '鑽石',
+      'champion': '冠軍'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} 第{position}名'
+  },
   'graphicsQuality': '畫質',
   'graphicsQualityNote': '裝置低於 25 FPS 時，自動模式會降低特效。',
   'qualityAuto': '自動',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': '關卡',
   'bossStage': '頭目關卡',
+  'bossDefeated': '擊敗頭目',
   'stageN': '第 {n} 關',
   'intro': {
     'reclaim': '全部贏回來！',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': '廣告',
+    'free': '免費',
     'spinning': '旋轉中...',
     'spinAgain': '再轉一次',
+    'tripleCoinsAria': '觀看廣告，總共獲得 {count} 枚金幣',
     'skip': '跳過',
     'youWin': '勝利！',
     'youLose': '失敗！',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} 顆鑽石',
         'rewardSpeed': '2 倍戰鬥速度',
         'rewardRespin': '再轉一次',
+        'rewardSkinAd': '一個新造型',
         'watch': '觀看廣告',
         'decline': '不用了'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': '已裝備',
       'selectButton': '選擇',
       'hintSelectCards': '點卡片選擇陀螺配置，點升級按鈕即可升級。',
-      'hintPlusIcon': '每張上部零件卡片頂端的「+」圖示會開啟該零件的造型商店（例如穿甲者造型商店），可在這裡取得新造型。'
+      'hintPlusIcon': '每張上部零件卡片頂端的「+」圖示會開啟該零件的造型商店（例如穿甲者造型商店），可在這裡取得新造型。',
+      'watchAdsToUnlock': '觀看廣告解鎖'
     }
   }
 }

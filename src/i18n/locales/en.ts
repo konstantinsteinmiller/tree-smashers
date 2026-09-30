@@ -141,6 +141,19 @@ export default {
     'yourRank': 'You are #{n}',
     'of': 'of {n} players'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Wood',
+      'bronze': 'Bronze',
+      'silver': 'Silver',
+      'gold': 'Gold',
+      'platinum': 'Platinum',
+      'diamond': 'Diamond',
+      'champion': 'Champion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Graphics',
   'graphicsQualityNote': 'Automatic lowers effects when your device drops below 25 FPS.',
   'qualityAuto': 'Automatic',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': 'Stage',
   'bossStage': 'Boss Stage',
+  'bossDefeated': 'Boss Defeated',
   'stageN': 'Stage {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': 'Ad',
+    'free': 'FREE',
     'spinning': 'Spinning...',
     'spinAgain': 'Spin Again',
+    'tripleCoinsAria': 'Watch an ad to get {count} coins in total',
     'skip': 'Skip',
     'youWin': 'YOU WIN!',
     'youLose': 'YOU LOSE!',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '{count} diamonds',
         'rewardSpeed': '2x battle speed',
         'rewardRespin': 'another spin',
+        'rewardSkinAd': 'a new skin',
         'watch': 'Watch ad',
         'decline': 'No thanks'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': 'EQUIPPED',
       'selectButton': 'SELECT',
       'hintSelectCards': 'Tap a card to select your spinner blade configuration. Tap the upgrade button to upgrade it.',
-      'hintPlusIcon': 'The + icon at the top of each top-blade card opens that part\'s skin shop (e.g. Tank Piercer skin shop) where you can acquire new skins.'
+      'hintPlusIcon': 'The + icon at the top of each top-blade card opens that part\'s skin shop (e.g. Tank Piercer skin shop) where you can acquire new skins.',
+      'watchAdsToUnlock': 'Watch an ad to unlock'
     }
   }
 }

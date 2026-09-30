@@ -19,6 +19,10 @@ export const COINS_KEY = 'spinner_coins'
 export const DIAMONDS_KEY = 'spinner_diamonds'
 export const UPGRADES_KEY = 'spinner_upgrades'
 export const SKINS_KEY = 'spinner_owned_skins'
+/** Rewarded ads watched towards each ad-unlock skin (`AD_UNLOCK_SKINS`),
+ *  `{ [modelId]: count }`. Rides the cloud save (`spinner_` prefix) and
+ *  survives a progress reset like the skins it pays for. */
+export const SKIN_AD_PROGRESS_KEY = 'spinner_skin_ad_progress'
 
 // ─── Global leaderboard ─────────────────────────────────────────────────────
 //

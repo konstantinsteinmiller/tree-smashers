@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FIconButton from '@/components/atoms/FIconButton.vue'
@@ -10,7 +10,8 @@ import { displayDiamondReward } from '@/use/useCurrency'
 import useBattlePass, {
   BP_TOTAL_STAGES,
   BP_XP_PER_STAGE,
-  BP_DIAMOND_AMOUNT
+  BP_DIAMOND_AMOUNT,
+  startSeasonClock
 } from '@/use/useBattlePass'
 import {
   modelImgPath,
@@ -58,6 +59,17 @@ const {
 } = usePvpStats()
 
 const { canShowPvP } = usePVP()
+
+// Keep "days left" current across 00:00 UTC and foreground resumes while
+// this screen is mounted (see startSeasonClock).
+let stopSeasonClock: (() => void) | null = null
+onMounted(() => {
+  stopSeasonClock = startSeasonClock()
+})
+onBeforeUnmount(() => {
+  stopSeasonClock?.()
+  stopSeasonClock = null
+})
 
 // What the battle-pass diamond tier pays and shows. On a single-currency
 // build (Poki) that is coins at the diamond rate; `addDiamonds` already

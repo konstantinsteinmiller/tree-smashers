@@ -218,7 +218,10 @@ export function parseArgs(argv, config) {
   }
 
   // ── which formats ──
-  let selected = formats
+  // A format marked `onDemand` (e.g. the showreel's per-scene clips, which
+  // are raw material for an assembly step rather than deliverables) is left
+  // out of a bare run and recorded only when --formats names it.
+  let selected = formats.filter((f) => !f.onDemand)
   if (flags.formats !== undefined) {
     const want = list(flags.formats)
     const ids = formats.map((f) => f.id)
@@ -228,8 +231,14 @@ export function parseArgs(argv, config) {
     selected = formats.filter((f) => want.includes(f.id))
   }
 
-  const scenarioIds = flags.scenarios !== undefined ? list(flags.scenarios) : (config.scenarios ?? [])
-  if (scenarioIds.length === 0) throw new Error('No scenarios: pass --scenarios or set `scenarios` in preview.config.mjs.')
+  // --scenarios wins everywhere; otherwise a format may name its OWN scenario
+  // list (`format.scenarioIds`) — the showreel's scenes are not the
+  // success/fail pair — and falls back to `config.scenarios`.
+  const cliScenarioIds = flags.scenarios !== undefined ? list(flags.scenarios) : null
+  const scenarioIdsFor = (format) => cliScenarioIds ?? format.scenarioIds ?? config.scenarios ?? []
+  if (selected.some((f) => scenarioIdsFor(f).length === 0)) {
+    throw new Error('No scenarios: pass --scenarios or set `scenarios` in preview.config.mjs.')
+  }
 
   const orientationFilter = flags.orientations !== undefined ? list(flags.orientations) : null
   if (orientationFilter) {
@@ -257,7 +266,7 @@ export function parseArgs(argv, config) {
       ?? qualityList(format.quality ?? config.quality ?? DEFAULTS.quality, `format "${format.id ?? 'default'}"`)
     const orientationIds = Object.keys(format.orientations).filter((id) => !orientationFilter || orientationFilter.includes(id))
 
-    for (const scenarioId of scenarioIds) {
+    for (const scenarioId of scenarioIdsFor(format)) {
       for (const orientationId of orientationIds) {
         const base = format.orientations[orientationId]
         const size = flags[orientationId] !== undefined

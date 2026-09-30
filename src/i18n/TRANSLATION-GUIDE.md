@@ -176,6 +176,14 @@ What the terms mean in the game:
   Squire / Master) — keep them as rank titles, not "easy/normal/hard".
 - `QuestReward` copy mentions cards; it is legacy text from a sister game —
   translate it as written.
+- **League tiers** (`league.tiers.*`) — the PvP ranks Wood → Champion. Use the
+  words ranked games in your language already use. `tierDivision` is the tier
+  plus a Roman numeral ("Gold II"); `tierPosition` is Champion plus its
+  leaderboard position ("Champion #12") — reorder or add a rank word as your
+  language needs, keep both placeholders.
+  **Open native check (zh / zh-TW):** `platinum` is 铂金 in `zh` and 白金 in
+  `zh-TW` — both are used in games. A native speaker should confirm which one
+  each market's players expect before release; until then leave them as is.
 
 ## 4. Tone
 

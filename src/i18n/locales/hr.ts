@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Tvoje mjesto: #{n}',
     'of': 'od {n} igrača'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Drvo',
+      'bronze': 'Bronca',
+      'silver': 'Srebro',
+      'gold': 'Zlato',
+      'platinum': 'Platina',
+      'diamond': 'Dijamant',
+      'champion': 'Prvak'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatski način smanjuje efekte kad uređaj padne ispod 25 FPS.',
   'qualityAuto': 'Automatska',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa s bossom',
+  'bossDefeated': 'Boss poražen',
   'stageN': '{n}. etapa',
   'intro': {
     'reclaim': 'Vrati sve natrag!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Oglas',
+    'free': 'BESPLATNO',
     'spinning': 'Vrti se...',
     'spinAgain': 'Zavrti ponovno',
+    'tripleCoinsAria': 'Pogledaj oglas i dobij ukupno {count} novčića',
     'skip': 'Preskoči',
     'youWin': 'POBJEDA!',
     'youLose': 'PORAZ!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'dijamanti ×{count}',
         'rewardSpeed': 'brzina bitke ×2',
         'rewardRespin': 'još jedno okretanje',
+        'rewardSkinAd': 'novi skin',
         'watch': 'Pogledaj',
         'decline': 'Ne, hvala'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'OPREMLJENO',
       'selectButton': 'ODABERI',
       'hintSelectCards': 'Dodirni karticu da odabereš konfiguraciju zvrka. Dodirni gumb za nadogradnju da ga nadogradiš.',
-      'hintPlusIcon': 'Ikona + na vrhu svake kartice gornjeg dijela otvara trgovinu skinova za taj dio (npr. trgovinu skinova Probijača), gdje možeš nabaviti nove skinove.'
+      'hintPlusIcon': 'Ikona + na vrhu svake kartice gornjeg dijela otvara trgovinu skinova za taj dio (npr. trgovinu skinova Probijača), gdje možeš nabaviti nove skinove.',
+      'watchAdsToUnlock': 'Gledaj oglas za otključavanje'
     }
   }
 }

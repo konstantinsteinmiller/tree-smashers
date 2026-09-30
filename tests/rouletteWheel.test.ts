@@ -116,10 +116,27 @@ const OWNED_SETS: string[][] = [
   ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'sp1', 'sp2', 'sp3']
 ]
 
+/** What the respin contract adds on top of the golden record. Since the
+ *  respin became an ADDITIONAL reward, the wheel emits one `result` per spin
+ *  (the first as soon as it lands, before the ad is offered) and then `done`.
+ *  The golden file was recorded when only the final spin was emitted, so the
+ *  golden comparison uses the spin it recorded — the LAST one — and the first
+ *  spin's grant is pinned separately (see "Spin Again adds a second reward"). */
+interface RespinTrace {
+  emittedAll: unknown[]
+  boughtAll: unknown[][]
+  /** buySkin calls made before `showRewardedAd` was called. */
+  boughtBeforeAd: unknown[][] | null
+  /** `result` emissions before `showRewardedAd` was called. */
+  emittedBeforeAd: number | null
+  doneCount: number
+}
+
 const runCase = async (seed: number, ownedSet: string[], adReady: boolean): Promise<{
   outcome: Outcome;
   wrapper: any;
-  rotationAtRest: number
+  rotationAtRest: number;
+  trace: RespinTrace
 }> => {
   owned.clear()
   ownedSet.forEach(id => owned.add(id))
@@ -145,12 +162,21 @@ const runCase = async (seed: number, ownedSet: string[], adReady: boolean): Prom
   }
   const rotationAtRest = vm.currentRotation as number
   let respinSegments: SegmentShape[] | undefined
+  let boughtBeforeAd: unknown[][] | null = null
+  let emittedBeforeAd: number | null = null
+  let firstSpinBuys = 0
   if (vm.showAdButton) {
+    firstSpinBuys = buySkin.mock.calls.length
+    showRewardedAd.mockImplementationOnce(async () => {
+      boughtBeforeAd = buySkin.mock.calls.map(c => [...c])
+      emittedBeforeAd = (wrapper.emitted('result') ?? []).length
+      return true
+    })
     const btn = wrapper.findAll('button').find((b: any) => b.text().toLowerCase().includes('spinagain'))
     await btn!.trigger('click')
     await flushPromises()
     respinSegments = shape(vm.segments)
-    for (let i = 0; i < 400 && !wrapper.emitted('result'); i++) {
+    for (let i = 0; i < 400 && !wrapper.emitted('done'); i++) {
       vi.advanceTimersByTime(20)
       await nextTick()
     }
@@ -158,17 +184,26 @@ const runCase = async (seed: number, ownedSet: string[], adReady: boolean): Prom
   vi.advanceTimersByTime(1000)
   await nextTick()
 
+  const emittedAll = (wrapper.emitted('result') ?? []).map(e => JSON.parse(JSON.stringify(e[0])))
+  const boughtAll = buySkin.mock.calls.map(c => [...c])
   const outcome: Outcome = {
     seed,
     ownedCount: ownedSet.length,
     adReady,
     segments,
     ...(respinSegments ? { respinSegments } : {}),
-    emitted: (wrapper.emitted('result') ?? []).map(e => JSON.parse(JSON.stringify(e[0]))),
-    bought: buySkin.mock.calls.map(c => [...c]),
+    emitted: respinSegments ? emittedAll.slice(1) : emittedAll,
+    bought: respinSegments ? boughtAll.slice(firstSpinBuys) : boughtAll,
     randomCalls
   }
-  return { outcome, wrapper, rotationAtRest }
+  const trace: RespinTrace = {
+    emittedAll,
+    boughtAll,
+    boughtBeforeAd,
+    emittedBeforeAd,
+    doneCount: (wrapper.emitted('done') ?? []).length
+  }
+  return { outcome, wrapper, rotationAtRest, trace }
 }
 
 beforeEach(() => {
@@ -233,5 +268,178 @@ describe('RouletteWheel reward logic', () => {
       expect(vm.segments[idx].result).toEqual(outcome.emitted[0])
       wrapper.unmount()
     }
+  })
+})
+
+// ─── "Spin Again" is an ADDITIONAL reward ─────────────────────────────────
+//
+// The respin used to REPLACE the first spin: the first result was held back
+// until the player chose, and a watched ad threw it away. Now every spin is
+// granted the moment it lands — the first one before the ad is even offered —
+// so the respin can only add a second reward on top.
+
+const spinUntil = async (wrapper: any, stop: () => boolean) => {
+  for (let i = 0; i < 400 && !stop(); i++) {
+    vi.advanceTimersByTime(20)
+    await nextTick()
+  }
+}
+
+const mountWheel = async (seed: number, ownedSet: string[]) => {
+  owned.clear()
+  ownedSet.forEach(id => owned.add(id))
+  buySkin.mockReset()
+  showRewardedAd.mockReset()
+  showRewardedAd.mockImplementation(async () => true)
+  isRewardedReady.value = true
+  const rnd = seeded(seed)
+  vi.spyOn(Math, 'random').mockImplementation(() => rnd())
+  const wrapper = mount(RouletteWheel, { global: { plugins: [i18n()] }, attachTo: document.body })
+  const vm = wrapper.vm as any
+  await spinUntil(wrapper, () => !!vm.showAdButton || !!wrapper.emitted('done'))
+  return { wrapper, vm }
+}
+
+const respinButton = (wrapper: any) =>
+  wrapper.findAll('button').find((b: any) => b.text().toLowerCase().includes('spinagain'))
+
+describe('RouletteWheel "Spin Again" adds a second reward', () => {
+  it('grants the first spin before the ad, then the respin on top; done once', async () => {
+    const respinCases = CASES.filter(c => c.adReady)
+    expect(respinCases.length).toBeGreaterThan(0)
+    for (const c of respinCases) {
+      const { outcome, wrapper, rotationAtRest, trace } = await runCase(c.seed, c.ownedSet, true)
+      // Both spins emitted, in order, and the wheel finished exactly once.
+      expect(trace.emittedAll.length, `seed ${c.seed}`).toBe(2)
+      expect(trace.doneCount).toBe(1)
+      // The first grant is the segment the first spin stopped on.
+      const idx = indexUnderPointer(rotationAtRest, outcome.segments.length)
+      expect(trace.emittedAll[0]).toEqual(outcome.segments[idx]!.result)
+      // …and it was handed over BEFORE the ad was requested.
+      expect(trace.emittedBeforeAd).toBe(1)
+      const first = trace.emittedAll[0] as any
+      if (first.type === 'skin') {
+        expect(trace.boughtBeforeAd).toEqual([[first.skin.topPartId, first.skin.modelId]])
+      } else {
+        expect(trace.boughtBeforeAd).toEqual([])
+      }
+      // Every emitted skin was bought exactly once — nothing granted twice.
+      const skins = trace.emittedAll.filter((r: any) => r.type === 'skin').map((r: any) => [r.skin.topPartId, r.skin.modelId])
+      expect(trace.boughtAll).toEqual(skins)
+      wrapper.unmount()
+    }
+  })
+
+  it('flushes the save before the ad plays', async () => {
+    const order: string[] = []
+    const flush = vi.fn(async () => {
+        order.push('flush')
+      })
+    ;(window as any).__saveManager = { flush }
+    try {
+      const { wrapper, vm } = await mountWheel(4, [])
+      expect(vm.showAdButton).toBe(true)
+      expect(wrapper.emitted('result')!.length).toBe(1)
+      showRewardedAd.mockImplementation(async () => {
+        order.push('ad')
+        return true
+      })
+      await respinButton(wrapper)!.trigger('click')
+      await flushPromises()
+      expect(order).toEqual(['flush', 'ad'])
+      wrapper.unmount()
+    } finally {
+      delete (window as any).__saveManager
+    }
+  })
+
+  it('a skipped / unfilled ad keeps the first reward and adds nothing', async () => {
+    const { wrapper } = await mountWheel(4, [])
+    showRewardedAd.mockImplementation(async () => false)
+    await respinButton(wrapper)!.trigger('click')
+    await flushPromises()
+    await spinUntil(wrapper, () => !!wrapper.emitted('done'))
+    vi.advanceTimersByTime(5000)
+    await nextTick()
+    expect(wrapper.emitted('result')!.length).toBe(1)
+    expect(wrapper.emitted('done')!.length).toBe(1)
+    wrapper.unmount()
+  })
+
+  it('"Skip" keeps the first reward, emits it once, and finishes', async () => {
+    const { wrapper } = await mountWheel(4, [])
+    const skip = wrapper.findAll('button').find((b: any) => b.text().toLowerCase().includes('skip'))
+    await skip!.trigger('click')
+    vi.advanceTimersByTime(1000)
+    await nextTick()
+    expect(showRewardedAd).not.toHaveBeenCalled()
+    expect(wrapper.emitted('result')!.length).toBe(1)
+    expect(wrapper.emitted('done')!.length).toBe(1)
+    wrapper.unmount()
+  })
+
+  it('a double tap on "Spin Again" plays one ad and pays one respin', async () => {
+    const { wrapper } = await mountWheel(4, [])
+    const btn = respinButton(wrapper)!
+    await Promise.all([btn.trigger('click'), btn.trigger('click')])
+    await flushPromises()
+    await spinUntil(wrapper, () => !!wrapper.emitted('done'))
+    vi.advanceTimersByTime(5000)
+    await nextTick()
+    expect(showRewardedAd).toHaveBeenCalledTimes(1)
+    expect(wrapper.emitted('result')!.length).toBe(2)
+    expect(wrapper.emitted('done')!.length).toBe(1)
+    wrapper.unmount()
+  })
+
+  it('a skin won on the first spin is not on the respin wheel (duplicate rule)', async () => {
+    // Real ownership: buySkin marks the skin owned, as the store does.
+    let found = false
+    for (let seed = 1; seed <= 600 && !found; seed++) {
+      const { wrapper, vm } = await mountWheel(seed, [])
+      buySkin.mockImplementation((_top: unknown, id: unknown) => {
+        owned.add(id as string)
+      })
+      const first = wrapper.emitted('result')?.[0]?.[0] as any
+      if (!first || first.type !== 'skin' || !vm.showAdButton) {
+        wrapper.unmount()
+        vi.restoreAllMocks()
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => null)
+        continue
+      }
+      // The first spin's grant ran before this mockImplementation was set, so
+      // mark it owned the way the real buySkin would have.
+      owned.add(first.skin.modelId)
+      found = true
+      await respinButton(wrapper)!.trigger('click')
+      await flushPromises()
+      const respinSkins = (vm.segments as any[]).filter(s => s.kind === 'skin').map(s => s.result.skin.modelId)
+      expect(respinSkins).not.toContain(first.skin.modelId)
+      await spinUntil(wrapper, () => !!wrapper.emitted('done'))
+      const second = wrapper.emitted('result')![1]![0] as any
+      if (second.type === 'skin') expect(second.skin.modelId).not.toBe(first.skin.modelId)
+      wrapper.unmount()
+    }
+    expect(found).toBe(true)
+  })
+})
+
+// ─── What each landed spin pays (the parent's grant) ──────────────────────
+describe('roulette grants: a respin ADDS to the first spin', () => {
+  it('pays each spin on its own; two spins sum, neither replaces the other', async () => {
+    const { rouletteGrantFor } = await import('@/use/rouletteGrants')
+    const base = 140
+    const first = rouletteGrantFor({ type: 'multiplier', multiplier: 2 }, base)
+    const second = rouletteGrantFor({ type: 'multiplier', multiplier: 0.75 }, base)
+    expect(first.coins).toBe(280)
+    expect(second.coins).toBe(105)
+    expect(first.coins + second.coins).toBe(385)
+
+    const skin = rouletteGrantFor({ type: 'skin', skin: { topPartId: 'alpha' as any, modelId: 'n1' as any } }, base)
+    expect(skin.coins).toBe(base) // the skin comes with the 1x coins
+    expect(skin.skin).toEqual({ topPartId: 'alpha', modelId: 'n1' })
+
+    const jackpot = rouletteGrantFor({ type: 'diamonds', diamonds: 5 }, base)
+    expect(jackpot).toMatchObject({ diamonds: 5, coins: 0 })
   })
 })

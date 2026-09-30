@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Ets el #{n}',
     'of': 'de {n} jugadors'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Fusta',
+      'bronze': 'Bronze',
+      'silver': 'Plata',
+      'gold': 'Or',
+      'platinum': 'Platí',
+      'diamond': 'Diamant',
+      'champion': 'Campió'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Gràfics',
   'graphicsQualityNote': 'En mode automàtic, els efectes es redueixen quan el dispositiu baixa de 25 FPS.',
   'qualityAuto': 'Automàtic',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Fase',
   'bossStage': 'Fase del cap',
+  'bossDefeated': 'Cap derrotat',
   'stageN': 'Fase {n}',
   'intro': {
     'reclaim': 'Recupera-ho tot!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Anunci',
+    'free': 'GRATIS',
     'spinning': 'Girant...',
     'spinAgain': 'Torna a girar',
+    'tripleCoinsAria': 'Mira un anunci per obtenir {count} monedes en total',
     'skip': 'Salta',
     'youWin': 'HAS GUANYAT!',
     'youLose': 'HAS PERDUT!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamants',
         'rewardSpeed': 'velocitat de batalla x2',
         'rewardRespin': 'una altra tirada',
+        'rewardSkinAd': 'una aparença nova',
         'watch': 'Mira l\'anunci',
         'decline': 'No, gràcies'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'EQUIPAT',
       'selectButton': 'TRIA',
       'hintSelectCards': 'Toca una carta per triar la configuració de la baldufa. Toca el botó de millora per millorar-la.',
-      'hintPlusIcon': 'La icona + de dalt de cada carta de peça superior obre la botiga d\'aspectes d\'aquella peça (p. ex. botiga d\'aspectes Perforador), on pots aconseguir aspectes nous.'
+      'hintPlusIcon': 'La icona + de dalt de cada carta de peça superior obre la botiga d\'aspectes d\'aquella peça (p. ex. botiga d\'aspectes Perforador), on pots aconseguir aspectes nous.',
+      'watchAdsToUnlock': 'Mira un anunci per desbloquejar'
     }
   }
 }

@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Twoje miejsce: #{n}',
     'of': 'z {n} graczy'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Drewno',
+      'bronze': 'Brąz',
+      'silver': 'Srebro',
+      'gold': 'Złoto',
+      'platinum': 'Platyna',
+      'diamond': 'Diament',
+      'champion': 'Mistrz'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Tryb automatyczny ogranicza efekty, gdy urządzenie spada poniżej 25 FPS.',
   'qualityAuto': 'Automatyczna',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etap',
   'bossStage': 'Etap bossa',
+  'bossDefeated': 'Boss pokonany',
   'stageN': 'Etap {n}',
   'intro': {
     'reclaim': 'Odzyskaj wszystko!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklama',
+    'free': 'ZA DARMO',
     'spinning': 'Losowanie...',
     'spinAgain': 'Zakręć ponownie',
+    'tripleCoinsAria': 'Obejrzyj reklamę, aby otrzymać łącznie {count} monet',
     'skip': 'Pomiń',
     'youWin': 'ZWYCIĘSTWO!',
     'youLose': 'PORAŻKA!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'diamenty ×{count}',
         'rewardSpeed': 'prędkość walki ×2',
         'rewardRespin': 'dodatkowy obrót',
+        'rewardSkinAd': 'nowa skórka',
         'watch': 'Obejrzyj',
         'decline': 'Nie, dzięki'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'W UŻYCIU',
       'selectButton': 'WYBIERZ',
       'hintSelectCards': 'Dotknij karty, aby wybrać konfigurację bączka. Dotknij przycisku ulepszenia, aby ją ulepszyć.',
-      'hintPlusIcon': 'Ikona + na górze każdej karty górnej części otwiera sklep ze skórkami tej części (np. sklep skórek Przebijacza), gdzie zdobędziesz nowe skórki.'
+      'hintPlusIcon': 'Ikona + na górze każdej karty górnej części otwiera sklep ze skórkami tej części (np. sklep skórek Przebijacza), gdzie zdobędziesz nowe skórki.',
+      'watchAdsToUnlock': 'Obejrzyj reklamę, aby odblokować'
     }
   }
 }

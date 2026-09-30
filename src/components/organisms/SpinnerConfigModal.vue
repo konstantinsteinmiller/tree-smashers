@@ -14,8 +14,9 @@ import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSpinnerCampaign, { upgradeCost, TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
 import {
   SKINS_PER_TOP, skinCost,
-  modelImgPath, isSkinOwned, buySkin, selectSkin, getSelectedSkin,
+  modelImgPath, isSkinOwned, purchaseSkinWithCoins, selectSkin, getSelectedSkin,
   hasUnownedSkinsForTop,
+  isAdUnlockSkin, recordSkinAdWatch, settleSkinAdProgress,
   markSkinPickerOpened, wasSkinPickerOpened,
   type SpinnerModelId
 } from '@/use/useModels'
@@ -27,7 +28,9 @@ import IconSpeed from '@/components/icons/IconSpeed.vue'
 import IconWeight from '@/components/icons/IconWeight.vue'
 import BGSkinButton from '@/components/organisms/BGSkinButton.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
-import { isBgSkinsEnabled } from '@/use/useUser'
+import { isBgSkinsEnabled, isNative } from '@/use/useUser'
+import { isRewardedReady, showRewardedAd } from '@/use/useAds'
+import { prependBaseUrl } from '@/utils/function'
 import { stopGameplay } from '@/use/useCrazyGames'
 
 interface Props {
@@ -166,6 +169,8 @@ const openSkinPicker = (topId: TopPartId) => {
   skinPickerKey.value++
   skinPickerOpen.value = true
   markSkinPickerOpened(topId)
+  // Ad progress saved under the old 3-ad rule already pays for a skin now.
+  settleSkinAdProgress()
 }
 
 /** True when the plus icon should hint-bounce (unowned skins available
@@ -176,8 +181,27 @@ const shouldBouncePlus = (topId: TopPartId): boolean =>
 const handleBuySkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   const cost = skinCost(modelId)
   if (coins.value < cost) return
-  addCoins(-cost)
-  buySkin(topId, modelId)
+  // Refuses the ad-unlock skins, so coins are only taken for a real grant.
+  if (purchaseSkinWithCoins(topId, modelId)) addCoins(-cost)
+}
+
+// Ad-unlock skins (the newest 4 per top part) are never sold for coins on a
+// build with rewarded ads: ONE completed rewarded ad unlocks the skin. The
+// button is disabled while no rewarded ad is ready (readiness gating), and a
+// skipped / no-fill ad grants nothing. On a build without rewarded ads
+// `isAdUnlockSkin` is false, the button is never rendered and the skin
+// falls through to the coin price (`skinCost`).
+const skinAdPending = ref(false)
+
+const handleWatchSkinAd = async (topId: TopPartId, modelId: SpinnerModelId) => {
+  if (skinAdPending.value || !isRewardedReady.value) return
+  skinAdPending.value = true
+  try {
+    const ok = await showRewardedAd({ kind: 'skinAd' })
+    if (ok) recordSkinAdWatch(topId, modelId)
+  } finally {
+    skinAdPending.value = false
+  }
 }
 
 const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
@@ -421,6 +445,22 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-3 py-0.5 bg-green-600 hover:bg-green-500 text-white cursor-pointer"
               @click="handleSelectSkin(skinPickerTopId, modelId)"
             ) {{ t('selectButton') }}
+          //- Ad-unlock skin (rewarded-ad builds only): one ad instead of a coin price.
+          template(v-else-if="isAdUnlockSkin(modelId)")
+            button.rounded-lg.font-bold.transition-all.skin-card-action(
+              class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5 flex items-center gap-1"
+              :class="isRewardedReady && !skinAdPending                ? 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000] text-white cursor-pointer'                : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
+              :disabled="!isRewardedReady || skinAdPending"
+              :aria-label="t('watchAdsToUnlock')"
+              :title="t('watchAdsToUnlock')"
+              @click="handleWatchSkinAd(skinPickerTopId, modelId)"
+            )
+              span.game-text(v-if="isNative") {{ t('spinner.ad') }}
+              img.object-contain(
+                :src="prependBaseUrl('images/icons/movie_128x96.webp')"
+                class="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                alt=""
+              )
           template(v-else)
             button.rounded-lg.font-bold.transition-all.skin-card-action(
               class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5 flex items-center gap-1"

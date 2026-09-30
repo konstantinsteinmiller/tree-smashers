@@ -141,6 +141,19 @@ export default {
     'yourRank': '你排第 #{n}',
     'of': '/ 共 {n} 人'
   },
+  'league': {
+    'tiers': {
+      'wood': '木头',
+      'bronze': '青铜',
+      'silver': '白银',
+      'gold': '黄金',
+      'platinum': '铂金',
+      'diamond': '钻石',
+      'champion': '冠军'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} 第{position}名'
+  },
   'graphicsQuality': '画质',
   'graphicsQualityNote': '自动模式会在设备帧率低于 25 FPS 时降低特效。',
   'qualityAuto': '自动',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': '关卡',
   'bossStage': '首领关卡',
+  'bossDefeated': '击败首领',
   'stageN': '第 {n} 关',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': '广告',
+    'free': '免费',
     'spinning': '旋转中...',
     'spinAgain': '再转一次',
+    'tripleCoinsAria': '观看广告，总共获得 {count} 枚金币',
     'skip': '跳过',
     'youWin': '胜利！',
     'youLose': '失败！',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '{count} 钻石',
         'rewardSpeed': '2 倍战斗速度',
         'rewardRespin': '再转一次',
+        'rewardSkinAd': '一个新皮肤',
         'watch': '观看广告',
         'decline': '不用了'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': '已装备',
       'selectButton': '选择',
       'hintSelectCards': '点击卡片选择你的陀螺配置，点击升级按钮进行升级。',
-      'hintPlusIcon': '上部卡片顶部的「+」图标会打开对应部件的皮肤商店（例如穿甲者皮肤商店），可在此购买新皮肤。'
+      'hintPlusIcon': '上部卡片顶部的「+」图标会打开对应部件的皮肤商店（例如穿甲者皮肤商店），可在此购买新皮肤。',
+      'watchAdsToUnlock': '观看广告解锁'
     }
   }
 }

@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Bạn hạng #{n}',
     'of': 'trên {n} người chơi'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Gỗ',
+      'bronze': 'Đồng',
+      'silver': 'Bạc',
+      'gold': 'Vàng',
+      'platinum': 'Bạch Kim',
+      'diamond': 'Kim Cương',
+      'champion': 'Nhà Vô Địch'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Đồ họa',
   'graphicsQualityNote': 'Chế độ Tự động giảm hiệu ứng khi thiết bị tụt dưới 25 FPS.',
   'qualityAuto': 'Tự động',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Màn',
   'bossStage': 'Màn Trùm',
+  'bossDefeated': 'Đã hạ Trùm',
   'stageN': 'Màn {n}',
   'intro': {
     'reclaim': 'Giành lại tất cả!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'QC',
+    'free': 'MIỄN PHÍ',
     'spinning': 'Đang quay...',
     'spinAgain': 'Quay lần nữa',
+    'tripleCoinsAria': 'Xem quảng cáo để nhận tổng cộng {count} xu',
     'skip': 'Bỏ qua',
     'youWin': 'BẠN THẮNG!',
     'youLose': 'BẠN THUA!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} kim cương',
         'rewardSpeed': 'tốc độ trận x2',
         'rewardRespin': 'thêm một lượt quay',
+        'rewardSkinAd': 'một skin mới',
         'watch': 'Xem quảng cáo',
         'decline': 'Không, cảm ơn'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ĐANG DÙNG',
       'selectButton': 'CHỌN',
       'hintSelectCards': 'Chạm vào thẻ để chọn cấu hình con quay. Chạm nút nâng cấp để nâng cấp.',
-      'hintPlusIcon': 'Biểu tượng + ở đầu mỗi thẻ phần trên mở cửa hàng skin của phần đó (vd. cửa hàng skin Xuyên Giáp), nơi bạn có thể nhận skin mới.'
+      'hintPlusIcon': 'Biểu tượng + ở đầu mỗi thẻ phần trên mở cửa hàng skin của phần đó (vd. cửa hàng skin Xuyên Giáp), nơi bạn có thể nhận skin mới.',
+      'watchAdsToUnlock': 'Xem quảng cáo để mở khóa'
     }
   }
 }

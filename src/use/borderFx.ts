@@ -3,8 +3,10 @@
  *
  *   · LAVA border   → a painted 12-frame flame-burn strip that follows the
  *                     spinner for ~1 s (public/images/vfx/flame-burn_*.webp).
- *   · FOREST border → a small procedural heal pulse: an expanding green ring
- *                     plus a few rising "+" glyphs.
+ *   · HEAL (any)    → a small procedural heal pulse: an expanding green ring
+ *                     plus a few rising "+" glyphs. Every code path that
+ *                     raises a blade's HP plays it — forest border, healer
+ *                     ally contact, life-leech — via `triggerHeal`.
  *
  * Pure state + draw helpers with no side-effecting imports, so the trigger /
  * throttle / cap rules are unit-testable (tests/borderFx.test.ts) without
@@ -15,9 +17,12 @@
  *   · No gradients, no shadowBlur, no per-frame string building: every style
  *     below is a module constant, and the heal pulse is one stroked arc and
  *     a handful of fillRects.
- *   · Callers pass a live cap so the low quality tier (FX.low) gets fewer
- *     concurrent instances, and pass `rekindle=false` on low so a burn is one
- *     pass per contact instead of being held alight.
+ *   · Burns: callers pass a live cap so the low quality tier (FX.low) gets
+ *     fewer concurrent instances, and pass `rekindle=false` on low so a burn
+ *     is one pass per contact instead of being held alight.
+ *   · Heals are never dropped (a heal must always read): the pool covers
+ *     every blade that can be alive at once, and the low tier instead draws
+ *     the cheap variant (one thin ring, 2 glyphs, no ink pass).
  *   · Time is the pool's own clock, advanced by the physics tick, so a paused
  *     game freezes the effects with everything else.
  */
@@ -64,8 +69,13 @@ export interface BurnSlot {
 // ─── Heal pulse ────────────────────────────────────────────────────────────
 
 export const HEAL_LIFE_MS = 720
-/** Per-spinner throttle: a heal inside this window of the last one is ignored. */
-export const HEAL_RETRIGGER_MS = 400
+/**
+ * Heal-pulse pool size. Heals are uncapped (see header), so this must cover
+ * every blade that can be healed at the same moment: player + enemy teams,
+ * split children and emitted minis included. 16 slots of three fields each,
+ * allocated once.
+ */
+export const HEAL_POOL_SIZE = 16
 
 export interface HealSlot {
   active: boolean
@@ -83,13 +93,14 @@ export interface BorderFxState {
   heals: HealSlot[]
 }
 
-export const createBorderFx = (size = BORDER_FX_POOL_SIZE): BorderFxState => {
+export const createBorderFx = (
+  size = BORDER_FX_POOL_SIZE,
+  healSize = HEAL_POOL_SIZE
+): BorderFxState => {
   const burns: BurnSlot[] = []
   const heals: HealSlot[] = []
-  for (let i = 0; i < size; i++) {
-    burns.push({ active: false, blade: null, frame: 0, timer: 0 })
-    heals.push({ active: false, blade: null, t: 0 })
-  }
+  for (let i = 0; i < size; i++) burns.push({ active: false, blade: null, frame: 0, timer: 0 })
+  for (let i = 0; i < healSize; i++) heals.push({ active: false, blade: null, t: 0 })
   return { burns, heals }
 }
 
@@ -144,31 +155,29 @@ export const triggerBurn = (
 }
 
 /**
- * A spinner was healed by a forest border. Per-spinner throttle: a pulse
- * already playing on this spinner restarts only once it is older than
- * HEAL_RETRIGGER_MS. Capped like the burns.
+ * A spinner was healed (by anything). No stacking: while a pulse is still
+ * playing on this spinner the new heal leaves it alone — it neither restarts
+ * nor adds a second one — and the running slot is returned. Once it has
+ * finished, the next heal starts a fresh pulse. Only a dead spinner, or a
+ * pool with every slot live, gets nothing (null).
  */
 export const triggerHeal = (
   s: BorderFxState,
-  blade: BorderFxBlade,
-  cap: number
+  blade: BorderFxBlade
 ): HealSlot | null => {
-  let live = 0
+  if (blade.hp <= 0) return null
   let free: HealSlot | null = null
   for (const slot of s.heals) {
     if (slot.active) {
       if (slot.blade!.id === blade.id) {
-        if (slot.t < HEAL_RETRIGGER_MS) return null
-        slot.t = 0
         slot.blade = blade
         return slot
       }
-      live++
     } else if (!free) {
       free = slot
     }
   }
-  if (!free || live >= cap) return null
+  if (!free) return null
   free.active = true
   free.blade = blade
   free.t = 0

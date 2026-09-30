@@ -45,6 +45,7 @@ import { refreshSaveBackedState } from '@/use/useSaveStatus'
 import { requestStageReinit } from '@/use/useSpinnerCampaign'
 import { requestIntroReplay } from '@/use/useIntroCutscene'
 import { INTRO_SEEN_KEY } from '@/use/introGate'
+import { DAILY_SPEED_GIFT_KEY, SPEED_GIFT_KEY } from '@/use/speedGiftGate'
 
 /** Keys that must SURVIVE a progress reset (settings + purchased content). */
 const KEEP_KEYS = new Set<string>([
@@ -57,6 +58,7 @@ const KEEP_KEYS = new Set<string>([
   'spinner_owned_skins',
   'spinner_selected_skins',
   'spinner_skin_picker_opened',
+  'spinner_skin_ad_progress',
   'spinner_player_team',
   'spinner_bg_skins_owned',
   'spinner_bg_skin_selected',
@@ -64,7 +66,11 @@ const KEEP_KEYS = new Set<string>([
   // `useRewardedThrottle`'s `__save_internal__` key: a player must not be
   // able to buy back a rewarded-ad cooldown by resetting, and the reset is
   // now instant (no reload), which would make that a one-tap loop.
-  'spinner_ad_button_ready_at'
+  'spinner_ad_button_ready_at',
+  // The first-time free 2x gift (see speedGiftGate.ts): a reset must not
+  // hand out a second ad-free boost. Same for today's daily free boost.
+  SPEED_GIFT_KEY,
+  DAILY_SPEED_GIFT_KEY
 ])
 
 /**

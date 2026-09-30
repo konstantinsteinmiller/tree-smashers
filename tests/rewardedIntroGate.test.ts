@@ -62,6 +62,11 @@ vi.mock('@/platforms/resolveAdProvider', async () => {
 const loadAds = async (native: boolean) => {
   vi.resetModules()
   vi.stubEnv('VITE_APP_NATIVE', native ? 'true' : '')
+  // Both must be AD builds: without rewarded ads `useAds` refuses every
+  // rewarded placement before the intro is reached. Native = AdMob build
+  // (SHOW_MEDIATOR_ADS), web = GameDistribution.
+  vi.stubEnv('VITE_APP_SHOW_MEDIATOR_ADS', native ? 'true' : '')
+  vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', native ? '' : 'true')
   const ads = await import('@/use/useAds')
   const intro = await import('@/use/useRewardedIntro')
   return { ads, intro }

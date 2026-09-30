@@ -141,6 +141,19 @@ export default {
     'yourRank': 'Eres el #{n}',
     'of': 'de {n} jugadores'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Madera',
+      'bronze': 'Bronce',
+      'silver': 'Plata',
+      'gold': 'Oro',
+      'platinum': 'Platino',
+      'diamond': 'Diamante',
+      'champion': 'Campeón'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'El modo automático reduce los efectos si tu dispositivo baja de 25 FPS.',
   'qualityAuto': 'Automático',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapa Jefe',
+  'bossDefeated': 'Jefe derrotado',
   'stageN': 'Etapa {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': 'Anuncio',
+    'free': 'GRATIS',
     'spinning': 'Girando...',
     'spinAgain': 'Girar de nuevo',
+    'tripleCoinsAria': 'Mira un anuncio para conseguir {count} monedas en total',
     'skip': 'Saltar',
     'youWin': '¡GANASTE!',
     'youLose': '¡PERDISTE!',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '{count} diamantes',
         'rewardSpeed': 'velocidad de combate x2',
         'rewardRespin': 'otro giro',
+        'rewardSkinAd': 'un aspecto nuevo',
         'watch': 'Ver anuncio',
         'decline': 'No, gracias'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': 'EQUIPADO',
       'selectButton': 'ELEGIR',
       'hintSelectCards': 'Toca una tarjeta para elegir la configuración de tu peonza. Toca el botón de mejora para mejorarla.',
-      'hintPlusIcon': 'El + en la parte superior de cada tarjeta abre la tienda de skins de esa parte superior (p. ej. Perforador) donde puedes adquirir nuevas skins.'
+      'hintPlusIcon': 'El + en la parte superior de cada tarjeta abre la tienda de skins de esa parte superior (p. ej. Perforador) donde puedes adquirir nuevas skins.',
+      'watchAdsToUnlock': 'Mira un anuncio para desbloquear'
     }
   }
 }

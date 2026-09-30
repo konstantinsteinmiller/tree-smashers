@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Du er #{n}',
     'of': 'av {n} spillere'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Tre',
+      'bronze': 'Bronse',
+      'silver': 'Sølv',
+      'gold': 'Gull',
+      'platinum': 'Platina',
+      'diamond': 'Diamant',
+      'champion': 'Mester'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafikk',
   'graphicsQualityNote': 'Automatisk skrur ned effektene når enheten din faller under 25 FPS.',
   'qualityAuto': 'Automatisk',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etappe',
   'bossStage': 'Bossetappe',
+  'bossDefeated': 'Boss beseiret',
   'stageN': 'Etappe {n}',
   'intro': {
     'reclaim': 'Vinn alt tilbake!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reklame',
+    'free': 'GRATIS',
     'spinning': 'Snurrer...',
     'spinAgain': 'Snurr igjen',
+    'tripleCoinsAria': 'Se en reklame for å få {count} mynter totalt',
     'skip': 'Hopp over',
     'youWin': 'DU VANT!',
     'youLose': 'DU TAPTE!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} diamanter',
         'rewardSpeed': '2x kamptempo',
         'rewardRespin': 'ett snurr til',
+        'rewardSkinAd': 'et nytt skin',
         'watch': 'Se reklame',
         'decline': 'Nei takk'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'UTRUSTET',
       'selectButton': 'VELG',
       'hintSelectCards': 'Trykk på et kort for å velge delene til snurrebassen din. Trykk på oppgraderingsknappen for å oppgradere den.',
-      'hintPlusIcon': '+-ikonet øverst på hvert toppklingekort åpner skinbutikken for den delen (f.eks. Panserbryterens skinbutikk), der du kan skaffe nye skins.'
+      'hintPlusIcon': '+-ikonet øverst på hvert toppklingekort åpner skinbutikken for den delen (f.eks. Panserbryterens skinbutikk), der du kan skaffe nye skins.',
+      'watchAdsToUnlock': 'Se en reklame for å låse opp'
     }
   }
 }

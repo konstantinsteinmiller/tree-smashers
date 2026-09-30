@@ -80,6 +80,8 @@ export default {
       orientations: { [orientationId]: { width, height, dpr, isMobile, hasTouch } },
       durationMs, fps, quality,   // quality: string | string[]
       scenarios: { [scenarioId]: moduleName },   // default: moduleName = scenarioId
+      scenarioIds,                // this format's own scenario list when --scenarios is absent
+      onDemand,                   // true = skipped by a bare run; recorded only when --formats names it
       urlParams,
     },
   },

@@ -1,3 +1,5 @@
+import type { BladeSkills } from './skills'
+
 // ─── Top & Bottom Part Identifiers ───────────────────────────────────────────
 
 export const TOP_PART_IDS = {
@@ -160,6 +162,14 @@ export interface SpinnerState {
   /** Timestamp of last thunder damage tick per target blade id.
    *  Key is the target blade's numeric `id` (matches `SpinnerState.id`). */
   thunderLastHit?: Map<number, number>
+  // ── skills (skills-feature.md §10.1; engine wiring lands in WP4) ──────
+  /** Per-blade skill runtime state; only created when a loadout is given. */
+  skills?: BladeSkills
+  /** Static Charge: the turn index on which this blade may not be launched. */
+  stunnedForTurn?: number
+  /** Static Charge: the turn index this blade is immune to a new stun
+   *  (no two consecutive stuns). */
+  stunImmuneTurn?: number
 }
 
 // ─── Arena Powerup ───────────────────────────────────────────────────────────

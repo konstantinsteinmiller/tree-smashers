@@ -35,6 +35,7 @@ import {
 } from '@/use/useUser'
 import type { AdProvider } from './ads/types'
 import { resolveAdProvider } from '@/platforms/resolveAdProvider'
+import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
 import { isRewardedThrottled, recordRewardedGranted } from '@/use/useRewardedThrottle'
 import {
   requestRewardedIntro,
@@ -63,8 +64,15 @@ export const isAdsReady = computed(() => provider.isReady.value)
 // (RouletteWheel respin, AdRewardButton, 2x speed boost) hides — the
 // same UX as a no-fill SDK state. Anti-abuse for kids audience: caps
 // the watch-only reward farming pattern.
+//
+// Build gate: on a build WITHOUT rewarded ads (`HAS_REWARDED_ADS` false — CG
+// basic launch, itch, Glitch, GamePix, Y8, WaveDash, plain web, native
+// without ads) this is false whatever the provider claims, so NO
+// watch-an-ad-for-a-reward placement (the "+N coins" button, the roulette
+// respin, the win-screen 2x coins, the 2x speed ad, the skin ad unlock) can
+// ever render there. One choke point, so a future placement inherits it.
 export const isRewardedReady = computed(() =>
-  provider.isRewardedReady.value && !isRewardedThrottled.value
+  HAS_REWARDED_ADS && provider.isRewardedReady.value && !isRewardedThrottled.value
 )
 export const isInterstitialReady = computed(() => provider.isInterstitialReady.value)
 /** True once the active ad provider has detected a browser-extension
@@ -114,6 +122,9 @@ export const initAds = (): Promise<void> => provider.init()
  *      See `useRewardedIntro.ts`.
  */
 export const showRewardedAd = async (reward: RewardedIntroReward | null = null): Promise<boolean> => {
+  // No-rewarded build: never grant (the placements are already hidden via
+  // `isRewardedReady`; this only fires if one bypassed it).
+  if (!HAS_REWARDED_ADS) return false
   if (isRewardedThrottled.value) return false
   if (requiresRewardedIntro) {
     const accepted = await requestRewardedIntro(reward)

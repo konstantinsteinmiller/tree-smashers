@@ -141,6 +141,19 @@ export default {
     'yourRank': 'Tu es #{n}',
     'of': 'sur {n} joueurs'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Bois',
+      'bronze': 'Bronze',
+      'silver': 'Argent',
+      'gold': 'Or',
+      'platinum': 'Platine',
+      'diamond': 'Diamant',
+      'champion': 'Champion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Graphismes',
   'graphicsQualityNote': 'Le mode automatique réduit les effets si votre appareil descend sous 25 FPS.',
   'qualityAuto': 'Automatique',
@@ -154,6 +167,7 @@ export default {
   'vs': 'VS',
   'stage': 'Étape',
   'bossStage': 'Étape Boss',
+  'bossDefeated': 'Boss vaincu',
   'stageN': 'Étape {n}',
   // First-launch intro cutscene (IntroCutscene.vue). The badges reuse
   // 'bossStage' / 'stage' / 'lv' and the button reuses 'spinner.skip'.
@@ -177,8 +191,10 @@ export default {
   },
   'spinner': {
     'ad': 'Pub',
+    'free': 'GRATUIT',
     'spinning': 'Rotation...',
     'spinAgain': 'Relancer',
+    'tripleCoinsAria': 'Regarde une pub pour obtenir {count} pièces au total',
     'skip': 'Passer',
     'youWin': 'VICTOIRE !',
     'youLose': 'DÉFAITE !',
@@ -391,6 +407,7 @@ export default {
         'rewardDiamonds': '{count} diamants',
         'rewardSpeed': 'vitesse de combat x2',
         'rewardRespin': 'un tour de plus',
+        'rewardSkinAd': 'un nouveau skin',
         'watch': 'Regarder la pub',
         'decline': 'Non merci'
       }
@@ -525,7 +542,8 @@ export default {
       'equipped': 'ÉQUIPÉ',
       'selectButton': 'CHOISIR',
       'hintSelectCards': 'Touche une carte pour choisir la configuration de ta toupie. Touche le bouton d\'amélioration pour l\'améliorer.',
-      'hintPlusIcon': 'Le + en haut de chaque carte de partie haute ouvre la boutique de skins correspondante (ex. Perce-blindage), où tu peux acquérir de nouveaux skins.'
+      'hintPlusIcon': 'Le + en haut de chaque carte de partie haute ouvre la boutique de skins correspondante (ex. Perce-blindage), où tu peux acquérir de nouveaux skins.',
+      'watchAdsToUnlock': 'Regarde une pub pour débloquer'
     }
   }
 }

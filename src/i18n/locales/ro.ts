@@ -142,6 +142,19 @@ export default {
     'yourRank': 'Locul tău: #{n}',
     'of': 'din {n}'
   },
+  'league': {
+    'tiers': {
+      'wood': 'Lemn',
+      'bronze': 'Bronz',
+      'silver': 'Argint',
+      'gold': 'Aur',
+      'platinum': 'Platină',
+      'diamond': 'Diamant',
+      'champion': 'Campion'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'Grafică',
   'graphicsQualityNote': 'Modul automat reduce efectele când dispozitivul scade sub 25 FPS.',
   'qualityAuto': 'Automată',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'Etapa',
   'bossStage': 'Etapă cu boss',
+  'bossDefeated': 'Boss învins',
   'stageN': 'Etapa {n}',
   'intro': {
     'reclaim': 'Recuperează tot!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'Reclamă',
+    'free': 'GRATUIT',
     'spinning': 'Se învârte...',
     'spinAgain': 'Învârte din nou',
+    'tripleCoinsAria': 'Urmărește o reclamă ca să primești în total {count} monede',
     'skip': 'Sari peste',
     'youWin': 'AI CÂȘTIGAT!',
     'youLose': 'AI PIERDUT!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': 'diamante ×{count}',
         'rewardSpeed': 'viteză de luptă ×2',
         'rewardRespin': 'încă o învârtire',
+        'rewardSkinAd': 'un skin nou',
         'watch': 'Vezi reclama',
         'decline': 'Nu, mersi'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'ECHIPAT',
       'selectButton': 'ALEGE',
       'hintSelectCards': 'Atinge un cartonaș ca să alegi configurația titirezului. Atinge butonul de îmbunătățire ca s-o îmbunătățești.',
-      'hintPlusIcon': 'Pictograma + din colțul de sus al fiecărui cartonaș de parte superioară deschide magazinul de skinuri al piesei (de ex. magazinul de skinuri Străpungător), unde poți obține skinuri noi.'
+      'hintPlusIcon': 'Pictograma + din colțul de sus al fiecărui cartonaș de parte superioară deschide magazinul de skinuri al piesei (de ex. magazinul de skinuri Străpungător), unde poți obține skinuri noi.',
+      'watchAdsToUnlock': 'Urmărește o reclamă pentru a debloca'
     }
   }
 }

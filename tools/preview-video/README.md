@@ -36,6 +36,32 @@ Two scenarios per format — a **success** clip and a **fail** clip. Ship both
 and let the portal's A/B decide: a near-miss loss converts differently from a
 clean win, and which one wins is not predictable from the armchair.
 
+## The 12 s showreel
+
+```bash
+pnpm preview:reel                 # record the scenes, cut the showreel (portrait + landscape)
+pnpm preview:reel --no-record     # re-cut from the recorded scenes (change a transition, re-time)
+pnpm preview:reel --piranha       # also cut the Piranha-ending alternative
+```
+
+Five staged scenes cut into exactly 12.000 s (360 frames) with 8-frame
+(0.27 s) transitions: fire arena (stage 17 — a kill explosion, rim burns)
+→ *flash* → heal arena (stage 9 — rim heal pulses) → *whip-pan left* → ice
+arena (stage 13 — the glide) → *radial sweep* → Bear Mother (stage 10 — the
+split) → *whip-pan up* → Phantom Twin (stage 15 — the ghost phasing into
+two halves). That is `showreel-12s-<orientation>-<W>x<H>.mp4`, the upload.
+`--piranha` also cuts `showreel-piranha-…`, which ends on the Piranha
+(stage 35 — the swarm bursting out) instead. The cuts are defined in
+`preview.config.mjs` (`formats.reel.reels`).
+
+The scenes are ordinary recorder clips (format `reel`, `onDemand`, 2.8 s,
+lossless) under `preview-videos/showreel/scenes/`; `showreel.mjs` cuts them
+with ffmpeg `xfade` (timeline math in `lib/reel.mjs`, tested by
+`tests/previewReel.test.ts`) and writes a contact sheet per reel and
+orientation. Each scene is staged, not hoped for: HP authored, blades PLACED
+(`__chaos.place`), the shot pre-aimed — and it logs a `scene peaks` line
+(burns / heals / kills / spawned) with a warning if its moment was missed.
+
 ## The game-side seams
 
 Both are `import.meta.env.DEV` only and absent from every portal build
@@ -44,7 +70,7 @@ Both are `import.meta.env.DEV` only and absent from every portal build
 
 | seam               | where                                                                                                                  | what                                                                                                                       |
 |--------------------|------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `window.__chaos`   | `src/utils/previewSeam.ts`, installed by `SpinnerArena.vue` via a dynamic import inside an `import.meta.env.DEV` guard | snapshot / setStage / seed / begin / freeze / unfreeze / setHp / aim / fire                                                |
+| `window.__chaos`   | `src/utils/previewSeam.ts`, installed by `SpinnerArena.vue` via a dynamic import inside an `import.meta.env.DEV` guard | snapshot / setStage / seed / begin / freeze / unfreeze / setHp / place / freezeOnPhase / aim / fire                        |
 | `?clean=1`         | `src/utils/cleanFeed.ts` → `CLEAN_FEED`                                                                                | renderer skips HP rings, selection glow, damage numbers, powerup floats, hint pulse, tutorial arrows, the ⚔ATK/🛡DEF label |
 | `?clean=1&rings=1` | same file → `CLEAN_HP_RINGS`                                                                                           | keeps the HP rings in an otherwise clean feed, for a portal whose spec is looser than "no counters"                        |
 

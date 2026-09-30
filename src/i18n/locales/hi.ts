@@ -142,6 +142,19 @@ export default {
     'yourRank': 'तुम #{n} पर हो',
     'of': '{n} खिलाड़ियों में से'
   },
+  'league': {
+    'tiers': {
+      'wood': 'लकड़ी',
+      'bronze': 'कांस्य',
+      'silver': 'चाँदी',
+      'gold': 'सोना',
+      'platinum': 'प्लैटिनम',
+      'diamond': 'हीरा',
+      'champion': 'चैंपियन'
+    },
+    'tierDivision': '{tier} {division}',
+    'tierPosition': '{tier} #{position}'
+  },
   'graphicsQuality': 'ग्राफ़िक्स',
   'graphicsQualityNote': 'डिवाइस 25 FPS से नीचे जाने पर ऑटोमैटिक मोड इफ़ेक्ट्स कम कर देता है।',
   'qualityAuto': 'ऑटोमैटिक',
@@ -155,6 +168,7 @@ export default {
   'vs': 'VS',
   'stage': 'स्टेज',
   'bossStage': 'बॉस स्टेज',
+  'bossDefeated': 'बॉस पराजित',
   'stageN': 'स्टेज {n}',
   'intro': {
     'reclaim': 'सब कुछ वापस जीतो!',
@@ -176,8 +190,10 @@ export default {
   },
   'spinner': {
     'ad': 'विज्ञापन',
+    'free': 'मुफ़्त',
     'spinning': 'घूम रहा है...',
     'spinAgain': 'फिर घुमाओ',
+    'tripleCoinsAria': 'कुल {count} सिक्के पाने के लिए एक विज्ञापन देखें',
     'skip': 'छोड़ो',
     'youWin': 'जीत!',
     'youLose': 'हार!',
@@ -390,6 +406,7 @@ export default {
         'rewardDiamonds': '{count} डायमंड',
         'rewardSpeed': 'लड़ाई में दोगुनी रफ़्तार',
         'rewardRespin': 'एक और स्पिन',
+        'rewardSkinAd': 'एक नई स्किन',
         'watch': 'विज्ञापन देखो',
         'decline': 'नहीं, शुक्रिया'
       }
@@ -524,7 +541,8 @@ export default {
       'equipped': 'चयनित',
       'selectButton': 'चुनो',
       'hintSelectCards': 'अपने स्पिनर ब्लेड का कॉन्फ़िगरेशन चुनने के लिए किसी कार्ड पर टैप करो। अपग्रेड करने के लिए अपग्रेड बटन पर टैप करो।',
-      'hintPlusIcon': 'हर ऊपरी ब्लेड कार्ड के ऊपर वाला + आइकन उस पार्ट की स्किन शॉप खोलता है (जैसे कवचभेदी स्किन शॉप), जहाँ नई स्किन मिलती हैं।'
+      'hintPlusIcon': 'हर ऊपरी ब्लेड कार्ड के ऊपर वाला + आइकन उस पार्ट की स्किन शॉप खोलता है (जैसे कवचभेदी स्किन शॉप), जहाँ नई स्किन मिलती हैं।',
+      'watchAdsToUnlock': 'अनलॉक करने के लिए एक विज्ञापन देखें'
     }
   }
 }
