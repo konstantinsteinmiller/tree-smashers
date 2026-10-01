@@ -427,6 +427,12 @@ export default {
     'shareText': '快來加入我的 Chaos Arena PvP 對戰！',
     'versionMismatch': '對手使用的遊戲版本不同。雙方玩家都需要重新載入頁面後再試一次。'
   },
+  'powerups': {
+    'attack': '攻擊+{pct}%',
+    'defense': '防禦+{pct}%',
+    'speed': '速度+{pct}%',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': '星刃',
     'triangle': '尖刺',

@@ -294,7 +294,7 @@ describe('league fights in the arena (league build, offline)', () => {
     }
   }, 60_000)
 
-  it('unlock popup: tap_to_start only, never over a skills surface, ≥ 1.2 s after it closed; Enter → seen + hub', async () => {
+  it('unlock popup: armed by a win-screen close only, tap_to_start only, never over a skills surface, ≥ 1.2 s after it closed; Enter → seen + hub', async () => {
     // Stored state: never unlocked (the arena's load stores the unlock at stage 20).
     const arena = await remount(null)
     try {
@@ -303,6 +303,18 @@ describe('league fights in the arena (league build, offline)', () => {
       const L = vm.league
       expect(L.state.value.unlocked).toBe(true) // loadLeague() at mount stored it
       expect(JSON.parse(localStorage.getItem('spinner_league') ?? '{}').unlocked).toBe(true)
+
+      // Never at boot: only a closed campaign WIN screen arms it — a loss or a
+      // non-campaign win does not.
+      await arena.settle(1500)
+      expect(vm.leagueUnlockOpen).toBe(false)
+      await vm.armLeagueUnlockAfterWin('lose', 'campaign')
+      await vm.armLeagueUnlockAfterWin('win', 'ghost')
+      await arena.settle(1500)
+      expect(vm.leagueUnlockArmed).toBe(false)
+      expect(vm.leagueUnlockOpen).toBe(false)
+      await vm.armLeagueUnlockAfterWin('win', 'campaign')
+      expect(vm.leagueUnlockArmed).toBe(true)
 
       // A skills surface is up → the popup waits.
       vm.sk.introOpen = true
@@ -328,7 +340,7 @@ describe('league fights in the arena (league build, offline)', () => {
     }
   }, 60_000)
 
-  it('unlock popup never opens mid-battle or over a result screen', async () => {
+  it('unlock popup never opens mid-battle or over a result screen; the closed win screen opens it', async () => {
     const arena = await remount({ v: 1, unlocked: true, unlockSeen: false })
     try {
       const vm = vmOf(arena)
@@ -343,6 +355,12 @@ describe('league fights in the arena (league build, offline)', () => {
       await until(arena, () => vm.showReward === true || vm.showRoulette === true || vm.showBossDefeated === true)
       await arena.settle(1500)
       expect(vm.leagueUnlockOpen).toBe(false)
+      // The win screen closes → back on tap_to_start, the popup follows.
+      if (vm.showReward === true) {
+        await vm.onRewardContinue()
+        await until(arena, () => vm.leagueUnlockOpen === true, 5000)
+        expect(vm.phase).toBe('tap_to_start')
+      }
     } finally {
       arena.unmount()
     }

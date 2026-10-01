@@ -15,6 +15,10 @@ import type { LeagueUiSource } from '@/league/ui/leagueUi'
  * into a gift marker and the button bounces (static on low quality / reduced
  * motion).
  *
+ * Sized as an `FIconButton size="md"` twin — same box, corner radius, drop
+ * shadow and `scale-80 sm:scale-100` HUD scaling — so it lines up with the
+ * trophy / team buttons in the bottom-right row; only the bubble sticks out.
+ *
  * Mounted by the arena (LG6) through the gate handle `LeagueHudButtonUi`
  * behind `leagueMountAllowed(stage)`. Emits `open`.
  */
@@ -54,6 +58,7 @@ const aria = computed(() =>
 <template lang="pug">
   button.lhb(
     type="button"
+    class="scale-80 sm:scale-100 hover:scale-[103%] active:scale-90 transition-transform"
     data-league="hud-button"
     :class="{ 'lhb--attention': hasReward && !isLowQuality, 'lhb--idle': !league.canFight.value && !hasReward }"
     :style="{ '--lhb-accent': accent }"
@@ -62,7 +67,7 @@ const aria = computed(() =>
   )
     span.lhb__shadow(aria-hidden="true")
     span.lhb__body(aria-hidden="true")
-      LeagueTierIcon(:tier="standing.tier" :size="34" :animated="false")
+      LeagueTierIcon(:tier="standing.tier" :size="tag ? 26 : 32" :animated="false")
       span.lhb__tag(v-if="tag") {{ tag }}
     span.lhb__bubble(v-if="hasReward" aria-hidden="true" class="lhb__bubble--gift")
       svg(viewBox="0 0 24 24" width="100%" height="100%")
@@ -80,22 +85,17 @@ const aria = computed(() =>
   background: none
   cursor: pointer
   -webkit-tap-highlight-color: transparent
-  transition: transform 0.1s ease
 
-  &:hover
-    transform: scale(1.04)
-  &:active
-    transform: scale(0.92)
   &:focus-visible
     outline: 3px solid #ffcd00
     outline-offset: 3px
-    border-radius: 0.8rem
+    border-radius: 0.5rem
 
 .lhb__shadow
   position: absolute
   inset: 0
-  transform: translateY(4px)
-  border-radius: 0.8rem
+  transform: translateY(0.25rem)
+  border-radius: 0.5rem
   background: #1a2b4b
 
 .lhb__body
@@ -105,16 +105,18 @@ const aria = computed(() =>
   align-items: center
   justify-content: center
   gap: 0.05rem
-  min-width: 3.25rem
-  min-height: 3.25rem
-  padding: 0.25rem 0.35rem 0.2rem
-  border-radius: 0.8rem
+  // FIconButton md: 1.75rem image + 2 × 0.5rem padding + 2 × 2px border.
+  box-sizing: border-box
+  width: calc(2.75rem + 4px)
+  height: calc(2.75rem + 4px)
+  padding: 0
+  border-radius: 0.5rem
   border: 2px solid #0f1a30
   background: radial-gradient(90% 80% at 50% 20%, color-mix(in srgb, var(--lhb-accent) 45%, #2a4476), #1a2b4b 80%)
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18)
 
 .lhb__tag
-  font-size: 0.68rem
+  font-size: 0.6rem
   font-weight: 900
   line-height: 1
   color: var(--lhb-accent)

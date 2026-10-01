@@ -427,6 +427,12 @@ export default {
     'shareText': 'Přidej se k mé PvP bitvě v Chaos Arena!',
     'versionMismatch': 'Tvůj soupeř používá jinou verzi hry. Oba hráči by měli znovu načíst stránku a zkusit to znovu.'
   },
+  'powerups': {
+    'attack': '+{pct} % Útok',
+    'defense': '+{pct} % Obrana',
+    'speed': '+{pct} % Rychlost',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Hvězdné ostří',
     'triangle': 'Ostnatý',

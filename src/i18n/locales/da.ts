@@ -427,6 +427,12 @@ export default {
     'shareText': 'Vær med i min PvP-kamp i Chaos Arena!',
     'versionMismatch': 'Din modstander kører en anden version af spillet. Begge spillere skal genindlæse siden og prøve igen.'
   },
+  'powerups': {
+    'attack': '+{pct} % Angreb',
+    'defense': '+{pct} % Forsvar',
+    'speed': '+{pct} % Fart',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Stjerneklinge',
     'triangle': 'Pigget',

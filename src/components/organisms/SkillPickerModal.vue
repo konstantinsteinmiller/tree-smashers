@@ -19,6 +19,7 @@ import FModal from '@/components/molecules/FModal.vue'
 import SkillIcon from '@/components/atoms/SkillIcon.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import { UI_GLYPHS } from '@/data/uiGlyphs'
+import StatIcon from '@/components/icons/StatIcon.vue'
 import { SKILLS, SKILL_MAX_LEVEL } from '@/data/skillCatalog'
 import type { SkillId } from '@/types/skills'
 import useSkills from '@/use/useSkills'
@@ -36,7 +37,7 @@ import { pickerCards, skillDescParams, skillValuesText, type PickerCard } from '
  *
  *   • tap a learned card body = equip into `slotIndex` (swaps when it sits in the
  *     other slot); the equipped card shows "Equipped ✓" + Remove;
- *   • learn / upgrade bar: `⬆ 🪙 cost`, disabled (grey) when unaffordable,
+ *   • learn / upgrade bar: `level-up icon · coin · cost`, disabled (grey) when unaffordable,
  *     `MAX` at L10; the optional rewarded top-up sits beside a disabled bar
  *     on ad builds only (module-scope pick above);
  *   • locked: silhouette, name hidden, "Unlocks after the Stage N boss".
@@ -200,8 +201,7 @@ const buyAria = (id: SkillId) => {
                   @click.stop="buy(card.id)"
                 )
                   span.game-text(v-if="skills.levelOf(card.id) === 0") {{ t('skills.learn') }}
-                  svg(v-else viewBox="0 0 24 24" width="14" height="14" aria-hidden="true")
-                    path(:d="UI_GLYPHS.up" fill="currentColor")
+                  StatIcon(v-else stat="level-up" class="w-4 h-4" :class="{ 'grayscale opacity-70': !affordable(card.id) }")
                   IconCoin(class="w-4 h-4 text-yellow-300")
                   span.game-text {{ costOf(card.id) }}
       p.skill-picker__hint.text-slate-300.text-center.m-0 {{ t('skills.hint') }}

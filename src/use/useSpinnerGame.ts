@@ -38,6 +38,8 @@ import { currentPvpRole } from '@/use/usePVP'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
 import { FX } from '@/use/useQuality'
+import { POWERUP_PLATE, powerupBoxPath, preloadPowerupArt, statIconPath, uiArtImage, uiArtReady } from '@/data/uiArt'
+import { fmtNum } from '@/utils/localeNumber'
 import {
   createBorderFx, resetBorderFx, tickBorderFx, triggerBurn, triggerHeal,
   renderBurns, renderHeals, FLAME_BURN_SRC, BORDER_FX_POOL_SIZE
@@ -82,14 +84,29 @@ const { playSound } = useSounds()
 // (same window-singleton pattern as `window.__saveManager`). Used for the
 // transient turn-announcement text, so not reacting to a mid-string locale
 // change is fine; falls back to the raw key if i18n isn't ready.
-const translate = (key: string): string => {
+type GlobalI18n = {
+  t?: (k: string, named?: Record<string, unknown>) => string
+  locale?: string | { value: string }
+}
+const globalI18n = (): GlobalI18n | undefined =>
+  (window as unknown as { __i18n?: { global?: GlobalI18n } }).__i18n?.global
+
+const translate = (key: string, named?: Record<string, unknown>): string => {
   try {
-    const g = (window as unknown as {
-      __i18n?: { global?: { t?: (k: string) => string } }
-    }).__i18n?.global
-    return g?.t ? g.t(key) : key
+    const g = globalI18n()
+    return g?.t ? g.t(key, named) : key
   } catch {
     return key
+  }
+}
+
+/** The active locale code ('en', 'de', 'jp'…), 'en' when i18n isn't ready. */
+const activeLocale = (): string => {
+  try {
+    const l = globalI18n()?.locale
+    return (typeof l === 'string' ? l : l?.value) || 'en'
+  } catch {
+    return 'en'
   }
 }
 
@@ -1690,37 +1707,43 @@ export const useSpinnerGame = () => {
   const damageNumbers: DamageNumber[] = []
 
   // ── Floating Powerup Pickup Indicators ──────────────────────────────────
-  // Similar to damage numbers but show "+ATK" / "+DEF" / "+SPD" with the
-  // stat icon color, floating upward from the pickup position.
+  // What the box granted, spelled out: the stat icon + "+25% Attack" (i18n,
+  // `powerups.*`), with a gold outline so it reads on any arena floor. It
+  // pops in, HOLDS readable for most of its life, drifts up a little and only
+  // fades at the end — ~2 s, a second longer than the old "+ATK" tag.
   interface PowerupFloat {
     x: number
     y: number
-    vy: number
     stat: PowerupStat
+    label: string
     life: number
     maxLife: number
   }
 
-  const POWERUP_FLOAT_LIFE = 1100
+  const POWERUP_FLOAT_LIFE = 2100
+  /** Upward drift over the whole life, arena units (eased out). */
+  const POWERUP_FLOAT_RISE = 34
+  const POWERUP_FLOAT_POP_MS = 220
+  const POWERUP_FLOAT_FADE_MS = 500
   const powerupFloats: PowerupFloat[] = []
-  const POWERUP_STAT_LABEL: Record<PowerupStat, string> = {
-    attack: 'ATK',
-    defense: 'DEF',
-    speed: 'SPD'
-  }
+  // The stat colours the Team modal and stat cards use (defense = blue).
   const POWERUP_FLOAT_COLOR: Record<PowerupStat, string> = {
-    attack: '#ef4444',
-    defense: '#a78bfa',
+    attack: '#f87171',
+    defense: '#60a5fa',
     speed: '#22d3ee'
   }
+
+  /** The boost as a localized number (1.25 → "25"); where the sign and the
+   *  percent go is each locale's `powerups.*` copy. */
+  const powerupPct = (): string => fmtNum(Math.round((POWERUP_BUFF_MULTIPLIER - 1) * 100), activeLocale())
 
   const spawnPowerupFloat = (x: number, y: number, stat: PowerupStat) => {
     if (powerupFloats.length >= 25) return
     powerupFloats.push({
       x,
       y,
-      vy: -0.06,
       stat,
+      label: translate(`powerups.${stat}`, { pct: powerupPct() }),
       life: POWERUP_FLOAT_LIFE,
       maxLife: POWERUP_FLOAT_LIFE
     })
@@ -1730,7 +1753,6 @@ export const useSpinnerGame = () => {
     let w = 0
     for (let i = 0; i < powerupFloats.length; i++) {
       const pf = powerupFloats[i]!
-      pf.y += pf.vy * dt
       pf.life -= dt
       if (pf.life > 0) powerupFloats[w++] = pf
     }
@@ -1739,45 +1761,60 @@ export const useSpinnerGame = () => {
 
   const renderPowerupFloats = (ctx: CanvasRenderingContext2D) => {
     for (const pf of powerupFloats) {
-      const alpha = Math.max(0, pf.life / pf.maxLife)
-      const scale = 0.9 + 0.3 * (1 - alpha)
+      const age = pf.maxLife - pf.life
+      const t = age / pf.maxLife
+      // pop 0.6 → ~1.05 → 1.0 over the first POP ms, then steady
+      const pop = Math.min(1, age / POWERUP_FLOAT_POP_MS)
+      const scale = 0.6 + 0.4 * pop + 0.25 * Math.sin(pop * Math.PI)
+      const alpha = Math.min(1, pf.life / POWERUP_FLOAT_FADE_MS)
+      const y = pf.y - 44 - POWERUP_FLOAT_RISE * (1 - (1 - t) * (1 - t))
       const color = POWERUP_FLOAT_COLOR[pf.stat]
-      const label = '+' + POWERUP_STAT_LABEL[pf.stat]
 
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.font = `bold ${18 * scale}px Arial`
+      ctx.font = `900 ${Math.round(20 * scale)}px Arial, sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
-      // Draw the stat icon to the left of the text
-      const textWidth = ctx.measureText(label).width
-      const iconSize = 14 * scale
-      const totalWidth = iconSize + 3 + textWidth
-      const startX = pf.x - totalWidth / 2
+      const textWidth = ctx.measureText(pf.label).width
+      const iconSize = 30 * scale
+      const gap = 4 * scale
+      const startX = pf.x - (iconSize + gap + textWidth) / 2
 
-      // Icon
-      const iconPath = getPowerupIconPath(pf.stat)
-      ctx.save()
-      ctx.translate(startX + iconSize / 2, pf.y)
-      const s = iconSize / 24
-      ctx.scale(s, s)
-      ctx.translate(-12, -12)
-      ctx.fillStyle = color
-      ctx.fill(iconPath)
-      ctx.lineWidth = 1.5
-      ctx.strokeStyle = '#000'
-      ctx.stroke(iconPath)
-      ctx.restore()
+      // Icon — the painted stat icon, else the drawn glyph with a gold rim.
+      const icon = uiArtImage(statIconPath(pf.stat))
+      if (uiArtReady(icon)) {
+        ctx.drawImage(icon, startX, y - iconSize / 2, iconSize, iconSize)
+      } else {
+        const iconPath = getPowerupIconPath(pf.stat)
+        ctx.save()
+        ctx.translate(startX + iconSize / 2, y)
+        const k = (iconSize * 0.8) / 24
+        ctx.scale(k, k)
+        ctx.translate(-12, -12)
+        ctx.lineJoin = 'round'
+        ctx.lineWidth = 4
+        ctx.strokeStyle = '#facc15'
+        ctx.stroke(iconPath)
+        ctx.fillStyle = color
+        ctx.fill(iconPath)
+        ctx.lineWidth = 1.5
+        ctx.strokeStyle = '#0f1a30'
+        ctx.stroke(iconPath)
+        ctx.restore()
+      }
 
-      // Text with outline
-      const textX = startX + iconSize + 3 + textWidth / 2
-      ctx.strokeStyle = '#000000'
-      ctx.lineWidth = 3
+      // Text: gold outer ring, dark outline, stat-coloured fill.
+      const textX = startX + iconSize + gap + textWidth / 2
       ctx.lineJoin = 'round'
-      ctx.strokeText(label, textX, pf.y)
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)'
+      ctx.lineWidth = 8 * scale
+      ctx.strokeText(pf.label, textX, y)
+      ctx.strokeStyle = '#0f1a30'
+      ctx.lineWidth = 4 * scale
+      ctx.strokeText(pf.label, textX, y)
       ctx.fillStyle = color
-      ctx.fillText(label, textX, pf.y)
+      ctx.fillText(pf.label, textX, y)
 
       ctx.restore()
     }
@@ -3244,6 +3281,7 @@ export const useSpinnerGame = () => {
     // Configure spawn cadence and clear any leftover crates/particles from
     // a previous match. The actual spawning is driven by the physics loop.
     powerupsEnabled = enablePowerups
+    if (enablePowerups) preloadPowerupArt()
     powerupIntervalMinMs = powerupIntervalMs[0]
     powerupIntervalMaxMs = powerupIntervalMs[1]
     resetPowerups()
@@ -6026,8 +6064,85 @@ export const useSpinnerGame = () => {
    * whole sprite is scaled by `p.scale` so the lifecycle animation reads as
    * one continuous grow → settle → vanish.
    */
+  // The "+25%" tag on every box (i18n `powerups.badge`), cached per locale.
+  let powerupBadge = { locale: '', text: '' }
+  const powerupBadgeText = (): string => {
+    const locale = activeLocale()
+    if (powerupBadge.locale !== locale) {
+      powerupBadge = { locale, text: translate('powerups.badge', { pct: powerupPct() }) }
+    }
+    return powerupBadge.text
+  }
+
+  /** Gold pill with "+25%" over the box's top-right corner. `extent` is the
+   *  box's drawn width; (0,0) is the box centre. */
+  const drawPowerupBadge = (ctx: CanvasRenderingContext2D, extent: number) => {
+    const text = powerupBadgeText()
+    const fs = Math.max(7, extent * 0.27)
+    ctx.font = `900 ${fs}px Arial, sans-serif`
+    const w = ctx.measureText(text).width + fs * 0.7
+    const h = fs * 1.25
+    const cx = extent * 0.36
+    const cy = -extent * 0.42
+    ctx.beginPath()
+    ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2)
+    const g = ctx.createLinearGradient(0, cy - h / 2, 0, cy + h / 2)
+    g.addColorStop(0, '#fde047')
+    g.addColorStop(1, '#f59e0b')
+    ctx.fillStyle = g
+    ctx.fill()
+    ctx.lineWidth = Math.max(1, fs * 0.14)
+    ctx.strokeStyle = '#0f1a30'
+    ctx.stroke()
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#0f1a30'
+    ctx.fillText(text, cx, cy + fs * 0.04)
+  }
+
+  /**
+   * The painted box (art/ui: the box + the painted stat icon stamped on its
+   * face plate) inside a pulsing gold halo. False when the painting isn't
+   * there (not shipped, failed, still loading) — the caller draws the crate.
+   */
+  const renderPaintedPowerup = (ctx: CanvasRenderingContext2D, p: Powerup): boolean => {
+    const box = uiArtImage(powerupBoxPath(p.stat))
+    if (!uiArtReady(box)) return false
+    // Drawn larger than the pickup radius so the painting reads at a glance;
+    // the hitbox (p.radius) is unchanged.
+    const size = p.radius * 3 * p.scale
+    ctx.save()
+    ctx.translate(p.x, p.y)
+    // Gold halo — a gradient disc, not shadowBlur (Firefox pays per frame).
+    const pulse = p.phase === 'final' ? 0.5 + 0.5 * Math.sin(performance.now() * 0.005) : 0.5
+    const halo = ctx.createRadialGradient(0, 0, size * 0.3, 0, 0, size * 0.78)
+    halo.addColorStop(0, `rgba(250, 204, 21, ${0.3 + 0.25 * pulse})`)
+    halo.addColorStop(1, 'rgba(250, 204, 21, 0)')
+    ctx.fillStyle = halo
+    ctx.beginPath()
+    ctx.arc(0, 0, size * 0.78, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.drawImage(box, -size / 2, -size / 2, size, size)
+    const pr = size * POWERUP_PLATE.r
+    const px = (POWERUP_PLATE.cx - 0.5) * size
+    const py = (POWERUP_PLATE.cy - 0.5) * size
+    const icon = uiArtImage(statIconPath(p.stat))
+    if (uiArtReady(icon)) {
+      ctx.drawImage(icon, px - pr * 1.05, py - pr * 1.05, pr * 2.1, pr * 2.1)
+    } else {
+      ctx.save()
+      ctx.translate(px, py)
+      drawPowerupGlyph(ctx, p.stat, pr * 1.5)
+      ctx.restore()
+    }
+    drawPowerupBadge(ctx, size)
+    ctx.restore()
+    return true
+  }
+
   const renderPowerup = (ctx: CanvasRenderingContext2D, p: Powerup): void => {
     if (p.scale <= 0.001) return
+    if (renderPaintedPowerup(ctx, p)) return
     const baseSize = p.radius * 1.6
     const size = baseSize * p.scale
     const half = size / 2
@@ -6092,6 +6207,12 @@ export const useSpinnerGame = () => {
       ctx.fillRect(-half, -half, size, half * 0.6)
       ctx.restore()
     }
+
+    // The drawn crate states its boost too (its visual extent incl. depth).
+    ctx.save()
+    ctx.translate(dx / 2, -dy / 2)
+    drawPowerupBadge(ctx, size * 1.15)
+    ctx.restore()
 
     ctx.restore()
   }

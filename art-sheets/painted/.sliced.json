@@ -1,0 +1,27 @@
+{
+  "files": {
+    "ui-stat-icons.png": {
+      "rev": "dea324d9b109",
+      "painting": "df2a42d6c379",
+      "at": "2026-10-01T13:15:35.235Z",
+      "targets": [
+        "images/stats/attack_256x256.webp",
+        "images/stats/defense_256x256.webp",
+        "images/stats/speed_256x256.webp",
+        "images/stats/hp_256x256.webp",
+        "images/stats/weight_256x256.webp",
+        "images/stats/level-up_256x256.webp"
+      ]
+    },
+    "ui-power-up-boxes.png": {
+      "rev": "9115b2d64430",
+      "painting": "68d9edf6a229",
+      "at": "2026-10-01T13:25:04.018Z",
+      "targets": [
+        "images/powerups/attack-box_256x256.webp",
+        "images/powerups/defense-box_256x256.webp",
+        "images/powerups/speed-box_256x256.webp"
+      ]
+    }
+  }
+}

@@ -428,6 +428,12 @@ export default {
     'shareText': 'カオスアリーナPvPバトルに参加しよう！',
     'versionMismatch': '対戦相手は別のバージョンのゲームを使っています。両方のプレイヤーがページを再読み込みして、もう一度お試しください。'
   },
+  'powerups': {
+    'attack': '攻撃+{pct}%',
+    'defense': '防御+{pct}%',
+    'speed': '速度+{pct}%',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'スターブレード',
     'triangle': 'スパイキー',

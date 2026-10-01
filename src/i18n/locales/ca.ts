@@ -427,6 +427,12 @@ export default {
     'shareText': 'Uneix-te a la meva batalla PvP de Chaos Arena!',
     'versionMismatch': 'El teu rival fa servir una altra versió del joc. Tots dos jugadors heu de recarregar la pàgina i tornar-ho a provar.'
   },
+  'powerups': {
+    'attack': '+{pct}% Atac',
+    'defense': '+{pct}% Defensa',
+    'speed': '+{pct}% Velocitat',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Fulla Estelar',
     'triangle': 'Punxegut',

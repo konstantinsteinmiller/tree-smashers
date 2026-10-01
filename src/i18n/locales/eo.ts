@@ -427,6 +427,12 @@ export default {
     'shareText': 'Aliĝu al mia PvP-batalo en Chaos Arena!',
     'versionMismatch': 'Via kontraŭulo uzas alian version de la ludo. Ambaŭ ludantoj reŝargu la paĝon kaj reprovu.'
   },
+  'powerups': {
+    'attack': '+{pct}% Atako',
+    'defense': '+{pct}% Defendo',
+    'speed': '+{pct}% Rapido',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Stelklingo',
     'triangle': 'Dorna',

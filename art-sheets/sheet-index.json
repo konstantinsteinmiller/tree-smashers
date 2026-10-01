@@ -1,0 +1,71 @@
+{
+  "sheets": [
+    {
+      "files": {
+        "clean": "ui/ui-stat-icons.png"
+      },
+      "grid": {
+        "cols": 3,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "id": "attack",
+          "label": "Attack",
+          "target": "images/stats/attack_256x256.webp"
+        },
+        {
+          "id": "defense",
+          "label": "Defense",
+          "target": "images/stats/defense_256x256.webp"
+        },
+        {
+          "id": "speed",
+          "label": "Speed",
+          "target": "images/stats/speed_256x256.webp"
+        },
+        {
+          "id": "hp",
+          "label": "HP",
+          "target": "images/stats/hp_256x256.webp"
+        },
+        {
+          "id": "weight",
+          "label": "Weight",
+          "target": "images/stats/weight_256x256.webp"
+        },
+        {
+          "id": "level-up",
+          "label": "Level up",
+          "target": "images/stats/level-up_256x256.webp"
+        }
+      ]
+    },
+    {
+      "files": {
+        "clean": "ui/ui-power-up-boxes.png"
+      },
+      "grid": {
+        "cols": 2,
+        "rows": 2
+      },
+      "cells": [
+        {
+          "id": "attack",
+          "label": "attack box",
+          "target": "images/powerups/attack-box_256x256.webp"
+        },
+        {
+          "id": "defense",
+          "label": "defense box",
+          "target": "images/powerups/defense-box_256x256.webp"
+        },
+        {
+          "id": "speed",
+          "label": "speed box",
+          "target": "images/powerups/speed-box_256x256.webp"
+        }
+      ]
+    }
+  ]
+}

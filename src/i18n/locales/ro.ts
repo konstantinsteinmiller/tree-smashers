@@ -427,6 +427,12 @@ export default {
     'shareText': 'Intră în lupta mea PvP din Chaos Arena!',
     'versionMismatch': 'Adversarul tău folosește altă versiune a jocului. Amândoi jucătorii trebuie să reîncarce pagina și să încerce din nou.'
   },
+  'powerups': {
+    'attack': '+{pct}% Atac',
+    'defense': '+{pct}% Apărare',
+    'speed': '+{pct}% Viteză',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Lamă stelară',
     'triangle': 'Țepos',

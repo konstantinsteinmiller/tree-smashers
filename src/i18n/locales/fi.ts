@@ -427,6 +427,12 @@ export default {
     'shareText': 'Liity PvP-taisteluuni Chaos Arenassa!',
     'versionMismatch': 'Vastustajasi käyttää pelin eri versiota. Molempien pelaajien pitää ladata sivu uudelleen ja yrittää uudestaan.'
   },
+  'powerups': {
+    'attack': '+{pct} % Hyökkäys',
+    'defense': '+{pct} % Puolustus',
+    'speed': '+{pct} % Vauhti',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Tähtiterä',
     'triangle': 'Piikikäs',

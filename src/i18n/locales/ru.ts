@@ -428,6 +428,12 @@ export default {
     'shareText': 'Присоединяйся к моему PvP-бою в Chaos Arena!',
     'versionMismatch': 'У соперника другая версия игры. Обоим игрокам нужно перезагрузить страницу и попробовать снова.'
   },
+  'powerups': {
+    'attack': '+{pct}% Атака',
+    'defense': '+{pct}% Защита',
+    'speed': '+{pct}% Скорость',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Звёздный клинок',
     'triangle': 'Шипастый',

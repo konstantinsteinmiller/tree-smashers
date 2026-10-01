@@ -427,6 +427,12 @@ export default {
     'shareText': 'Chaos Arena PvP jangimga qoʻshil!',
     'versionMismatch': 'Raqibingiz oʻyinning boshqa versiyasidan foydalanmoqda. Ikkala oʻyinchi ham sahifani qayta yuklab, yana urinib koʻrishi kerak.'
   },
+  'powerups': {
+    'attack': '+{pct}% Hujum',
+    'defense': '+{pct}% Himoya',
+    'speed': '+{pct}% Tezlik',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Yulduz Tigʻ',
     'triangle': 'Tikanli',

@@ -427,6 +427,12 @@ export default {
     'shareText': 'Doe mee met mijn Chaos Arena PvP-gevecht!',
     'versionMismatch': 'Je tegenstander gebruikt een andere versie van het spel. Jullie moeten allebei de pagina herladen en het opnieuw proberen.'
   },
+  'powerups': {
+    'attack': '+{pct}% Aanval',
+    'defense': '+{pct}% Verdediging',
+    'speed': '+{pct}% Snelheid',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Sterlemmet',
     'triangle': 'Stekelig',

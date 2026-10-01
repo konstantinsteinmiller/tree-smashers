@@ -427,6 +427,12 @@ export default {
     'shareText': 'มาร่วมประลอง PvP ใน Chaos Arena กับฉันสิ!',
     'versionMismatch': 'คู่แข่งของคุณใช้เกมคนละเวอร์ชัน ผู้เล่นทั้งสองฝ่ายควรโหลดหน้าเว็บใหม่แล้วลองอีกครั้ง'
   },
+  'powerups': {
+    'attack': '+{pct}% โจมตี',
+    'defense': '+{pct}% ป้องกัน',
+    'speed': '+{pct}% ความเร็ว',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'ใบมีดดวงดาว',
     'triangle': 'หนามแหลม',

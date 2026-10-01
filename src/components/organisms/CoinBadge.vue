@@ -62,7 +62,7 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
       div.coin-badge__icon.flex.items-center.justify-center.rounded-full(
         class="w-7 h-7 sm:w-8 sm:h-8"
       )
-        IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-100 drop-shadow")
+        IconCoin(class="w-7 h-7 sm:w-8 sm:h-8 drop-shadow")
       span.game-text.coin-badge__value.justify-self-end {{ coins }}
 
       ////- Diamond row
@@ -115,10 +115,9 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
     animation: coin-shine 3.5s linear infinite
     pointer-events: none
 
+  // The coin painting is the whole icon now (`@/use/coinArt`) — only its glow.
   &__icon
-    background: radial-gradient(circle at 30% 30%, #fff7b0 0%, #fcd34d 35%, #b8860b 100%)
-    box-shadow: 0 0 8px rgba(252, 211, 77, 0.7), inset 0 -2px 3px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.6)
-    border: 1px solid #78350f
+    filter: drop-shadow(0 0 4px rgba(252, 211, 77, 0.6))
 
   // Diamond cell gets a cool cyan well so the gem pops against the warm coin row.
   &__icon--diamond

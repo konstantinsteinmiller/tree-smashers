@@ -7,6 +7,7 @@ import { isEarnOnlySkin } from '@/data/skinCatalog'
 import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
 import { resourceCache, getCachedImage } from '@/use/useAssets'
+import { getCoinImage, coinImageReady } from '@/use/coinArt'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import { flushSaveNow } from '@/use/persistedState'
 import { isNative } from '@/use/useUser'
@@ -355,6 +356,9 @@ const diamondImg = jackpotDisplay.currency === 'diamonds'
   ? getCachedImage(prependBaseUrl('images/icons/diamond_256x256.webp'))
   : null
 if (diamondImg) whenLoaded(diamondImg)
+// The currency coin painting (`@/use/coinArt`); `drawCoin` is its fallback.
+const coinImg = getCoinImage()
+if (coinImg) whenLoaded(coinImg)
 
 // ─── Face drawing (static — runs when the segments/size change, not per frame)
 
@@ -610,7 +614,9 @@ const drawFace = () => {
         }
         drawGlint(ctx, R * 0.07, -R * 0.06, R * 0.035)
       } else {
-        drawCoin(ctx, 0, 0, Math.min(R * 0.08, halfChord(iconR) * 0.8))
+        const coinR = Math.min(R * 0.08, halfChord(iconR) * 0.8)
+        if (coinImageReady(coinImg)) ctx.drawImage(coinImg, -coinR, -coinR, coinR * 2, coinR * 2)
+        else drawCoin(ctx, 0, 0, coinR)
       }
       ctx.restore()
     }

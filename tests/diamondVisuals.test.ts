@@ -14,6 +14,7 @@ import {
   type CurrencyBadgeTargets
 } from '@/use/useCoinExplosion'
 import { FX } from '@/use/useQuality'
+import { coinArtFailed } from '@/use/coinArt'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 
 /** The burst's explode + fly phases; the first particle lands by +300ms stagger. */
@@ -113,11 +114,17 @@ describe('spawnCoinExplosion', () => {
     expect(imgs[0]!.getAttribute('src')).toContain('diamond_256x256.webp')
   })
 
-  it('coin variant (default) spawns coin SVG particles, not images', () => {
+  it('coin variant (default) spawns the painted coin, and the drawn coin after a load error', () => {
     const { source, target } = pair()
     spawnCoinExplosion({ sourceEl: source, targetEl: target, count: 4 })
-    expect(app().querySelectorAll('svg').length).toBe(4)
-    expect(app().querySelectorAll('img').length).toBe(0)
+    const imgs = [...app().querySelectorAll('img')]
+    expect(imgs.length).toBe(4)
+    for (const i of imgs) expect(i.getAttribute('src')).toContain('coin_128x128.webp')
+    expect(app().querySelectorAll('svg').length).toBe(0)
+    // A failing painting swaps that particle to the drawing in place.
+    imgs[0]!.dispatchEvent(new Event('error'))
+    expect(app().querySelectorAll('svg').length).toBe(1)
+    coinArtFailed.value = false
   })
 
   it('the low quality tier halves the burst', () => {

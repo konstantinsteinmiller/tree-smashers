@@ -428,6 +428,12 @@ export default {
     'shareText': '카오스 아레나 PvP 배틀에 참가하세요!',
     'versionMismatch': '상대가 다른 버전의 게임을 사용 중입니다. 두 플레이어 모두 페이지를 새로고침한 뒤 다시 시도하세요.'
   },
+  'powerups': {
+    'attack': '공격력 +{pct}%',
+    'defense': '방어력 +{pct}%',
+    'speed': '속도 +{pct}%',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': '스타 블레이드',
     'triangle': '가시',

@@ -427,6 +427,12 @@ export default {
     'shareText': 'Csatlakozz a Chaos Arena PvP-csatámhoz!',
     'versionMismatch': 'Az ellenfeled a játék egy másik verzióját használja. Mindkét játékos töltse újra az oldalt, és próbálja újra.'
   },
+  'powerups': {
+    'attack': '+{pct}% Támadás',
+    'defense': '+{pct}% Védelem',
+    'speed': '+{pct}% Sebesség',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Csillagpenge',
     'triangle': 'Tüskés',

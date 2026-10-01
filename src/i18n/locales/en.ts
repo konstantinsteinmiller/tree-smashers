@@ -431,6 +431,12 @@ export default {
     'shareText': 'Join my Chaos Arena PvP battle!',
     'versionMismatch': 'Your opponent is running a different game version. Both players should reload the page and try again.'
   },
+  'powerups': {
+    'attack': '+{pct}% Attack',
+    'defense': '+{pct}% Defense',
+    'speed': '+{pct}% Speed',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Star Blade',
     'triangle': 'Spiky',

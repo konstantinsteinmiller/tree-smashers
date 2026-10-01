@@ -427,6 +427,12 @@ export default {
     'shareText': 'Prisijunk prie mano PvP kovos žaidime Chaos Arena!',
     'versionMismatch': 'Tavo priešininkas naudoja kitą žaidimo versiją. Abu žaidėjai turi iš naujo įkelti puslapį ir bandyti dar kartą.'
   },
+  'powerups': {
+    'attack': '+{pct} % Ataka',
+    'defense': '+{pct} % Gynyba',
+    'speed': '+{pct} % Greitis',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Žvaigždė',
     'triangle': 'Dygliuotas',

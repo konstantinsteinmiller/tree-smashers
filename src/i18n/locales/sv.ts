@@ -427,6 +427,12 @@ export default {
     'shareText': 'Gå med i min PvP-strid i Chaos Arena!',
     'versionMismatch': 'Din motståndare kör en annan version av spelet. Båda spelarna behöver ladda om sidan och försöka igen.'
   },
+  'powerups': {
+    'attack': '+{pct} % Attack',
+    'defense': '+{pct} % Försvar',
+    'speed': '+{pct} % Fart',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Stjärnklinga',
     'triangle': 'Taggig',

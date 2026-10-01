@@ -427,6 +427,12 @@ export default {
     'shareText': 'Entre na minha batalha PvP no Chaos Arena!',
     'versionMismatch': 'Seu oponente está usando outra versão do jogo. Os dois jogadores devem recarregar a página e tentar de novo.'
   },
+  'powerups': {
+    'attack': '+{pct}% Ataque',
+    'defense': '+{pct}% Defesa',
+    'speed': '+{pct}% Velocidade',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Lâmina Estelar',
     'triangle': 'Espinhoso',

@@ -427,6 +427,12 @@ export default {
     'shareText': 'Tritt meinem Chaos Arena PvP-Kampf bei!',
     'versionMismatch': 'Dein Gegner nutzt eine andere Spielversion. Ladet beide die Seite neu und versucht es erneut.'
   },
+  'powerups': {
+    'attack': '+{pct} % Angriff',
+    'defense': '+{pct} % Abwehr',
+    'speed': '+{pct} % Tempo',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Sternklinge',
     'triangle': 'Stachel',

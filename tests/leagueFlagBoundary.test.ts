@@ -258,14 +258,14 @@ describe('build config', () => {
   })
 
   // The .env files are git-ignored, so this only runs where they exist.
-  it('the base .env ships the league off at stage 13 and not kids; dev opts in at 1; Tauri + GD are kids', () => {
+  it('the base .env ships the league off at stage 13 and not kids; dev unlocks at 13 too; Tauri + GD are kids', () => {
     const env = (f: string) => { try { return read(path.join(ROOT, f)) } catch { return null } }
     const expected: [string, string, string][] = [
       ['.env', 'VITE_APP_FEATURE_LEAGUE', 'false'],
       ['.env', 'VITE_APP_LEAGUE_UNLOCK_STAGE', '13'],
       ['.env', 'VITE_APP_KIDS', 'false'],
       ['.env.development', 'VITE_APP_FEATURE_LEAGUE', 'true'],
-      ['.env.development', 'VITE_APP_LEAGUE_UNLOCK_STAGE', '1'],
+      ['.env.development', 'VITE_APP_LEAGUE_UNLOCK_STAGE', '13'],
       ['.env.tauri', 'VITE_APP_KIDS', 'true'],
       ['.env.game-distribution.local', 'VITE_APP_KIDS', 'true']
     ]

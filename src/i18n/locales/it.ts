@@ -427,6 +427,12 @@ export default {
     'shareText': 'Unisciti alla mia sfida PvP su Chaos Arena!',
     'versionMismatch': 'Il tuo avversario usa una versione diversa del gioco. Entrambi i giocatori devono ricaricare la pagina e riprovare.'
   },
+  'powerups': {
+    'attack': '+{pct}% Attacco',
+    'defense': '+{pct}% Difesa',
+    'speed': '+{pct}% Velocità',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Lama Stella',
     'triangle': 'Spinoso',

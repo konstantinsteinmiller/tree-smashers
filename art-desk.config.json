@@ -1,7 +1,7 @@
 {
   "slice": [
     "node",
-    "art/bosses/slice-return.mjs",
+    "art/slice-return.mjs",
     "{painting}"
   ]
 }

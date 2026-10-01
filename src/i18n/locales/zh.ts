@@ -428,6 +428,12 @@ export default {
     'shareText': '加入我的混沌竞技场PvP对战！',
     'versionMismatch': '对手使用的游戏版本不同。双方玩家都需要刷新页面后再试一次。'
   },
+  'powerups': {
+    'attack': '攻击+{pct}%',
+    'defense': '防御+{pct}%',
+    'speed': '速度+{pct}%',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': '星刃',
     'triangle': '尖刺',

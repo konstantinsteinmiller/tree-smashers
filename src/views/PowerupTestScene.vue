@@ -111,6 +111,11 @@ const renderLoop = () => {
   renderRafId = requestAnimationFrame(renderLoop)
 }
 
+// Dev probes (headless checks): this scene's own game instance.
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __powerupScene?: unknown }).__powerupScene = { powerups, npcBlades }
+}
+
 onMounted(() => {
   updateCanvasSize()
   window.addEventListener('resize', updateCanvasSize)

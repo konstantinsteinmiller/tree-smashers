@@ -427,6 +427,12 @@ export default {
     'shareText': 'Vào đấu PvP Chaos Arena với mình nào!',
     'versionMismatch': 'Đối thủ của bạn đang dùng phiên bản trò chơi khác. Cả hai người chơi nên tải lại trang rồi thử lại.'
   },
+  'powerups': {
+    'attack': '+{pct}% Tấn công',
+    'defense': '+{pct}% Phòng thủ',
+    'speed': '+{pct}% Tốc độ',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Lưỡi Sao',
     'triangle': 'Gai nhọn',

@@ -427,6 +427,12 @@ export default {
     'shareText': 'Chaos Arena में मेरी PvP लड़ाई में शामिल हो जाओ!',
     'versionMismatch': 'आपका प्रतिद्वंद्वी गेम का अलग संस्करण चला रहा है। दोनों खिलाड़ी पेज फिर से लोड करें और दोबारा कोशिश करें।'
   },
+  'powerups': {
+    'attack': '+{pct}% अटैक',
+    'defense': '+{pct}% डिफ़ेंस',
+    'speed': '+{pct}% स्पीड',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'सितारा ब्लेड',
     'triangle': 'काँटेदार',

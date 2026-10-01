@@ -427,6 +427,12 @@ export default {
     'shareText': 'Chaos Arena PvP döyüşümə qoşul!',
     'versionMismatch': 'Rəqibin oyunun fərqli versiyasını işlədir. Hər iki oyunçu səhifəni yeniləyib yenidən cəhd etməlidir.'
   },
+  'powerups': {
+    'attack': '+{pct}% Hücum',
+    'defense': '+{pct}% Müdafiə',
+    'speed': '+{pct}% Sürət',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Ulduz Bıçaq',
     'triangle': 'Tikanlı',

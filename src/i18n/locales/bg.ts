@@ -427,6 +427,12 @@ export default {
     'shareText': 'Включи се в моята PvP битка в Chaos Arena!',
     'versionMismatch': 'Противникът ти използва друга версия на играта. И двамата играчи трябва да презаредят страницата и да опитат отново.'
   },
+  'powerups': {
+    'attack': '+{pct}% Атака',
+    'defense': '+{pct}% Защита',
+    'speed': '+{pct}% Скорост',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Звезден меч',
     'triangle': 'Шипест',

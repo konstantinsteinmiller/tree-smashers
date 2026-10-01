@@ -3,7 +3,8 @@
  * fly toward a target element (typically a HUD badge).
  *
  * Two visual variants share the exact same motion:
- *   - 'coin'    → the yellow coin SVG, flies to the CoinBadge coin row.
+ *   - 'coin'    → the coin painting (`@/use/coinArt`; the drawn SVG only when
+ *                 it fails to load), flies to the CoinBadge coin row.
  *   - 'diamond' → the diamond webp, flies to the CoinBadge diamond row, or to
  *                 the badge itself while that row is hidden (see
  *                 `flyDiamondsToBadge`).
@@ -19,12 +20,15 @@
  */
 import { prependBaseUrl } from '@/utils/function'
 import { FX } from '@/use/useQuality'
+import { coinArtFailed, coinArtSrc, markCoinArtFailed } from '@/use/coinArt'
 
+/** Fallback coin drawing, used only once the painting failed to load. */
 const COIN_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px;height:20px">' +
   '<circle cx="12" cy="12" r="11" fill="black"/>' +
   '<circle cx="12" cy="12" r="10" fill="#fde047"/>' +
-  '<text x="12" y="18" text-anchor="middle" font-size="16" font-weight="bold" fill="#2f920e">$</text>' +
+  '<text x="12" y="12" text-anchor="middle" dominant-baseline="central" ' +
+  'font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="#2f920e">$</text>' +
   '</svg>'
 
 export type CoinExplosionVariant = 'coin' | 'diamond'
@@ -37,7 +41,19 @@ const particleHtml = (variant: CoinExplosionVariant): string => {
     return `<img src="${src}" alt="" style="width:20px;height:20px;object-fit:contain;` +
       `filter:drop-shadow(0 0 3px rgba(120,220,255,0.7))" draggable="false"/>`
   }
-  return COIN_SVG
+  if (coinArtFailed.value) return COIN_SVG
+  return `<img src="${coinArtSrc()}" alt="" style="width:20px;height:20px;object-fit:contain" draggable="false"/>`
+}
+
+/** A coin particle whose painting fails swaps to the drawing in place (no
+ *  inline handler — the CSP forbids them) and flips every later coin too. */
+const guardCoinImage = (el: HTMLDivElement) => {
+  const img = el.querySelector('img')
+  if (!img) return
+  img.addEventListener('error', () => {
+    markCoinArtFailed()
+    el.innerHTML = COIN_SVG
+  }, { once: true })
 }
 
 /** Particles alive across every burst on screen, high tier. */
@@ -61,6 +77,7 @@ let liveParticles = 0
 const createParticle = (variant: CoinExplosionVariant): HTMLDivElement => {
   const el = document.createElement('div')
   el.innerHTML = particleHtml(variant)
+  if (variant === 'coin') guardCoinImage(el)
   el.style.cssText =
     'position:absolute;left:0;top:0;pointer-events:none;z-index:100;will-change:transform,opacity;'
   return el

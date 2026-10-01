@@ -427,6 +427,12 @@ export default {
     'shareText': 'Pievienojies manai Chaos Arena PvP kaujai!',
     'versionMismatch': 'Tavs pretinieks izmanto citu spēles versiju. Abiem spēlētājiem jāpārlādē lapa un jāmēģina vēlreiz.'
   },
+  'powerups': {
+    'attack': '+{pct}% Uzbrukums',
+    'defense': '+{pct}% Aizsardzība',
+    'speed': '+{pct}% Ātrums',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Zvaigzne',
     'triangle': 'Dzeloņainais',

@@ -27,6 +27,6 @@ defineProps<Props>()
     class="right-0 -top-2 gap-0.5 pl-0.5 pr-1.5 py-0.5 text-[9px] sm:text-[10px] border-[#0f1a30]"
     :class="unaffordable ? 'bg-slate-600 text-slate-400' : 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000] text-white'"
   )
-    IconCoin(class="w-3 h-3" :class="unaffordable ? 'text-slate-400' : 'text-yellow-200'")
+    IconCoin(class="w-3 h-3" :class="{ 'grayscale opacity-70': unaffordable }")
     span {{ SPEED_BOOST_COIN_PRICE }}
 </template>

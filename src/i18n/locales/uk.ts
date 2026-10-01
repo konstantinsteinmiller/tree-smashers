@@ -427,6 +427,12 @@ export default {
     'shareText': 'Приєднуйся до мого PvP-бою в Chaos Arena!',
     'versionMismatch': 'У суперника інша версія гри. Обом гравцям потрібно перезавантажити сторінку й спробувати знову.'
   },
+  'powerups': {
+    'attack': '+{pct}% Атака',
+    'defense': '+{pct}% Захист',
+    'speed': '+{pct}% Швидкість',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Зоряне лезо',
     'triangle': 'Шипастий',

@@ -21,11 +21,8 @@ import {
   type SpinnerModelId
 } from '@/use/useModels'
 import IconCoin from '@/components/icons/IconCoin.vue'
-import IconAttack from '@/components/icons/IconAttack.vue'
-import IconDefense from '@/components/icons/IconDefense.vue'
-import IconHp from '@/components/icons/IconHp.vue'
-import IconSpeed from '@/components/icons/IconSpeed.vue'
-import IconWeight from '@/components/icons/IconWeight.vue'
+import StatIcon from '@/components/icons/StatIcon.vue'
+import CardRuneFrame from '@/components/atoms/CardRuneFrame.vue'
 import BGSkinButton from '@/components/organisms/BGSkinButton.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import { isBgSkinsEnabled, isNative } from '@/use/useUser'
@@ -165,7 +162,7 @@ const bottomHp = (part: typeof BOTTOM_PARTS_LIST[number]) =>
 const setTop = (id: TopPartId) => {
   const idx = activeBladeIndex.value as number
   // Tapping the already-selected top part acts as a shortcut to the
-  // upgrade button — more discoverable than the small ⬆ row, especially
+  // upgrade button — more discoverable than the small level-up row, especially
   // on mobile. Only upgrades if the player can actually afford it,
   // otherwise the tap is a no-op (the card is already selected).
   if (localTeam.value[idx]?.topPartId === id) {
@@ -294,8 +291,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
             @click="setTop(part.id)"
             class="relative cursor-pointer rounded-lg transition-all duration-150 hover:scale-105 active:scale-95 flex flex-col top-part-card"
             :class="currentConfig.topPartId === part.id \
-            ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-2 border-yellow-300' \
-            : 'bg-slate-700 border-2 border-slate-600 hover:border-slate-400'"
+            ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-2 border-transparent' \
+            : 'bg-slate-700 border-2 border-transparent'"
           )
             //- Floating skin row above the card border:
             //- Desktop/landscape: all owned skin thumbnails + plus button
@@ -333,17 +330,19 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                     :class="shouldBouncePlus(part.id) ? 'hint-bounce-2' : ''"
                     :title="t('purchaseMoreSkins')"
                   ) +
+            //- Runic border in the part's colour (replaces the card border)
+            CardRuneFrame(:part-id="part.id" :selected="currentConfig.topPartId === part.id")
             div.text-center.part-card-body
               div.part-name.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
               div.flex.flex-col.items-center.stat-list
                 div.flex.items-center.justify-center.text-red-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
-                  IconAttack.inline-block.stat-icon
+                  StatIcon.inline-block.stat-icon(stat="attack")
                   span {{ topDamage(part) }}x
                 div.flex.items-center.justify-center.text-blue-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
-                  IconDefense.inline-block.stat-icon
+                  StatIcon.inline-block.stat-icon(stat="defense")
                   span {{ topDefense(part) }}x
                 div.flex.items-center.justify-center.text-green-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]" v-if="topHp(part) > 0")
-                  IconHp.inline-block.stat-icon
+                  StatIcon.inline-block.stat-icon(stat="hp")
                   span +{{ topHp(part) }}
             //- Upgrade button integrated at card bottom
             button.w-full.rounded-b-lg.font-bold.transition-all.mt-auto.upgrade-btn(
@@ -353,8 +352,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               @click.stop="buyTopUpgrade(part.id)"
             )
               span.flex.items-center.justify-center(class="gap-0.5 -mt-[2px] pt-[2px]")
-                span.game-text ⬆
-                IconCoin.upgrade-coin-icon.text-yellow-300
+                StatIcon.upgrade-coin-icon(
+                  stat="level-up"
+                  :class="{ 'grayscale opacity-70': coins < upgradeCost(topLevel(part.id) + 1) }"
+                )
+                IconCoin.upgrade-coin-icon(:class="{ 'grayscale opacity-70': coins < upgradeCost(topLevel(part.id) + 1) }")
                 span.game-text {{ upgradeCost(topLevel(part.id) + 1) }}
             //- Level badge — bottom-right corner, overlapping the upgrade button
             div.level-badge.absolute.font-black.game-text.text-white.flex.items-center.justify-center.pointer-events-none(
@@ -377,20 +379,22 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               @click="setBottom(part.id)"
               class="relative cursor-pointer rounded-lg transition-all duration-150 hover:scale-105 active:scale-95 flex flex-col"
               :class="currentConfig.bottomPartId === part.id \
-              ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-2 border-yellow-300' \
-              : 'bg-slate-700 border-2 border-slate-600 hover:border-slate-400'"
+              ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-2 border-transparent' \
+              : 'bg-slate-700 border-2 border-transparent'"
             )
+              //- Runic border in the part's colour (replaces the card border)
+              CardRuneFrame(:part-id="part.id" :selected="currentConfig.bottomPartId === part.id")
               div.text-center.part-card-body
                 div.part-name.text-white.font-bold.game-text(class="text-[0.85rem] sm:text-xs") {{ t('parts.' + part.id) }}
                 div.flex.flex-col.items-center.stat-list
                   div.flex.items-center.justify-center.text-cyan-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
-                    IconSpeed.inline-block.stat-icon
+                    StatIcon.inline-block.stat-icon(stat="speed")
                     span {{ bottomSpeed(part) }}x
                   div.flex.items-center.justify-center.text-gray-300.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]")
-                    IconWeight.inline-block.stat-icon
+                    StatIcon.inline-block.stat-icon(stat="weight")
                     span {{ part.weight }}
                   div.flex.items-center.justify-center.text-green-400.rounded-full.stat-glass(class="gap-0.5 px-[2px] py-[1px]" v-if="bottomHp(part) > 0")
-                    IconHp.inline-block.stat-icon
+                    StatIcon.inline-block.stat-icon(stat="hp")
                     span +{{ bottomHp(part) }}
               //- Upgrade button integrated at card bottom
               button.w-full.rounded-b-lg.font-bold.transition-all.mt-auto.upgrade-btn(
@@ -400,8 +404,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
                 @click.stop="buyBottomUpgrade(part.id)"
               )
                 span.flex.items-center.justify-center(class="gap-0.5 -mt-[2px] pt-[2px]")
-                  span.game-text ⬆
-                  IconCoin.upgrade-coin-icon.text-yellow-300
+                  StatIcon.upgrade-coin-icon(
+                    stat="level-up"
+                    :class="{ 'grayscale opacity-70': coins < upgradeCost(bottomLevel(part.id) + 1) }"
+                  )
+                  IconCoin.upgrade-coin-icon(:class="{ 'grayscale opacity-70': coins < upgradeCost(bottomLevel(part.id) + 1) }")
                   span.game-text {{ upgradeCost(bottomLevel(part.id) + 1) }}
               //- Level badge — bottom-right corner, overlapping the upgrade button
               div.level-badge.absolute.font-black.game-text.text-white.flex.items-center.justify-center.pointer-events-none(
@@ -424,19 +431,19 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           ) {{ t('statsLabel') }}
           div.flex.flex-wrap.justify-center.stats-items
             div.flex.items-center
-              IconHp.stat-summary-icon.text-green-400
+              StatIcon.stat-summary-icon.text-green-400(stat="hp")
               span.text-green-400.font-bold {{ stats.maxHp }}
             div.flex.items-center
-              IconWeight.stat-summary-icon.text-gray-300
-              span.text-blue-400.font-bold {{ stats.totalWeight }}
+              StatIcon.stat-summary-icon.text-gray-300(stat="weight")
+              span.text-gray-300.font-bold {{ stats.totalWeight }}
             div.flex.items-center
-              IconAttack.stat-summary-icon.text-red-400
+              StatIcon.stat-summary-icon.text-red-400(stat="attack")
               span.text-red-400.font-bold {{ statNum(stats.damageMultiplier, 1) }}x
             div.flex.items-center
-              IconDefense.stat-summary-icon.text-purple-400
-              span.text-purple-400.font-bold {{ statNum(stats.defenseMultiplier, 1) }}x
+              StatIcon.stat-summary-icon.text-blue-400(stat="defense")
+              span.text-blue-400.font-bold {{ statNum(stats.defenseMultiplier, 1) }}x
             div.flex.items-center
-              IconSpeed.stat-summary-icon.text-cyan-400
+              StatIcon.stat-summary-icon.text-cyan-400(stat="speed")
               span.text-cyan-400.font-bold {{ statNum(stats.speedMultiplier, 1) }}x
 
       //- ── Hint Texts ─────────────────────────────────────────────────────
@@ -466,7 +473,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           class="px-2 py-0.5 bg-yellow-600/60 text-yellow-300 text-[0.75rem] sm:text-xs"
         )
           IconCoin(class="w-3.5 h-3.5 text-yellow-300")
-          span {{ coins }}g
+          span {{ coins }}
       div.grid.gap-2.skin-picker-grid(class="grid-cols-3 sm:grid-cols-4")
         div.skin-card(
           v-for="modelId in pickerSkins"
@@ -649,8 +656,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     text-shadow: 1px 1px 0 #333, -1px -1px 0 #333, 1px -1px 0 #333, -1px 1px 0 #333, 1px 1px 0 #333
 
 .stat-icon
-  width: 0.8rem
-  height: 0.8rem
+  width: 1.12rem
+  height: 1.12rem
 
 // Floating skin row sitting above the top-part card border
 .skin-row
@@ -712,8 +719,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   padding: 0.62rem 0
 
 .upgrade-coin-icon
-  width: 0.85rem
-  height: 0.85rem
+  width: 1.062rem
+  height: 1.062rem
 
 .stats-bar
   padding-top: 0.375rem
@@ -734,8 +741,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
   flex: 1 1 auto
 
 .stat-summary-icon
-  width: 0.875rem
-  height: 0.875rem
+  width: 1.225rem
+  height: 1.225rem
   margin-right: 0.125rem
 
 // ─── sm+ breakpoint (≥640px) ─────────────────────────────────────────────────
@@ -776,8 +783,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     gap: 2px
 
   .stat-icon
-    width: 0.85rem
-    height: 0.85rem
+    width: 1.19rem
+    height: 1.19rem
 
   .skin-row
     top: -1rem
@@ -815,15 +822,15 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.9rem
-    height: 0.9rem
+    width: 1.125rem
+    height: 1.125rem
 
   .stats-items
     font-size: 0.85rem
 
   .stat-summary-icon
-    width: 1rem
-    height: 1rem
+    width: 1.4rem
+    height: 1.4rem
 
 // ─── Mobile + tablet landscape (limited vertical viewport) ──────────────────
 // Stats text in the in-card pills was previously hard to read on landscape
@@ -847,8 +854,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     gap: 2px
 
   .stat-icon
-    width: 0.95rem
-    height: 0.95rem
+    width: 1.33rem
+    height: 1.33rem
 
   // Bottom stats summary row also gets the readability bump.
   .stats-items
@@ -856,8 +863,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     gap: 0.5rem
 
   .stat-summary-icon
-    width: 1.1rem
-    height: 1.1rem
+    width: 1.54rem
+    height: 1.54rem
 
 // ─── Landscape mobile (short viewport) ──────────────────────────────────────
 
@@ -959,8 +966,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     min-height: 0
 
   .stat-icon
-    width: 0.7rem
-    height: 0.7rem
+    width: 0.98rem
+    height: 0.98rem
 
   .skin-row-full
     display: flex
@@ -1003,8 +1010,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.8rem
-    height: 0.8rem
+    width: 1rem
+    height: 1rem
 
   .stats-bar
     padding-top: 0.15rem
@@ -1016,8 +1023,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     font-size: 0.9rem
 
   .stat-summary-icon
-    width: 0.85rem
-    height: 0.85rem
+    width: 1.19rem
+    height: 1.19rem
     margin-right: 1px
 
   // ─── Skin picker (sibling FModal) ────────────────────────────────────────
@@ -1108,16 +1115,16 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     gap: 2px
 
   .stat-icon
-    width: 0.85rem
-    height: 0.85rem
+    width: 1.19rem
+    height: 1.19rem
 
   .upgrade-btn
     font-size: 0.85rem
     padding: 0.58rem 0
 
   .upgrade-coin-icon
-    width: 0.9rem
-    height: 0.9rem
+    width: 1.125rem
+    height: 1.125rem
 
   .level-badge
     font-size: 0.62rem
@@ -1133,8 +1140,8 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
     font-size: 0.9rem
 
   .stat-summary-icon
-    width: 1rem
-    height: 1rem
+    width: 1.4rem
+    height: 1.4rem
 
   .hint-block
     margin-top: 0.4rem

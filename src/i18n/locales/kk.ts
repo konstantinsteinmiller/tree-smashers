@@ -427,6 +427,12 @@ export default {
     'shareText': 'Chaos Arena-дағы PvP шайқасыма қосыл!',
     'versionMismatch': 'Қарсыласыңыз ойынның басқа нұсқасын қолданып жатыр. Екі ойыншы да бетті қайта жүктеп, қайталап көруі керек.'
   },
+  'powerups': {
+    'attack': '+{pct}% Шабуыл',
+    'defense': '+{pct}% Қорғаныс',
+    'speed': '+{pct}% Жылдамдық',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Жұлдыз жүзі',
     'triangle': 'Тікенді',

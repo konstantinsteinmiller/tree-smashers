@@ -427,6 +427,12 @@ export default {
     'shareText': 'Pridruži se mojoj PvP bitci u igri Chaos Arena!',
     'versionMismatch': 'Tvoj protivnik koristi drugu verziju igre. Oba igrača trebaju ponovno učitati stranicu i pokušati opet.'
   },
+  'powerups': {
+    'attack': '+{pct} % Napad',
+    'defense': '+{pct} % Obrana',
+    'speed': '+{pct} % Brzina',
+    'badge': '+{pct} %'
+  },
   'parts': {
     'star': 'Zvijezda',
     'triangle': 'Bodljikavi',

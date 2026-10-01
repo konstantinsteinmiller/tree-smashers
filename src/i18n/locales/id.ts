@@ -427,6 +427,12 @@ export default {
     'shareText': 'Ayo gabung duel PvP Chaos Arena-ku!',
     'versionMismatch': 'Lawanmu memakai versi game yang berbeda. Kedua pemain perlu memuat ulang halaman lalu mencoba lagi.'
   },
+  'powerups': {
+    'attack': '+{pct}% Serangan',
+    'defense': '+{pct}% Pertahanan',
+    'speed': '+{pct}% Kecepatan',
+    'badge': '+{pct}%'
+  },
   'parts': {
     'star': 'Bilah Bintang',
     'triangle': 'Berduri',

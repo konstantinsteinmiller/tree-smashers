@@ -111,10 +111,7 @@ import { noteRenderFrame, setQualityMonitoring } from '@/use/useQuality'
 import type { SpinnerConfig } from '@/types/spinner'
 import useUser, { isMobileLandscape, isMobilePortrait, isDailyChallengeEnabled } from '@/use/useUser'
 import IconCoin from '@/components/icons/IconCoin.vue'
-import IconAttack from '@/components/icons/IconAttack.vue'
-import IconDefense from '@/components/icons/IconDefense.vue'
-import IconSpeed from '@/components/icons/IconSpeed.vue'
-import IconHp from '@/components/icons/IconHp.vue'
+import StatIcon from '@/components/icons/StatIcon.vue'
 import DailyRewards from '@/components/organisms/DailyRewards.vue'
 import BattlePass from '@/components/organisms/BattlePass.vue'
 import useBattlePass from '@/use/useBattlePass'
@@ -1506,6 +1503,7 @@ const onRouletteRewardContinue = async () => {
   // reward closed and opens on the tap_to_start that initCampaignGame set.
   sk.value?.queueIntro('win', battleModeOf({ cheat: !!cheatStage.value }))
   maybeReopenBossLab()
+  void armLeagueUnlockAfterWin('win', battleModeOf({ cheat: !!cheatStage.value }))
 }
 
 // The roulette only opens after a BOSS win, so its painted rim/pointer/hub are
@@ -1678,6 +1676,7 @@ const onRewardContinue = async () => {
   // tap_to_start once the gate allows it.
   sk.value?.queueIntro(closedResult, closedMode)
   maybeReopenBossLab()
+  void armLeagueUnlockAfterWin(closedResult, closedMode)
 }
 
 // ─── Leaderboard / Ghost Fight ────────────────────────────────────────────
@@ -2066,12 +2065,36 @@ function leagueSurfaceBlocks(): boolean {
  *  so its refs read unwrapped at runtime. */
 const skillsSurfaceOpen = (): boolean => (sk.value?.surfaceOpen as unknown) === true
 
+/**
+ * The first-unlock popup is armed only by a closed campaign WIN screen once the
+ * league is unlocked (stage ≥ LEAGUE_UNLOCK_STAGE, i.e. stage 12 beaten) — never
+ * at boot, so a fresh or returning session is never greeted by it — and only
+ * after a due interstitial has played on that close, so the ad never lands
+ * between the popup and the next battle. Session-only: an un-armed unlock waits
+ * for the next win.
+ */
+const leagueUnlockArmed = ref(false)
+
+const armLeagueUnlockAfterWin = async (result: unknown, mode: string): Promise<void> => {
+  if (!LEAGUE_BUILD || result !== 'win' || (mode !== 'campaign' && mode !== 'cheat')) return
+  const st = league.value?.state.value
+  if (!st || !st.unlocked || st.unlockSeen || !leagueMounted.value) return
+  // A skills surface already up on this close keeps the ad where it was
+  // (before the next battle) rather than covering the surface.
+  if (phase.value === 'tap_to_start' && !skillsSurfaceOpen() && shouldShowMidgameAdNow()) {
+    phase.value = 'ad_break'
+    await runMidgameAdBeforeBattle()
+    if (phase.value === 'ad_break') phase.value = 'tap_to_start'
+  }
+  leagueUnlockArmed.value = true
+}
+
 /** Which league surface is waiting: the first-unlock popup, then a season reward. */
 const leagueSurfacePending = computed<'unlock' | 'season' | null>(() => {
   const api = league.value
   if (!LEAGUE_BUILD || !api || !leagueMounted.value) return null
   const st = api.state.value
-  if (st.unlocked && !st.unlockSeen) return 'unlock'
+  if (st.unlocked && !st.unlockSeen && leagueUnlockArmed.value) return 'unlock'
   if (api.unclaimedSeason.value) return 'season'
   return null
 })
@@ -2710,16 +2733,16 @@ onUnmounted(() => {
           component.blade-stat-ice(v-if="BossTraitGlyphUi && bs.trait.frozen" :is="BossTraitGlyphUi" trait="frost" :size="18" decorative)
           div.blade-stat-grid
             div.blade-stat-row
-              IconHp.blade-stat-icon.text-green-400
+              StatIcon.blade-stat-icon.text-green-400(stat="hp")
               span.text-green-400 {{ bs.hp }}
             div.blade-stat-row
-              IconAttack.blade-stat-icon.text-red-400
+              StatIcon.blade-stat-icon.text-red-400(stat="attack")
               span.text-red-400 {{ statNum(bs.atk) }}
             div.blade-stat-row
-              IconDefense.blade-stat-icon.text-purple-400
-              span.text-purple-400 {{ statNum(bs.def) }}
+              StatIcon.blade-stat-icon.text-blue-400(stat="defense")
+              span.text-blue-400 {{ statNum(bs.def) }}
             div.blade-stat-row
-              IconSpeed.blade-stat-icon.text-cyan-400
+              StatIcon.blade-stat-icon.text-cyan-400(stat="speed")
               span(:class="bs.trait.chill > 0 ? 'blade-stat-spd-chilled' : 'text-cyan-400'") {{ statNum(bs.spd) }}
           //- Chilled (Frostbite): one snowflake pip per live stack, under SPD.
           div.blade-chill-pips(v-if="BossTraitGlyphUi && bs.trait.chill > 0" aria-hidden="true")
@@ -2873,7 +2896,9 @@ onUnmounted(() => {
             :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
             @click="leaderboardModalOpen = true"
           )
-          div.relative(v-if="(hasFirstWin || currentStageId >= 2) && !leagueSession")
+          //- flex: no inline line box under the button (its descender gap
+          //- lifted this button above the rest of the row).
+          div.relative.flex(v-if="(hasFirstWin || currentStageId >= 2) && !leagueSession")
             FIconButton(
               type="secondary"
               :class="{ 'instant-bounce': showConfigSpotlight }"
@@ -3245,7 +3270,7 @@ onUnmounted(() => {
   content: ''
   position: absolute
   inset: -4px
-  border-radius: 14px
+  border-radius: 12px
   border: 3px solid #ffd54a
   box-shadow: 0 0 0 2px #0f1a30, inset 0 0 0 2px rgba(255, 245, 190, 0.6)
   pointer-events: none
@@ -3556,8 +3581,8 @@ onUnmounted(() => {
   line-height: 1.3
 
 .blade-stat-icon
-  width: 0.65rem
-  height: 0.65rem
+  width: 0.91rem
+  height: 0.91rem
   flex-shrink: 0
 
 @media (min-width: 640px)
@@ -3571,8 +3596,8 @@ onUnmounted(() => {
     font-size: 0.75rem
     gap: 0.2rem
   .blade-stat-icon
-    width: 0.75rem
-    height: 0.75rem
+    width: 1.05rem
+    height: 1.05rem
 
 // ─── Reward overlay — short-landscape fit ───────────────────────────────────
 // A 390px-tall landscape viewport has to hold the parchment ribbon, the result

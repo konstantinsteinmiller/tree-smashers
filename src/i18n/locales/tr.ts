@@ -427,6 +427,12 @@ export default {
     'shareText': 'Chaos Arena PvP savaşıma katıl!',
     'versionMismatch': 'Rakibin oyunun farklı bir sürümünü kullanıyor. İki oyuncu da sayfayı yenileyip tekrar denemeli.'
   },
+  'powerups': {
+    'attack': '+%{pct} Saldırı',
+    'defense': '+%{pct} Savunma',
+    'speed': '+%{pct} Hız',
+    'badge': '+%{pct}'
+  },
   'parts': {
     'star': 'Yıldız Bıçak',
     'triangle': 'Dikenli',
