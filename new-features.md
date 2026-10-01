@@ -14,8 +14,8 @@
   transitions.
 
 ## league with pvp league ranks
-- [ ] simulated pvp battles based on remote player stats
-- [ ] boss enemies to rise in league ranks
+- [x] simulated pvp battles based on remote player stats
+- [x] boss enemies to rise in league ranks
 
 ## new Bosses for 100+ stages
 
