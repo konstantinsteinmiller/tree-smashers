@@ -2,13 +2,33 @@
 //
 //   node perf/ab.mjs --a "quality=high" --b "quality=low" --stage 48 --throttle 8
 //   node perf/ab.mjs --b "abl=gradient" --stage 48          (probe-side ablation)
+//   node perf/ab.mjs --b "skin=x" --stage 48 --throttle 8 --quality high
+//
+// Options:
+//   --a / --b <query>     extra URL query for each arm (omit --b for a baseline run)
+//   --stage <n>           seed the save at campaign stage n (default 1); seeded
+//                         stages also mark intro / league-unlock / skills
+//                         popups as seen so they never cover the arena
+//   --quality high|low    pin the quality tier in BOTH arms (URL + stored pref +
+//                         verdict). Use it at high throttle: at 8x the auto
+//                         detector downgrades some reps and not others, which
+//                         makes the results bimodal. An arm's own `quality=`
+//                         query still wins for the URL override.
+//   --throttle <x>        CDP CPU throttling rate (default 4)
+//   --reps <n>            interleaved reps per arm (default 4)
+//   --ms / --warmup <ms>  sample window (default 30000) / warmup (default 9000)
+//   --seed <s>            game RNG seed (default 7)
+//   --dist <dir>          build to serve (default dist)
+//   --init <file>         extra init script run in both arms after the seed
+//   --labelA/--labelB     column labels; --headed, --dc; --help
 //
 // Experiment switches for a NEW optimization go in a boot-frozen flag module
 // the way `src/use/perfVariants.ts` did (see PERF-LEDGER.md) — and come back
 // out again once the experiment has a verdict.
 //
-// * serves ./dist itself on a random free port (so a stale server from another
-//   project can never answer instead — the title is verified before measuring)
+// * serves ./dist itself on `localhost` (the game only renders on localhost or
+//   a portal hostname — 127.0.0.1 gets a blank page) on a random free port
+//   (so a stale server from another project can never answer instead — the title is verified before measuring)
 // * launches ONE Chrome per rep on a throw-away user-data-dir (fresh save, so
 //   every rep starts at stage 1 with the same roster)
 // * emulates a 412x915 dpr3 touch phone and applies CDP CPU throttling
@@ -25,7 +45,7 @@ import { readFile } from 'node:fs'
 import { readFileSync as rfs } from 'node:fs'
 import { extname, join, dirname, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { seedScript } from './scenario.mjs'
+import { seedScript, qualityScript } from './scenario.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -38,6 +58,13 @@ const arg = (name, dflt) => {
   return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : dflt
 }
 const has = (name) => argv.includes(`--${name}`)
+
+if (has('help') || argv.includes('-h')) {
+  const src = rfs(fileURLToPath(import.meta.url), 'utf8').split(/\r?\n/)
+  const header = src.slice(0, src.findIndex((l) => !l.startsWith('//')))
+  console.log(header.map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+  process.exit(0)
+}
 
 const A_QUERY = arg('a', '')
 const B_QUERY = arg('b', null)
@@ -56,6 +83,11 @@ const LABEL_B = arg('labelB', B_QUERY || 'B')
 // app code — e.g. one that seeds a save shape keyed off a query param the
 // B arm sets, so a save-state A/B stays interleaved in one run.
 const INIT = arg('init', null)
+const QUALITY = arg('quality', null)
+if (QUALITY !== null && QUALITY !== 'high' && QUALITY !== 'low') {
+  console.error(`--quality must be high or low, got "${QUALITY}"`)
+  process.exit(1)
+}
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -86,7 +118,7 @@ const serve = () =>
         res.end(buf)
       })
     })
-    server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port }))
+    server.listen(0, 'localhost', () => resolve({ server, port: server.address().port }))
   })
 
 // ── stats ──────────────────────────────────────────────────────────────────
@@ -115,6 +147,8 @@ async function runRep(port, query, repIdx) {
   await context.addInitScript(probe)
   const seed = seedScript(STAGE)
   if (seed) await context.addInitScript({ content: seed })
+  const pin = qualityScript(QUALITY)
+  if (pin) await context.addInitScript({ content: pin })
   if (INIT) await context.addInitScript({ path: INIT })
   const page = await context.newPage()
   page.on('pageerror', (e) => console.error('  [pageerror]', e.message))
@@ -125,9 +159,10 @@ async function runRep(port, query, repIdx) {
   const qs = new URLSearchParams()
   qs.set('seed', SEED)
   if (DC) qs.set('dc', '1')
+  if (QUALITY) qs.set('quality', QUALITY)
   if (query) for (const [k, v] of new URLSearchParams(query)) qs.set(k, v)
 
-  const url = `http://127.0.0.1:${port}/index.html?${qs}`
+  const url = `http://localhost:${port}/index.html?${qs}`
   await page.goto(url, { waitUntil: 'domcontentloaded' })
 
   const title = await page.title()
@@ -203,7 +238,7 @@ const METRICS = [
 const { server, port } = await serve()
 console.log(
   `serving ${DIST} on :${port} | throttle ${THROTTLE}x | 412x915 dpr3 | ` +
-  `${REPS} reps x ${SAMPLE_MS / 1000}s | seed ${SEED} | stage ${STAGE}`
+  `${REPS} reps x ${SAMPLE_MS / 1000}s | seed ${SEED} | stage ${STAGE} | quality ${QUALITY ?? 'auto'}`
 )
 
 const results = { A: [], B: [] }

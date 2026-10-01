@@ -189,6 +189,50 @@ before quoting a number.
 
 ---
 
+## 2026-10-01 — Idle-machine re-runs (WP11 skills 8×, BW9 bosses 4× / 8×)
+
+Fresh production build of HEAD `d4dbcab` (`vite build`, mode production,
+obfuscated as shipped; skills, bosses-100 and league flags on via `.env`), same
+runner, scenarios, stages, reps × 30 s, seed 7 and 412×915 dpr 3 touch
+emulation as the 2026-09-30 rows. Three harness-only differences, none in game
+code:
+
+- served and loaded on **`localhost`** (the game only renders on localhost or a
+  portal hostname; the committed runner uses `127.0.0.1`);
+- the init seeds also mark the **league unlock popup** seen (`spinner_league`
+  `unlockSeen: true`) — since the league landed, stage ≥ the unlock stage opens
+  that modal over the arena and every rep measured a static dialog at 60 fps;
+- the bosses seed also marks the skill-UI intros seen, as the skills seed does.
+
+**Machine load:** worker budget 2/20 for the whole session (this run's own
+lease); other sessions held 10 extra workers for two short windows (~11:14 and
+11:21–11:22, a vitest run and a vue-tsc build). Total CPU 2–44 % outside those
+windows, 68–71 % peak.
+
+| check                          | throttle | reps | deltaP50 A → B        | deltaP95 A → B          | fps A → B   | noise (A spread, P50) | verdict   |
+|--------------------------------|----------|------|-----------------------|-------------------------|-------------|-----------------------|-----------|
+| skills off → on, quality auto  | 8×       | 6    | 49.80 → 49.95 (+0.3 %) | 133.5 → 175.0 (+31 %)  | 16.1 → 14.2 | 183.9 ms              | no verdict — bimodal, see below |
+| skills off → on, quality high  | 8×       | 8    | 33.30 → 33.30 (0.0 %) | 66.70 → 66.75 (+0.1 %)  | 30.6 → 29.9 | 0.1 ms (fps 4.9)      | **PASS**  |
+| classic 195 → Court 200        | 4×       | 4    | 16.70 → 16.70 (0.0 %) | 41.35 → 33.45 (−19 %)   | 45.1 → 48.8 | 33.4 ms               | **PASS**  |
+| classic 195 → Court 200        | 8×       | 4    | 49.95 → 33.40 (−33 %) | 116.95 → 100.00 (−15 %) | 17.6 → 23.2 | 16.6 ms               | **PASS** (B faster, outside the band) |
+
+**Why 8× was noise on 2026-09-30, and still is with `quality=auto`:** at 8× the
+stage-91 fight sits right on the adaptive tier's 25 fps threshold, so each fresh
+Chrome independently lands on `high` or `low` mid-rep — reps cluster at ~12 fps
+and ~27 fps in *both* arms on an otherwise idle machine. Pinning
+`quality=high` in both arms (query param, no save change) collapses the A
+spread from 183.9 ms to 0.1 ms and the result is a clean null: skills cost
+nothing measurable at 8×. Other-session load was not the cause. Quote the
+pinned row; any future 8× A/B near the tier threshold should pin the tier.
+
+The one slow bosses-4× rep (A rep 4, 12.1 fps) coincided with the other
+session's 10-worker vitest window; dropping it leaves the verdict unchanged.
+The BW4 dev-scene result (traits cost nothing at 4×) now holds on the
+production build at 4× and 8× too; the Court is cheaper than the classic
+stage-195 fight, not dearer.
+
+---
+
 ## Adaptive quality tier (`src/use/useQuality.ts`)
 
 A per-device tier, not an experiment flag — it stays. `high` is the full look;
