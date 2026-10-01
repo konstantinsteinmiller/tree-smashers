@@ -27,7 +27,6 @@
 
 import type { BottomPartId, BossAbility, BossTrait, TopPartId } from '@/types/spinner'
 import type { ArenaType, Stage, StageBladeConfig } from '@/use/useSpinnerCampaign'
-import type { LeagueTier } from '@/use/leagueTiers'
 
 /** Boss layout period: stage `id` and `id + 200` field the same boss lineup. */
 export const BOSS_LAYOUT_PERIOD = 200
@@ -317,13 +316,3 @@ export const trophySkinFirstStage = (skinId: string): number | null => {
   }
   return first
 }
-
-/**
- * League gatekeepers (decision B6 / design D6): the encounter guarding the
- * promotion INTO a tier. Lower promotions keep classic bosses (LG7 owns them).
- */
-export const LEAGUE_GATEKEEPER_ENCOUNTERS: Readonly<Partial<Record<LeagueTier, BossEncounterId>>> = /* @__PURE__ */ Object.freeze({
-  platinum: 'cinder_tyrant', // Gold → Platinum
-  diamond: 'glacier_warden', // Platinum → Diamond
-  champion: 'elemental_court' // Diamond → Champion
-})

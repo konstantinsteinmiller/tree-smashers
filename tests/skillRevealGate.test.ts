@@ -224,7 +224,7 @@ describe('SpinnerArena wiring', () => {
   const src = read('../src/views/SpinnerArena.vue')
   const glue = read('../src/use/skills/arenaSkills.ts')
   const bodyIn = (text: string, name: string) => {
-    const start = text.search(new RegExp(`(const ${name} = |function ${name} \\()`))
+    const start = text.search(new RegExp(`(const ${name} = |function ${name} ?\\()`))
     expect(start, name).toBeGreaterThan(0)
     const end = text.indexOf('\n}\n', start)
     return text.slice(start, end)

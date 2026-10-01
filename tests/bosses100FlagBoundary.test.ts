@@ -156,7 +156,7 @@ describe('rule 3 — the boundary modules pull in nothing obfuscated', () => {
     const raw = src('src/data/bossEncounters.ts')
     const unannotated = [...raw.matchAll(/^(?:export )?const \w+[^=\n]*= (?!\/\* @__PURE__ \*\/)(Object\.freeze|new Map)\b/gm)].map(m => m[0])
     expect(unannotated).toEqual([])
-    expect(raw.match(/\/\* @__PURE__ \*\//g)?.length).toBeGreaterThanOrEqual(7)
+    expect(raw.match(/\/\* @__PURE__ \*\//g)?.length).toBeGreaterThanOrEqual(6) // 7 before LG7 moved the league mapping out
   })
 })
 

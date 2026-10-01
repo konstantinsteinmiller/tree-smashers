@@ -952,30 +952,45 @@ const upgradeBottom = (partId: BottomPartId): boolean => {
   return true
 }
 
-// ─── Cheat Stage Builder ────────────────────────────────────────────────────
+// ─── Ability Boss Stage Builder ─────────────────────────────────────────────
 
 /**
- * Build a boss-showcase stage scaled to the player's current upgrade levels,
- * for a specific `ability`. The enemy team roster is chosen to highlight
- * each ability's mechanic:
+ * Part-level function of {@link buildAbilityBossStage}: the levels of the
+ * `index`-th roster blade, given its parts. The cheat menu scales to the
+ * player's upgrades; a league gatekeeper (LG7) passes FIXED levels.
+ */
+export type AbilityLevelFn = (
+  top: TopPartId,
+  bottom: BottomPartId,
+  index: number
+) => { topLevel: number; bottomLevel: number }
+
+/**
+ * Build a boss-showcase stage for a specific `ability` — PURE: the levels come
+ * only from `level`, so the same arguments always give a deep-equal stage that
+ * shares no object with a previous call. The enemy roster is chosen to
+ * highlight each ability's mechanic:
  *
  *   ghost    → single ghost boss (splits on launch)
  *   split    → single split boss (shatters into 5 on death)
  *   partners → 3-blade partner team (no FF between them)
  *   healers  → 4-blade healer team (no FF + heal-on-contact, 20% oversize)
  *
- * Each enemy blade's part levels are matched to the player's corresponding
- * upgrade level so the fight is fair regardless of progression.
+ * Shared by the cheat menu ({@link buildCheatBossStage}) and the league's
+ * classic gatekeepers (src/league/leagueGatekeepers.ts). Stage id −1 (the
+ * sentinel: never persists or advances), 'boss' arena, name `cheat_<ability>`.
  */
-export const buildCheatBossStage = (ability: BossAbility): Stage => {
-  const tops = playerUpgrades.value.tops
-  const bots = playerUpgrades.value.bottoms
-  // Level used for parts the player hasn't upgraded on their own team —
-  // falls back to the player's peak level so the boss stays threatening.
-  const peakTop = Math.max(0, ...Object.values(tops))
-  const peakBot = Math.max(0, ...Object.values(bots))
-  const t = (id: TopPartId) => Math.max(tops[id] ?? 0, peakTop)
-  const b = (id: BottomPartId) => Math.max(bots[id] ?? 0, peakBot)
+export const buildAbilityBossStage = (ability: BossAbility, level: AbilityLevelFn): Stage => {
+  let index = 0
+  const at = (
+    top: TopPartId,
+    bot: BottomPartId,
+    modelId: string,
+    bossAbility: BossAbility
+  ): StageBladeConfig => {
+    const lv = level(top, bot, index++)
+    return e(top, bot, lv.topLevel, lv.bottomLevel, modelId, bossAbility)
+  }
 
   let name = 'cheat_boss'
   let enemyTeam: StageBladeConfig[] = []
@@ -984,54 +999,54 @@ export const buildCheatBossStage = (ability: BossAbility): Stage => {
     case 'ghost':
       name = 'cheat_ghost'
       enemyTeam = [
-        e('triangle', 'speedy', t('triangle'), b('speedy'), 'snake', 'ghost')
+        at('triangle', 'speedy', 'snake', 'ghost')
       ]
       break
     case 'split':
       name = 'cheat_split'
       enemyTeam = [
-        e('round', 'tanky', t('round'), b('tanky'), 'piranha', 'split')
+        at('round', 'tanky', 'piranha', 'split')
       ]
       break
     case 'partners':
       name = 'cheat_partners'
       enemyTeam = [
-        e('cushioned', 'tanky', t('cushioned'), b('tanky'), 'castle', 'partners'),
-        e('round', 'tanky', t('round'), b('tanky'), 'turtle', 'partners'),
-        e('quadratic', 'balanced', t('quadratic'), b('balanced'), 'mysticaleye', 'partners')
+        at('cushioned', 'tanky', 'castle', 'partners'),
+        at('round', 'tanky', 'turtle', 'partners'),
+        at('quadratic', 'balanced', 'mysticaleye', 'partners')
       ]
       break
     case 'healers':
       name = 'cheat_healers'
       enemyTeam = [
-        e('cushioned', 'balanced', t('cushioned'), b('balanced'), 'mountain', 'healers'),
-        e('round', 'balanced', t('round'), b('balanced'), 'piranha', 'healers'),
-        e('cushioned', 'balanced', t('cushioned'), b('balanced'), 'gear', 'healers'),
-        e('quadratic', 'balanced', t('quadratic'), b('balanced'), 'mysticaleye', 'healers')
+        at('cushioned', 'balanced', 'mountain', 'healers'),
+        at('round', 'balanced', 'piranha', 'healers'),
+        at('cushioned', 'balanced', 'gear', 'healers'),
+        at('quadratic', 'balanced', 'mysticaleye', 'healers')
       ]
       break
     case 'child-emitter':
       name = 'cheat_child_emitter'
       enemyTeam = [
-        e('round', 'tanky', t('round'), b('tanky'), 'dark', 'child-emitter')
+        at('round', 'tanky', 'dark', 'child-emitter')
       ]
       break
     case 'stat-switch':
       name = 'cheat_stat_switch'
       enemyTeam = [
-        e('cushioned', 'tanky', t('cushioned'), b('tanky'), 'boulder', 'stat-switch')
+        at('cushioned', 'tanky', 'boulder', 'stat-switch')
       ]
       break
     case 'life-leech':
       name = 'cheat_life_leech'
       enemyTeam = [
-        e('triangle', 'speedy', t('triangle'), b('speedy'), 'snake', 'life-leech')
+        at('triangle', 'speedy', 'snake', 'life-leech')
       ]
       break
     case 'thunder':
       name = 'cheat_thunder'
       enemyTeam = [
-        e('triangle', 'tanky', t('triangle'), b('tanky'), 'thunderstorm', 'thunder')
+        at('triangle', 'tanky', 'thunderstorm', 'thunder')
       ]
       break
   }
@@ -1046,6 +1061,27 @@ export const buildCheatBossStage = (ability: BossAbility): Stage => {
     rewardWin: 500,
     rewardLose: 100
   }
+}
+
+// ─── Cheat Stage Builder ────────────────────────────────────────────────────
+
+/**
+ * Build a boss-showcase stage scaled to the player's current upgrade levels
+ * (see {@link buildAbilityBossStage} for the rosters). Each enemy blade's part
+ * levels are matched to the player's corresponding upgrade level so the fight
+ * is fair regardless of progression.
+ */
+export const buildCheatBossStage = (ability: BossAbility): Stage => {
+  const tops = playerUpgrades.value.tops
+  const bots = playerUpgrades.value.bottoms
+  // Level used for parts the player hasn't upgraded on their own team —
+  // falls back to the player's peak level so the boss stays threatening.
+  const peakTop = Math.max(0, ...Object.values(tops))
+  const peakBot = Math.max(0, ...Object.values(bots))
+  return buildAbilityBossStage(ability, (top, bot) => ({
+    topLevel: Math.max(tops[top] ?? 0, peakTop),
+    bottomLevel: Math.max(bots[bot] ?? 0, peakBot)
+  }))
 }
 
 /**

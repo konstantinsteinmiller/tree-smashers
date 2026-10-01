@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+  DEV-ONLY preview of the league UI (LG5a / LG5b): hub, opponent cards,
+  gatekeeper card, result panel, unlock popup, season reward, HUD button,
+  LP bar and delta chip — all on MOCKED league state (no server, no save).
+
+    pnpm dev   →   http://localhost:5173/dev/league.html
+                   ?scene=hub        hub with three opponent cards      [default]
+                   ?scene=empty      hub, no fights left (reset timer, top-up on ad builds)
+                   ?scene=gate       hub at x99 → gatekeeper card (encounter boss)
+                   ?scene=gate-classic  gatekeeper card, classic gate (portrait, no crest)
+                   ?scene=offline    online build, server unreachable (O3 quiet state)
+                   ?scene=kids       kids build (generated names, no top list)
+                   ?scene=champion   Champion standing (#N from the top list)
+                   ?scene=top        the season top tab
+                   ?scene=result     result panels (win, promotion, loss, drop, shield, gate)
+                   ?scene=unlock     first-unlock popup
+                   ?scene=season     end-of-season reward
+                   ?scene=atoms      LP bars, delta chips, HUD buttons
+                   ?lp=457           the player's LP
+                   ?quality=low      the FX.low variant (useQuality URL override)
+                   ?lang=de          another locale
+
+  Vite serves every .html under the root in dev, but a production build only
+  bundles `index.html` (no `build.rollupOptions.input` names this file), so
+  nothing reachable from here ships. tests/leagueUi.test.ts pins that.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- The game resolves assets relative to the root (prependBaseUrl → "images/…"). -->
+  <base href="/">
+  <title>Chaos Arena — league UI (dev)</title>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/dev/leagueUiPreview.ts"></script>
+</body>
+</html>

@@ -52,6 +52,12 @@ export const POSTED_NAME_KEY = 'spinner_posted_name'
 /** The best stage the server has ACCEPTED. The whole write rule is
  *  `stage > this`, so it may only be set after a confirmed 200. */
 export const SUBMITTED_STAGE_KEY = 'spinner_submitted_stage'
+/** The build the server last ACCEPTED for this row, `{ d: digest, at: ms }`.
+ *  Drives the build-only refresh POST (at most one per 6 h, and only when the
+ *  digest changed). Cloud-synced like its neighbours so a second device does
+ *  not re-post the same build; deliberately NOT in KEEP_KEYS — after a reset
+ *  the next report simply re-posts the current build. */
+export const POSTED_BUILD_KEY = 'spinner_posted_build'
 
 // ─── Skills (skills-feature.md §10.4) ──────────────────────────────────────
 // Declared in the flag-boundary module `src/skills/skillKeys.ts` (so a

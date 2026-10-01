@@ -103,9 +103,28 @@ export const FLAGS = {
   },
   league: {
     env: 'VITE_APP_FEATURE_LEAGUE',
-    markers: ['spinner_league', 'chaosarena_league_pool', '/league/', 'LeagueHub', 'LeagueHudButton', 'LeagueResultPanel', 'LeagueUnlockPopup'],
-    chunks: [/^League/, /^league/, /^useLeague/],
-    publicFiles: []
+    markers: [
+      // storage keys (src/league/leagueKeys.ts) + the Worker routes (LG3/LG4)
+      'spinner_league', 'chaosarena_league_pool', '/league/',
+      // component names (Vue keeps `__name` in production) + their DOM hook
+      'LeagueHub', 'LeagueHudButton', 'LeagueResultPanel', 'LeagueUnlockPopup', 'LeagueLpBar',
+      'LeagueDeltaChip', 'LeagueOpponentCard', 'LeagueSeasonRewardModal', 'LeagueRankBadge', 'LeagueTierIcon',
+      'data-league',
+      // arena-bridge members (reserved strings; SpinnerArena calls them in
+      // bracket form behind LEAGUE_BUILD — LG6)
+      'createLeagueBattle', 'finishLeagueBattle',
+      // leagueMath: minified exports lose their names, so match what survives
+      // — the season epoch expression (LEAGUE_EPOCH_MS) and the names in
+      // unminified property form, should a module keep them
+      'Date.UTC(2026,9,5)', 'LEAGUE_EPOCH_MS', 'PROMOTION_SHIELDS', 'SERVER_DAILY_CAP',
+      // NPC opponent ids (LG1: `npc:<band>:<seed>`) and the pokiMeasure category
+      /[`'"]npc:/, /['"]league['"],\s*['"][a-z_]+['"]/
+    ],
+    // Chunk stems. `leagueGate` / `leagueKeys` are the boundary modules every
+    // build imports (unobfuscated, folded); if Rollup ever splits them into a
+    // chunk of their own that is not the feature shipping.
+    chunks: [/^League/, /^league(?!Gate$|Keys$)/, /^useLeague/],
+    publicFiles: [/(^|\/)images\/league[-/]/, /(^|\/)audio\/sfx\/league-[^/]+$/]
   }
 }
 

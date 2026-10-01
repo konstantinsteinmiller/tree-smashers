@@ -9,6 +9,7 @@
 //   • settings — sound / music volume, language, difficulty, quality
 //   • purchases — owned blade skins + owned background skins, and the
 //     equipped loadout / selections tied to them
+//   • the league (league builds only) — standing, season and the unlock
 //
 // It is a KEEP-LIST sweep over the persisted keys rather than an explicit
 // delete-list: any future progress key is wiped automatically without
@@ -46,6 +47,9 @@ import { requestStageReinit } from '@/use/useSpinnerCampaign'
 import { requestIntroReplay } from '@/use/useIntroCutscene'
 import { INTRO_SEEN_KEY } from '@/use/introGate'
 import { DAILY_SPEED_GIFT_KEY, SPEED_GIFT_KEY } from '@/use/speedGiftGate'
+// League: a flag-boundary module; every use below sits behind LEAGUE_BUILD so
+// a league-off build folds the key and the loader away.
+import { LEAGUE_BUILD, LEAGUE_STATE_KEY, leagueAccountAllowed, loadLeague } from '@/league/leagueGate'
 
 /** Keys that must SURVIVE a progress reset (settings + purchased content).
  *  Skills (`spinner_skills`, `spinner_skill_loadout`, `spinner_skill_ui`) are
@@ -73,7 +77,10 @@ const KEEP_KEYS = new Set<string>([
   // The first-time free 2x gift (see speedGiftGate.ts): a reset must not
   // hand out a second ad-free boost. Same for today's daily free boost.
   SPEED_GIFT_KEY,
-  DAILY_SPEED_GIFT_KEY
+  DAILY_SPEED_GIFT_KEY,
+  // The league survives a reset (LD5 / plan F7): standing, season, the
+  // unlock and today's fight / ad counters (a reset must not refill them).
+  ...(LEAGUE_BUILD ? [LEAGUE_STATE_KEY] : [])
 ])
 
 /**
@@ -117,6 +124,12 @@ const collectProgressKeys = (): string[] => {
  */
 export const resetAllProgress = async (): Promise<void> => {
   try {
+    // League build: load the league once BEFORE the stage key goes, so a
+    // player who reached the unlock stage but never opened the league has
+    // the unlock persisted (it is kept below, the stage is not). Not for a
+    // player whose account may not enter the league (CrazyGames guest): the
+    // league writes nothing for them, so there is nothing to persist.
+    if (LEAGUE_BUILD && leagueAccountAllowed()) await loadLeague().catch(() => null)
     // Collected first, then removed, so mutating the store mid-iteration
     // can't skip keys (removeItem shifts the raw index order).
     for (const key of collectProgressKeys()) localStorage.removeItem(key)

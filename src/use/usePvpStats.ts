@@ -243,6 +243,8 @@ export default function usePvpStats() {
     // actions
     recordPvpWin,
     recordPvpLoss,
+    /** Honour without a PvP win/loss record (league wins earn half, LG6). */
+    awardHonor: (amount: number) => addHonor(Math.max(0, Math.round(amount))),
     calcHonorPoints,
     // honor track
     isHonorStageClaimed,

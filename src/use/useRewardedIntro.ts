@@ -54,10 +54,10 @@ export const isRewardedIntroOpen = ref(false)
  * being concatenated in TypeScript. `null` selects the generic copy.
  */
 export type RewardedIntroReward = {
-  /** Quantity, for the currency kinds. Ignored by 'speed', 'respin' and
-   *  'skinAd' (one ad unlocks one skin). */
+  /** Quantity, for the currency kinds and 'fights' (extra league fights).
+   *  Ignored by 'speed', 'respin' and 'skinAd' (one ad unlocks one skin). */
   amount?: number
-  kind: 'coins' | 'diamonds' | 'speed' | 'respin' | 'skinAd'
+  kind: 'coins' | 'diamonds' | 'speed' | 'respin' | 'skinAd' | 'fights'
 }
 
 export const rewardedIntroReward = ref<RewardedIntroReward | null>(null)

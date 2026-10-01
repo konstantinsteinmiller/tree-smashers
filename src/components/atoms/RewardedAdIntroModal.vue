@@ -62,6 +62,9 @@ const rewardText = computed(() => {
       return t('rewardedIntro.rewardRespin')
     case 'skinAd':
       return t('rewardedIntro.rewardSkinAd')
+    case 'fights':
+      // League top-up (placement `league_fights`): extra ranked fights today.
+      return t('rewardedIntro.rewardFights', { count }, count)
     default:
       return ''
   }

@@ -154,9 +154,84 @@ const leaderboardSnapshotPlugin = (live: boolean): Plugin => ({
   },
   load(id) {
     if (id !== SNAPSHOT_RESOLVED) return null
-    return `export default ${JSON.stringify(readSnapshotFile(live ? SNAPSHOT_FILE : SEED_FILE))}`
+    // `fetchedAt` is this build machine's refresh clock, not board data — no
+    // reader uses it (see the `virtual:leaderboard-snapshot` declaration), and
+    // baking it made every rebuild after a refresh differ even when the board
+    // itself had not changed (league plan O-S: reproducible builds).
+    const snap = readSnapshotFile(live ? SNAPSHOT_FILE : SEED_FILE)
+    const baked = snap === null ? null : { updatedAt: snap.updatedAt, total: snap.total, entries: snap.entries, dist: snap.dist }
+    return `export default ${JSON.stringify(baked)}`
   }
 })
+
+// ─── The league's baked opponent pool ─────────────────────────────
+//
+// `virtual:league-pool`: `{ v: 1, builds }` from `data/league-pool.json`
+// (written by `scripts/league-pool-snapshot.mjs` from the Worker's
+// /league/pool-export, ids and names stripped, <= ~10 KB gzipped), or `null`
+// when the file holds no builds. It is the third rung of the league's opponent
+// ladder (live /league/pool -> device cache -> THIS -> seeded generator).
+//
+// LEAGUE BUILDS ONLY: on a league-off build the plugin logs "skipped" and
+// resolves the module to `null` WITHOUT running the script, reading the file
+// or touching the network (tests/leagueOpponents.test.ts pins it). Nothing but
+// the league's lazy chunks imports it, and a league-off build has none.
+//
+// The refresh is a child process, as for the leaderboard, and may fail: the
+// committed file stands in.
+const LEAGUE_POOL_VIRTUAL_ID = 'virtual:league-pool'
+const LEAGUE_POOL_RESOLVED = '\0' + LEAGUE_POOL_VIRTUAL_ID
+const LEAGUE_POOL_FILE = resolve(fileURLToPath(new URL('./data/league-pool.json', import.meta.url)))
+const LEAGUE_POOL_SCRIPT = resolve(fileURLToPath(new URL('./scripts/league-pool-snapshot.mjs', import.meta.url)))
+/** Refetch the pool at most this often (a build:* burst shares one fetch). */
+const LEAGUE_POOL_FRESH_MS = 6 * 60 * 60_000
+
+const readLeaguePool = (): { fetchedAt?: number; builds: unknown[] } | null => {
+  try {
+    if (!existsSync(LEAGUE_POOL_FILE)) return null
+    const parsed = JSON.parse(readFileSync(LEAGUE_POOL_FILE, 'utf-8'))
+    return parsed && parsed.v === 1 && Array.isArray(parsed.builds) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const leaguePoolPlugin = (leagueBuild: boolean): Plugin => {
+  let baked: { v: 1; builds: unknown[] } | null = null
+  return {
+    name: 'chaos-arena-league-pool',
+    buildStart() {
+      baked = null
+      if (!leagueBuild) {
+        console.log('[league-pool] skipped (VITE_APP_FEATURE_LEAGUE is not true) - no fetch, nothing baked')
+        return
+      }
+      const onDisk = readLeaguePool()
+      const fresh = onDisk !== null && Date.now() - Number(onDisk.fetchedAt ?? 0) < LEAGUE_POOL_FRESH_MS
+      if (!fresh) {
+        try {
+          execFileSync(process.execPath, [LEAGUE_POOL_SCRIPT, '--soft'], { stdio: 'inherit', timeout: 30_000 })
+        } catch {
+          console.warn('[league-pool] could not refresh the pool - building with the committed copy.')
+        }
+      }
+      const pool = readLeaguePool()
+      baked = pool && pool.builds.length > 0 ? { v: 1, builds: pool.builds } : null
+      console.log(
+        baked
+          ? `[league-pool] baking ${baked.builds.length} opponent builds`
+          : '[league-pool] no baked builds - the league falls back to the generator'
+      )
+    },
+    resolveId(id) {
+      return id === LEAGUE_POOL_VIRTUAL_ID ? LEAGUE_POOL_RESOLVED : null
+    },
+    load(id) {
+      if (id !== LEAGUE_POOL_RESOLVED) return null
+      return `export default ${JSON.stringify(leagueBuild ? baked : null)}`
+    }
+  }
+}
 
 // https://vite.dev/config/
 /** vue-i18n compile-time feature flags (mirrored in `vitest.config.ts`). */
@@ -231,9 +306,10 @@ export default defineConfig(({ mode, command }) => {
   // sets 'false' and a mode opts in; UNSET is allowed and means off, because
   // the .env files are git-ignored and CI builds (static.yml, ios-build.yml)
   // run without them. `VITE_APP_FEATURE_BOSSES100` (the bosses gate,
-  // src/bosses/bosses100Gate.ts) follows the same rule. (The league flag joins
-  // this list with LG-FLAG.)
-  for (const flag of ['VITE_APP_FEATURE_SKILLS', 'VITE_APP_FEATURE_BOSSES100']) {
+  // src/bosses/bosses100Gate.ts) follows the same rule, and so do the league
+  // flags (src/league/leagueGate.ts): VITE_APP_FEATURE_LEAGUE, and
+  // VITE_APP_KIDS (child-directed build -> offline league, league plan O5).
+  for (const flag of ['VITE_APP_FEATURE_SKILLS', 'VITE_APP_FEATURE_BOSSES100', 'VITE_APP_FEATURE_LEAGUE', 'VITE_APP_KIDS']) {
     const v = env[flag]
     if (v !== undefined && v !== '' && v !== 'true' && v !== 'false') {
       throw new Error(
@@ -242,8 +318,19 @@ export default defineConfig(({ mode, command }) => {
       )
     }
   }
+  // The league unlock stage, when set, is a positive integer ("13", not "13th").
+  {
+    const v = env.VITE_APP_LEAGUE_UNLOCK_STAGE
+    if (v !== undefined && v !== '' && !/^[1-9]\d*$/.test(v)) {
+      throw new Error(
+        `[build] VITE_APP_LEAGUE_UNLOCK_STAGE must be a positive integer in mode "${mode}" (got ${JSON.stringify(v)}). `
+        + 'Set it in .env (default "13") or .env.<mode>[.local].'
+      )
+    }
+  }
   const skillsBuild = env.VITE_APP_FEATURE_SKILLS === 'true'
   const bosses100Build = env.VITE_APP_FEATURE_BOSSES100 === 'true'
+  const leagueBuild = env.VITE_APP_FEATURE_LEAGUE === 'true'
 
   // Initialize plugins array
   const plugins = []
@@ -291,6 +378,12 @@ export default defineConfig(({ mode, command }) => {
   // — Poki, YouTube — gets the synthetic board, because for those players it is
   // not a fallback, it is the entire feature.
   plugins.push(leaderboardSnapshotPlugin(!!env.VITE_LEADERBOARD_URL))
+
+  // The league's baked opponent pool (bottom-but-one rung of the ladder:
+  // live /league/pool -> device cache -> THIS -> seeded generator). Only the
+  // league reads it, through the gate's lazy loaders, so a league-off build
+  // never even resolves it - and it must never fetch anything then.
+  plugins.push(leaguePoolPlugin(leagueBuild))
 
   // The self-hosted Playpen Sans subsets (fonts.sass) are OFL 1.1, which asks
   // for the licence to travel with the font. Nothing imports OFL.txt, so emit
@@ -351,8 +444,8 @@ export default defineConfig(({ mode, command }) => {
           // The first-launch intro cutscene's lazy chunk: its one dynamic
           // import lives in this 1-line loader for exactly the same reason.
           /use[\\/]introCutsceneLoader\.ts$/,
-          // Feature-flag boundaries (skills; the league joins as src/league/
-          // leagueGate.ts). The gate holds the env literal and EVERY dynamic
+          // Feature-flag boundaries (skills here; bosses and league below).
+          // The gate holds the env literal and EVERY dynamic
           // import of the feature; the boundary modules next to it hold the
           // feature's strings shared code may name (storage keys, ids). All
           // of them must stay unobfuscated: the dynamic-import constraint
@@ -365,7 +458,12 @@ export default defineConfig(({ mode, command }) => {
           // peek / shop hints). Unobfuscated so a bosses100-off build
           // tree-shakes every export whose only use folded away.
           /src[\\/]bosses[\\/]/,
-          /data[\\/]boss(Encounters|Art)\.ts$/
+          /data[\\/]boss(Encounters|Art)\.ts$/,
+          // League boundary (src/league/leagueGate.ts): the gate and the whole
+          // league folder, as with src/skills/. The gate holds the env
+          // literals and every dynamic import, and a league-off build must
+          // tree-shake every league export whose only use folded away.
+          /src[\\/]league[\\/]/
         ],
         // ─── Obfuscation profile (tuned 2026-04-30) ─────────────────────
         // The previous profile enabled every aggressive transform the
@@ -408,6 +506,17 @@ export default defineConfig(({ mode, command }) => {
           simplify: true,
           stringArray: true,
           stringArrayThreshold: 0.6,
+          // ─── Reproducible output (league plan O-S) ─────────────────────
+          //
+          // The default seed (0) draws a fresh random seed for every module
+          // on every build, so two builds of the same commit differed in
+          // every obfuscated chunk and, through the content hashes, in
+          // every file name that imports one. A fixed seed makes the output
+          // a pure function of the source: a rebuild is byte-identical, a
+          // diff between two release zips shows only real changes, and a
+          // crash report's chunk name maps back to one build. Any constant
+          // works; changing it reshuffles every obfuscated chunk once.
+          seed: 0x5eedc4a0,
           // ─── Strings that must stay literals (batch-3 Q1) ──────────────
           //
           // The obfuscator runs after vite:define, so an env comparison
@@ -437,6 +546,15 @@ export default defineConfig(({ mode, command }) => {
             // and would hoist the name into the string array, where it
             // outlives the folded call on a bosses100-off build.
             '^(nova|burn|frost_touch|freeze|freeze_crack|thaw|chill|chill_fade|ember|frost|snowflake)$',
+            // The league arena bridge (leagueGate `loadLeagueBridge`, LG6):
+            // SpinnerArena calls its members in bracket form behind
+            // `LEAGUE_BUILD`, so each name must stay a literal that folds
+            // away with the call on a league-off build.
+            '^(createLeagueBattle|finishLeagueBattle|loadLeagueDeck|fetchLeagueTop|measureLeague|previewSeasonReward)$',
+            // BattleMode 'league' (bossPeek) and the arena's league-mode
+            // arguments: a literal, never a string-array entry next to
+            // another name (the league audit's pokiMeasure marker).
+            '^league$',
             '^(BOSS_TRAIT_TUNING|EMBER_PERIOD_MS|EMBER_RADIUS_MUL|applyEmberBurn|beginTeamTurnTraits|bossClockHashPart|bossTraitVfxEvent|chillSpeedMul|createBossClock|createBossTraitEventRing|createBossTraitVfx|createTapCrackEvent|createTraitContactResult|createTraitHudRow|drawBossTraitGlyph|emberVictimMask|endTeamTurnTraits|hasBossTraits|hasLivingEmberCarrier|initTraitVictim|isBossTraitGlyph|isFrostLockedFor|novaCharge|onTraitContact|prepareBossTraitVfx|renderBossAura|renderBossTraitLayer|renderChillOverlay|renderEmberCharge|renderIceShell|resetBossClock|resetBossTraitVfx|tickBossClock|tickBossTraitVfx|traitHashPart|writeTraitHud)$'
           ]
         }
@@ -734,6 +852,12 @@ export default defineConfig(({ mode, command }) => {
             if (isPoki && id.includes('utils/pokiPlugin')) return 'plugin-poki'
             if (isPlaygama && id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
             if (isGameDistribution && id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
+            // League boundary (LG6): the gate holds every league `import()`,
+            // so whichever chunk it lands in carries the preload map of the
+            // League* chunk file names. Pinned to its own small chunk — never
+            // the hot path (index / App / SpinnerArena). League builds only,
+            // for the emptied-group reason above.
+            if (leagueBuild && /src[\/]league[\/]league(Gate|Keys)\.ts$/.test(id)) return 'leagueGate'
           }
         }
       }

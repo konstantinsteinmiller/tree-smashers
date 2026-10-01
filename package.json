@@ -34,6 +34,7 @@
     "art:slice": "node tools/art-desk/slice.mjs",
     "art:desk": "node tools/art-desk/server.mjs",
     "leaderboard:snapshot": "node scripts/leaderboard-snapshot.mjs",
+    "league:pool": "node scripts/league-pool-snapshot.mjs",
     "leaderboard:seed": "node scripts/generate-leaderboard-seed.mjs",
     "visualize-bundle": "npx vite-bundle-visualizer",
     "tauri": "tauri",

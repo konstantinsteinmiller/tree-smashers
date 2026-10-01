@@ -1,0 +1,167 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { isLowQuality } from '@/use/useQuality'
+import { LEAGUE_TIER_META, divisionNumeral } from '@/use/leagueTiers'
+import LeagueTierIcon from '@/components/atoms/LeagueTierIcon.vue'
+import type { LeagueUiSource } from '@/league/ui/leagueUi'
+
+/**
+ * ─── League HUD button (LG5b) ───────────────────────────────────────────────
+ *
+ * The entry to the league from the idle HUD: the player's tier icon with the
+ * division (or Champion #N) as real text under it, and a bubble with the
+ * fights left today. A finished season waiting to be claimed turns the bubble
+ * into a gift marker and the button bounces (static on low quality / reduced
+ * motion).
+ *
+ * Mounted by the arena (LG6) through the gate handle `LeagueHudButtonUi`
+ * behind `leagueMountAllowed(stage)`. Emits `open`.
+ */
+
+const props = withDefaults(defineProps<{
+  league: Pick<LeagueUiSource, 'standing' | 'fightsLeft' | 'canFight' | 'unclaimedSeason'>
+  /** Champion's leaderboard position, when known. */
+  championPosition?: number | null
+}>(), { championPosition: null })
+
+const emit = defineEmits<{ open: [] }>()
+
+const { t } = useI18n()
+
+const standing = computed(() => props.league.standing.value)
+const fights = computed(() => props.league.fightsLeft.value)
+const hasReward = computed(() => props.league.unclaimedSeason.value !== null)
+const accent = computed(() => LEAGUE_TIER_META[standing.value.tier].accent)
+
+const tag = computed(() => {
+  if (standing.value.tier === 'champion') return props.championPosition ? `#${props.championPosition}` : ''
+  return divisionNumeral(standing.value.tier, standing.value.division)
+})
+
+const rankName = computed(() => {
+  const tier = t(LEAGUE_TIER_META[standing.value.tier].nameKey)
+  if (standing.value.tier === 'champion') {
+    return props.championPosition ? t('league.tierPosition', { tier, position: props.championPosition }) : tier
+  }
+  return t('league.tierDivision', { tier, division: tag.value })
+})
+
+const aria = computed(() =>
+  t('league.hudAria', { rank: rankName.value, fights: t('league.fightsLeft', { n: fights.value }, fights.value) }))
+</script>
+
+<template lang="pug">
+  button.lhb(
+    type="button"
+    data-league="hud-button"
+    :class="{ 'lhb--attention': hasReward && !isLowQuality, 'lhb--idle': !league.canFight.value && !hasReward }"
+    :style="{ '--lhb-accent': accent }"
+    :aria-label="aria"
+    @click="emit('open')"
+  )
+    span.lhb__shadow(aria-hidden="true")
+    span.lhb__body(aria-hidden="true")
+      LeagueTierIcon(:tier="standing.tier" :size="34" :animated="false")
+      span.lhb__tag(v-if="tag") {{ tag }}
+    span.lhb__bubble(v-if="hasReward" aria-hidden="true" class="lhb__bubble--gift")
+      svg(viewBox="0 0 24 24" width="100%" height="100%")
+        path(d="M4 10h16v3H4zm1 4h6v7H5zm8 0h6v7h-6zM11 10h2v11h-2zM12 9.5C10 6 6.5 5 6.5 7.5 6.5 9 9 9.5 12 9.5zm0 0c2-3.5 5.5-4.5 5.5-2 0 1.5-2.5 2-5.5 2z" fill="#fff" stroke="#0f1a30" stroke-width="1.2" stroke-linejoin="round")
+    span.lhb__bubble(v-else aria-hidden="true" :class="fights > 0 ? 'lhb__bubble--on' : 'lhb__bubble--off'") {{ fights }}
+</template>
+
+<style scoped lang="sass">
+.lhb
+  --lhb-accent: #ffc93c
+  position: relative
+  display: inline-block
+  padding: 0
+  border: 0
+  background: none
+  cursor: pointer
+  -webkit-tap-highlight-color: transparent
+  transition: transform 0.1s ease
+
+  &:hover
+    transform: scale(1.04)
+  &:active
+    transform: scale(0.92)
+  &:focus-visible
+    outline: 3px solid #ffcd00
+    outline-offset: 3px
+    border-radius: 0.8rem
+
+.lhb__shadow
+  position: absolute
+  inset: 0
+  transform: translateY(4px)
+  border-radius: 0.8rem
+  background: #1a2b4b
+
+.lhb__body
+  position: relative
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  gap: 0.05rem
+  min-width: 3.25rem
+  min-height: 3.25rem
+  padding: 0.25rem 0.35rem 0.2rem
+  border-radius: 0.8rem
+  border: 2px solid #0f1a30
+  background: radial-gradient(90% 80% at 50% 20%, color-mix(in srgb, var(--lhb-accent) 45%, #2a4476), #1a2b4b 80%)
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18)
+
+.lhb__tag
+  font-size: 0.68rem
+  font-weight: 900
+  line-height: 1
+  color: var(--lhb-accent)
+  font-variant-numeric: tabular-nums
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+
+.lhb__bubble
+  position: absolute
+  top: -0.45rem
+  right: -0.45rem
+  min-width: 1.3rem
+  height: 1.3rem
+  padding: 0 0.3rem
+  border-radius: 999px
+  border: 2px solid #0f1a30
+  display: flex
+  align-items: center
+  justify-content: center
+  font-size: 0.72rem
+  font-weight: 900
+  color: #fff
+  line-height: 1
+  text-shadow: 0 1px 0 #000
+
+.lhb__bubble--on
+  background: linear-gradient(to bottom, #5fe08a, #1f9c55)
+.lhb__bubble--off
+  background: linear-gradient(to bottom, #8193ad, #4d5d78)
+.lhb__bubble--gift
+  width: 1.5rem
+  height: 1.5rem
+  padding: 0.15rem
+  background: linear-gradient(to bottom, #ff7a6b, #d9303c)
+
+.lhb--idle .lhb__body
+  filter: saturate(0.7)
+
+.lhb--attention
+  animation: lhb-bounce 1.4s ease-in-out infinite
+
+@keyframes lhb-bounce
+  0%, 60%, 100%
+    transform: translateY(0)
+  30%
+    transform: translateY(-5px)
+
+@media (prefers-reduced-motion: reduce)
+  .lhb--attention
+    animation: none
+</style>

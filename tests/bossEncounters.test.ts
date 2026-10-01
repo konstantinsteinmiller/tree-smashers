@@ -11,6 +11,7 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 // The encounters only exist on a bosses100 build (the off build is pinned by
 // tests/bosses100FlagOff.test.ts).
@@ -21,7 +22,6 @@ import {
   BOSS_ENCOUNTER_SLOTS,
   BOSS_LAYOUT_PERIOD,
   BOSS_TROPHY_SKIN_IDS,
-  LEAGUE_GATEKEEPER_ENCOUNTERS,
   bossTraitsOf,
   buildBossEncounterStage,
   encounterAppearance,
@@ -294,12 +294,9 @@ describe('encounter builder (Boss Lab + league LG7, §9)', () => {
     expect(st.enemyTeam[0]).toMatchObject({ topLevel: 0, bottomLevel: 0 })
   })
 
-  it('league gatekeeper mapping (decision B6)', () => {
-    expect(LEAGUE_GATEKEEPER_ENCOUNTERS).toEqual({
-      platinum: 'cinder_tyrant',
-      diamond: 'glacier_warden',
-      champion: 'elemental_court'
-    })
+  it('names no league type (the gatekeeper mapping lives in src/league/leagueGatekeepers.ts)', () => {
+    const text = readFileSync(resolve(__dirname, '../src/data/bossEncounters.ts'), 'utf8')
+    expect(text).not.toMatch(/LEAGUE_GATEKEEPER_ENCOUNTERS|LeagueTier|leagueTiers|@\/league\//)
   })
 })
 

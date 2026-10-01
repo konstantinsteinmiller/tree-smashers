@@ -41,6 +41,18 @@ import {
   BossTrophyCardUi,
   BossLabUi
 } from '@/bosses/bosses100Gate'
+
+// League surfaces (league plan LG6): lazy handles from the league flag
+// boundary (src/league/leagueGate.ts) — each is null on a league-off build,
+// so no HUD button, hub, result panel, unlock popup or season modal can
+// render and none is bundled (tests/leagueFlagBoundary, leagueFlagOffRuntime).
+import {
+  LeagueHudButtonUi,
+  LeagueHubUi,
+  LeagueResultPanelUi,
+  LeagueUnlockPopupUi,
+  LeagueSeasonRewardModalUi
+} from '@/league/leagueGate'
 </script>
 
 <script setup lang="ts">
@@ -138,7 +150,7 @@ import { BOSSES100_BUILD, loadBossArenaUi, loadBossTraitEngine, type BossArenaUi
 // Pure boundary data (bosses gate header): used only behind BOSSES100_BUILD.
 import { bossTraitsOf, type BossTrophySkinId } from '@/data/bossEncounters'
 import { bossPreviewModelId } from '@/use/bossPeek'
-import { leaderboardVisible, reportRun } from '@/use/useLiveLeaderboard'
+import { leaderboardVisible, reportRun, setPlayerBuildSource } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
 import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
@@ -196,6 +208,14 @@ import { isRewardedIntroOpen } from '@/use/useRewardedIntro'
 // Stub-swapped on every non-Poki build (vite.config alias), so this never
 // pulls the SDK into another portal's bundle; a no-op until the SDK is live.
 import { pokiMeasure } from '@/utils/pokiPlugin'
+// League (LG6): only through the gate — the build literal, the mount rule and
+// the two lazy loaders. Everything else is a type, or a bridge member called
+// in bracket form (tests/leagueFlagBoundary rule 5).
+import { LEAGUE_BUILD, loadLeague, loadLeagueBridge, leagueMountAllowed, type LeagueApi, type LeagueBridge } from '@/league/leagueGate'
+import type { LeagueBattleFinish, LeagueBattleStart, LeaguePlayerSide } from '@/league/leagueArenaBridge'
+import type { LeagueFightTarget } from '@/league/useLeague'
+import type { OpponentCard } from '@/league/leagueOpponents'
+import type { LeagueSeasonRewardView } from '@/league/ui/leagueUi'
 
 useCheats()
 
@@ -357,6 +377,7 @@ const teamPower = computed(() => {
 const reportLeaderboardRun = () => {
   void reportRun(bestStage.value, teamPower.value, { force: gameResult.value === 'lose' })
 }
+setPlayerBuildSource(() => ({ team: playerTeamWithUpgrades(), skills: sk.value?.battleSkillOptions('campaign').skillLoadout ?? [] }))
 
 const pvpModalOpen: Ref<boolean> = ref(false)
 const pvpMode: Ref<boolean> = ref(false)
@@ -440,7 +461,7 @@ const {
   awardLoss: bpAwardLoss
 } = useBattlePass()
 
-const { recordPvpWin, recordPvpLoss } = usePvpStats()
+const { recordPvpWin, recordPvpLoss, awardHonor } = usePvpStats()
 
 const PVP_COIN_REWARD = 20
 /** Honor points earned in the last PvP match — shown on the reward overlay. */
@@ -560,6 +581,8 @@ watch(stageReinitSignal, () => {
   showReward.value = false
   ghostMode.value = false
   ghostEnemy.value = null
+  leagueSession.value = null
+  leagueResult.value = null
   initCampaignGame()
 })
 
@@ -645,7 +668,7 @@ const winAdBaseCoins = computed(() => {
   if (dailyChallengeMode.value) return dailyCoinReward.value
   return grantedCoins.value
 })
-const showWinCoinsAd = computed(() => showsWinCoinsAd({
+const showWinCoinsAd = computed(() => !leagueSession.value && showsWinCoinsAd({
   adsBuild: HAS_REWARDED_ADS,
   result: gameResult.value,
   bossWin: lastWinWasBoss.value,
@@ -771,6 +794,13 @@ const onSurrender = () => {
   if (pvpMode.value) {
     // Notify opponent, then force a loss game-over
     pvpSendSurrender()
+    gameResult.value = 'lose'
+    phase.value = 'game_over'
+    return
+  }
+  // A league fight surrendered is a ranked LOSS (O10): settled right away
+  // through the league game-over branch (LP delta, loss coins, result panel).
+  if (LEAGUE_BUILD && leagueSession.value) {
     gameResult.value = 'lose'
     phase.value = 'game_over'
     return
@@ -1227,6 +1257,7 @@ watch(isGameOver, (over) => {
       mode: battleModeOf({
         pvp: pvpMode.value,
         daily: dailyChallengeMode.value,
+        league: !!leagueSession.value,
         ghost: ghostMode.value,
         cheat: !!cheatStage.value
       })
@@ -1292,6 +1323,28 @@ watch(isGameOver, (over) => {
       } else if (gameResult.value === 'lose') {
         dailyCoinReward.value = 0
         bpAwardLoss()
+      }
+      coinsAwarded.value = true
+      showReward.value = true
+      stopBattleMusic()
+      return
+    }
+
+    // League fight (LG6): ranked, on the ghost path. No stage advance, no
+    // first-win flag, no trophy, no roulette / boss card, no rubber band, no
+    // tip counters, no 3x button. The bridge applies the result (local first,
+    // then the server post) and returns what to credit: coins (and diamonds)
+    // at once, half the PvP honour on a win, +25 battle-pass XP on a win (O4).
+    if (LEAGUE_BUILD && leagueSession.value) {
+      const fin = leagueBridge.value?.['finishLeagueBattle'](gameResult.value) ?? null
+      leagueResult.value = fin
+      grantedCoins.value = fin?.coins ?? 0
+      lastHonorEarned.value = fin?.honor ?? 0
+      if (fin) {
+        if (fin.coins > 0) addCoins(fin.coins)
+        if (fin.diamonds > 0) addDiamonds(fin.diamonds)
+        if (fin.honor > 0) awardHonor(fin.honor)
+        if (fin.bpXp > 0) bpAwardLeaderboardWin()
       }
       coinsAwarded.value = true
       showReward.value = true
@@ -1579,8 +1632,9 @@ const onRewardContinue = async () => {
   const wasPvp = pvpMode.value
   const wasGhost = ghostMode.value
   const wasDaily = dailyChallengeMode.value
+  const wasLeague = LEAGUE_BUILD && leagueSession.value !== null
   const closedResult = gameResult.value
-  const closedMode = battleModeOf({ pvp: wasPvp, daily: wasDaily, ghost: wasGhost, cheat: !!cheatStage.value })
+  const closedMode = battleModeOf({ pvp: wasPvp, daily: wasDaily, league: wasLeague, ghost: wasGhost, cheat: !!cheatStage.value })
 
   // Every battle attempt counts toward the cadence — including
   // surrendered ones. A player who quits a tough match still committed
@@ -1600,6 +1654,8 @@ const onRewardContinue = async () => {
   } else if (wasGhost) {
     ghostMode.value = false
     ghostEnemy.value = null
+    leagueSession.value = null
+    leagueResult.value = null
   } else if (wasDaily) {
     dailyChallengeMode.value = false
     dailyDiamondEarned.value = false
@@ -1611,6 +1667,12 @@ const onRewardContinue = async () => {
   // phantom second reward screen).
   coinsAwarded.value = false
   initCampaignGame()
+  // A league result never queues the skills intro (LG6) — back to the hub
+  // instead, for the next ranked fight.
+  if (wasLeague) {
+    openLeagueHub()
+    return
+  }
   // Skills intro: an existing player's next non-PvP WIN-screen close (a
   // new player's comes through the boss roulette below). Opens on this
   // tap_to_start once the gate allows it.
@@ -1835,7 +1897,277 @@ const skillGateBlockers = () => ({
     || showBossDefeated.value || showSkinChestReward.value || showEnemySurrender.value
     || configModalOpen.value || showOptions.value || leaderboardModalOpen.value
     || surrenderModalOpen.value || anyModalOverlayOpen()
+    || leagueSurfaceBlocks()
 })
+
+
+// ─── League (league plan LG6) ─────────────────────────────────────────────
+//
+// Everything league-side is reached through the gate: `loadLeague()` (the
+// LG2 state singleton — loading it at mount also stores the unlock once the
+// campaign stage reaches it) and `loadLeagueBridge()` (leagueArenaBridge.ts:
+// deck, battle start / finish, season preview, measure), whose members are
+// called in bracket form. Both stay null on a league-off build, where every
+// branch below sits behind the folded `LEAGUE_BUILD` literal and nothing
+// runs, is stored, fetched or rendered.
+//
+// A ranked fight runs on the ghost path (`ghostMode` + `leagueSession`): the
+// engine's campaign-only scaling (difficulty HP, boss rubber band) is off,
+// the stage badge / PvP / leaderboard buttons hide, and the game-over watcher
+// takes the league branch.
+const league = shallowRef<LeagueApi | null>(null)
+const leagueBridge = shallowRef<LeagueBridge | null>(null)
+type LeagueSessionView = Extract<LeagueBattleStart, { ok: true }>
+/** The ranked fight on the board (null: none). */
+const leagueSession = shallowRef<LeagueSessionView | null>(null)
+/** What the last ranked fight did (the result screen's league panel). */
+const leagueResult = shallowRef<LeagueBattleFinish | null>(null)
+const leagueHubOpen = ref(false)
+const leagueUnlockOpen = ref(false)
+const leagueSeasonOpen = ref(false)
+const leagueSeasonReward = shallowRef<LeagueSeasonRewardView | null>(null)
+/** A fight is being started (the hub disables its cards). */
+const leagueBusy = ref(false)
+/** Why the last start failed — a `league.notice.*` key for the hub. */
+const leagueNotice = ref<string | null>(null)
+/** VS card inside the league fight's meteor intro. */
+const leagueVsShow = ref(false)
+let leagueUnmounted = false
+
+/** HUD button / hub / popups allowed right now (CrazyGames guests: never). */
+const leagueMounted = computed(() => LEAGUE_BUILD && league.value !== null && leagueMountAllowed(currentStageId.value))
+/** Champion frame (a Champion season reward) around the HUD button. */
+const leagueChampionFrame = computed(() => LEAGUE_BUILD && league.value?.championFrame.value === true)
+
+const measureLeague = (what: string, action: string) => {
+  if (LEAGUE_BUILD) leagueBridge.value?.['measureLeague'](what, action)
+}
+
+/** The player's side as the league sees it: the board team and the loadout
+ *  this fight would use ([] on a skills-off build / before the glue loads). */
+const leagueSide = (): LeaguePlayerSide => ({
+  team: playerTeamWithUpgrades(),
+  skills: sk.value?.battleSkillOptions('league').skillLoadout ?? []
+})
+
+/** The hub's `loadDeck` (null until the bridge is in). */
+const loadLeagueDeckForHub = () =>
+  leagueBridge.value?.['loadLeagueDeck'](leagueSide()) ?? Promise.resolve(null)
+/** The hub's `fetchTop` (online, non-kids builds; null elsewhere). */
+const fetchLeagueTopForHub = () =>
+  leagueBridge.value?.['fetchLeagueTop']() ?? Promise.resolve(null)
+
+/** The menu (not a battle, not a result screen) — where league surfaces may open. */
+const leagueMenuPhase = (): boolean => phase.value === 'tap_to_start' || phase.value === 'idle'
+
+function openLeagueHub() {
+  if (!LEAGUE_BUILD || !leagueMounted.value || !leagueMenuPhase()) return
+  leagueNotice.value = null
+  leagueHubOpen.value = true
+  measureLeague('hub', 'open')
+}
+
+/** Fight-start refusals the hub names (the rest: the quiet state or a retry). */
+const LEAGUE_NOTICE: Partial<Record<string, string>> = {
+  daily_cap: 'league.notice.dailyCap',
+  no_fights: 'league.notice.noFights'
+}
+
+/** Build the ranked fight's board (also the rebuild when the loadout / the
+ *  skill glue changes on tap_to_start — same seed, same opponent). */
+const initLeagueBoard = () => {
+  const s = leagueSession.value
+  if (!s) return
+  const o = s.initOptions
+  initGame(
+    playerTeamWithUpgrades(),
+    o.enemyTeam.map(c => ({ ...c })),
+    false,
+    o.arenaType,
+    o.bouncers,
+    false,
+    undefined,
+    null,
+    'circle',
+    false,
+    {
+      ...(sk.value?.battleSkillOptions('league', o.enemySkillLoadout) ?? {}),
+      seed: o.seed,
+      firstTurn: o.firstTurn
+    }
+  )
+}
+
+/** Hub → Fight: start the ranked battle (server token first on an online
+ *  build) and put its board up on the ghost path. A refusal stays in the hub
+ *  (the O3 quiet state, or a notice). */
+const onLeagueFight = async (payload: { target: LeagueFightTarget; card: OpponentCard | null }) => {
+  if (!LEAGUE_BUILD || !leagueBridge.value || leagueBusy.value || !leagueMenuPhase()) return
+  leagueBusy.value = true
+  leagueNotice.value = null
+  try {
+    // The loadout and the boss-trait port must be in before the board is
+    // built (a gatekeeper encounter carries boss traits on a bosses100 build).
+    if (SKILLS_BUILD && !skillsLoaded) await skillsReady
+    if (BOSSES100_BUILD && !bossesLoaded) await bossesReady
+    const res = await leagueBridge.value?.['createLeagueBattle']({ ...leagueSide(), target: payload.target, card: payload.card })
+    if (leagueUnmounted || !res) return
+    if (!res.ok) {
+      leagueNotice.value = LEAGUE_NOTICE[res.error]
+        ?? (res.error === 'offline' || res.error === 'unrankable' ? null : 'league.notice.retry')
+      return
+    }
+    leagueHubOpen.value = false
+    leagueResult.value = null
+    dailyChallengeMode.value = false
+    ghostEnemy.value = null
+    ghostMode.value = true
+    coinsAwarded.value = false
+    leagueSession.value = res
+    lastBattleInit = initLeagueBoard
+    initLeagueBoard()
+  } finally {
+    leagueBusy.value = false
+  }
+}
+
+// VS card: both teams inside the league fight's meteor intro (skills builds
+// ship the card; elsewhere it is null and the intro plays as ever).
+const LEAGUE_VS_MS = 1600
+if (LEAGUE_BUILD) {
+  watch(phase, (p) => {
+    leagueVsShow.value = p === 'meteor_intro' && leagueSession.value !== null && PvpVsCard !== null
+  })
+}
+
+// ── Unlock popup + season reward: the reveal gate's rules (G13) ─────────────
+// Only on tap_to_start, never mid-battle, over an ad, the cutscene or any
+// modal, never on a league board, and at least LEAGUE_SURFACE_GAP_MS after
+// the previous skills or league surface closed — so the unlock lands AFTER a
+// skills intro, never on top of it. A short settle after tap_to_start gives
+// a skills surface due on the same edge its turn first.
+const LEAGUE_SURFACE_GAP_MS = 1200
+const LEAGUE_SURFACE_SETTLE_MS = 400
+let leagueSurfaceClosedAt = -Infinity
+let skillsSurfaceClosedAt = -Infinity
+let tapToStartAt = -Infinity
+let leagueSurfacePoll: number | null = null
+
+/** A league surface (or board) is up, or closed too recently: the skills
+ *  reveal gate waits too (part of skillGateBlockers). */
+function leagueSurfaceBlocks(): boolean {
+  return LEAGUE_BUILD && (
+    leagueHubOpen.value || leagueUnlockOpen.value || leagueSeasonOpen.value || leagueSession.value !== null
+    || performance.now() - leagueSurfaceClosedAt < LEAGUE_SURFACE_GAP_MS
+  )
+}
+
+/** A skills surface (intro / reveal / picker) is up. `sk` is `reactive(glue)`,
+ *  so its refs read unwrapped at runtime. */
+const skillsSurfaceOpen = (): boolean => (sk.value?.surfaceOpen as unknown) === true
+
+/** Which league surface is waiting: the first-unlock popup, then a season reward. */
+const leagueSurfacePending = computed<'unlock' | 'season' | null>(() => {
+  const api = league.value
+  if (!LEAGUE_BUILD || !api || !leagueMounted.value) return null
+  const st = api.state.value
+  if (st.unlocked && !st.unlockSeen) return 'unlock'
+  if (api.unclaimedSeason.value) return 'season'
+  return null
+})
+
+const leagueSurfaceGateOpen = (): boolean => {
+  if (phase.value !== 'tap_to_start' || leagueSession.value !== null) return false
+  if (leagueHubOpen.value || leagueUnlockOpen.value || leagueSeasonOpen.value || skillsSurfaceOpen()) return false
+  const b = skillGateBlockers()
+  if (b.pvp || b.adActive || b.cutscene) return false
+  if (showReward.value || showRoulette.value || showRouletteReward.value || showBossDefeated.value
+    || showSkinChestReward.value || showEnemySurrender.value || configModalOpen.value || showOptions.value
+    || leaderboardModalOpen.value || surrenderModalOpen.value || anyModalOverlayOpen()) return false
+  const now = performance.now()
+  return now - tapToStartAt >= LEAGUE_SURFACE_SETTLE_MS
+    && now - Math.max(skillsSurfaceClosedAt, leagueSurfaceClosedAt) >= LEAGUE_SURFACE_GAP_MS
+}
+
+const tryOpenLeagueSurface = () => {
+  const item = leagueSurfacePending.value
+  if (!item || !leagueSurfaceGateOpen()) return
+  if (item === 'unlock' && LeagueUnlockPopupUi) {
+    leagueUnlockOpen.value = true
+    measureLeague('unlock', 'visible')
+  } else if (item === 'season' && LeagueSeasonRewardModalUi) {
+    const reward = leagueBridge.value?.['previewSeasonReward']() ?? null
+    if (!reward) return
+    leagueSeasonReward.value = reward
+    leagueSeasonOpen.value = true
+    measureLeague('season', 'visible')
+  }
+}
+
+/** Popup CTA: the hub. Either way the popup counts as seen (watcher below). */
+const onLeagueUnlockEnter = () => {
+  leagueUnlockOpen.value = false
+  measureLeague('unlock', 'interact')
+  openLeagueHub()
+}
+
+/** Season modal (arena-hosted) → claim: coins / diamonds to the wallet; the
+ *  Champion frame is stored by the claim itself (useLeague). */
+const onLeagueSeasonClaim = () => {
+  const r = league.value?.claimSeasonReward() ?? null
+  leagueSeasonOpen.value = false
+  leagueSeasonReward.value = null
+  if (!r) return
+  if (r.coins > 0) addCoins(r.coins)
+  if (r.diamonds > 0) addDiamonds(r.diamonds)
+  measureLeague('season', 'claim')
+}
+
+/** The hub hosted the claim (and already credited the wallet). */
+const onLeagueSeasonClaimed = () => {
+  measureLeague('season', 'claim')
+}
+
+if (LEAGUE_BUILD) {
+  watch(phase, (p) => {
+    if (p === 'tap_to_start') tapToStartAt = performance.now()
+  })
+  watch(skillsSurfaceOpen, (open, was) => {
+    if (was && !open) skillsSurfaceClosedAt = performance.now()
+  })
+  watch(leagueUnlockOpen, (open, was) => {
+    if (!was || open) return
+    league.value?.markUnlockSeen()
+    leagueSurfaceClosedAt = performance.now()
+  })
+  watch([leagueSeasonOpen, leagueHubOpen], ([season, hub], [wasSeason, wasHub]) => {
+    if ((wasSeason && !season) || (wasHub && !hub)) leagueSurfaceClosedAt = performance.now()
+  })
+  // Light poll while a surface is waiting (most blockers are not one reactive
+  // source — the same approach as the skills reveal gate).
+  watch(leagueSurfacePending, (item) => {
+    if (item && leagueSurfacePoll === null) {
+      leagueSurfacePoll = window.setInterval(tryOpenLeagueSurface, 250)
+    } else if (!item && leagueSurfacePoll !== null) {
+      clearInterval(leagueSurfacePoll)
+      leagueSurfacePoll = null
+    }
+  }, { immediate: true })
+}
+
+/** At mount on a league build: the state (stores the unlock) + the bridge. */
+const loadLeagueAtMount = () => {
+  if (!LEAGUE_BUILD) return
+  void Promise.all([loadLeague(), loadLeagueBridge()])
+    .then(([api, bridge]) => {
+      if (leagueUnmounted) return
+      league.value = api
+      leagueBridge.value = bridge
+    })
+    .catch((e) => {
+      console.error('[league] failed to load:', e)
+    })
+}
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -1924,6 +2256,7 @@ onMounted(() => {
 
   initCampaignGame()
   renderRafId = requestAnimationFrame(renderLoop)
+  loadLeagueAtMount()
   // Boss Lab: `?bosslab` opens it once on a dev build with cheats on (touch
   // devices have no ctrl+shift+9).
   if (BossLabUi && cheatsOn && new URLSearchParams(window.location.search).has('bosslab')) openBossLab()
@@ -2134,6 +2467,8 @@ onUnmounted(() => {
   if (speedBoostIntervalId !== null) clearInterval(speedBoostIntervalId)
   skillsUnmounted = true
   bossesUnmounted = true
+  leagueUnmounted = true
+  if (leagueSurfacePoll !== null) clearInterval(leagueSurfacePoll)
   sk.value?.dispose()
   skillsScope.stop()
   clearTipCycle()
@@ -2311,6 +2646,20 @@ onUnmounted(() => {
           :my-role="pvpRole === 'guest' ? 'guest' : 'host'"
           :announcement="turnAnnouncement"
           @done="pvpVsShow = false"
+        )
+        //- League VS card — player vs the opponent card / gatekeeper, inside
+        //- the league fight's meteor intro (never changes its timing).
+        component(
+          v-if="PvpVsCard && leagueVsShow && leagueSession && phase === 'meteor_intro'"
+          :is="PvpVsCard"
+          :host-team="leagueSession.vs.teams.player"
+          :guest-team="leagueSession.vs.teams.opponent"
+          :host-skills="leagueSession.vs.skills.player"
+          :guest-skills="leagueSession.vs.skills.opponent"
+          my-role="host"
+          :opponent-name="leagueSession.vs.opponentNameKey ? t(leagueSession.vs.opponentNameKey) : leagueSession.vs.opponentName"
+          :duration-ms="LEAGUE_VS_MS"
+          @done="leagueVsShow = false"
         )
 
       //- Boss intro card — stage-101+ encounters, inside the meteor intro.
@@ -2496,6 +2845,13 @@ onUnmounted(() => {
 
         //- Row 2: pvp → leaderboard → team
         div.flex.items-end(class="gap-0 sm:gap-1")
+          //- League HUD button (tier + fights left). Champion frame once a
+          //- Champion season reward granted it.
+          div.rank-frame-slot(
+            v-if="LeagueHudButtonUi && league && leagueMounted && !ghostMode && !pvpMode && !showConfigSpotlight"
+            :class="{ 'rank-frame-slot--champion': leagueChampionFrame }"
+          )
+            component(:is="LeagueHudButtonUi" :league="league" @open="openLeagueHub")
           PvPButton(
             v-if="canShowPvP && !ghostMode && !pvpMode && currentStageId >= 2 && !showConfigSpotlight"
             @click="pvpModalOpen = true"
@@ -2517,7 +2873,7 @@ onUnmounted(() => {
             :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
             @click="leaderboardModalOpen = true"
           )
-          div.relative(v-if="hasFirstWin || currentStageId >= 2")
+          div.relative(v-if="(hasFirstWin || currentStageId >= 2) && !leagueSession")
             FIconButton(
               type="secondary"
               :class="{ 'instant-bounce': showConfigSpotlight }"
@@ -2588,6 +2944,13 @@ onUnmounted(() => {
               v-else
               class="text-xs sm:text-sm opacity-80"
             ) {{ t('challenge.alreadyClaimed') }}
+        //- League fight: the LP panel (it shows the coins it paid) + honour.
+        template(v-else-if="leagueSession")
+          div(ref="rewardCoinRef")
+            component(v-if="LeagueResultPanelUi && leagueResult" :is="LeagueResultPanelUi" :outcome="leagueResult.outcome")
+          div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
+            span.text-purple-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
+            span.text-purple-400.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
         //- Campaign / leaderboard rewards
         template(v-else)
           //- `.reward-meta` and `.reward-meta__stack` are `display: contents`
@@ -2804,6 +3167,36 @@ onUnmounted(() => {
           @click="showEnemySurrender = false"
         ) {{ t('pvp.okay') }}
 
+    //- ── League (LG6) — gate handles, null on a league-off build ──────────
+    //- (`:league` stays the LAST dynamic prop: the compiled dynamic-props
+    //- list keeps its names even when the handle is null, and a "league"
+    //- followed by another name reads as the league audit's measure marker.)
+    component(
+      v-if="LeagueHubUi && league && leagueMounted"
+      :is="LeagueHubUi"
+      v-model="leagueHubOpen"
+      :load-deck="loadLeagueDeckForHub"
+      :fetch-top="fetchLeagueTopForHub"
+      :busy="leagueBusy"
+      :notice="leagueNotice"
+      :league="league"
+      @fight="onLeagueFight"
+      @season-claimed="onLeagueSeasonClaimed"
+    )
+    component(
+      v-if="LeagueUnlockPopupUi && league && leagueUnlockOpen"
+      :is="LeagueUnlockPopupUi"
+      v-model="leagueUnlockOpen"
+      @enter="onLeagueUnlockEnter"
+    )
+    component(
+      v-if="LeagueSeasonRewardModalUi && league && leagueSeasonOpen"
+      :is="LeagueSeasonRewardModalUi"
+      v-model="leagueSeasonOpen"
+      :reward="leagueSeasonReward"
+      @claim="onLeagueSeasonClaim"
+    )
+
     //- ── Skills surfaces (WP7) — opened only through the reveal gate ──────
     //- Intro: first unlock (drum roll → panel → "Pick your skill").
     component(
@@ -2843,6 +3236,21 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="sass">
+// ── Champion frame around the league HUD button (LG6) ───────────────────
+.rank-frame-slot
+  position: relative
+  display: inline-block
+
+.rank-frame-slot--champion::before
+  content: ''
+  position: absolute
+  inset: -4px
+  border-radius: 14px
+  border: 3px solid #ffd54a
+  box-shadow: 0 0 0 2px #0f1a30, inset 0 0 0 2px rgba(255, 245, 190, 0.6)
+  pointer-events: none
+  z-index: 1
+
 // ── First-Config Spotlight ──────────────────────────────────────────────
 .config-spotlight
   position: fixed

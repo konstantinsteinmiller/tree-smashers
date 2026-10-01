@@ -44,8 +44,10 @@ import type { BossTrait, GameResult } from '@/types/spinner'
 import { bossTraitsOf, type BossEncounterId } from '@/data/bossEncounters'
 import { BOSSES100_BUILD } from '@/bosses/bosses100Gate'
 
-/** Which kind of battle just ended. Only `'campaign'` can carry a peek. */
-export type BattleMode = 'campaign' | 'daily' | 'pvp' | 'ghost' | 'cheat'
+/** Which kind of battle just ended. Only `'campaign'` can carry a peek.
+ *  `'league'`: a ranked league fight (LG6) — never a peek, a trophy, a boss
+ *  card or a skills-intro trigger. */
+export type BattleMode = 'campaign' | 'daily' | 'pvp' | 'ghost' | 'cheat' | 'league'
 
 /** Stage lookup — `getStageById` in the game, a synthetic table in tests. */
 export type StageLookup = (id: number) => Stage
@@ -95,11 +97,14 @@ export interface BossPeekInput {
 export const battleModeOf = (flags: {
   pvp?: boolean
   daily?: boolean
+  /** A league fight (it runs on the ghost path, so it wins over `ghost`). */
+  league?: boolean
   ghost?: boolean
   cheat?: boolean
 }): BattleMode => {
   if (flags.pvp) return 'pvp'
   if (flags.daily) return 'daily'
+  if (flags.league) return 'league'
   if (flags.ghost) return 'ghost'
   if (flags.cheat) return 'cheat'
   return 'campaign'
@@ -154,7 +159,7 @@ export const findNextBossStageId = (
  * Should this result screen carry the boss peek, and what does it say?
  *
  * Returns null — no badge — for: any non-campaign mode (daily challenge, PvP,
- * leaderboard ghost, cheat stage), a loss, a boss stage's own win (that path
+ * leaderboard ghost, league fight, cheat stage), a loss, a boss stage's own win (that path
  * shows the roulette anyway), a stage outside the post-boss window, or a
  * schedule with no boss left to tease.
  */

@@ -26,3 +26,13 @@ declare module 'virtual:leaderboard-snapshot' {
   } | null
   export default snapshot
 }
+
+declare module 'virtual:league-pool' {
+  /**
+   * The league's baked opponent pool (vite.config.ts `leaguePoolPlugin`).
+   * `null` until LG1 bakes one, and always `null` on a league-off build.
+   * Typed `unknown`: the reader (LG1) validates it structurally.
+   */
+  const pool: unknown
+  export default pool
+}

@@ -1,0 +1,89 @@
+{
+ "profiles": [
+  {
+   "tops": {
+    "star": 0,
+    "triangle": 0,
+    "round": 0,
+    "quadratic": 0,
+    "cushioned": 0,
+    "piercer": 0
+   },
+   "bottoms": {
+    "speedy": 0,
+    "tanky": 0,
+    "balanced": 0
+   }
+  },
+  {
+   "tops": {
+    "star": 12,
+    "triangle": 3,
+    "round": 7,
+    "quadratic": 0,
+    "cushioned": 9,
+    "piercer": 1
+   },
+   "bottoms": {
+    "speedy": 2,
+    "tanky": 11,
+    "balanced": 5
+   }
+  },
+  {
+   "tops": {
+    "star": 40,
+    "triangle": 41,
+    "round": 38,
+    "quadratic": 44,
+    "cushioned": 39,
+    "piercer": 42
+   },
+   "bottoms": {
+    "speedy": 30,
+    "tanky": 47,
+    "balanced": 33
+   }
+  }
+ ],
+ "abilities": [
+  "ghost",
+  "split",
+  "partners",
+  "healers",
+  "child-emitter",
+  "stat-switch",
+  "life-leech",
+  "thunder",
+  "bogus"
+ ],
+ "stages": [
+  "{\"id\":-1,\"name\":\"cheat_ghost\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"ghost\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_split\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"split\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_partners\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"castle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"turtle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"partners\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_healers\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"mountain\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"round\",\"bottomPartId\":\"balanced\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"gear\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"healers\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_child_emitter\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"dark\",\"isBoss\":true,\"bossAbility\":\"child-emitter\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_stat_switch\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"boulder\",\"isBoss\":true,\"bossAbility\":\"stat-switch\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_life_leech\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"life-leech\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_thunder\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"tanky\",\"topLevel\":0,\"bottomLevel\":0,\"modelId\":\"thunderstorm\",\"isBoss\":true,\"bossAbility\":\"thunder\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_boss\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_ghost\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"ghost\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_split\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"split\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_partners\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"castle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"turtle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"partners\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_healers\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"mountain\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"round\",\"bottomPartId\":\"balanced\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"gear\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"healers\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_child_emitter\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"dark\",\"isBoss\":true,\"bossAbility\":\"child-emitter\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_stat_switch\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"boulder\",\"isBoss\":true,\"bossAbility\":\"stat-switch\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_life_leech\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"life-leech\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_thunder\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"tanky\",\"topLevel\":12,\"bottomLevel\":11,\"modelId\":\"thunderstorm\",\"isBoss\":true,\"bossAbility\":\"thunder\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_boss\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_ghost\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"ghost\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_split\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"split\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_partners\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"castle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"turtle\",\"isBoss\":true,\"bossAbility\":\"partners\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"partners\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_healers\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"mountain\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"round\",\"bottomPartId\":\"balanced\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"piranha\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"cushioned\",\"bottomPartId\":\"balanced\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"gear\",\"isBoss\":true,\"bossAbility\":\"healers\"},{\"topPartId\":\"quadratic\",\"bottomPartId\":\"balanced\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"mysticaleye\",\"isBoss\":true,\"bossAbility\":\"healers\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_child_emitter\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"round\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"dark\",\"isBoss\":true,\"bossAbility\":\"child-emitter\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_stat_switch\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"cushioned\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"boulder\",\"isBoss\":true,\"bossAbility\":\"stat-switch\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_life_leech\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"speedy\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"snake\",\"isBoss\":true,\"bossAbility\":\"life-leech\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_thunder\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[{\"topPartId\":\"triangle\",\"bottomPartId\":\"tanky\",\"topLevel\":44,\"bottomLevel\":47,\"modelId\":\"thunderstorm\",\"isBoss\":true,\"bossAbility\":\"thunder\"}],\"rewardWin\":500,\"rewardLose\":100}",
+  "{\"id\":-1,\"name\":\"cheat_boss\",\"isBoss\":true,\"arenaType\":\"boss\",\"enemyTeam\":[],\"rewardWin\":500,\"rewardLose\":100}"
+ ]
+}

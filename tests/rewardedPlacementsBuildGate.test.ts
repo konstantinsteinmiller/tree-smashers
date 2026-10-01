@@ -185,6 +185,63 @@ describe('skill picker coin top-up', () => {
   })
 })
 
+// ─── League fights top-up (placement league_fights, LG5b) ─────────────────
+// Picked at module scope in the hub (`HAS_REWARDED_ADS ? LeagueFightsTopUp :
+// null`): a no-ad build neither renders nor bundles it. Visible only with a
+// loaded ad, outside the shared cooldown, while the league still offers one.
+
+const leagueSource = (canAdTopUp = true) => ({
+  canAdTopUp: ref(canAdTopUp),
+  grantAdFights: vi.fn(() => true)
+})
+
+const mountLeagueTopUp = async (canAdTopUp = true) => {
+  await loadAds()
+  const LeagueFightsTopUp = (await import('@/league/ui/LeagueFightsTopUp.vue')).default
+  const league = leagueSource(canAdTopUp)
+  return { w: mount(LeagueFightsTopUp, { props: { league }, global: { plugins: [i18n()] } }), league }
+}
+
+describe('league fights top-up', () => {
+  it.each(NO_AD_BUILDS)('no-ad build %s: no top-up', async (_, env) => {
+    setBuild(env)
+    const { w } = await mountLeagueTopUp()
+    expect(w.find('button.league-topup').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it.each(AD_BUILDS)('ad build %s: top-up renders; a watched ad grants fights and arms the shared cooldown', async (_, env) => {
+    setBuild(env)
+    const { w, league } = await mountLeagueTopUp()
+    const btn = w.find('button.league-topup')
+    expect(btn.exists()).toBe(true)
+    expect(btn.attributes('data-placement')).toBe('league_fights')
+    await btn.trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+    expect(providerShow).toHaveBeenCalledTimes(1)
+    expect(league.grantAdFights).toHaveBeenCalledTimes(1)
+    expect(Number(localStorage.getItem('spinner_ad_button_ready_at'))).toBeGreaterThan(Date.now())
+    w.unmount()
+  })
+
+  it('ad build: hidden once the daily top-ups are used, and while the shared cooldown runs', async () => {
+    setBuild(AD_BUILDS[0]![1])
+    const spent = await mountLeagueTopUp(false)
+    expect(spent.w.find('button.league-topup').exists()).toBe(false)
+    spent.w.unmount()
+    localStorage.setItem('spinner_ad_button_ready_at', String(Date.now() + 20_000))
+    const cooling = await mountLeagueTopUp(true)
+    await new Promise(r => setTimeout(r, 0))
+    expect(cooling.w.find('button.league-topup').exists()).toBe(false)
+    cooling.w.unmount()
+  })
+
+  it('the hub picks the top-up at module scope, never in a template v-if', () => {
+    const src = readFileSync(resolve(__dirname, '../src/league/ui/LeagueHub.vue'), 'utf8')
+    expect(src).toMatch(/const TopUpButton = HAS_REWARDED_ADS \? LeagueFightsTopUp : null/)
+  })
+})
+
 describe('no placement bypasses useAds', () => {
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
@@ -192,9 +249,9 @@ describe('no placement bypasses useAds', () => {
       return statSync(p).isDirectory() ? walk(p) : /\.(vue|ts)$/.test(f) ? [p] : []
     })
 
-  it('components and views get rewarded ads only from @/use/useAds', () => {
+  it('components, views and the league UI get rewarded ads only from @/use/useAds', () => {
     const root = resolve(__dirname, '../src')
-    const files = [...walk(join(root, 'components')), ...walk(join(root, 'views'))]
+    const files = [...walk(join(root, 'components')), ...walk(join(root, 'views')), ...walk(join(root, 'league'))]
     const offenders = files.flatMap((f) => {
       const src = readFileSync(f, 'utf8')
       return [...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*'([^']+)'/g)]

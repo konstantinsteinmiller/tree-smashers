@@ -77,3 +77,7 @@ perf/last-trace-summary.json
 
 # Generated gameplay clips — build artifacts, tens of MB each (tools/preview-video)
 /preview-videos/
+
+# Cloudflare Worker local secrets (wrangler dev: LEAGUE_SECRET, SCORE_SECRET)
+worker/.dev.vars
+worker/.dev.vars.*

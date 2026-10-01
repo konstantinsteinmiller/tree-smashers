@@ -16,6 +16,12 @@
 // + ownedSpecialSkins  × 1500
 // + Σ skill levels     × 150   (learning = one level, like a part level)
 //
+// NOT weighed, deliberately: the league (`spinner_league`, league builds).
+// League LP is server-authoritative on online builds and re-synced by
+// /league/me after any hydrate, and a save must never win (or lose) a merge
+// because of a ranked streak — it rides along with whichever blob wins.
+// (tests/save/leagueMergeWeight.test.ts)
+//
 // Conflict policy:
 //   - higher score wins
 //   - tie on score → newer savedAt wins
