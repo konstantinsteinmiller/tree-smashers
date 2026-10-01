@@ -22,3 +22,6 @@ database_id = "fa4850bf-c91c-4ca7-b0ca-3a5a168a8759"
 # origin and a sandboxed iframe sends `null`, so an allowlist is opt-in.
 ALLOWED_ORIGINS = ""
 # SCORE_SECRET is deliberately NOT here — `wrangler secret put SCORE_SECRET`.
+# LEAGUE_SECRET neither — `wrangler secret put LEAGUE_SECRET` (any long random
+# string; server-only, it signs league battle tokens and never ships in a
+# client). Without it /league/start and /league/result answer 503.

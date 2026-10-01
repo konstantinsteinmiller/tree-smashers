@@ -1,11 +1,15 @@
 /**
  * ─── Chaos Arena leaderboard ───────────────────────────────────────────────────
  *
- * A Cloudflare Worker over one D1 table. Two routes:
+ * A Cloudflare Worker over one D1 database. Two leaderboard routes here, plus
+ * the league routes under /league/* (see league.ts):
  *
  *   GET  /top    → the materialised top-100 PLUS the score histogram for the
  *                  whole population, edge-cached for `EDGE_TTL`
- *   POST /score  → upsert one player's best, and return their rank + the board
+ *   POST /score  → upsert one player's best, and return their rank + the board.
+ *                  May carry the player's BUILD (team + skins + skills, see
+ *                  `src/utils/playerBuild.ts`), stored beside the row so it can
+ *                  later be fought as a league ghost.
  *
  * The histogram is what lets the client rank a player EXACTLY without asking:
  * the published rows stop at 100, so on a board of thousands almost everyone is
@@ -35,12 +39,17 @@
  */
 
 import { sanitizeDisplayName } from '../../src/utils/nameDenylist'
+import {
+  BUILD_REFRESH_MS,
+  buildDigest,
+  buildPower,
+  validatePlayerBuildShape,
+  type PlayerBuildV1
+} from '../../src/utils/playerBuild'
+import { cleanName, corsHeaders, hmac, json, safeEqual, validId, withCors, type Env } from './http'
+import { handleLeague } from './league'
 
-export interface Env {
-  DB: D1Database
-  ALLOWED_ORIGINS?: string
-  SCORE_SECRET?: string
-}
+export type { Env }
 
 interface BoardEntry {
   rank: number;
@@ -108,86 +117,21 @@ const MAX_SCORE = 10_000
  *  and costs nothing, because this column is never ordered by. */
 const MAX_POWER = 100_000
 
+/** Parse + structurally validate a stored build column; null on anything odd. */
+const storedBuild = (raw: unknown): PlayerBuildV1 | null => {
+  if (typeof raw !== 'string' || raw.length === 0) return null
+  try {
+    return validatePlayerBuildShape(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
 const plausible = (score: number, power: number): boolean =>
   Number.isInteger(score) && Number.isInteger(power) &&
   score >= 0 && score <= MAX_SCORE &&
   power >= 0 && power <= MAX_POWER
 
-/** `[a-zA-Z0-9_-]`, 8–64 — the same shape the client mints. */
-const validId = (id: unknown): id is string =>
-  typeof id === 'string' && /^[a-zA-Z0-9_-]{8,64}$/.test(id)
-
-/**
- * Strip the characters that let a name break a table or impersonate a rank:
- * C0/C1 controls, zero-width joiners and spaces, bidi overrides, and the BOM —
- * then swap a denylisted name for its deterministic generated stand-in (the
- * same one the client and the snapshot baker compute, so the player's own row
- * is still recognised as theirs).
- */
-const cleanName = (raw: unknown): string => {
-  if (typeof raw !== 'string') return 'Anon'
-  const out = raw
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001F\u007F\u200B-\u200F\u202A-\u202E\uFEFF]/g, '')
-    .trim()
-    .slice(0, 16)
-  return out.length > 0 ? sanitizeDisplayName(out) : 'Anon'
-}
-
-const corsHeaders = (env: Env, origin: string | null): Record<string, string> => {
-  const allowed = (env.ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-  // An empty allowlist means "any": every portal build has its own origin and a
-  // sandboxed iframe sends `null`, so locking this down is opt-in per deploy.
-  const ok = allowed.length === 0 || (origin !== null && allowed.includes(origin))
-  return {
-    'access-control-allow-origin': ok ? (origin ?? '*') : 'null',
-    'access-control-allow-methods': 'GET,POST,OPTIONS',
-    'access-control-allow-headers': 'content-type',
-    'access-control-max-age': '86400'
-  }
-}
-
-const json = (body: unknown, status = 200, extra: Record<string, string> = {}): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...extra }
-  })
-
-/**
- * Re-clothe a cached response with this request's CORS headers.
- *
- * The cached copy carries whatever origin was allowed when it was stored, and
- * every portal build serves the game from a different one — so the headers have
- * to be rewritten per request or the second portal to ask gets a body it is not
- * allowed to read.
- */
-const withCors = (
-  res: Response, cors: Record<string, string>, extra: Record<string, string> = {}
-): Response => {
-  const out = new Response(res.body, res)
-  for (const [k, v] of Object.entries({ ...cors, ...extra })) out.headers.set(k, v)
-  return out
-}
-
-const hmac = async (secret: string, message: string): Promise<string> => {
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  )
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-/** Constant-time compare, so a signature cannot be probed a byte at a time. */
-const safeEqual = (a: string, b: string): boolean => {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return diff === 0
-}
 
 const readBoard = async (env: Env): Promise<Board> => {
   const row = await env.DB
@@ -436,47 +380,114 @@ export default {
         if (!validId(id)) return json({ error: 'bad id' }, 400, cors)
         if (!plausible(score, power)) return json({ error: 'implausible' }, 422, cors)
 
+        // The build is OPTIONAL and never costs the player their score: a
+        // missing or malformed one is simply not stored. Validation is
+        // structural only (shape, id charset, level bounds) — the client that
+        // fights the ghost re-sanitises it against its own catalogue.
+        let build: PlayerBuildV1 | null =
+          body.build === undefined || body.build === null ? null : validatePlayerBuildShape(body.build)
+        const digest = build ? buildDigest(build) : null
+
         if (env.SCORE_SECRET) {
-          const expected = await hmac(env.SCORE_SECRET, `${id}:${score}:${power}`)
-          if (typeof body.sig !== 'string' || !safeEqual(body.sig, expected)) {
+          // v1 `id:score:power` (every client before builds) or v2
+          // `id:score:power:digest` (the build is signed in). A v1 signature on
+          // a post that also carries a build keeps the SCORE — it was signed —
+          // but drops the unsigned build.
+          const sig = typeof body.sig === 'string' ? body.sig : ''
+          const v1 = await hmac(env.SCORE_SECRET, `${id}:${score}:${power}`)
+          const v2 = digest !== null ? await hmac(env.SCORE_SECRET, `${id}:${score}:${power}:${digest}`) : null
+          if (v2 !== null && safeEqual(sig, v2)) {
+            // signed build — keep it
+          } else if (safeEqual(sig, v1)) {
+            build = null
+          } else {
             return json({ error: 'bad signature' }, 401, cors)
           }
         }
+        const buildJson = build ? JSON.stringify(build) : null
+        const lpower = build ? buildPower(build) : null
 
         const now = Date.now()
         const existing = await env.DB
-          .prepare('SELECT name, score, updated_at FROM scores WHERE id = ?')
+          .prepare('SELECT name, score, updated_at, build, build_at FROM scores WHERE id = ?')
           .bind(id)
-          .first<{ name: string; score: number; updated_at: number }>()
+          .first<{ name: string; score: number; updated_at: number; build: string | null; build_at: number | null }>()
 
         if (existing && now - existing.updated_at < WRITE_COOLDOWN_MS) {
           return json({ error: 'too fast' }, 429, cors)
         }
 
-        // Three outcomes, deliberately not one `ON CONFLICT`: a new player, a new
-        // record, and "same score, different name" are different writes, and the
-        // third must not touch the score or its timestamp (which would jump the
-        // player ahead of everyone they were tied with).
+        // Four outcomes, deliberately not one `ON CONFLICT`: a new player, a new
+        // record, "same score, different name", and "same score and name,
+        // different build" are different writes. The last two must not touch
+        // the score or its timestamp (which would jump the player ahead of
+        // everyone they were tied with) — the refresh touches NOTHING but the
+        // build columns (league plan F6).
+        //
+        // A post without a (valid) build never clears a stored one: an old
+        // client posting a record leaves the last known team in place.
         let best = existing?.score ?? 0
         let changed = false
+        let buildOutcome: 'stored' | 'unchanged' | 'throttled' | 'none' = build ? 'unchanged' : 'none'
         if (!existing) {
           await env.DB
-            .prepare('INSERT INTO scores (id, name, score, power, updated_at) VALUES (?, ?, ?, ?, ?)')
-            .bind(id, name, score, power, now)
+            .prepare(
+              'INSERT INTO scores (id, name, score, power, updated_at, build, build_at, lpower) ' +
+              'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            )
+            .bind(id, name, score, power, now, buildJson, build ? now : null, lpower)
             .run()
           best = score
           changed = true
+          if (build) buildOutcome = 'stored'
         } else if (score > existing.score) {
-          await env.DB
-            .prepare('UPDATE scores SET name = ?, score = ?, power = ?, updated_at = ? WHERE id = ?')
-            .bind(name, score, power, now, id)
-            .run()
+          if (build) {
+            await env.DB
+              .prepare(
+                'UPDATE scores SET name = ?, score = ?, power = ?, updated_at = ?, ' +
+                'build = ?, build_at = ?, lpower = ? WHERE id = ?'
+              )
+              .bind(name, score, power, now, buildJson, now, lpower, id)
+              .run()
+            buildOutcome = 'stored'
+          } else {
+            await env.DB
+              .prepare('UPDATE scores SET name = ?, score = ?, power = ?, updated_at = ? WHERE id = ?')
+              .bind(name, score, power, now, id)
+              .run()
+          }
           best = score
           changed = true
         } else if (existing.name !== name) {
-          await env.DB.prepare('UPDATE scores SET name = ? WHERE id = ?').bind(name, id).run()
+          if (build) {
+            await env.DB
+              .prepare('UPDATE scores SET name = ?, build = ?, build_at = ?, lpower = ? WHERE id = ?')
+              .bind(name, buildJson, now, lpower, id)
+              .run()
+            buildOutcome = 'stored'
+          } else {
+            await env.DB.prepare('UPDATE scores SET name = ? WHERE id = ?').bind(name, id).run()
+          }
           changed = true
+        } else if (build && digest !== null) {
+          // REFRESH: same score (or a lagging device's lower one), same name.
+          // Only when the team actually changed and the stored one is at least
+          // BUILD_REFRESH_MS old — and only ever the build columns.
+          const prev = storedBuild(existing.build)
+          const prevAt = Number(existing.build_at) || 0
+          if (prev !== null && buildDigest(prev) === digest) {
+            buildOutcome = 'unchanged'
+          } else if (prev !== null && prevAt > 0 && now - prevAt < BUILD_REFRESH_MS) {
+            buildOutcome = 'throttled'
+          } else {
+            await env.DB
+              .prepare('UPDATE scores SET build = ?, build_at = ?, lpower = ? WHERE id = ?')
+              .bind(buildJson, now, lpower, id)
+              .run()
+            buildOutcome = 'stored'
+          }
         }
+
 
         // NEITHER rebuilds the board NOR busts the edge cache any more.
         //
@@ -491,7 +502,7 @@ export default {
         // are shown their own new best from their own save either way.
         const board = await withDist(env, await readBoard(env))
         return json(
-          { rank: rankOf(board.dist, best), best, total: board.total, board },
+          { rank: rankOf(board.dist, best), best, total: board.total, build: buildOutcome, board },
           200,
           cors
         )
@@ -504,6 +515,9 @@ export default {
       }
     }
 
+
+    // ── /league/* — the simulated-PvP league (league.ts) ──
+    if (url.pathname.startsWith('/league/')) return handleLeague(request, env, url, cors)
 
     return json({ error: 'not found' }, 404, cors)
   }

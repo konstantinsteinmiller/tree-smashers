@@ -163,6 +163,103 @@ Select-String -Path dist\index.html -Pattern "workers.dev"
 
 ---
 
+## Upgrading: player builds (migration 0002)
+
+`POST /score` can now carry the player's BUILD — both spinners' parts, levels
+and skins plus the equipped skills — stored on their row for the league
+(`build`, `build_at`, `lpower`). An existing database needs the new columns
+BEFORE the Worker that writes them goes live. Order matters:
+
+1. **Migrate** (from `worker/`; answer `y`):
+
+   ```powershell
+   cd worker
+   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0002_player_build.sql
+   ```
+
+   Four statements run (three `ALTER TABLE`, one `CREATE INDEX`). Running it a
+   second time fails with `duplicate column name: build` — that just means it
+   is already applied.
+
+2. **Deploy the Worker**: `npm run deploy`. It still accepts every old client
+   (no build, v1 signature) unchanged.
+
+3. **Ship the clients** (the normal `build:*` flow). New clients post their
+   build with every record / rename, plus at most one build-only refresh per
+   6 h when the team changed. A refresh only ever updates the build columns —
+   never the score or its timestamp, so it cannot move anyone on the board.
+
+Shipping clients before step 2 is harmless too (the old Worker ignores the
+extra field), but never deploy the Worker before step 1: its first INSERT would
+fail on the missing columns and every post would answer 503.
+
+Check it took:
+
+```powershell
+npx wrangler d1 execute leaderboard-chaos-arena --remote `
+  --command "SELECT COUNT(*) AS with_build FROM scores WHERE build IS NOT NULL"
+```
+
+A fresh database (`npm run db:init`) gets the columns from `schema.sql`
+directly and must NOT run the migration. On an existing database run the
+migration before ever re-running `db:init`: `schema.sql`'s new index names the
+`build` column and fails on a table that does not have it yet.
+
+With `SCORE_SECRET` set, a build-carrying post is signed
+`id:score:power:digest` (v2); the old `id:score:power` (v1) is still accepted,
+and a v1-signed post that carries a build keeps its score but drops the
+unsigned build.
+
+## Upgrading: the league (migration 0003)
+
+The Worker also serves the simulated-PvP league under `/league/*`
+(`worker/src/league.ts`): opponent pools, the player's standing, the league
+top, and the battle start / result pair. It needs two new tables and one new
+secret. Order matters — run everything from `worker/`:
+
+1. **Migration 0002 first** (the section above), if it has not been applied:
+   league opponents are read from the `build` columns it adds.
+
+2. **Migrate 0003** (answer `y`):
+
+   ```powershell
+   cd worker
+   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0003_league.sql
+   ```
+
+   Only `CREATE ... IF NOT EXISTS` (tables `league`, `league_cache` and one
+   index), so running it twice is harmless. It never touches `scores`.
+
+3. **Set the league secret** (paste any long random string when asked):
+
+   ```powershell
+   npx wrangler secret put LEAGUE_SECRET
+   ```
+
+   Server-only: it signs battle tokens and is never put in the game's `.env`.
+   Rotating it only invalidates battles in flight (they then count as
+   losses once they expire).
+
+4. **Deploy**: `npm run deploy`. The leaderboard routes are unchanged.
+
+Check it took:
+
+```powershell
+$w = "https://leaderboard-chaos-arena.<your-subdomain>.workers.dev"
+Invoke-RestMethod "$w/league/top"          # { season, total: 0, entries: [], dist: [] }
+Invoke-RestMethod "$w/league/pool?band=4"  # opponents with a posted build, power ~24-59
+```
+
+A `503 {"error":"league offline"}` from `POST /league/start` means the secret
+is missing. A fresh database (`npm run db:init`) gets the league tables from
+`schema.sql` and needs neither migration.
+
+Free-tier cost: a ranked fight is one read + one write on `/league/start` and
+one read + one write on `/league/result`. Pools (per power band, 10 min), the
+league top (5 min) and its histogram (hourly) are materialised in
+`league_cache` and edge-cached for 60 s, with a day-long emergency copy served
+when D1 refuses.
+
 ## Running it locally (optional)
 
 Useful when changing the Worker itself — no deploys, no remote data:
@@ -172,6 +269,9 @@ cd worker
 npm run db:init:local     # tables in the local emulator
 npm run dev               # http://localhost:8787
 ```
+
+For the league routes locally, put `LEAGUE_SECRET=<anything>` in
+`worker/.dev.vars` (gitignored — never commit it).
 
 Then set `VITE_LEADERBOARD_URL=http://localhost:8787` in the game's `.env` while
 you work. The edge cache is a no-op locally, so every `/top` hits the database —
