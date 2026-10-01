@@ -6,54 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import worker from '../../worker/src/index'
 import { safeNameFor } from '@/utils/nameDenylist'
-
-interface Row {
-  id: string;
-  name: string;
-  score: number;
-  power: number;
-  updated_at: number
-}
-
-/** Just enough of D1 for the /score path: the `scores` table and `board_cache`. */
-const fakeDb = (seed: Row[] = []) => {
-  const scores = new Map(seed.map((r) => [r.id, { ...r }]))
-  const writes: { sql: string; args: unknown[] }[] = []
-  const prepare = (sql: string) => {
-    let args: unknown[] = []
-    const stmt = {
-      bind: (...a: unknown[]) => {
-        args = a
-        return stmt
-      },
-      first: async () => {
-        if (sql.includes('FROM scores WHERE id')) return scores.get(args[0] as string) ?? null
-        return null // board_cache: always cold, forcing a rebuild
-      },
-      all: async () => ({
-        results: [...scores.values()]
-          .sort((a, b) => b.score - a.score || a.updated_at - b.updated_at)
-          .map(({ name, score, power }) => ({ name, score, power }))
-      }),
-      run: async () => {
-        writes.push({ sql, args })
-        if (sql.startsWith('INSERT INTO scores')) {
-          const [id, name, score, power, updated_at] = args as [string, string, number, number, number]
-          scores.set(id, { id, name, score, power, updated_at })
-        } else if (sql.startsWith('UPDATE scores SET name = ?, score')) {
-          const [name, score, power, updated_at, id] = args as [string, number, number, number, string]
-          scores.set(id, { ...scores.get(id)!, name, score, power, updated_at })
-        } else if (sql.startsWith('UPDATE scores SET name = ? WHERE')) {
-          const [name, id] = args as [string, string]
-          scores.set(id, { ...scores.get(id)!, name })
-        }
-        return {}
-      }
-    }
-    return stmt
-  }
-  return { db: { prepare } as unknown as D1Database, scores, writes }
-}
+import { fakeD1 as fakeDb } from './fakeD1'
 
 const post = (body: Record<string, unknown>) =>
   new Request('https://lb.test/score', { method: 'POST', body: JSON.stringify(body) })

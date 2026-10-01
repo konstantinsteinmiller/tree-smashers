@@ -1,9 +1,18 @@
 import { computed, ref, shallowRef, type ComputedRef, type Ref } from 'vue'
 import { getState, setState } from '@/use/persistedState'
-import { POSTED_NAME_KEY, SUBMITTED_STAGE_KEY } from '@/keys'
+import { POSTED_BUILD_KEY, POSTED_NAME_KEY, SUBMITTED_STAGE_KEY } from '@/keys'
 import { resolveIdentity, type PlayerIdentity } from '@/use/usePlayerIdentity'
 import { boardSnapshot, rankFromDist } from '@/use/leaderboardSnapshot'
 import { sanitizeDisplayName } from '@/utils/nameDenylist'
+import {
+  BUILD_REFRESH_MS,
+  buildDigest,
+  encodePlayerBuild,
+  validatePlayerBuildShape,
+  type BuildSkillInput,
+  type BuildSpinnerInput,
+  type PlayerBuildV1
+} from '@/utils/playerBuild'
 
 /**
  * ─── The global board, client side ──────────────────────────────────────────
@@ -56,6 +65,11 @@ const SECRET: string = import.meta.env.VITE_LEADERBOARD_SECRET ?? ''
  * run to `''`.
  */
 const LIVE: boolean = ENDPOINT.length > 0
+
+/** The Worker base URL ('' when this build has no live board). The league
+ *  client (src/league/leagueApi.ts) talks to the same Worker, so it reads the
+ *  endpoint from here rather than re-deriving it. */
+export const leaderboardEndpoint: string = ENDPOINT
 
 /**
  * Does this build have a board at all — live or baked?
@@ -439,14 +453,77 @@ export const ensureBoard = async (): Promise<void> => {
 
 // ─── Writes ─────────────────────────────────────────────────────────────────
 
+// ─── The player's build (league plan: "extend POST /score") ─────────────────
+//
+// Every build-carrying post also stores the player's team — both spinners'
+// parts, levels and skins, plus the equipped skills — on their row, so the row
+// can later be fought as a league ghost. NOT league-gated (O1): every live
+// build posts it, whether or not the league ships in it.
+//
+// Injected, not imported, for the same reason as the auth gate: the team lives
+// in the arena's setup scope (skill loadout included, which only exists on a
+// skills build), and importing that here would drag the arena's module graph
+// into every consumer of this file. No source installed -> no build is sent,
+// and the Worker keeps accepting build-less posts from older clients.
+
+/** What the arena hands over: raw configs + loadout; encoding happens here. */
+export type PlayerBuildSource = () => {
+  team: readonly BuildSpinnerInput[]
+  skills: readonly BuildSkillInput[]
+} | null
+
+let buildSource: PlayerBuildSource | null = null
+
+/** Install (or clear with `null`) the getter for the player's current build. */
+export const setPlayerBuildSource = (source: PlayerBuildSource | null): void => {
+  buildSource = source
+}
+
+/** The current build, or `null` — a throwing or odd source is "no build". */
+const currentBuild = (): PlayerBuildV1 | null => {
+  try {
+    const raw = buildSource?.()
+    return raw ? encodePlayerBuild(raw.team, raw.skills) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The whole POST body, build included, must stay under this many bytes.
+ *
+ * A worst-case build (maximum-length ids everywhere, two skills) is ~350 B and
+ * the rest of the body ~250 B with a signature; a name full of 4-byte
+ * characters can push past it, and then the build is dropped for that post
+ * rather than the post growing — the score is what matters.
+ */
+export const MAX_SCORE_PAYLOAD_BYTES = 600
+
+const byteLength = (text: string): number => new TextEncoder().encode(text).length
+
+/**
+ * Did the last successful `submitScore` get its build STORED (or confirmed
+ * already stored) by the server? False when no build was sent, when the Worker
+ * throttled it (another device stored one inside the 6 h window) and when an
+ * older Worker that knows nothing of builds answered — in all three the build
+ * is not remembered as posted, so a later refresh window tries again.
+ */
+let lastPostStoredBuild = false
+
 /**
  * Post one score and adopt whatever the server says about it.
  *
  * Returns whether the row is now on the server — the caller only records the
  * score as posted after a `true`, so a failed write is retried on the next run
  * instead of being silently forgotten.
+ *
+ * `build` rides along when given and valid. Signature v2 signs it in
+ * (`id:score:power:digest`); without a build the v1 message is unchanged.
  */
-export const submitScore = async (score: number, power: number): Promise<boolean> => {
+export const submitScore = async (
+  score: number, power: number, build?: PlayerBuildV1 | null
+): Promise<boolean> => {
+  lastPostStoredBuild = false
   if (!LIVE) return false
   // Belt and braces. `reportRun` already refuses on behalf of a guest, but this
   // is the function that actually writes a name to a public board, and the
@@ -456,23 +533,42 @@ export const submitScore = async (score: number, power: number): Promise<boolean
   pending.value = true
   try {
     const { id, name } = await identity()
-    const body: Record<string, unknown> = { id, name, score, power }
-    // Only when this build was given a secret. An unsigned request against a
-    // worker with `SCORE_SECRET` set is a 401; a signed one against a worker
-    // without it is simply ignored — so the two sides can be rolled out in
-    // either order.
-    if (SECRET.length > 0) body.sig = await sign(`${id}:${score}:${power}`)
+    const valid = build ? validatePlayerBuildShape(build) : null
+
+    const makeBody = async (withBuild: PlayerBuildV1 | null): Promise<Record<string, unknown>> => {
+      const body: Record<string, unknown> = { id, name, score, power }
+      if (withBuild) body.build = withBuild
+      // Only when this build was given a secret. An unsigned request against a
+      // worker with `SCORE_SECRET` set is a 401; a signed one against a worker
+      // without it is simply ignored — so the two sides can be rolled out in
+      // either order.
+      if (SECRET.length > 0) {
+        body.sig = await sign(withBuild
+          ? `${id}:${score}:${power}:${buildDigest(withBuild)}`
+          : `${id}:${score}:${power}`)
+      }
+      return body
+    }
+
+    let body = await makeBody(valid)
+    let text = JSON.stringify(body)
+    if (valid && byteLength(text) > MAX_SCORE_PAYLOAD_BYTES) {
+      body = await makeBody(null)
+      text = JSON.stringify(body)
+    }
 
     const res = await withTimeout(`${ENDPOINT}/score`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body)
+      body: text
     })
     if (!res.ok) {
       failed.value = true
       return false
     }
-    const data = await res.json() as { rank?: number; best?: number; total?: number; board?: unknown }
+    const data = await res.json() as {
+      rank?: number; best?: number; total?: number; board?: unknown; build?: unknown
+    }
     serverRank.value = Number(data.rank) || 0
     // The server's `best`, not what we sent: a re-post that only relabelled the
     // row comes back with the row's existing score, and pinning the rank to the
@@ -488,6 +584,7 @@ export const submitScore = async (score: number, power: number): Promise<boolean
       if (board.value) writeBoardCache(board.value)
     }
     failed.value = false
+    lastPostStoredBuild = 'build' in body && (data.build === 'stored' || data.build === 'unchanged')
     return true
   } catch {
     failed.value = true
@@ -514,6 +611,24 @@ const WRITE_MIN_GAP_MS = 180_000
  *  refusing must not be asked again on the next clear. */
 let lastWriteAt = 0
 
+// BUILD REFRESH, the third write reason after "new record" and "renamed":
+// same score, same name, but the team changed (an upgrade, a new skin, a new
+// skill). At most once per `BUILD_REFRESH_MS` (6 h, shared with the Worker,
+// which applies the same clock and only ever touches the build columns — never
+// the score or its timestamp, so a refresh cannot move anyone on the board).
+
+/** When this session last ATTEMPTED a build-only refresh — success or not, so
+ *  a refusing backend is not asked again every three minutes for decoration. */
+let lastBuildRefreshAt = 0
+
+/** The build the server last accepted, off the save (remote input). */
+const readPostedBuild = (): { d: string; at: number } | null => {
+  const raw = getState<unknown>(POSTED_BUILD_KEY, null)
+  if (!raw || typeof raw !== 'object') return null
+  const { d, at } = raw as { d?: unknown; at?: unknown }
+  return typeof d === 'string' && Number.isFinite(Number(at)) ? { d, at: Number(at) } : null
+}
+
 /**
  * THE ENTRY POINT. Called once per finished run, with `void`, never awaited.
  *
@@ -526,7 +641,9 @@ let lastWriteAt = 0
  *   • RENAMED SINCE THE LAST POST → one POST of the SAME score, purely to
  *     relabel the row. The worker special-cases this and touches only the name,
  *     so the player does not jump ahead of everyone they were tied with.
- *   • NEITHER → no write at all, and at most one read for the whole session
+ *   • SAME SCORE + NAME, TEAM CHANGED → one build-only refresh, at most once
+ *     per `BUILD_REFRESH_MS`. The worker updates the build columns only.
+ *   • NONE OF THE ABOVE → no write at all, and at most one read for the whole session
  *     (`ensureBoard` no-ops once the board is in hand).
  *
  * A player grinding the same score for an hour therefore costs one GET,
@@ -561,15 +678,41 @@ export const reportRun = async (
     const due = o.force === true || lastWriteAt === 0 ||
       Date.now() - lastWriteAt >= WRITE_MIN_GAP_MS
 
+    const build = currentBuild()
+    const digest = build ? buildDigest(build) : null
+    // Remember the build only when the server actually stored it.
+    const markBuild = (): void => {
+      if (digest !== null && lastPostStoredBuild) {
+        setState(POSTED_BUILD_KEY, { d: digest, at: Date.now() })
+      }
+    }
+
     if (score > posted && due) {
       lastWriteAt = Date.now()
-      if (await submitScore(score, power)) {
+      if (await submitScore(score, power, build)) {
         setState(SUBMITTED_STAGE_KEY, score)
         setState(POSTED_NAME_KEY, name)
+        markBuild()
       }
     } else if (posted > 0 && due && getState<string>(POSTED_NAME_KEY, '') !== name) {
       lastWriteAt = Date.now()
-      if (await submitScore(posted, power)) setState(POSTED_NAME_KEY, name)
+      if (await submitScore(posted, power, build)) {
+        setState(POSTED_NAME_KEY, name)
+        markBuild()
+      }
+    } else if (posted > 0 && due && digest !== null) {
+      // BUILD REFRESH — same score, same name, a team that changed since the
+      // server last stored it, and that store at least BUILD_REFRESH_MS old.
+      // Also how a row posted before builds existed gets its first one.
+      const prev = readPostedBuild()
+      const now = Date.now()
+      const stale = prev === null || now - prev.at >= BUILD_REFRESH_MS
+      const sessionIdle = lastBuildRefreshAt === 0 || now - lastBuildRefreshAt >= BUILD_REFRESH_MS
+      if (prev?.d !== digest && stale && sessionIdle) {
+        lastWriteAt = now
+        lastBuildRefreshAt = now
+        if (await submitScore(posted, power, build)) markBuild()
+      }
     }
 
     // HOWEVER the run was reported, end with a board to rank against.
