@@ -64,6 +64,14 @@ export const createRng = (seed: number): (() => number) => {
 }
 
 /**
+ * Salt for a seeded battle's AUX gameplay stream: `createRng(seed ^ salt)`.
+ * `useSpinnerGame` draws NPC spawn jitter, bouncer placement, NPC AI picks and
+ * split-child jitter from it when `initGame` got a seed (league battles), so
+ * those rolls replay from the seed without shifting `matchRng()`'s draw order.
+ */
+export const GAMEPLAY_RNG_SALT = 0x5eed1ea9
+
+/**
  * Stateless hash of two integers to [0, 1).
  *
  * The cutscene's particles are pure functions of (event, particle index, age),

@@ -93,11 +93,15 @@ const until = (cond: () => boolean, max = 60 * 30) => {
 }
 
 /** Physics running, phase 'tap_to_start' (no turn logic). */
+/** `seed: null` = an unseeded (campaign) match: the NPC AI rolls on
+ *  Math.random, which a test can script. Seeded matches roll on the seed's
+ *  aux stream (league determinism, LG-DET). */
 const sandbox = (
-  p: SpinnerConfig[], n: SpinnerConfig[], arena: ArenaType = 'boss', mine?: SkillLoadout
+  p: SpinnerConfig[], n: SpinnerConfig[], arena: ArenaType = 'boss', mine?: SkillLoadout, seed: number | null = 99
 ): Engine => {
   const e = useSpinnerGame()
-  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle', false, { seed: 99, skillLoadout: mine })
+  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle', false,
+    seed === null ? { skillLoadout: mine } : { seed, skillLoadout: mine })
   e.startPhysics()
   return e
 }
@@ -255,7 +259,8 @@ describe('Frost Lock (Glacier Warden)', () => {
    *  (= a) with a −9° spread: a glancing ram, so the Warden keeps moving. */
   const setup = (mine?: SkillLoadout) => {
     vi.spyOn(Math, 'random').mockReturnValue(0.2)
-    const e = sandbox([cfg(), cfg()], [boss('frost', { bottomPartId: 'speedy' })], 'boss', mine)
+    // Unseeded, so the scripted Math.random drives the Warden's aim.
+    const e = sandbox([cfg(), cfg()], [boss('frost', { bottomPartId: 'speedy' })], 'boss', mine, null)
     const [a, b] = e.playerBlades.value as [SpinnerState, SpinnerState]
     return { e, a, b, w: e.npcBlades.value[0]! }
   }

@@ -33,7 +33,7 @@ import useSounds from '@/use/useSound'
 import { prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
-import { matchRng, seedMatchRng, seedMatchRngRandom, currentMatchSeed } from '@/use/useDeterministicRng'
+import { matchRng, seedMatchRng, seedMatchRngRandom, currentMatchSeed, createRng, GAMEPLAY_RNG_SALT } from '@/use/useDeterministicRng'
 import { currentPvpRole } from '@/use/usePVP'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
@@ -613,6 +613,11 @@ export interface InitGameOptions {
   seed?: number
   skillLoadout?: SkillLoadout | null
   enemySkillLoadout?: SkillLoadout | null
+  /** League fights (DT1): who moves first, decided by the battle seed and
+   *  handed in by the arena. Overrides the last-result first-turn bias of a
+   *  single-player match; the matchRng draw still happens, so the stream
+   *  order is the same as without it. Ignored in PvP. */
+  firstTurn?: 'player' | 'opponent'
 }
 
 /** Live state of one HUD skill chip — structurally the `SkillHudState` prop
@@ -787,8 +792,16 @@ export const useSpinnerGame = () => {
   // is fully deterministic in PvP, and falls back to `performance.now()`
   // in single-player so existing behaviour is unchanged.
   let pvpTickCount = 0
+  // Seeded single-player battle (initGame got `opts.seed` outside PvP, e.g.
+  // league fights): every gameplay timer reads the SIM clock (`simTickCount`,
+  // below) instead of the wall clock, so a replay of the same seed + launches
+  // lands every cooldown on the same tick. Unseeded campaign: wall clock, as
+  // before.
+  let seededSim = false
   const gameTime = (): number =>
-    pvpMode.value ? pvpTickCount * FIXED_STEP_MS : performance.now()
+    pvpMode.value
+      ? pvpTickCount * FIXED_STEP_MS
+      : seededSim ? simTickCount * FIXED_STEP_MS : performance.now()
   // Simulation clock for skill objects that must freeze with the physics
   // loop (Homing Rockets). Outside PvP `gameTime()` is the wall clock, so a
   // rocket in flight during a platform pause / hidden tab kept flying on
@@ -804,6 +817,24 @@ export const useSpinnerGame = () => {
   let simTickCount = 0
   const skillClock = (): number =>
     pvpMode.value ? gameTime() : simTickCount * FIXED_STEP_MS
+  // A seeded battle restarts the sim clock a minute "in" (like the PvP clock:
+  // cooldown maps default a never-seen pair to 0).
+  const SEEDED_CLOCK_START_TICKS = 3600
+
+  // ── Gameplay RNG outside the match stream (league, LG-DET) ────────────
+  // NPC spawn jitter, bouncer placement, the NPC AI's blade/target/angle/
+  // force picks and split-child jitter. With `opts.seed` they draw from an
+  // AUX stream derived from the seed — never from `matchRng()`, so the match
+  // stream's draw order (star crit, power-ups, first turn, emitters) is
+  // exactly what it was. Without a seed they keep drawing Math.random, in
+  // the same call order (campaign unchanged). Presentation-only rolls stay
+  // on Math.random too and carry a `// vfx-rng` marker
+  // (tests/leagueDeterminism scans the file).
+  let gameplayStream: (() => number) | null = null
+  /** League first turn (InitGameOptions.firstTurn, DT1); null = the usual bias. */
+  let forcedFirstTurn: 'player' | 'opponent' | null = null
+  const gameplayRand = (): number =>
+    gameplayStream !== null ? gameplayStream() : Math.random() // gameplay-rng fallback (unseeded)
 
   // ── Peer-independent blade identity (PvP determinism) ──────────────────
   // The two PvP clients hold the teams in swapped playerBlades/npcBlades
@@ -1497,18 +1528,18 @@ export const useSpinnerGame = () => {
       const count = spd > 3 ? 2 : 1
       for (let i = 0; i < count; i++) {
         if (cloudParticles.length >= (FX.low ? 40 : 120)) break
-        const angle = Math.random() * Math.PI * 2
-        const drift = 0.2 + Math.random() * 0.3
-        const maxLife = 400 + Math.random() * 300
+        const angle = Math.random() * Math.PI * 2 // vfx-rng
+        const drift = 0.2 + Math.random() * 0.3 // vfx-rng
+        const maxLife = 400 + Math.random() * 300 // vfx-rng
         cloudParticles.push({
-          x: blade.x + (Math.random() - 0.5) * blade.radius,
-          y: blade.y + (Math.random() - 0.5) * blade.radius,
+          x: blade.x + (Math.random() - 0.5) * blade.radius, // vfx-rng
+          y: blade.y + (Math.random() - 0.5) * blade.radius, // vfx-rng
           vx: Math.cos(angle) * drift,
           vy: Math.sin(angle) * drift,
           life: maxLife,
           maxLife,
-          size: 8 + Math.random() * 6,
-          alpha: 0.7 + Math.random() * 0.3,
+          size: 8 + Math.random() * 6, // vfx-rng
+          alpha: 0.7 + Math.random() * 0.3, // vfx-rng
           frame: 0,
           frameTick: 0
         })
@@ -1542,7 +1573,7 @@ export const useSpinnerGame = () => {
         x: blade.x, y: blade.y,
         size: blade.radius * (0.6 + spd * 0.04),
         time: now,
-        rotation: Math.random() * Math.PI * 2
+        rotation: Math.random() * Math.PI * 2 // vfx-rng
       })
     }
     // Prune old decals (batch splice instead of repeated shift)
@@ -1560,19 +1591,19 @@ export const useSpinnerGame = () => {
       const count = spd > 3 ? 3 : spd > 1.5 ? 2 : 1
       for (let i = 0; i < count; i++) {
         if (sandGrains.length >= (FX.low ? 50 : 150)) break
-        const angle = Math.random() * Math.PI * 2
-        const drift = 0.15 + Math.random() * 0.25
-        const maxLife = 350 + Math.random() * 250
+        const angle = Math.random() * Math.PI * 2 // vfx-rng
+        const drift = 0.15 + Math.random() * 0.25 // vfx-rng
+        const maxLife = 350 + Math.random() * 250 // vfx-rng
         const colors = ['#e8c870', '#d4a855', '#c49040', '#bf8f3a', '#a87530']
         sandGrains.push({
-          x: blade.x + (Math.random() - 0.5) * blade.radius * 1.2,
-          y: blade.y + (Math.random() - 0.5) * blade.radius * 1.2,
+          x: blade.x + (Math.random() - 0.5) * blade.radius * 1.2, // vfx-rng
+          y: blade.y + (Math.random() - 0.5) * blade.radius * 1.2, // vfx-rng
           vx: Math.cos(angle) * drift,
           vy: Math.sin(angle) * drift,
           life: maxLife,
           maxLife,
-          size: 1 + Math.random() * 2,
-          color: colors[Math.floor(Math.random() * colors.length)]!
+          size: 1 + Math.random() * 2, // vfx-rng
+          color: colors[Math.floor(Math.random() * colors.length)]! // vfx-rng
         })
       }
     }
@@ -1765,8 +1796,8 @@ export const useSpinnerGame = () => {
     // Random angle in a 60° cone pointing upward (centered at -90°)
     const baseAngle = -Math.PI / 2
     const spread = (Math.PI / 3) // 60°
-    const angle = baseAngle + (Math.random() - 0.5) * spread
-    const speed = 0.06 + Math.random() * 0.03
+    const angle = baseAngle + (Math.random() - 0.5) * spread // vfx-rng
+    const speed = 0.06 + Math.random() * 0.03 // vfx-rng
 
     if (damageNumbers.length >= 60) return
     const dn: DamageNumber = {
@@ -2763,7 +2794,7 @@ export const useSpinnerGame = () => {
     const children: SpinnerState[] = []
     for (let i = 0; i < SPLIT_CHILD_COUNT; i++) {
       // In PvP use a fixed offset so both clients agree on child positions
-      const jitter = pvpMode.value ? 0.125 : Math.random() * 0.25
+      const jitter = pvpMode.value ? 0.125 : gameplayRand() * 0.25
       const angle = (i / SPLIT_CHILD_COUNT) * Math.PI * 2 + jitter
       const dx = Math.cos(angle)
       const dy = Math.sin(angle)
@@ -2955,6 +2986,11 @@ export const useSpinnerGame = () => {
     if (opts.seed !== undefined) seedMatchRng(opts.seed)
     else if (!pvpMode.value) seedMatchRngRandom()
     matchSeed = currentMatchSeed()
+    forcedFirstTurn = !pvpMode.value && (opts.firstTurn === 'player' || opts.firstTurn === 'opponent') ? opts.firstTurn : null
+    // Seeded battle: aux gameplay stream + sim-clock timers (see gameplayRand).
+    gameplayStream = opts.seed !== undefined ? createRng((opts.seed ^ GAMEPLAY_RNG_SALT) >>> 0) : null
+    seededSim = opts.seed !== undefined && !pvpMode.value
+    if (seededSim) simTickCount = SEEDED_CLOCK_START_TICKS
     stopPhysics()
     clearCombatLog()
     nextBladeId = 0
@@ -2989,13 +3025,13 @@ export const useSpinnerGame = () => {
       const maxJitter = BLADE_RADIUS * 0.8
 
       if (nCount === 1) {
-        const jx = (Math.random() - 0.5) * maxJitter
-        const jy = (Math.random() - 0.5) * maxJitter
+        const jx = (gameplayRand() - 0.5) * maxJitter
+        const jy = (gameplayRand() - 0.5) * maxJitter
         npcPositions.push({ x: jx, y: -ARENA_RADIUS * 0.4 + jy })
       } else if (nCount === 2) {
         for (let i = 0; i < 2; i++) {
-          const x = (i === 0 ? -1 : 1) * ARENA_RADIUS * 0.4 + (Math.random() - 0.5) * maxJitter
-          const y = -ARENA_RADIUS * 0.4 + (Math.random() - 0.5) * maxJitter
+          const x = (i === 0 ? -1 : 1) * ARENA_RADIUS * 0.4 + (gameplayRand() - 0.5) * maxJitter
+          const y = -ARENA_RADIUS * 0.4 + (gameplayRand() - 0.5) * maxJitter
           npcPositions.push({ x, y })
         }
       } else if (nCount === 3) {
@@ -3004,11 +3040,11 @@ export const useSpinnerGame = () => {
         const botY = -ARENA_RADIUS * 0.2
         const halfW = ARENA_RADIUS * 0.4
         npcPositions.push({
-          x: -halfW + (Math.random() - 0.5) * maxJitter,
-          y: topY + (Math.random() - 0.5) * maxJitter
+          x: -halfW + (gameplayRand() - 0.5) * maxJitter,
+          y: topY + (gameplayRand() - 0.5) * maxJitter
         })
-        npcPositions.push({ x: halfW + (Math.random() - 0.5) * maxJitter, y: topY + (Math.random() - 0.5) * maxJitter })
-        npcPositions.push({ x: (Math.random() - 0.5) * maxJitter, y: botY + (Math.random() - 0.5) * maxJitter })
+        npcPositions.push({ x: halfW + (gameplayRand() - 0.5) * maxJitter, y: topY + (gameplayRand() - 0.5) * maxJitter })
+        npcPositions.push({ x: (gameplayRand() - 0.5) * maxJitter, y: botY + (gameplayRand() - 0.5) * maxJitter })
       } else {
         // 4: 2x2 grid
         const halfW = ARENA_RADIUS * 0.4
@@ -3023,8 +3059,8 @@ export const useSpinnerGame = () => {
         for (let i = 0; i < nCount; i++) {
           const s = slots[i]!
           npcPositions.push({
-            x: s.x + (Math.random() - 0.5) * maxJitter,
-            y: s.y + (Math.random() - 0.5) * maxJitter
+            x: s.x + (gameplayRand() - 0.5) * maxJitter,
+            y: s.y + (gameplayRand() - 0.5) * maxJitter
           })
         }
       }
@@ -3230,8 +3266,8 @@ export const useSpinnerGame = () => {
       for (let i = 0; i < clampedBouncerCount; i++) {
         let placed: Bouncer | null = null
         for (let attempt = 0; attempt < 40 && !placed; attempt++) {
-          const angle = Math.random() * Math.PI * 2
-          const r = BOUNCER_MIN_R + Math.random() * (BOUNCER_MAX_R - BOUNCER_MIN_R)
+          const angle = gameplayRand() * Math.PI * 2
+          const r = BOUNCER_MIN_R + gameplayRand() * (BOUNCER_MAX_R - BOUNCER_MIN_R)
           // Clamp into the active shape so a bouncer never overlaps a
           // non-circular wall (no-op on the circle arena).
           const { x, y } = clampInArena(Math.cos(angle) * r, Math.sin(angle) * r, BOUNCER_RADIUS, 6)
@@ -3303,7 +3339,7 @@ export const useSpinnerGame = () => {
     spawnMeteorShower(80, 50, 65)
 
     try {
-      const randomInt = Math.min(Math.floor(Math.random() * 2) + 1, 2)
+      const randomInt = Math.min(Math.floor(Math.random() * 2) + 1, 2) // vfx-rng
       const audioName = `celebration-${randomInt}`
       playSound(audioName)
     } catch (e: any) {
@@ -3335,12 +3371,12 @@ export const useSpinnerGame = () => {
     const maxDelay = Math.floor(maxLife * 0.6)
     const particles: MeteorParticle[] = []
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3
-      const spawnDist = spawnRadius + (Math.random() - 0.5) * 6
-      const spd = 1.5 + Math.random() * 2.5
-      const lifeVar = maxLife + Math.floor(Math.random() * 20)
+      const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3 // vfx-rng
+      const spawnDist = spawnRadius + (Math.random() - 0.5) * 6 // vfx-rng
+      const spd = 1.5 + Math.random() * 2.5 // vfx-rng
+      const lifeVar = maxLife + Math.floor(Math.random() * 20) // vfx-rng
       // Stagger: life starts above maxLife; particle waits until life <= maxLife
-      const delay = Math.floor(Math.random() * maxDelay)
+      const delay = Math.floor(Math.random() * maxDelay) // vfx-rng
       particles.push({
         x: Math.cos(angle) * spawnDist,
         y: Math.sin(angle) * spawnDist,
@@ -3348,7 +3384,7 @@ export const useSpinnerGame = () => {
         vy: Math.sin(angle) * spd,
         life: lifeVar + delay,
         maxLife: lifeVar,
-        hue: Math.random() < 0.25 ? 20 + Math.floor(Math.random() * 25) : 190 + Math.floor(Math.random() * 40)
+        hue: Math.random() < 0.25 ? 20 + Math.floor(Math.random() * 25) : 190 + Math.floor(Math.random() * 40) // vfx-rng
       })
     }
     meteorParticles.value = particles
@@ -3638,20 +3674,20 @@ export const useSpinnerGame = () => {
     }
 
     // Pick a random living NPC blade
-    const blade = living[Math.floor(Math.random() * living.length)]!
+    const blade = living[Math.floor(gameplayRand() * living.length)]!
     npcActiveBladeId.value = blade.id
 
     // Pick a random living player target
     const targets = livingBlades(playerBlades.value)
     if (targets.length === 0) return
-    const target = targets[Math.floor(Math.random() * targets.length)]!
+    const target = targets[Math.floor(gameplayRand() * targets.length)]!
 
     const dx = target.x - blade.x
     const dy = target.y - blade.y
     const dist = Math.sqrt(dx * dx + dy * dy)
     if (dist < 0.01) {
       // Overlapping — aim in a random direction instead
-      const randAngle = Math.random() * Math.PI * 2
+      const randAngle = gameplayRand() * Math.PI * 2
       const stats = statsFor(blade)
       const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
       blade.ax = (Math.cos(randAngle) * maxForce * 0.5) / ACCEL_FRAMES
@@ -3700,15 +3736,15 @@ export const useSpinnerGame = () => {
         }
       }
       // If no clear path, just add the normal spread and hope for the best
-      if (!found) angle += (Math.random() - 0.5) * (Math.PI / 6)
+      if (!found) angle += (gameplayRand() - 0.5) * (Math.PI / 6)
     } else {
       // Normal ±15° spread when path is clear
-      angle += (Math.random() - 0.5) * (Math.PI / 6)
+      angle += (gameplayRand() - 0.5) * (Math.PI / 6)
     }
 
     // Random force 65-100% of max
     const stats = statsFor(blade)
-    const forcePct = 0.65 + Math.random() * 0.35
+    const forcePct = 0.65 + gameplayRand() * 0.35
     const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
     const targetForce = forcePct * maxForce
 
@@ -3755,7 +3791,10 @@ export const useSpinnerGame = () => {
         // - After a win or before any match has been played, the enemy starts 70% of
         //   the time so wins feel earned rather than handed out.
         const playerStartChance = lastGameResult.value === 'lose' ? 0.80 : 0.30
-        const startsWithPlayer = matchRng() < playerStartChance
+        // A league fight's first turn is neutral and fixed by its seed (DT1):
+        // the draw is still taken so the match stream stays aligned.
+        const turnRoll = matchRng()
+        const startsWithPlayer = forcedFirstTurn !== null ? forcedFirstTurn === 'player' : turnRoll < playerStartChance
         turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.npcTurn')
         setTimeout(() => {
           phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
@@ -3929,8 +3968,8 @@ export const useSpinnerGame = () => {
           noteSkilledHpLoss(target)
         }
         // Yellow floating damage number
-        const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3)
-        const hs = 0.06 + Math.random() * 0.03
+        const ha = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng
+        const hs = 0.06 + Math.random() * 0.03 // vfx-rng
         if (thunderShown > 0) {
           damageNumbers.push({
             x: target.x, y: target.y, value: thunderShown,
@@ -3984,7 +4023,10 @@ export const useSpinnerGame = () => {
 
     if ((playerAlive === 0 || npcAlive === 0) && !gameResult.value) {
       gameResult.value = npcAlive === 0 ? 'win' : 'lose'
-      saveLastGameResult(gameResult.value)
+      // A league fight (seeded first turn, DT1) never feeds the campaign's
+      // last-result first-turn bias: its outcome must not tilt the next
+      // campaign fight's odds.
+      if (forcedFirstTurn === null) saveLastGameResult(gameResult.value)
       gameOverAt = performance.now()
     }
 
@@ -5842,8 +5884,8 @@ export const useSpinnerGame = () => {
     const color = POWERUP_STAT_COLOR[stat]
     const COUNT = 10
     for (let i = 0; i < COUNT; i++) {
-      const angle = (i / COUNT) * Math.PI * 2 + Math.random() * 0.4
-      const speed = 0.05 + Math.random() * 0.06
+      const angle = (i / COUNT) * Math.PI * 2 + Math.random() * 0.4 // vfx-rng
+      const speed = 0.05 + Math.random() * 0.06 // vfx-rng
       powerupParticles.push({
         x, y,
         vx: Math.cos(angle) * speed,
@@ -5851,7 +5893,7 @@ export const useSpinnerGame = () => {
         color,
         life: 380,
         maxLife: 380,
-        size: 2 + Math.random() * 2
+        size: 2 + Math.random() * 2 // vfx-rng
       })
     }
   }
@@ -6949,6 +6991,8 @@ export const useSpinnerGame = () => {
     ghostMode,
     /** Seed the running match's RNG started from (PvP: the host's broadcast). */
     getMatchSeed: (): number => matchSeed,
+    /** This match's bouncers (seeded battles place them from the aux stream); tests / QA. */
+    bouncers: (): readonly Readonly<Bouncer>[] => arenaBouncers,
 
     // Skills (skills-feature.md §8.1 / §10.3)
     /** Local side's HUD chips, `[playerBlades index][slot]`; ≤ 10 Hz. */

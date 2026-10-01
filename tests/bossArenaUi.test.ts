@@ -270,7 +270,9 @@ describe('Frost Lock: HUD row + refused tap on the frozen spinner', () => {
     })
     const e = useSpinnerGame()
     const warden = stageEnemyConfigs(getStageById(120))
-    e.initGame(team(), warden, false, 'boss', 0, false, undefined, null, 'circle', false, { seed: 99 })
+    // Unseeded: the scripted Math.random drives the Warden's aim (a seeded
+    // match would roll its AI on the seed's aux stream — LG-DET).
+    e.initGame(team(), warden, false, 'boss', 0, false, undefined, null, 'circle', false)
     e.startPhysics()
     const [a, b] = e.playerBlades.value as [SpinnerState, SpinnerState]
     const w = e.npcBlades.value[0]!

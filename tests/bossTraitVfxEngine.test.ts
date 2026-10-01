@@ -32,7 +32,7 @@ const cfg = (extra: Partial<SpinnerConfig> = {}): SpinnerConfig =>
 const boss = (trait: SpinnerConfig['bossTrait'], extra: Partial<SpinnerConfig> = {}): SpinnerConfig =>
   cfg({ isBoss: true, bossTrait: trait, topLevel: 5, bottomLevel: 5, ...extra })
 
-const WALL0 = 10_000
+const WALL0 = 100_000
 let clock = 0
 const rafQueue = new Map<number, FrameRequestCallback>()
 const STEP = 1000 / 60
@@ -144,7 +144,7 @@ describe('boss-trait gates run on the simulation clock (platform pause)', () => 
     ram(a, y)
     until(() => (a.chillN ?? 0) > 0, 30)
     const first = a.lastChillAt!
-    // Sim clock, not the wall clock (which started at 10 s and only grows).
+    // Sim clock, not the wall clock (which started at 100 s and only grows; a seeded battle's sim clock starts at 60 s).
     expect(first).toBeLessThan(WALL0)
     expect(Math.abs(first / STEP - Math.round(first / STEP))).toBeLessThan(1e-6)
 
@@ -156,7 +156,9 @@ describe('boss-trait gates run on the simulation clock (platform pause)', () => 
     // Hammer the Yeti from the first resumed tick on.
     let ticks = 0
     while ((a.chillN ?? 0) < 2 && ticks < 120) {
-      if (ticks % 3 === 0) ram(a, y)
+      // Every 4th tick: 3 ticks is exactly the 50 ms contact re-arm on the
+      // (tick-exact) sim clock a seeded battle runs its contact gates on.
+      if (ticks % 4 === 0) ram(a, y)
       frame()
       ticks++
     }
@@ -189,7 +191,7 @@ describe('boss-trait gates run on the simulation clock (platform pause)', () => 
     setGamePaused(false)
     let ticks = 0
     while (count() < 2 && ticks < 120) {
-      if (ticks % 3 === 0) ram(a, w)
+      if (ticks % 4 === 0) ram(a, w)
       frame()
       ticks++
     }
