@@ -19,7 +19,7 @@
 
 ## new Bosses for 100+ stages
 
-- [] One of the most defining features and the most loved one is the diversity in boss fight, there is always something
+- [x] One of the most defining features and the most loved one is the diversity in boss fight, there is always something
   new every 5 to 10 stages.  
   I would like to extend this with a new set of completely new boss mechanic designs that keep up the freshness and
   bring new mechanics for very invested players.

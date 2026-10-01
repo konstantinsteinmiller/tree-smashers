@@ -1,1 +1,7 @@
-{"v":1,"source":"https://leaderboard-chaos-arena.rodent-race.workers.dev","origin":"none","fetchedAt":1790802511089,"builds":[]}
+{
+  "v": 1,
+  "source": "https://leaderboard-chaos-arena.rodent-race.workers.dev",
+  "origin": "worker",
+  "fetchedAt": 1790855651599,
+  "builds": []
+}
