@@ -19,9 +19,9 @@ import { BOSS_TRAIT_TUNING, resetBossTraitTuning } from '@/use/bosses/bossTraits
 /**
  * ─── Boss Lab (bosses-100-feature.md §11, BW7) — DEV CHEAT ──────────────────
  *
- * Opened by ctrl+shift+9 (or `?bosslab`) on a dev build with cheats on; the
- * arena references this component only behind `import.meta.env.DEV`, so it
- * never reaches a production bundle. One click per boss: the ten stage-101+
+ * Opened by ctrl+shift+9, `?bosslab` or 20 quick taps on the treasure chest,
+ * on a dev build with cheats on; the arena references this component only
+ * behind `import.meta.env.DEV`, so it never reaches a production bundle. One click per boss: the ten stage-101+
  * encounters in slot order plus three single-trait sandboxes. A click builds
  * the cheat stage (Lab rewards, never persisted, no trophy) and closes; the
  * arena re-opens the Lab after that battle's result screen with the NEXT

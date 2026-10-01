@@ -1218,6 +1218,23 @@ const openBossLab = () => {
   bossLabOpen.value = true
 }
 watch(bossLabSignal, openBossLab)
+// Touch route (no keyboard): 20 quick consecutive taps on the treasure chest
+// open the Lab on a dev build with cheats on. Silent — no counter is shown.
+const BOSS_LAB_CHEST_TAPS = 20
+/** A longer pause than this between taps starts the count again. */
+const BOSS_LAB_TAP_GAP_MS = 700
+let bossLabChestTaps = 0
+let bossLabChestTapAt = -Infinity
+const onChestDebugTap = () => {
+  if (!BossLabUi || !cheatsOn) return
+  const now = performance.now()
+  bossLabChestTaps = now - bossLabChestTapAt <= BOSS_LAB_TAP_GAP_MS ? bossLabChestTaps + 1 : 1
+  bossLabChestTapAt = now
+  if (bossLabChestTaps >= BOSS_LAB_CHEST_TAPS) {
+    bossLabChestTaps = 0
+    openBossLab()
+  }
+}
 const onBossLabLaunch = (stage: Stage, _index: number, boostPlayer: boolean) => {
   bossLabStage = stage
   bossLabBoost = boostPlayer
@@ -2281,8 +2298,10 @@ onMounted(() => {
   renderRafId = requestAnimationFrame(renderLoop)
   loadLeagueAtMount()
   // Boss Lab: `?bosslab` opens it once on a dev build with cheats on (touch
-  // devices have no ctrl+shift+9).
-  if (BossLabUi && cheatsOn && new URLSearchParams(window.location.search).has('bosslab')) openBossLab()
+  // devices have no ctrl+shift+9). Accepted before or after the `#/` of the
+  // hash route (`/?bosslab#/` and `/#/?bosslab` both work).
+  if (BossLabUi && cheatsOn && (new URLSearchParams(window.location.search).has('bosslab')
+    || /[?&]bosslab/.test(window.location.hash))) openBossLab()
 
   // The stage-1 board exists; the moment the loader is gone the intro gate
   // may decide (it waits on an unsettled cloud save — see introGate.ts).
@@ -2576,7 +2595,8 @@ onUnmounted(() => {
             //- Single chest with a dual reward window (25c after 3 min,
             //- 100c after 10 min). Replaces the previous mini+big chest
             //- pair. Hidden during PvP.
-            TreasureChest(v-if="!pvpMode" :target-el="coinBadgeEl")
+            //- @click: the dev Boss Lab's 20-tap cheat route (inert otherwise).
+            TreasureChest(v-if="!pvpMode" :target-el="coinBadgeEl" @click="onChestDebugTap")
 
       //- Daily Challenge launcher — menu screen only (campaign, not in a
       //- PvP/ghost/daily fight). Fixed below the FLogoProgress logo so it
@@ -3123,7 +3143,8 @@ onUnmounted(() => {
             ) +
             component(:is="BossTrophyCardUi" :skin-id="id")
 
-    //- Boss Lab — DEV-only cheat modal (ctrl+shift+9 / ?bosslab), async chunk.
+    //- Boss Lab — DEV-only cheat modal (ctrl+shift+9 / ?bosslab / 20 chest
+    //- taps), async chunk.
     component(
       v-if="BossLabUi && cheatsOn && bossLabOpen"
       :is="BossLabUi"
