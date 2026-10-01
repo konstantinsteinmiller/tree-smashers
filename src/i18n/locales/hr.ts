@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Sablasni blizanac',
     'cheat_split': 'Rasprsnuti roj',
     'cheat_partners': 'Željezno bratstvo',
-    'cheat_healers': 'Zbor iscjelitelja'
+    'cheat_healers': 'Zbor iscjelitelja',
+    'cheat_thunder': 'Zazivač oluje',
+    'cheat_child_emitter': 'Kraljica roja',
+    'cheat_life_leech': 'Pijavica duša'
   },
   'node-w1': {
     'name': 'Izviđač oaze',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Prvak'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'U borbu',
+      'top': 'Top sezone'
+    },
+    'standing': 'Tvoj rang',
+    'lp': '{n} LB',
+    'lpProgress': '{n} / {max} LB',
+    'lpAria': '{n} od {max} LB u ovoj diviziji',
+    'atGate': 'Sljedeće: borba za promociju!',
+    'shields': '{n} zaštićena borba | {n} zaštićene borbe | {n} zaštićenih borbi',
+    'streak': 'Niz pobjeda: {n}',
+    'fightsToday': 'Borbe danas',
+    'fightsLeft': 'Preostala {n} borba | Preostale {n} borbe | Preostalo {n} borbi',
+    'fightsReset': 'Nove borbe za {time}',
+    'topUp': '+{n} borba | +{n} borbe | +{n} borbi',
+    'topUpAria': 'Pogledaj oglas za još {n} borbu | Pogledaj oglas za još {n} borbe | Pogledaj oglas za još {n} borbi',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Odaberi protivnika',
+    'difficulty': {
+      'easier': 'Slabiji',
+      'even': 'Ravan',
+      'harder': 'Jači'
+    },
+    'fight': 'U borbu',
+    'fightAria': 'Bori se: {name} ({difficulty})',
+    'gate': {
+      'title': 'Borba za promociju',
+      'goal': 'Pobijedi i dosegni {rank}',
+      'challenge': 'Izazovi',
+      'aria': 'Izazovi: {name} i dosegni {rank}'
+    },
+    'quiet': {
+      'title': 'Protivnici stižu',
+      'body': 'Rangirane borbe bit će spremne za tren.'
+    },
+    'top': {
+      'title': 'Najbolji sezone',
+      'empty': 'Ove sezone još nitko nije napredovao. Budi prvi!'
+    },
+    'season': {
+      'label': 'Sezona {n}',
+      'endsIn': 'Završava za {time}',
+      'complete': 'Sezona {n} završena',
+      'peak': 'Najbolji rang: {tier}',
+      'coinsAria': '{n} novčić | {n} novčića | {n} novčića',
+      'diamondsAria': '{n} dijamant | {n} dijamanta | {n} dijamanata',
+      'frame': 'Okvir prvaka',
+      'claim': 'Preuzmi'
+    },
+    'result': {
+      'promoted': 'Promocija: {rank}!',
+      'up': 'Gore: {rank}',
+      'down': 'Pad: {rank}',
+      'shielded': 'Štit je izdržao: bez gubitka LB',
+      'gateHeld': 'Čuvar odolijeva. Pokušaj ponovno!',
+      'capped': 'Dosegnut dnevni limit LB',
+      'coins': 'Novčići: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Danas više nema rangiranih borbi. Vrati se sutra!',
+      'noFights': 'Danas ti nije preostala nijedna borba.',
+      'retry': 'Borba nije mogla započeti. Pokušaj ponovno!'
+    },
+    'unlock': {
+      'title': 'Liga otključana!',
+      'body': 'Bori se protiv timova drugih igrača i penji se od Drva do Prvaka.',
+      'point1': 'Odaberi slabijeg, ravnog ili jačeg protivnika',
+      'point2': 'Pobijedi bossa čuvara i dosegni novu razinu',
+      'point3': 'Osvoji nagrade na kraju svake sezone',
+      'enter': 'U ligu',
+      'later': 'Kasnije'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatski način smanjuje efekte kad uređaj padne ispod 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'brzina bitke ×2',
         'rewardRespin': 'još jedno okretanje',
         'rewardSkinAd': 'novi skin',
+        'rewardFights': '{count} dodatna ligaška borba | {count} dodatne ligaške borbe | {count} dodatnih ligaških borbi',
         'watch': 'Pogledaj',
         'decline': 'Ne, hvala'
       }

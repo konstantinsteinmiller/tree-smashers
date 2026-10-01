@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Fantoma ĝemelo',
     'cheat_split': 'Frakasanta svarmo',
     'cheat_partners': 'Fera frataro',
-    'cheat_healers': 'Saniga ĥoro'
+    'cheat_healers': 'Saniga ĥoro',
+    'cheat_thunder': 'Ŝtormvokanto',
+    'cheat_child_emitter': 'Idara Reĝino',
+    'cheat_life_leech': 'Animsuĉanto'
   },
   'node-w1': {
     'name': 'Oaza skolto',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Ĉampiono'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Ligo',
+    'tabs': {
+      'fight': 'Batali',
+      'top': 'Sezona pinto'
+    },
+    'standing': 'Via rango',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} el {max} LP en ĉi tiu divizio',
+    'atGate': 'Sekva: promocia batalo!',
+    'shields': '{n} protektita batalo | {n} protektitaj bataloj',
+    'streak': '{n} venkoj sinsekve',
+    'fightsToday': 'Bataloj hodiaŭ',
+    'fightsLeft': 'Restas {n} batalo | Restas {n} bataloj',
+    'fightsReset': 'Novaj bataloj post {time}',
+    'topUp': '+{n} batalo | +{n} bataloj',
+    'topUpAria': 'Spektu reklamon por {n} plia batalo | Spektu reklamon por {n} pliaj bataloj',
+    'hudAria': 'Ligo: {rank}, {fights}',
+    'opponents': 'Elektu vian kontraŭulon',
+    'difficulty': {
+      'easier': 'Malforta',
+      'even': 'Egala',
+      'harder': 'Forta'
+    },
+    'fight': 'Batali',
+    'fightAria': 'Batali kontraŭ {name} ({difficulty})',
+    'gate': {
+      'title': 'Promocia batalo',
+      'goal': 'Venku por atingi {rank}',
+      'challenge': 'Defii',
+      'aria': 'Defii {name} por atingi {rank}'
+    },
+    'quiet': {
+      'title': 'Kontraŭuloj alvenas',
+      'body': 'Rangaj bataloj pretos post momento.'
+    },
+    'top': {
+      'title': 'La plej bonaj de la sezono',
+      'empty': 'Neniu jam grimpis ĉi-sezone. Estu la unua!'
+    },
+    'season': {
+      'label': 'Sezono {n}',
+      'endsIn': 'Finiĝas post {time}',
+      'complete': 'Sezono {n} finita',
+      'peak': 'Plej bona rango: {tier}',
+      'coinsAria': '{n} monero | {n} moneroj',
+      'diamondsAria': '{n} diamanto | {n} diamantoj',
+      'frame': 'Ĉampiona kadro',
+      'claim': 'Preni'
+    },
+    'result': {
+      'promoted': 'Promociita al {rank}!',
+      'up': 'Supren al {rank}',
+      'down': 'Malsupren al {rank}',
+      'shielded': 'Ŝildo tenis: neniu LP perdita',
+      'gateHeld': 'La pordegisto rezistas. Provu denove!',
+      'capped': 'Taga LP-limo atingita',
+      'coins': '+{n} moneroj'
+    },
+    'notice': {
+      'dailyCap': 'Ne plu rangaj bataloj hodiaŭ. Revenu morgaŭ!',
+      'noFights': 'Neniu batalo restas hodiaŭ.',
+      'retry': 'La batalo ne povis komenciĝi. Provu denove!'
+    },
+    'unlock': {
+      'title': 'Ligo malŝlosita!',
+      'body': 'Batalu kontraŭ teamoj de aliaj ludantoj kaj grimpu de Ligno ĝis Ĉampiono.',
+      'point1': 'Elektu malfortan, egalan aŭ fortan kontraŭulon',
+      'point2': 'Venku la pordegistan estron por atingi novan nivelon',
+      'point3': 'Gajnu premiojn fine de ĉiu sezono',
+      'enter': 'Eniri la ligon',
+      'later': 'Poste'
+    },
+    'time': {
+      'dh': '{d} t {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafiko',
   'graphicsQualityNote': 'Aŭtomata reĝimo malpliigas efektojn, kiam via aparato falas sub 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'duoblan batalrapidon',
         'rewardRespin': 'plian turnon',
         'rewardSkinAd': 'novan haŭton',
+        'rewardFights': '{count} plian ligan batalon | {count} pliajn ligajn batalojn',
         'watch': 'Spekti reklamon',
         'decline': 'Ne, dankon'
       }

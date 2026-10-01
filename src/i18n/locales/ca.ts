@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Bessó Fantasma',
     'cheat_split': 'Eixam Esmicolat',
     'cheat_partners': 'Germandat de Ferro',
-    'cheat_healers': 'Cor Guaridor'
+    'cheat_healers': 'Cor Guaridor',
+    'cheat_thunder': 'Invocatempestes',
+    'cheat_child_emitter': 'Reina de la Niuada',
+    'cheat_life_leech': 'Xuclaànimes'
   },
   'node-w1': {
     'name': 'Explorador de l\'Oasi',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Campió'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Lliga',
+    'tabs': {
+      'fight': 'Lluitar',
+      'top': 'Top temporada'
+    },
+    'standing': 'El teu rang',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} de {max} PL en aquesta divisió',
+    'atGate': 'Següent: combat d\'ascens!',
+    'shields': '{n} combat protegit | {n} combats protegits',
+    'streak': 'Ratxa de {n} victòries',
+    'fightsToday': 'Combats avui',
+    'fightsLeft': 'Queda {n} combat | Queden {n} combats',
+    'fightsReset': 'Nous combats d\'aquí a {time}',
+    'topUp': '+{n} combat | +{n} combats',
+    'topUpAria': 'Mira un anunci per a {n} combat més | Mira un anunci per a {n} combats més',
+    'hudAria': 'Lliga: {rank}, {fights}',
+    'opponents': 'Tria el teu rival',
+    'difficulty': {
+      'easier': 'Més feble',
+      'even': 'Igualat',
+      'harder': 'Més fort'
+    },
+    'fight': 'Lluitar',
+    'fightAria': 'Lluitar contra {name} ({difficulty})',
+    'gate': {
+      'title': 'Combat d\'ascens',
+      'goal': 'Guanya per arribar a {rank}',
+      'challenge': 'Desafiar',
+      'aria': 'Desafia {name} per arribar a {rank}'
+    },
+    'quiet': {
+      'title': 'Els rivals són en camí',
+      'body': 'Els combats classificatoris estaran a punt en un moment.'
+    },
+    'top': {
+      'title': 'El millor de la temporada',
+      'empty': 'Encara ningú no ha pujat aquesta temporada. Sigues el primer!'
+    },
+    'season': {
+      'label': 'Temporada {n}',
+      'endsIn': 'Acaba d\'aquí a {time}',
+      'complete': 'Temporada {n} completada',
+      'peak': 'Millor rang: {tier}',
+      'coinsAria': '{n} moneda | {n} monedes',
+      'diamondsAria': '{n} diamant | {n} diamants',
+      'frame': 'Marc de campió',
+      'claim': 'Reclamar'
+    },
+    'result': {
+      'promoted': 'Ascens a {rank}!',
+      'up': 'Puges a {rank}',
+      'down': 'Baixes a {rank}',
+      'shielded': 'Escut actiu: no perds PL',
+      'gateHeld': 'El guardià resisteix. Torna-ho a provar!',
+      'capped': 'Límit diari de PL assolit',
+      'coins': '+{n} monedes'
+    },
+    'notice': {
+      'dailyCap': 'Avui no queden més combats classificatoris. Torna demà!',
+      'noFights': 'Avui no et queden combats.',
+      'retry': 'No s\'ha pogut iniciar el combat. Torna-ho a provar!'
+    },
+    'unlock': {
+      'title': 'Lliga desbloquejada!',
+      'body': 'Lluita contra els equips d\'altres jugadors i puja de Fusta a Campió.',
+      'point1': 'Tria un rival més feble, igualat o més fort',
+      'point2': 'Vence el cap guardià per arribar a un nou rang',
+      'point3': 'Guanya recompenses al final de cada temporada',
+      'enter': 'Entrar a la lliga',
+      'later': 'Més tard'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Gràfics',
   'graphicsQualityNote': 'En mode automàtic, els efectes es redueixen quan el dispositiu baixa de 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'velocitat de batalla x2',
         'rewardRespin': 'una altra tirada',
         'rewardSkinAd': 'una aparença nova',
+        'rewardFights': '{count} combat de lliga més | {count} combats de lliga més',
         'watch': 'Mira l\'anunci',
         'decline': 'No, gràcies'
       }

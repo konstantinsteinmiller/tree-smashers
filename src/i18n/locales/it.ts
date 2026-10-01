@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Gemello Fantasma',
     'cheat_split': 'Sciame Frantumante',
     'cheat_partners': 'Fratelli di Ferro',
-    'cheat_healers': 'Coro Guaritore'
+    'cheat_healers': 'Coro Guaritore',
+    'cheat_thunder': 'Evocatempeste',
+    'cheat_child_emitter': 'Regina della Covata',
+    'cheat_life_leech': 'Succhianime'
   },
   'node-w1': {
     'name': 'Esploratore dell\'Oasi',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Campione'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Lega',
+    'tabs': {
+      'fight': 'Combatti',
+      'top': 'Top stagione'
+    },
+    'standing': 'Il tuo grado',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} su {max} PL in questa divisione',
+    'atGate': 'Prossima: sfida promozione!',
+    'shields': '{n} sfida protetta | {n} sfide protette',
+    'streak': 'Serie di {n} vittorie',
+    'fightsToday': 'Sfide di oggi',
+    'fightsLeft': 'Resta {n} sfida | Restano {n} sfide',
+    'fightsReset': 'Nuove sfide tra {time}',
+    'topUp': '+{n} sfida | +{n} sfide',
+    'topUpAria': 'Guarda un annuncio per {n} sfida in più | Guarda un annuncio per {n} sfide in più',
+    'hudAria': 'Lega: {rank}, {fights}',
+    'opponents': 'Scegli il tuo avversario',
+    'difficulty': {
+      'easier': 'Più debole',
+      'even': 'Alla pari',
+      'harder': 'Più forte'
+    },
+    'fight': 'Combatti',
+    'fightAria': 'Combatti contro {name} ({difficulty})',
+    'gate': {
+      'title': 'Sfida promozione',
+      'goal': 'Vinci per raggiungere {rank}',
+      'challenge': 'Sfida',
+      'aria': 'Sfida {name} per raggiungere {rank}'
+    },
+    'quiet': {
+      'title': 'Gli avversari stanno arrivando',
+      'body': 'Le sfide classificate saranno pronte a breve.'
+    },
+    'top': {
+      'title': 'I migliori della stagione',
+      'empty': 'Nessuno è ancora salito in questa stagione. Sii il primo!'
+    },
+    'season': {
+      'label': 'Stagione {n}',
+      'endsIn': 'Termina tra {time}',
+      'complete': 'Stagione {n} completata',
+      'peak': 'Grado migliore: {tier}',
+      'coinsAria': '{n} moneta | {n} monete',
+      'diamondsAria': '{n} diamante | {n} diamanti',
+      'frame': 'Cornice da campione',
+      'claim': 'Riscatta'
+    },
+    'result': {
+      'promoted': 'Promosso a {rank}!',
+      'up': 'Sali a {rank}',
+      'down': 'Scendi a {rank}',
+      'shielded': 'Scudo attivo: nessun PL perso',
+      'gateHeld': 'Il guardiano resiste. Riprova!',
+      'capped': 'Limite giornaliero di PL raggiunto',
+      'coins': '+{n} monete'
+    },
+    'notice': {
+      'dailyCap': 'Niente più sfide classificate oggi. Torna domani!',
+      'noFights': 'Nessuna sfida rimasta oggi.',
+      'retry': 'Impossibile avviare la sfida. Riprova!'
+    },
+    'unlock': {
+      'title': 'Lega sbloccata!',
+      'body': 'Affronta le squadre di altri giocatori e sali da Legno a Campione.',
+      'point1': 'Scegli un avversario più debole, alla pari o più forte',
+      'point2': 'Sconfiggi il boss guardiano per salire di livello',
+      'point3': 'Ottieni ricompense alla fine di ogni stagione',
+      'enter': 'Entra nella lega',
+      'later': 'Più tardi'
+    },
+    'time': {
+      'dh': '{d} g {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafica',
   'graphicsQualityNote': 'In automatico gli effetti calano se il dispositivo scende sotto i 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'velocità di battaglia x2',
         'rewardRespin': 'un altro giro',
         'rewardSkinAd': 'una nuova skin',
+        'rewardFights': '{count} sfida di lega in più | {count} sfide di lega in più',
         'watch': 'Guarda il video',
         'decline': 'No, grazie'
       }

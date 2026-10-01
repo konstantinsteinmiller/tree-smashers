@@ -29,9 +29,10 @@ export const BRAND_KEYS: readonly string[] = [
  * check. For a feature whose English copy lands before its translation batch
  * — never for a key that shipped. Remove the prefix in the translation batch.
  *
- * Empty = parity fully enforced. (Last used for the bosses 100+ keys — 'stages.boss_',
- * 'skins.cinder' / 'skins.frost-vault' / 'skins.yeti', 'trophySkin.', 'bosses.' — translated
- * in BW8; before that 'skills.', translated in WP9.)
+ * Empty = parity fully enforced. (Last used for the league UI — 'league.*' incl.
+ * 'league.notice.', 'sfc.RewardedAdIntroModal.rewardedIntro.rewardFights' and the
+ * gatekeeper names 'stages.cheat_thunder' / 'cheat_child_emitter' / 'cheat_life_leech' —
+ * translated in LG8; before that the bosses 100+ keys in BW8 and 'skills.' in WP9.)
  */
 export const PENDING_TRANSLATION: readonly string[] = []
 
@@ -46,6 +47,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // ── The original eight — reviewed legacy values (cognates, loanwords,
   //    gaming abbreviations) when the parity test was introduced ──
   de: [
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze', 'league.tiers.gold', 'league.tiers.champion',
@@ -69,6 +72,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.OptionsModal.audio'
   ],
   fr: [
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze', 'league.tiers.champion',
     'options', 'page', 'elements.nature', 'elements.air', 'skins.nature', 'skins.scorpion', 'skins.pirate',
@@ -80,8 +85,10 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skills.max'
   ],
   // skills.max / skills.new: the "MAX" / "NEW" badges JP/KR games print in Latin letters
-  jp: ['ok', 'pvp.okay', 'lv', 'sfc.AdsBlockedModal.adsBlocked.gotIt', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
-  kr: ['lv', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
+  // league: "LP" (League Points) — the abbreviation ranked games in this language use
+  jp: ['league.lp', 'league.lpProgress', 'ok', 'pvp.okay', 'lv', 'sfc.AdsBlockedModal.adsBlocked.gotIt', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
+  // league: "LP" (League Points) — the abbreviation ranked games in this language use
+  kr: ['league.lp', 'league.lpProgress', 'lv', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
   ru: [],
   zh: ['lv'],
   // ── New locales: add entries in the translator's batch ──
@@ -100,6 +107,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     noun Wulf, genre names (Fidget, Brainrot, Steampunk), "Log", "MAX", "Lv." (hu),
   //     "D{n}" (den / dan / diena)
   cs: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.wulf', 'skins.dark', 'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short', 'sfc.DailyRewards.dayShort',
@@ -120,6 +129,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skills.slotChip' // skills: "Slot" — the Romanian gaming term
   ],
   hu: [
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'lv', 'skins.wulf', 'skins.kraken', 'skins.taiko', 'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'skills.max' // skills: "MAX" badge
@@ -173,6 +184,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular'
   ],
   nl: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'pvp.host', 'arenas.lava', 'elements.water', 'elements.psi', 'skins.chip', 'skins.wulf',
     'skins.prisma', 'skins.tornado', 'skins.salamaner', 'skins.piranha', 'skins.teleporter', 'skins.dark',
@@ -184,6 +197,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // tr / az / uz / lv / vi / el: loanwords that are the native word (Arena, Lava, Metal, Tsunami),
   //     proper nouns (Wulf, Hydra, Kraken), Ninja, genre names (Brainrot, Steampunk), "Lv." (vi)
   tr: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'elements.metal', 'skins.wulf', 'skins.tsunami', 'skins.ninja', 'skins.kraken',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
@@ -197,8 +212,11 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.ninja', 'skins.kraken', 'sfc.BGSkinModal.bg.skins.nebula'
   ],
-  lv: ['labBadge', 'arenas.lava', 'skins.wulf', 'sfc.BGSkinModal.bg.skins.nebula'],
+  // league: "LP" (League Points) — the abbreviation ranked games in this language use
+  lv: ['league.lp', 'league.lpProgress', 'labBadge', 'arenas.lava', 'skins.wulf', 'sfc.BGSkinModal.bg.skins.nebula'],
   vi: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'lv', 'skins.wulf', 'skins.dark', 'skins.ninja', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos'
@@ -210,6 +228,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     "HP" (hederspoäng / honorpoentoj), "Log" (da/id), "Lv." and "Battle Pass" (id — the terms
   //     Indonesian players use)
   sv: [
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.silver',
@@ -221,12 +241,16 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skills.max' // skills: "MAX" badge
   ],
   nb: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'elements.psi', 'skins.demon', 'skins.tornado', 'skins.ape', 'skins.salamaner',
     'skins.dark', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
   da: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze',
@@ -236,10 +260,14 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short'
   ],
   fi: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'elements.psi', 'skins.prisma', 'skins.dark', 'skins.ninja', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos'
   ],
   id: ['labBadge',
+    // league: "LP" (League Points) — the abbreviation ranked games in this language use
+    'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.platinum',
@@ -249,6 +277,10 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.CombatLog.short',
     'skills.slotChip', 'skills.hudAria' // skills: "Slot", "level" — the terms Indonesian players use
   ],
-  eo: ['labBadge', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BattlePass.honorAbbr'],
+  // league: "LP" (League Points) — the abbreviation ranked games in this language use
+  eo: ['league.lp', 'league.lpProgress', 'labBadge', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BattlePass.honorAbbr'],
+  // league: "LP" (League Points) — the abbreviation ranked games in this language use
+  hi: ['league.lp', 'league.lpProgress'],
+  th: ['league.lp', 'league.lpProgress'],
   ar: ['lv'] // "Lv." — the gaming abbreviation, glued to a number in the UI
 }

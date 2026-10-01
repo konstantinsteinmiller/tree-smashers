@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Aavekaksonen',
     'cheat_split': 'Pirstova parvi',
     'cheat_partners': 'Rautaveljeskunta',
-    'cheat_healers': 'Parantava kuoro'
+    'cheat_healers': 'Parantava kuoro',
+    'cheat_thunder': 'Myrskynkutsuja',
+    'cheat_child_emitter': 'Pesäkuningatar',
+    'cheat_life_leech': 'Sieluimijä'
   },
   'node-w1': {
     'name': 'Keidastiedustelija',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Mestari'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liiga',
+    'tabs': {
+      'fight': 'Taistele',
+      'top': 'Kauden kärki'
+    },
+    'standing': 'Sijoituksesi',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n}/{max} LP tässä divisioonassa',
+    'atGate': 'Seuraavaksi: nousuottelu!',
+    'shields': '{n} suojattu ottelu | {n} suojattua ottelua',
+    'streak': '{n} voittoa putkeen',
+    'fightsToday': 'Ottelut tänään',
+    'fightsLeft': '{n} ottelu jäljellä | {n} ottelua jäljellä',
+    'fightsReset': 'Uusia otteluita {time} kuluttua',
+    'topUp': '+{n} ottelu | +{n} ottelua',
+    'topUpAria': 'Katso mainos saadaksesi {n} ottelun lisää | Katso mainos saadaksesi {n} ottelua lisää',
+    'hudAria': 'Liiga: {rank}, {fights}',
+    'opponents': 'Valitse vastustaja',
+    'difficulty': {
+      'easier': 'Helpompi',
+      'even': 'Tasainen',
+      'harder': 'Vaikeampi'
+    },
+    'fight': 'Taistele',
+    'fightAria': 'Taistele: {name} ({difficulty})',
+    'gate': {
+      'title': 'Nousuottelu',
+      'goal': 'Voita ja nouse: {rank}',
+      'challenge': 'Haasta',
+      'aria': 'Haasta {name} ja nouse: {rank}'
+    },
+    'quiet': {
+      'title': 'Vastustajat ovat tulossa',
+      'body': 'Rankattuja otteluita on pian tarjolla.'
+    },
+    'top': {
+      'title': 'Kauden parhaat',
+      'empty': 'Kukaan ei ole vielä noussut tällä kaudella. Ole ensimmäinen!'
+    },
+    'season': {
+      'label': 'Kausi {n}',
+      'endsIn': 'Päättyy {time} kuluttua',
+      'complete': 'Kausi {n} päättyi',
+      'peak': 'Paras sijoitus: {tier}',
+      'coinsAria': '{n} kolikko | {n} kolikkoa',
+      'diamondsAria': '{n} timantti | {n} timanttia',
+      'frame': 'Mestarin kehys',
+      'claim': 'Lunasta'
+    },
+    'result': {
+      'promoted': 'Nousu: {rank}!',
+      'up': 'Ylös: {rank}',
+      'down': 'Putoaminen: {rank}',
+      'shielded': 'Kilpi kesti: ei LP-menetystä',
+      'gateHeld': 'Portinvartija pitää pintansa. Yritä uudelleen!',
+      'capped': 'Päivän LP-raja täynnä',
+      'coins': '+{n} kolikkoa'
+    },
+    'notice': {
+      'dailyCap': 'Ei enää rankattuja otteluita tänään. Palaa huomenna!',
+      'noFights': 'Ei otteluita jäljellä tänään.',
+      'retry': 'Ottelu ei alkanut. Yritä uudelleen!'
+    },
+    'unlock': {
+      'title': 'Liiga avattu!',
+      'body': 'Taistele muiden pelaajien joukkueita vastaan ja nouse Puusta Mestariksi.',
+      'point1': 'Valitse helpompi, tasainen tai vaikeampi vastustaja',
+      'point2': 'Voita portinvartijapomo ja nouse uudelle tasolle',
+      'point3': 'Ansaitse palkintoja jokaisen kauden lopussa',
+      'enter': 'Liigaan',
+      'later': 'Myöhemmin'
+    },
+    'time': {
+      'dh': '{d} pv {h} t',
+      'hm': '{h} t {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafiikka',
   'graphicsQualityNote': 'Automaattinen vähentää tehosteita, kun laitteesi putoaa alle 25 FPS:n.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x taistelunopeuden',
         'rewardRespin': 'uuden pyöräytyksen',
         'rewardSkinAd': 'uuden skinin',
+        'rewardFights': '{count} liigaottelun lisää | {count} liigaottelua lisää',
         'watch': 'Katso mainos',
         'decline': 'Ei kiitos'
       }

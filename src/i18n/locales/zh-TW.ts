@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': '幻影雙子',
     'cheat_split': '碎裂蟲群',
     'cheat_partners': '鋼鐵兄弟會',
-    'cheat_healers': '療癒聖歌隊'
+    'cheat_healers': '療癒聖歌隊',
+    'cheat_thunder': '風暴召喚者',
+    'cheat_child_emitter': '蟲巢女王',
+    'cheat_life_leech': '噬魂水蛭'
   },
   'node-w1': {
     'name': '綠洲斥候',
@@ -163,7 +166,85 @@ export default {
       'champion': '冠軍'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} 第{position}名'
+    'tierPosition': '{tier} 第{position}名',
+    'title': '聯賽',
+    'tabs': {
+      'fight': '對戰',
+      'top': '賽季排行'
+    },
+    'standing': '你的段位',
+    'lp': '{n} 積分',
+    'lpProgress': '{n} / {max} 積分',
+    'lpAria': '本分段 {n}/{max} 積分',
+    'atGate': '下一場：晉級賽！',
+    'shields': '保護 {n} 場',
+    'streak': '{n} 連勝',
+    'fightsToday': '今日對戰',
+    'fightsLeft': '剩餘 {n} 場',
+    'fightsReset': '{time}後刷新對戰',
+    'topUp': '+{n} 場',
+    'topUpAria': '觀看廣告再獲得 {n} 場對戰',
+    'hudAria': '聯賽：{rank}，{fights}',
+    'opponents': '選擇對手',
+    'difficulty': {
+      'easier': '較弱',
+      'even': '相當',
+      'harder': '較強'
+    },
+    'fight': '對戰',
+    'fightAria': '與{name}對戰（{difficulty}）',
+    'gate': {
+      'title': '晉級賽',
+      'goal': '獲勝即可晉級{rank}',
+      'challenge': '挑戰',
+      'aria': '挑戰{name}，晉級{rank}'
+    },
+    'quiet': {
+      'title': '對手正在趕來',
+      'body': '排位賽馬上就緒。'
+    },
+    'top': {
+      'title': '本賽季最佳',
+      'empty': '本賽季還沒有人晉級。搶當第一人！'
+    },
+    'season': {
+      'label': '第{n}賽季',
+      'endsIn': '{time}後結束',
+      'complete': '第{n}賽季結束',
+      'peak': '最高段位：{tier}',
+      'coinsAria': '{n} 金幣',
+      'diamondsAria': '{n} 鑽石',
+      'frame': '冠軍頭像框',
+      'claim': '領取'
+    },
+    'result': {
+      'promoted': '晉級{rank}！',
+      'up': '升至{rank}',
+      'down': '降至{rank}',
+      'shielded': '護盾生效：未扣積分',
+      'gateHeld': '守門人屹立不搖。再試一次！',
+      'capped': '已達今日積分上限',
+      'coins': '+{n} 金幣'
+    },
+    'notice': {
+      'dailyCap': '今日排位賽已用完，明天再來！',
+      'noFights': '今日對戰次數已用完。',
+      'retry': '對戰無法開始，請再試一次！'
+    },
+    'unlock': {
+      'title': '聯賽已解鎖！',
+      'body': '與其他玩家的隊伍對戰，從木頭一路攀升到冠軍。',
+      'point1': '可選較弱、相當或較強的對手',
+      'point2': '擊敗守門頭目即可晉升新段位',
+      'point3': '每個賽季結束時領取獎勵',
+      'enter': '進入聯賽',
+      'later': '稍後'
+    },
+    'time': {
+      'dh': '{d}天{h}小時',
+      'hm': '{h}小時{m}分',
+      'm': '{m}分鐘'
+    }
   },
   'graphicsQuality': '畫質',
   'graphicsQualityNote': '裝置低於 25 FPS 時，自動模式會降低特效。',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2 倍戰鬥速度',
         'rewardRespin': '再轉一次',
         'rewardSkinAd': '一個新造型',
+        'rewardFights': '額外 {count} 場聯賽對戰',
         'watch': '觀看廣告',
         'decline': '不用了'
       }

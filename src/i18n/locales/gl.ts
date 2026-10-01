@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Xemelgo Pantasma',
     'cheat_split': 'Enxame Esnaquizado',
     'cheat_partners': 'Irmandade de Ferro',
-    'cheat_healers': 'Coro Curandeiro'
+    'cheat_healers': 'Coro Curandeiro',
+    'cheat_thunder': 'Invocatormentas',
+    'cheat_child_emitter': 'Raíña da Niñada',
+    'cheat_life_leech': 'Chupaalmas'
   },
   'node-w1': {
     'name': 'Explorador do Oasis',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Campión'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Loitar',
+      'top': 'Top da tempada'
+    },
+    'standing': 'O teu rango',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} de {max} PL nesta división',
+    'atGate': 'Seguinte: combate de ascenso!',
+    'shields': '{n} combate protexido | {n} combates protexidos',
+    'streak': 'Racha de {n} vitorias',
+    'fightsToday': 'Combates hoxe',
+    'fightsLeft': 'Queda {n} combate | Quedan {n} combates',
+    'fightsReset': 'Novos combates en {time}',
+    'topUp': '+{n} combate | +{n} combates',
+    'topUpAria': 'Mira un anuncio para {n} combate máis | Mira un anuncio para {n} combates máis',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Escolle o teu rival',
+    'difficulty': {
+      'easier': 'Máis feble',
+      'even': 'Igualado',
+      'harder': 'Máis forte'
+    },
+    'fight': 'Loitar',
+    'fightAria': 'Loitar contra {name} ({difficulty})',
+    'gate': {
+      'title': 'Combate de ascenso',
+      'goal': 'Gaña para chegar a {rank}',
+      'challenge': 'Desafiar',
+      'aria': 'Desafía a {name} para chegar a {rank}'
+    },
+    'quiet': {
+      'title': 'Os rivais están de camiño',
+      'body': 'Os combates clasificatorios estarán listos nun momento.'
+    },
+    'top': {
+      'title': 'O mellor da tempada',
+      'empty': 'Aínda ninguén subiu nesta tempada. Sé o primeiro!'
+    },
+    'season': {
+      'label': 'Tempada {n}',
+      'endsIn': 'Remata en {time}',
+      'complete': 'Tempada {n} completada',
+      'peak': 'Mellor rango: {tier}',
+      'coinsAria': '{n} moeda | {n} moedas',
+      'diamondsAria': '{n} diamante | {n} diamantes',
+      'frame': 'Marco de campión',
+      'claim': 'Recoller'
+    },
+    'result': {
+      'promoted': 'Ascenso a {rank}!',
+      'up': 'Subes a {rank}',
+      'down': 'Baixas a {rank}',
+      'shielded': 'Escudo activo: non perdes PL',
+      'gateHeld': 'O gardián resiste. Téntao de novo!',
+      'capped': 'Límite diario de PL acadado',
+      'coins': '+{n} moedas'
+    },
+    'notice': {
+      'dailyCap': 'Hoxe non quedan máis combates clasificatorios. Volve mañá!',
+      'noFights': 'Hoxe non che quedan combates.',
+      'retry': 'Non se puido iniciar o combate. Téntao de novo!'
+    },
+    'unlock': {
+      'title': 'Liga desbloqueada!',
+      'body': 'Loita contra os equipos doutros xogadores e sobe de Madeira a Campión.',
+      'point1': 'Escolle un rival máis feble, igualado ou máis forte',
+      'point2': 'Vence o xefe gardián para chegar a un novo rango',
+      'point3': 'Gaña recompensas ao final de cada tempada',
+      'enter': 'Entrar na liga',
+      'later': 'Máis tarde'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'No automático, os efectos baixan se o dispositivo cae por baixo de 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'velocidade de batalla x2',
         'rewardRespin': 'outro xiro',
         'rewardSkinAd': 'unha aparencia nova',
+        'rewardFights': '{count} combate de liga máis | {count} combates de liga máis',
         'watch': 'Ver anuncio',
         'decline': 'Non, grazas'
       }

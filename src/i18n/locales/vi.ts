@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Song sinh Bóng ma',
     'cheat_split': 'Bầy Phân tách',
     'cheat_partners': 'Huynh đệ Sắt thép',
-    'cheat_healers': 'Ca đoàn Hồi phục'
+    'cheat_healers': 'Ca đoàn Hồi phục',
+    'cheat_thunder': 'Kẻ Gọi Bão',
+    'cheat_child_emitter': 'Nữ Hoàng Bầy',
+    'cheat_life_leech': 'Đỉa Linh Hồn'
   },
   'node-w1': {
     'name': 'Trinh sát Ốc đảo',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Nhà Vô Địch'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Giải đấu',
+    'tabs': {
+      'fight': 'Đấu',
+      'top': 'Top mùa'
+    },
+    'standing': 'Hạng của bạn',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n}/{max} LP ở bậc này',
+    'atGate': 'Tiếp theo: trận thăng hạng!',
+    'shields': '{n} trận được bảo vệ',
+    'streak': 'Chuỗi {n} trận thắng',
+    'fightsToday': 'Trận hôm nay',
+    'fightsLeft': 'Còn {n} trận',
+    'fightsReset': 'Trận mới sau {time}',
+    'topUp': '+{n} trận',
+    'topUpAria': 'Xem quảng cáo để có thêm {n} trận',
+    'hudAria': 'Giải đấu: {rank}, {fights}',
+    'opponents': 'Chọn đối thủ',
+    'difficulty': {
+      'easier': 'Dễ hơn',
+      'even': 'Ngang sức',
+      'harder': 'Khó hơn'
+    },
+    'fight': 'Đấu',
+    'fightAria': 'Đấu với {name} ({difficulty})',
+    'gate': {
+      'title': 'Trận thăng hạng',
+      'goal': 'Thắng để lên {rank}',
+      'challenge': 'Thách đấu',
+      'aria': 'Thách đấu {name} để lên {rank}'
+    },
+    'quiet': {
+      'title': 'Đối thủ đang đến',
+      'body': 'Trận xếp hạng sẽ sẵn sàng ngay.'
+    },
+    'top': {
+      'title': 'Xuất sắc nhất mùa',
+      'empty': 'Chưa ai leo hạng mùa này. Hãy là người đầu tiên!'
+    },
+    'season': {
+      'label': 'Mùa {n}',
+      'endsIn': 'Kết thúc sau {time}',
+      'complete': 'Mùa {n} kết thúc',
+      'peak': 'Hạng cao nhất: {tier}',
+      'coinsAria': '{n} xu',
+      'diamondsAria': '{n} kim cương',
+      'frame': 'Khung Nhà Vô Địch',
+      'claim': 'Nhận'
+    },
+    'result': {
+      'promoted': 'Thăng lên {rank}!',
+      'up': 'Lên {rank}',
+      'down': 'Xuống {rank}',
+      'shielded': 'Khiên đã chặn: không mất LP',
+      'gateHeld': 'Người gác cổng vẫn trụ. Thử lại nhé!',
+      'capped': 'Đã đạt giới hạn LP trong ngày',
+      'coins': '+{n} xu'
+    },
+    'notice': {
+      'dailyCap': 'Hôm nay đã hết trận xếp hạng. Mai quay lại nhé!',
+      'noFights': 'Hôm nay đã hết trận.',
+      'retry': 'Không thể bắt đầu trận đấu. Thử lại nhé!'
+    },
+    'unlock': {
+      'title': 'Đã mở khóa Giải đấu!',
+      'body': 'Đấu với đội của người chơi khác và leo từ Gỗ lên Nhà Vô Địch.',
+      'point1': 'Chọn đối thủ dễ hơn, ngang sức hoặc khó hơn',
+      'point2': 'Hạ trùm gác cổng để lên bậc mới',
+      'point3': 'Nhận thưởng vào cuối mỗi mùa',
+      'enter': 'Vào giải đấu',
+      'later': 'Để sau'
+    },
+    'time': {
+      'dh': '{d} ngày {h} giờ',
+      'hm': '{h} giờ {m} phút',
+      'm': '{m} phút'
+    }
   },
   'graphicsQuality': 'Đồ họa',
   'graphicsQualityNote': 'Chế độ Tự động giảm hiệu ứng khi thiết bị tụt dưới 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'tốc độ trận x2',
         'rewardRespin': 'thêm một lượt quay',
         'rewardSkinAd': 'một skin mới',
+        'rewardFights': 'thêm {count} trận giải đấu',
         'watch': 'Xem quảng cáo',
         'decline': 'Không, cảm ơn'
       }

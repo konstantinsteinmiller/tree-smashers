@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Fantomtvilling',
     'cheat_split': 'Knusende sværm',
     'cheat_partners': 'Jernbroderskab',
-    'cheat_healers': 'Helende kor'
+    'cheat_healers': 'Helende kor',
+    'cheat_thunder': 'Stormkalderen',
+    'cheat_child_emitter': 'Yngeldronningen',
+    'cheat_life_leech': 'Sjæleiglen'
   },
   'node-w1': {
     'name': 'Oasespejder',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Mester'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Kæmp',
+      'top': 'Sæsontop'
+    },
+    'standing': 'Din rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} af {max} LP i denne division',
+    'atGate': 'Næste: oprykningskamp!',
+    'shields': '{n} beskyttet kamp | {n} beskyttede kampe',
+    'streak': '{n} sejre i træk',
+    'fightsToday': 'Kampe i dag',
+    'fightsLeft': '{n} kamp tilbage | {n} kampe tilbage',
+    'fightsReset': 'Nye kampe om {time}',
+    'topUp': '+{n} kamp | +{n} kampe',
+    'topUpAria': 'Se en reklame for {n} kamp mere | Se en reklame for {n} kampe mere',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Vælg din modstander',
+    'difficulty': {
+      'easier': 'Lettere',
+      'even': 'Lige',
+      'harder': 'Sværere'
+    },
+    'fight': 'Kæmp',
+    'fightAria': 'Kæmp mod {name} ({difficulty})',
+    'gate': {
+      'title': 'Oprykningskamp',
+      'goal': 'Vind for at nå {rank}',
+      'challenge': 'Udfordr',
+      'aria': 'Udfordr {name} for at nå {rank}'
+    },
+    'quiet': {
+      'title': 'Modstanderne er på vej',
+      'body': 'Rangerede kampe er klar om et øjeblik.'
+    },
+    'top': {
+      'title': 'Sæsonens bedste',
+      'empty': 'Ingen er rykket op endnu i denne sæson. Bliv den første!'
+    },
+    'season': {
+      'label': 'Sæson {n}',
+      'endsIn': 'Slutter om {time}',
+      'complete': 'Sæson {n} fuldført',
+      'peak': 'Bedste rang: {tier}',
+      'coinsAria': '{n} mønt | {n} mønter',
+      'diamondsAria': '{n} diamant | {n} diamanter',
+      'frame': 'Mesterramme',
+      'claim': 'Hent'
+    },
+    'result': {
+      'promoted': 'Rykket op til {rank}!',
+      'up': 'Op til {rank}',
+      'down': 'Ned til {rank}',
+      'shielded': 'Skjoldet holdt: ingen LP tabt',
+      'gateHeld': 'Portvogteren holder stand. Prøv igen!',
+      'capped': 'Dagens LP-grænse nået',
+      'coins': '+{n} mønter'
+    },
+    'notice': {
+      'dailyCap': 'Ikke flere rangerede kampe i dag. Kom tilbage i morgen!',
+      'noFights': 'Ingen kampe tilbage i dag.',
+      'retry': 'Kampen kunne ikke starte. Prøv igen!'
+    },
+    'unlock': {
+      'title': 'Liga låst op!',
+      'body': 'Kæmp mod andre spilleres hold og klatr fra Træ til Mester.',
+      'point1': 'Vælg en lettere, lige eller sværere modstander',
+      'point2': 'Besejr portvogter-bossen for at nå et nyt niveau',
+      'point3': 'Optjen belønninger ved slutningen af hver sæson',
+      'enter': 'Gå til ligaen',
+      'later': 'Senere'
+    },
+    'time': {
+      'dh': '{d} d {h} t',
+      'hm': '{h} t {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Automatisk skruer ned for effekterne, når din enhed falder under 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x kamptempo',
         'rewardRespin': 'et ekstra spin',
         'rewardSkinAd': 'et nyt skin',
+        'rewardFights': '{count} ligakamp mere | {count} ligakampe mere',
         'watch': 'Se reklame',
         'decline': 'Nej tak'
       }

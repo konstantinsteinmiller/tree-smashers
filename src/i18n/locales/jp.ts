@@ -116,7 +116,10 @@ export default {
     'cheat_ghost': 'ファントムツイン',
     'cheat_split': '粉砕の群れ',
     'cheat_partners': '鉄の兄弟団',
-    'cheat_healers': '癒しの聖歌隊'
+    'cheat_healers': '癒しの聖歌隊',
+    'cheat_thunder': '嵐を呼ぶ者',
+    'cheat_child_emitter': '群れの女王',
+    'cheat_life_leech': '魂喰らい'
   },
   'node-w1': {
     'name': 'オアシスの斥候',
@@ -162,7 +165,85 @@ export default {
       'champion': 'チャンピオン'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} {position}位'
+    'tierPosition': '{tier} {position}位',
+    'title': 'リーグ',
+    'tabs': {
+      'fight': 'バトル',
+      'top': 'シーズン上位'
+    },
+    'standing': '現在のランク',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': 'このディビジョンで{n}/{max} LP',
+    'atGate': '次は昇格戦！',
+    'shields': '保護あと{n}回',
+    'streak': '{n}連勝',
+    'fightsToday': '今日のバトル',
+    'fightsLeft': '残り{n}回',
+    'fightsReset': '{time}後に新しいバトル',
+    'topUp': '+{n}回',
+    'topUpAria': '広告を見てバトルを{n}回追加',
+    'hudAria': 'リーグ：{rank}、{fights}',
+    'opponents': '対戦相手を選ぼう',
+    'difficulty': {
+      'easier': '格下',
+      'even': '互角',
+      'harder': '格上'
+    },
+    'fight': 'バトル',
+    'fightAria': '{name}とバトル（{difficulty}）',
+    'gate': {
+      'title': '昇格戦',
+      'goal': '勝って{rank}へ',
+      'challenge': '挑戦',
+      'aria': '{name}に挑戦して{rank}へ'
+    },
+    'quiet': {
+      'title': '対戦相手が向かっています',
+      'body': 'ランク戦はまもなく始まります。'
+    },
+    'top': {
+      'title': '今シーズンのトップ',
+      'empty': '今シーズンはまだ誰も昇格していません。一番乗りを目指そう！'
+    },
+    'season': {
+      'label': 'シーズン{n}',
+      'endsIn': '残り{time}',
+      'complete': 'シーズン{n}終了',
+      'peak': '最高ランク：{tier}',
+      'coinsAria': '{n}コイン',
+      'diamondsAria': 'ダイヤ{n}個',
+      'frame': 'チャンピオンフレーム',
+      'claim': '受け取る'
+    },
+    'result': {
+      'promoted': '{rank}に昇格！',
+      'up': '{rank}にアップ',
+      'down': '{rank}にダウン',
+      'shielded': 'シールド発動：LPは減りません',
+      'gateHeld': '門番は倒れない。もう一度挑戦！',
+      'capped': '本日のLP上限に達しました',
+      'coins': '+{n}コイン'
+    },
+    'notice': {
+      'dailyCap': '今日のランク戦は終了です。また明日！',
+      'noFights': '今日のバトルは残っていません。',
+      'retry': 'バトルを開始できませんでした。もう一度お試しください！'
+    },
+    'unlock': {
+      'title': 'リーグ解放！',
+      'body': '他のプレイヤーのチームと戦い、ウッドからチャンピオンを目指そう。',
+      'point1': '格下・互角・格上の相手を選べる',
+      'point2': '門番ボスを倒して新しいティアへ',
+      'point3': 'シーズン終了ごとに報酬をゲット',
+      'enter': 'リーグへ',
+      'later': 'あとで'
+    },
+    'time': {
+      'dh': '{d}日{h}時間',
+      'hm': '{h}時間{m}分',
+      'm': '{m}分'
+    }
   },
   'graphicsQuality': 'グラフィック',
   'graphicsQualityNote': '自動モードでは、25FPSを下回るとエフェクトを軽減します。',
@@ -505,6 +586,7 @@ export default {
         'rewardSpeed': 'バトル速度2倍',
         'rewardRespin': 'もう1回スピン',
         'rewardSkinAd': '新しいスキン',
+        'rewardFights': 'リーグバトル{count}回',
         'watch': '広告を見る',
         'decline': '見ない'
       }

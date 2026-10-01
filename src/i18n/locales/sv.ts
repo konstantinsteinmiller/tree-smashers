@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Fantomtvilling',
     'cheat_split': 'Splittrande svärm',
     'cheat_partners': 'Järnbrödraskap',
-    'cheat_healers': 'Helande kör'
+    'cheat_healers': 'Helande kör',
+    'cheat_thunder': 'Stormkallaren',
+    'cheat_child_emitter': 'Yngeldrottningen',
+    'cheat_life_leech': 'Själsiglen'
   },
   'node-w1': {
     'name': 'Oasens spejare',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Mästare'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Kämpa',
+      'top': 'Säsongstopp'
+    },
+    'standing': 'Din rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} av {max} LP i den här divisionen',
+    'atGate': 'Nästa: uppflyttningsmatch!',
+    'shields': '{n} skyddad match | {n} skyddade matcher',
+    'streak': '{n} vinster i rad',
+    'fightsToday': 'Matcher idag',
+    'fightsLeft': '{n} match kvar | {n} matcher kvar',
+    'fightsReset': 'Nya matcher om {time}',
+    'topUp': '+{n} match | +{n} matcher',
+    'topUpAria': 'Titta på en annons för {n} match till | Titta på en annons för {n} matcher till',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Välj din motståndare',
+    'difficulty': {
+      'easier': 'Lättare',
+      'even': 'Jämn',
+      'harder': 'Svårare'
+    },
+    'fight': 'Kämpa',
+    'fightAria': 'Kämpa mot {name} ({difficulty})',
+    'gate': {
+      'title': 'Uppflyttningsmatch',
+      'goal': 'Vinn för att nå {rank}',
+      'challenge': 'Utmana',
+      'aria': 'Utmana {name} för att nå {rank}'
+    },
+    'quiet': {
+      'title': 'Motståndarna är på väg',
+      'body': 'Rankade matcher är redo om en stund.'
+    },
+    'top': {
+      'title': 'Säsongens bästa',
+      'empty': 'Ingen har klättrat än den här säsongen. Bli först!'
+    },
+    'season': {
+      'label': 'Säsong {n}',
+      'endsIn': 'Slutar om {time}',
+      'complete': 'Säsong {n} klar',
+      'peak': 'Bästa rang: {tier}',
+      'coinsAria': '{n} mynt | {n} mynt',
+      'diamondsAria': '{n} diamant | {n} diamanter',
+      'frame': 'Mästarram',
+      'claim': 'Hämta'
+    },
+    'result': {
+      'promoted': 'Uppflyttad till {rank}!',
+      'up': 'Upp till {rank}',
+      'down': 'Nedflyttad till {rank}',
+      'shielded': 'Skölden höll: inga LP förlorade',
+      'gateHeld': 'Portvakten står emot. Försök igen!',
+      'capped': 'Dagens LP-gräns nådd',
+      'coins': '+{n} mynt'
+    },
+    'notice': {
+      'dailyCap': 'Inga fler rankade matcher idag. Kom tillbaka i morgon!',
+      'noFights': 'Inga matcher kvar idag.',
+      'retry': 'Matchen kunde inte starta. Försök igen!'
+    },
+    'unlock': {
+      'title': 'Ligan upplåst!',
+      'body': 'Slåss mot andra spelares lag och klättra från Trä till Mästare.',
+      'point1': 'Välj en lättare, jämn eller svårare motståndare',
+      'point2': 'Besegra portvaktsbossen för att nå en ny nivå',
+      'point3': 'Tjäna belöningar i slutet av varje säsong',
+      'enter': 'Till ligan',
+      'later': 'Senare'
+    },
+    'time': {
+      'dh': '{d} d {h} tim',
+      'hm': '{h} tim {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Automatisk sänker effekterna när din enhet går under 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x stridsfart',
         'rewardRespin': 'en snurr till',
         'rewardSkinAd': 'ett nytt skin',
+        'rewardFights': '{count} ligamatch till | {count} ligamatcher till',
         'watch': 'Titta på annons',
         'decline': 'Nej tack'
       }

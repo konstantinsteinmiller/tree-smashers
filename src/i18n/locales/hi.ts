@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'प्रेत जुड़वाँ',
     'cheat_split': 'बिखरता झुंड',
     'cheat_partners': 'लौह भाईचारा',
-    'cheat_healers': 'उपचार मंडली'
+    'cheat_healers': 'उपचार मंडली',
+    'cheat_thunder': 'आँधी का स्वामी',
+    'cheat_child_emitter': 'झुंड की रानी',
+    'cheat_life_leech': 'आत्मा-जोंक'
   },
   'node-w1': {
     'name': 'नख़लिस्तान स्काउट',
@@ -163,7 +166,85 @@ export default {
       'champion': 'चैंपियन'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'लीग',
+    'tabs': {
+      'fight': 'लड़ो',
+      'top': 'सीज़न टॉप'
+    },
+    'standing': 'तुम्हारी रैंक',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': 'इस डिवीज़न में {max} में से {n} LP',
+    'atGate': 'अगला: प्रमोशन फ़ाइट!',
+    'shields': '{n} सुरक्षित फ़ाइट | {n} सुरक्षित फ़ाइट्स',
+    'streak': 'लगातार {n} जीत',
+    'fightsToday': 'आज की फ़ाइट्स',
+    'fightsLeft': '{n} फ़ाइट बाकी | {n} फ़ाइट्स बाकी',
+    'fightsReset': 'नई फ़ाइट्स {time} में',
+    'topUp': '+{n} फ़ाइट | +{n} फ़ाइट्स',
+    'topUpAria': '{n} और फ़ाइट के लिए विज्ञापन देखो | {n} और फ़ाइट्स के लिए विज्ञापन देखो',
+    'hudAria': 'लीग: {rank}, {fights}',
+    'opponents': 'अपना विरोधी चुनो',
+    'difficulty': {
+      'easier': 'कमज़ोर',
+      'even': 'बराबर',
+      'harder': 'ताकतवर'
+    },
+    'fight': 'लड़ो',
+    'fightAria': '{name} से लड़ो ({difficulty})',
+    'gate': {
+      'title': 'प्रमोशन फ़ाइट',
+      'goal': 'जीतो और {rank} पाओ',
+      'challenge': 'चुनौती दो',
+      'aria': '{name} को चुनौती दो और {rank} पाओ'
+    },
+    'quiet': {
+      'title': 'विरोधी रास्ते में हैं',
+      'body': 'रैंक्ड फ़ाइट्स बस तैयार होने वाली हैं।'
+    },
+    'top': {
+      'title': 'इस सीज़न के बेहतरीन',
+      'empty': 'इस सीज़न अभी तक कोई ऊपर नहीं चढ़ा। पहले बनो!'
+    },
+    'season': {
+      'label': 'सीज़न {n}',
+      'endsIn': '{time} में खत्म',
+      'complete': 'सीज़न {n} पूरा',
+      'peak': 'सबसे अच्छी रैंक: {tier}',
+      'coinsAria': '{n} सिक्का | {n} सिक्के',
+      'diamondsAria': '{n} डायमंड | {n} डायमंड',
+      'frame': 'चैंपियन फ़्रेम',
+      'claim': 'लो'
+    },
+    'result': {
+      'promoted': '{rank} पर प्रमोशन!',
+      'up': '{rank} तक ऊपर',
+      'down': '{rank} पर नीचे',
+      'shielded': 'शील्ड ने बचाया: कोई LP नहीं गया',
+      'gateHeld': 'गेटकीपर डटा है। फिर कोशिश करो!',
+      'capped': 'आज की LP सीमा पूरी',
+      'coins': '+{n} सिक्के'
+    },
+    'notice': {
+      'dailyCap': 'आज के लिए रैंक्ड फ़ाइट्स खत्म। कल फिर आना!',
+      'noFights': 'आज कोई फ़ाइट बाकी नहीं।',
+      'retry': 'फ़ाइट शुरू नहीं हो सकी। फिर कोशिश करो!'
+    },
+    'unlock': {
+      'title': 'लीग अनलॉक!',
+      'body': 'दूसरे खिलाड़ियों की टीमों से लड़ो और लकड़ी से चैंपियन तक चढ़ो।',
+      'point1': 'कमज़ोर, बराबर या ताकतवर विरोधी चुनो',
+      'point2': 'नए टियर के लिए गेटकीपर बॉस को हराओ',
+      'point3': 'हर सीज़न के अंत में इनाम पाओ',
+      'enter': 'लीग में जाओ',
+      'later': 'बाद में'
+    },
+    'time': {
+      'dh': '{d} दिन {h} घं',
+      'hm': '{h} घं {m} मि',
+      'm': '{m} मि'
+    }
   },
   'graphicsQuality': 'ग्राफ़िक्स',
   'graphicsQualityNote': 'डिवाइस 25 FPS से नीचे जाने पर ऑटोमैटिक मोड इफ़ेक्ट्स कम कर देता है।',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'लड़ाई में दोगुनी रफ़्तार',
         'rewardRespin': 'एक और स्पिन',
         'rewardSkinAd': 'एक नई स्किन',
+        'rewardFights': '{count} और लीग फ़ाइट | {count} और लीग फ़ाइट्स',
         'watch': 'विज्ञापन देखो',
         'decline': 'नहीं, शुक्रिया'
       }

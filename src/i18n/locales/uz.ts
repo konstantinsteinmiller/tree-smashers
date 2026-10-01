@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Arvoh Egizak',
     'cheat_split': 'Boʻlinuvchi Toʻda',
     'cheat_partners': 'Temir Birodarlik',
-    'cheat_healers': 'Shifo Xori'
+    'cheat_healers': 'Shifo Xori',
+    'cheat_thunder': 'Boʻron Chaqiruvchi',
+    'cheat_child_emitter': 'Toʻda Malikasi',
+    'cheat_life_leech': 'Jon Zulugi'
   },
   'node-w1': {
     'name': 'Voha Kashshofi',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Chempion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Jang',
+      'top': 'Mavsum reytingi'
+    },
+    'standing': 'Darajang',
+    'lp': '{n} LO',
+    'lpProgress': '{n} / {max} LO',
+    'lpAria': 'Bu divizionda {n}/{max} LO',
+    'atGate': 'Keyingisi: koʻtarilish jangi!',
+    'shields': '{n} himoyalangan jang | {n} himoyalangan jang',
+    'streak': 'Ketma-ket {n} gʻalaba',
+    'fightsToday': 'Bugungi janglar',
+    'fightsLeft': '{n} jang qoldi | {n} jang qoldi',
+    'fightsReset': 'Yangi janglar: {time}',
+    'topUp': '+{n} jang | +{n} jang',
+    'topUpAria': 'Yana {n} jang uchun reklama koʻr | Yana {n} jang uchun reklama koʻr',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Raqibingni tanla',
+    'difficulty': {
+      'easier': 'Osonroq',
+      'even': 'Teng',
+      'harder': 'Qiyinroq'
+    },
+    'fight': 'Jang',
+    'fightAria': '{name} bilan jang ({difficulty})',
+    'gate': {
+      'title': 'Koʻtarilish jangi',
+      'goal': 'Yut va {rank} boʻl',
+      'challenge': 'Bellash',
+      'aria': '{name} bilan bellash va {rank} boʻl'
+    },
+    'quiet': {
+      'title': 'Raqiblar yoʻlda',
+      'body': 'Reyting janglari birozdan soʻng tayyor boʻladi.'
+    },
+    'top': {
+      'title': 'Mavsumning eng zoʻrlari',
+      'empty': 'Bu mavsumda hali hech kim koʻtarilmadi. Birinchi boʻl!'
+    },
+    'season': {
+      'label': 'Mavsum {n}',
+      'endsIn': 'Tugashiga: {time}',
+      'complete': 'Mavsum {n} yakunlandi',
+      'peak': 'Eng yaxshi daraja: {tier}',
+      'coinsAria': '{n} tanga | {n} tanga',
+      'diamondsAria': '{n} olmos | {n} olmos',
+      'frame': 'Chempion ramkasi',
+      'claim': 'Olish'
+    },
+    'result': {
+      'promoted': 'Koʻtarilding: {rank}!',
+      'up': 'Yuqoriga: {rank}',
+      'down': 'Pastga: {rank}',
+      'shielded': 'Qalqon saqladi: LO yoʻqotilmadi',
+      'gateHeld': 'Qoʻriqchi bardosh berdi. Yana urinib koʻr!',
+      'capped': 'Kunlik LO chegarasiga yetding',
+      'coins': '+{n} tanga'
+    },
+    'notice': {
+      'dailyCap': 'Bugun boshqa reyting janglari yoʻq. Ertaga qayt!',
+      'noFights': 'Bugun jang qolmadi.',
+      'retry': 'Jang boshlanmadi. Yana urinib koʻr!'
+    },
+    'unlock': {
+      'title': 'Liga ochildi!',
+      'body': 'Boshqa oʻyinchilar jamoalari bilan jang qil va Yogʻochdan Chempiongacha koʻtaril.',
+      'point1': 'Osonroq, teng yoki qiyinroq raqib tanla',
+      'point2': 'Yangi pogʻonaga chiqish uchun qoʻriqchi bossni yeng',
+      'point3': 'Har mavsum oxirida mukofotlar ol',
+      'enter': 'Ligaga kirish',
+      'later': 'Keyinroq'
+    },
+    'time': {
+      'dh': '{d} k {h} s',
+      'hm': '{h} s {m} daq',
+      'm': '{m} daq'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Avtomatik rejim qurilmang 25 FPS dan pastga tushsa, effektlarni kamaytiradi.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x jang tezligi',
         'rewardRespin': 'yana bir aylantirish',
         'rewardSkinAd': 'yangi skin',
+        'rewardFights': 'yana {count} liga jangi | yana {count} liga jangi',
         'watch': 'Tomosha qilish',
         'decline': 'Kerak emas'
       }

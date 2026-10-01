@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Přízračné dvojče',
     'cheat_split': 'Tříštivý roj',
     'cheat_partners': 'Železné bratrstvo',
-    'cheat_healers': 'Sbor léčitelů'
+    'cheat_healers': 'Sbor léčitelů',
+    'cheat_thunder': 'Vyvolavač bouří',
+    'cheat_child_emitter': 'Královna roje',
+    'cheat_life_leech': 'Pijavice duší'
   },
   'node-w1': {
     'name': 'Zvěd oázy',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Šampion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Do boje',
+      'top': 'Top sezóny'
+    },
+    'standing': 'Tvoje hodnost',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} z {max} LP v této divizi',
+    'atGate': 'Další: souboj o postup!',
+    'shields': '{n} chráněný souboj | {n} chráněné souboje | {n} chráněných soubojů',
+    'streak': 'Série výher: {n}',
+    'fightsToday': 'Souboje dnes',
+    'fightsLeft': 'Zbývá {n} souboj | Zbývají {n} souboje | Zbývá {n} soubojů',
+    'fightsReset': 'Nové souboje za {time}',
+    'topUp': '+{n} souboj | +{n} souboje | +{n} soubojů',
+    'topUpAria': 'Podívej se na reklamu a získej {n} souboj navíc | Podívej se na reklamu a získej {n} souboje navíc | Podívej se na reklamu a získej {n} soubojů navíc',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Vyber soupeře',
+    'difficulty': {
+      'easier': 'Slabší',
+      'even': 'Vyrovnaný',
+      'harder': 'Silnější'
+    },
+    'fight': 'Do boje',
+    'fightAria': 'Bojovat: {name} ({difficulty})',
+    'gate': {
+      'title': 'Souboj o postup',
+      'goal': 'Vyhraj a postup: {rank}',
+      'challenge': 'Vyzvat',
+      'aria': 'Vyzvat {name} o postup: {rank}'
+    },
+    'quiet': {
+      'title': 'Soupeři jsou na cestě',
+      'body': 'Hodnocené souboje budou za chvíli připravené.'
+    },
+    'top': {
+      'title': 'Nejlepší sezóny',
+      'empty': 'V této sezóně ještě nikdo nepostoupil. Buď první!'
+    },
+    'season': {
+      'label': 'Sezóna {n}',
+      'endsIn': 'Končí za {time}',
+      'complete': 'Sezóna {n} dokončena',
+      'peak': 'Nejlepší hodnost: {tier}',
+      'coinsAria': '{n} mince | {n} mince | {n} mincí',
+      'diamondsAria': '{n} diamant | {n} diamanty | {n} diamantů',
+      'frame': 'Rámeček šampiona',
+      'claim': 'Vyzvednout'
+    },
+    'result': {
+      'promoted': 'Postup: {rank}!',
+      'up': 'Nahoru: {rank}',
+      'down': 'Sestup: {rank}',
+      'shielded': 'Štít vydržel: žádné LP ztraceny',
+      'gateHeld': 'Strážce odolal. Zkus to znovu!',
+      'capped': 'Denní limit LP dosažen',
+      'coins': 'Mince: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Dnes už žádné hodnocené souboje. Vrať se zítra!',
+      'noFights': 'Dnes ti už nezbývají souboje.',
+      'retry': 'Souboj se nepodařilo spustit. Zkus to znovu!'
+    },
+    'unlock': {
+      'title': 'Liga odemčena!',
+      'body': 'Bojuj s týmy ostatních hráčů a vyšplhej se ze Dřeva až na Šampiona.',
+      'point1': 'Vyber slabšího, vyrovnaného nebo silnějšího soupeře',
+      'point2': 'Poraz strážného bosse a postup na novou úroveň',
+      'point3': 'Získej odměny na konci každé sezóny',
+      'enter': 'Do ligy',
+      'later': 'Později'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatický režim sníží efekty, když zařízení klesne pod 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'rychlost bitvy ×2',
         'rewardRespin': 'další zatočení',
         'rewardSkinAd': 'nový skin',
+        'rewardFights': '{count} souboj v lize navíc | {count} souboje v lize navíc | {count} soubojů v lize navíc',
         'watch': 'Přehrát',
         'decline': 'Ne, díky'
       }

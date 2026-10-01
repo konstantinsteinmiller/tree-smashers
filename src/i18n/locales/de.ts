@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Phantomzwilling',
     'cheat_split': 'Zertrümmernder Schwarm',
     'cheat_partners': 'Eiserne Bruderschaft',
-    'cheat_healers': 'Heilender Chor'
+    'cheat_healers': 'Heilender Chor',
+    'cheat_thunder': 'Sturmrufer',
+    'cheat_child_emitter': 'Brutkönigin',
+    'cheat_life_leech': 'Seelensauger'
   },
   'node-w1': {
     'name': 'Oasenspäher',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Champion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Kämpfen',
+      'top': 'Saison-Top'
+    },
+    'standing': 'Dein Rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} von {max} LP in dieser Division',
+    'atGate': 'Als Nächstes: Aufstiegskampf!',
+    'shields': '{n} geschützter Kampf | {n} geschützte Kämpfe',
+    'streak': '{n} Siege in Folge',
+    'fightsToday': 'Kämpfe heute',
+    'fightsLeft': 'Noch {n} Kampf | Noch {n} Kämpfe',
+    'fightsReset': 'Neue Kämpfe in {time}',
+    'topUp': '+{n} Kampf | +{n} Kämpfe',
+    'topUpAria': 'Werbung ansehen für {n} weiteren Kampf | Werbung ansehen für {n} weitere Kämpfe',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Wähle deinen Gegner',
+    'difficulty': {
+      'easier': 'Schwächer',
+      'even': 'Ebenbürtig',
+      'harder': 'Stärker'
+    },
+    'fight': 'Kämpfen',
+    'fightAria': 'Gegen {name} kämpfen ({difficulty})',
+    'gate': {
+      'title': 'Aufstiegskampf',
+      'goal': 'Gewinne für {rank}',
+      'challenge': 'Herausfordern',
+      'aria': '{name} herausfordern, um {rank} zu erreichen'
+    },
+    'quiet': {
+      'title': 'Gegner sind unterwegs',
+      'body': 'Ranglistenkämpfe sind gleich bereit.'
+    },
+    'top': {
+      'title': 'Die Besten der Saison',
+      'empty': 'Diese Saison ist noch niemand aufgestiegen. Sei der Erste!'
+    },
+    'season': {
+      'label': 'Saison {n}',
+      'endsIn': 'Endet in {time}',
+      'complete': 'Saison {n} beendet',
+      'peak': 'Bester Rang: {tier}',
+      'coinsAria': '{n} Münze | {n} Münzen',
+      'diamondsAria': '{n} Diamant | {n} Diamanten',
+      'frame': 'Champion-Rahmen',
+      'claim': 'Abholen'
+    },
+    'result': {
+      'promoted': 'Aufstieg: {rank}!',
+      'up': 'Hoch auf {rank}',
+      'down': 'Abgestiegen auf {rank}',
+      'shielded': 'Schild hält: keine LP verloren',
+      'gateHeld': 'Der Torwächter hält stand. Versuch es nochmal!',
+      'capped': 'Tägliches LP-Limit erreicht',
+      'coins': '+{n} Münzen'
+    },
+    'notice': {
+      'dailyCap': 'Heute keine Ranglistenkämpfe mehr. Komm morgen wieder!',
+      'noFights': 'Heute keine Kämpfe mehr übrig.',
+      'retry': 'Der Kampf konnte nicht starten. Versuch es nochmal!'
+    },
+    'unlock': {
+      'title': 'Liga freigeschaltet!',
+      'body': 'Kämpfe gegen Teams anderer Spieler und steig von Holz bis Champion auf.',
+      'point1': 'Wähle einen schwächeren, ebenbürtigen oder stärkeren Gegner',
+      'point2': 'Besiege den Torwächter-Boss für eine neue Stufe',
+      'point3': 'Hol dir Belohnungen am Ende jeder Saison',
+      'enter': 'Zur Liga',
+      'later': 'Später'
+    },
+    'time': {
+      'dh': '{d} T. {h} Std.',
+      'hm': '{h} Std. {m} Min.',
+      'm': '{m} Min.'
+    }
   },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Automatisch reduziert Effekte, wenn dein Gerät unter 25 FPS fällt.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x Kampftempo',
         'rewardRespin': 'einen weiteren Dreh',
         'rewardSkinAd': 'einen neuen Skin',
+        'rewardFights': '{count} weiteren Ligakampf | {count} weitere Ligakämpfe',
         'watch': 'Werbung ansehen',
         'decline': 'Nein, danke'
       }

@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Gêmeo Fantasma',
     'cheat_split': 'Enxame Estilhaçado',
     'cheat_partners': 'Irmandade de Ferro',
-    'cheat_healers': 'Coro Curandeiro'
+    'cheat_healers': 'Coro Curandeiro',
+    'cheat_thunder': 'Chama-Tempestades',
+    'cheat_child_emitter': 'Rainha da Ninhada',
+    'cheat_life_leech': 'Suga-Almas'
   },
   'node-w1': {
     'name': 'Batedor do Oásis',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Campeão'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Lutar',
+      'top': 'Top da temporada'
+    },
+    'standing': 'Seu ranking',
+    'lp': '{n} PDL',
+    'lpProgress': '{n} / {max} PDL',
+    'lpAria': '{n} de {max} PDL nesta divisão',
+    'atGate': 'Próxima: luta de promoção!',
+    'shields': '{n} luta protegida | {n} lutas protegidas',
+    'streak': '{n} vitórias seguidas',
+    'fightsToday': 'Lutas hoje',
+    'fightsLeft': '{n} luta restante | {n} lutas restantes',
+    'fightsReset': 'Novas lutas em {time}',
+    'topUp': '+{n} luta | +{n} lutas',
+    'topUpAria': 'Assista a um anúncio para ganhar mais {n} luta | Assista a um anúncio para ganhar mais {n} lutas',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Escolha seu oponente',
+    'difficulty': {
+      'easier': 'Mais fraco',
+      'even': 'Parelho',
+      'harder': 'Mais forte'
+    },
+    'fight': 'Lutar',
+    'fightAria': 'Lutar contra {name} ({difficulty})',
+    'gate': {
+      'title': 'Luta de promoção',
+      'goal': 'Vença para chegar a {rank}',
+      'challenge': 'Desafiar',
+      'aria': 'Desafie {name} para chegar a {rank}'
+    },
+    'quiet': {
+      'title': 'Os oponentes estão a caminho',
+      'body': 'As lutas ranqueadas estarão prontas em instantes.'
+    },
+    'top': {
+      'title': 'Os melhores da temporada',
+      'empty': 'Ninguém subiu ainda nesta temporada. Seja o primeiro!'
+    },
+    'season': {
+      'label': 'Temporada {n}',
+      'endsIn': 'Termina em {time}',
+      'complete': 'Temporada {n} concluída',
+      'peak': 'Melhor ranking: {tier}',
+      'coinsAria': '{n} moeda | {n} moedas',
+      'diamondsAria': '{n} diamante | {n} diamantes',
+      'frame': 'Moldura de campeão',
+      'claim': 'Resgatar'
+    },
+    'result': {
+      'promoted': 'Promovido a {rank}!',
+      'up': 'Subiu para {rank}',
+      'down': 'Caiu para {rank}',
+      'shielded': 'Escudo ativo: nenhum PDL perdido',
+      'gateHeld': 'O guardião resiste. Tente de novo!',
+      'capped': 'Limite diário de PDL atingido',
+      'coins': '+{n} moedas'
+    },
+    'notice': {
+      'dailyCap': 'Sem mais lutas ranqueadas hoje. Volte amanhã!',
+      'noFights': 'Nenhuma luta restante hoje.',
+      'retry': 'Não foi possível iniciar a luta. Tente de novo!'
+    },
+    'unlock': {
+      'title': 'Liga desbloqueada!',
+      'body': 'Enfrente equipes de outros jogadores e suba de Madeira a Campeão.',
+      'point1': 'Escolha um oponente mais fraco, parelho ou mais forte',
+      'point2': 'Derrote o chefe guardião para alcançar um novo nível',
+      'point3': 'Ganhe recompensas no fim de cada temporada',
+      'enter': 'Entrar na liga',
+      'later': 'Depois'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'No automático, os efeitos diminuem quando seu aparelho cai abaixo de 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'velocidade de batalha 2x',
         'rewardRespin': 'mais um giro',
         'rewardSkinAd': 'uma nova skin',
+        'rewardFights': 'mais {count} luta da liga | mais {count} lutas da liga',
         'watch': 'Assistir anúncio',
         'decline': 'Não, valeu'
       }

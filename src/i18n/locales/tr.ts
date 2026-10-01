@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Hayalet İkiz',
     'cheat_split': 'Parçalanan Sürü',
     'cheat_partners': 'Demir Kardeşlik',
-    'cheat_healers': 'Şifa Korosu'
+    'cheat_healers': 'Şifa Korosu',
+    'cheat_thunder': 'Fırtına Çağıran',
+    'cheat_child_emitter': 'Kuluçka Kraliçesi',
+    'cheat_life_leech': 'Ruh Sülüğü'
   },
   'node-w1': {
     'name': 'Vaha Kâşifi',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Şampiyon'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Lig',
+    'tabs': {
+      'fight': 'Savaş',
+      'top': 'Sezon zirvesi'
+    },
+    'standing': 'Sıralaman',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': 'Bu kümede {n}/{max} LP',
+    'atGate': 'Sırada: terfi maçı!',
+    'shields': '{n} korumalı maç | {n} korumalı maç',
+    'streak': '{n} galibiyet serisi',
+    'fightsToday': 'Bugünkü maçlar',
+    'fightsLeft': '{n} maç kaldı | {n} maç kaldı',
+    'fightsReset': 'Yeni maçlar {time} sonra',
+    'topUp': '+{n} maç | +{n} maç',
+    'topUpAria': '{n} maç daha için reklam izle | {n} maç daha için reklam izle',
+    'hudAria': 'Lig: {rank}, {fights}',
+    'opponents': 'Rakibini seç',
+    'difficulty': {
+      'easier': 'Daha kolay',
+      'even': 'Denk',
+      'harder': 'Daha zor'
+    },
+    'fight': 'Savaş',
+    'fightAria': '{name} ile savaş ({difficulty})',
+    'gate': {
+      'title': 'Terfi maçı',
+      'goal': 'Kazan, {rank} ol',
+      'challenge': 'Meydan oku',
+      'aria': '{name} rakibine meydan oku, {rank} ol'
+    },
+    'quiet': {
+      'title': 'Rakipler yolda',
+      'body': 'Dereceli maçlar birazdan hazır olacak.'
+    },
+    'top': {
+      'title': 'Sezonun en iyileri',
+      'empty': 'Bu sezon henüz kimse yükselmedi. İlk sen ol!'
+    },
+    'season': {
+      'label': 'Sezon {n}',
+      'endsIn': '{time} sonra bitiyor',
+      'complete': 'Sezon {n} tamamlandı',
+      'peak': 'En iyi derece: {tier}',
+      'coinsAria': '{n} altın | {n} altın',
+      'diamondsAria': '{n} elmas | {n} elmas',
+      'frame': 'Şampiyon çerçevesi',
+      'claim': 'Al'
+    },
+    'result': {
+      'promoted': 'Terfi: {rank}!',
+      'up': 'Yükseldin: {rank}',
+      'down': 'Düştün: {rank}',
+      'shielded': 'Kalkan dayandı: LP kaybı yok',
+      'gateHeld': 'Kapı bekçisi direniyor. Tekrar dene!',
+      'capped': 'Günlük LP sınırına ulaşıldı',
+      'coins': '+{n} altın'
+    },
+    'notice': {
+      'dailyCap': 'Bugünlük dereceli maç kalmadı. Yarın tekrar gel!',
+      'noFights': 'Bugün maç hakkın kalmadı.',
+      'retry': 'Maç başlatılamadı. Tekrar dene!'
+    },
+    'unlock': {
+      'title': 'Lig açıldı!',
+      'body': 'Diğer oyuncuların takımlarıyla savaş, Tahta\'dan Şampiyon\'a tırman.',
+      'point1': 'Daha kolay, denk veya daha zor bir rakip seç',
+      'point2': 'Yeni kademe için kapı bekçisi boss\'u yen',
+      'point3': 'Her sezon sonunda ödüller kazan',
+      'enter': 'Lige gir',
+      'later': 'Sonra'
+    },
+    'time': {
+      'dh': '{d} g {h} sa',
+      'hm': '{h} sa {m} dk',
+      'm': '{m} dk'
+    }
   },
   'graphicsQuality': 'Grafik',
   'graphicsQualityNote': 'Otomatik mod, cihazın 25 FPS\'nin altına düşünce efektleri azaltır.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x savaş hızı',
         'rewardRespin': 'bir çevirme hakkı daha',
         'rewardSkinAd': 'yeni bir kostüm',
+        'rewardFights': '{count} lig maçı daha | {count} lig maçı daha',
         'watch': 'Reklamı İzle',
         'decline': 'Hayır, sağ ol'
       }

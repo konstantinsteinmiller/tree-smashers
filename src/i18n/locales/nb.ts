@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Fantomtvilling',
     'cheat_split': 'Knusende sverm',
     'cheat_partners': 'Jernbrorskap',
-    'cheat_healers': 'Helbrederkor'
+    'cheat_healers': 'Helbrederkor',
+    'cheat_thunder': 'Stormkalleren',
+    'cheat_child_emitter': 'Yngeldronningen',
+    'cheat_life_leech': 'Sjeleiglen'
   },
   'node-w1': {
     'name': 'Oasespeider',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Mester'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Kjemp',
+      'top': 'Sesongtopp'
+    },
+    'standing': 'Din rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} av {max} LP i denne divisjonen',
+    'atGate': 'Neste: opprykkskamp!',
+    'shields': '{n} beskyttet kamp | {n} beskyttede kamper',
+    'streak': '{n} seire på rad',
+    'fightsToday': 'Kamper i dag',
+    'fightsLeft': '{n} kamp igjen | {n} kamper igjen',
+    'fightsReset': 'Nye kamper om {time}',
+    'topUp': '+{n} kamp | +{n} kamper',
+    'topUpAria': 'Se en reklame for {n} kamp til | Se en reklame for {n} kamper til',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Velg motstanderen din',
+    'difficulty': {
+      'easier': 'Svakere',
+      'even': 'Jevn',
+      'harder': 'Sterkere'
+    },
+    'fight': 'Kjemp',
+    'fightAria': 'Kjemp mot {name} ({difficulty})',
+    'gate': {
+      'title': 'Opprykkskamp',
+      'goal': 'Vinn for å nå {rank}',
+      'challenge': 'Utfordre',
+      'aria': 'Utfordre {name} for å nå {rank}'
+    },
+    'quiet': {
+      'title': 'Motstanderne er på vei',
+      'body': 'Rangerte kamper er klare om et øyeblikk.'
+    },
+    'top': {
+      'title': 'Sesongens beste',
+      'empty': 'Ingen har klatret ennå denne sesongen. Bli den første!'
+    },
+    'season': {
+      'label': 'Sesong {n}',
+      'endsIn': 'Slutter om {time}',
+      'complete': 'Sesong {n} fullført',
+      'peak': 'Beste rang: {tier}',
+      'coinsAria': '{n} mynt | {n} mynter',
+      'diamondsAria': '{n} diamant | {n} diamanter',
+      'frame': 'Mesterramme',
+      'claim': 'Hent'
+    },
+    'result': {
+      'promoted': 'Rykket opp til {rank}!',
+      'up': 'Opp til {rank}',
+      'down': 'Ned til {rank}',
+      'shielded': 'Skjoldet holdt: ingen LP tapt',
+      'gateHeld': 'Portvokteren holder stand. Prøv igjen!',
+      'capped': 'Daglig LP-grense nådd',
+      'coins': '+{n} mynter'
+    },
+    'notice': {
+      'dailyCap': 'Ingen flere rangerte kamper i dag. Kom tilbake i morgen!',
+      'noFights': 'Ingen kamper igjen i dag.',
+      'retry': 'Kampen kunne ikke starte. Prøv igjen!'
+    },
+    'unlock': {
+      'title': 'Liga låst opp!',
+      'body': 'Kjemp mot andre spilleres lag og klatre fra Tre til Mester.',
+      'point1': 'Velg en svakere, jevn eller sterkere motstander',
+      'point2': 'Beseir portvokter-bossen for å nå et nytt nivå',
+      'point3': 'Tjen belønninger på slutten av hver sesong',
+      'enter': 'Gå til ligaen',
+      'later': 'Senere'
+    },
+    'time': {
+      'dh': '{d} d {h} t',
+      'hm': '{h} t {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafikk',
   'graphicsQualityNote': 'Automatisk skrur ned effektene når enheten din faller under 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x kamptempo',
         'rewardRespin': 'ett snurr til',
         'rewardSkinAd': 'et nytt skin',
+        'rewardFights': '{count} ligakamp til | {count} ligakamper til',
         'watch': 'Se reklame',
         'decline': 'Nei takk'
       }

@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Xəyalət Əkiz',
     'cheat_split': 'Parçalanan Sürü',
     'cheat_partners': 'Dəmir Qardaşlıq',
-    'cheat_healers': 'Şəfa Xoru'
+    'cheat_healers': 'Şəfa Xoru',
+    'cheat_thunder': 'Fırtına Çağıran',
+    'cheat_child_emitter': 'Yuva Kraliçası',
+    'cheat_life_leech': 'Ruh Zəlisi'
   },
   'node-w1': {
     'name': 'Vaha Kəşfiyyatçısı',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Çempion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liqa',
+    'tabs': {
+      'fight': 'Döyüş',
+      'top': 'Mövsüm zirvəsi'
+    },
+    'standing': 'Sənin rütbən',
+    'lp': '{n} LX',
+    'lpProgress': '{n} / {max} LX',
+    'lpAria': 'Bu divizionda {n}/{max} LX',
+    'atGate': 'Növbəti: yüksəliş döyüşü!',
+    'shields': '{n} qorunan döyüş | {n} qorunan döyüş',
+    'streak': 'Qələbə seriyası: {n}',
+    'fightsToday': 'Bugünkü döyüşlər',
+    'fightsLeft': '{n} döyüş qaldı | {n} döyüş qaldı',
+    'fightsReset': 'Yeni döyüşlər {time} sonra',
+    'topUp': '+{n} döyüş | +{n} döyüş',
+    'topUpAria': '{n} əlavə döyüş üçün reklama bax | {n} əlavə döyüş üçün reklama bax',
+    'hudAria': 'Liqa: {rank}, {fights}',
+    'opponents': 'Rəqibini seç',
+    'difficulty': {
+      'easier': 'Daha asan',
+      'even': 'Bərabər',
+      'harder': 'Daha çətin'
+    },
+    'fight': 'Döyüş',
+    'fightAria': '{name} ilə döyüş ({difficulty})',
+    'gate': {
+      'title': 'Yüksəliş döyüşü',
+      'goal': 'Qalib gəl, {rank} ol',
+      'challenge': 'Meydan oxu',
+      'aria': '{name} rəqibinə meydan oxu, {rank} ol'
+    },
+    'quiet': {
+      'title': 'Rəqiblər yoldadır',
+      'body': 'Reytinq döyüşləri bir azdan hazır olacaq.'
+    },
+    'top': {
+      'title': 'Mövsümün ən yaxşıları',
+      'empty': 'Bu mövsüm hələ heç kim yüksəlməyib. İlk sən ol!'
+    },
+    'season': {
+      'label': 'Mövsüm {n}',
+      'endsIn': '{time} sonra bitir',
+      'complete': 'Mövsüm {n} tamamlandı',
+      'peak': 'Ən yaxşı rütbə: {tier}',
+      'coinsAria': '{n} sikkə | {n} sikkə',
+      'diamondsAria': '{n} almaz | {n} almaz',
+      'frame': 'Çempion çərçivəsi',
+      'claim': 'Götür'
+    },
+    'result': {
+      'promoted': 'Yüksəliş: {rank}!',
+      'up': 'Yuxarı: {rank}',
+      'down': 'Aşağı: {rank}',
+      'shielded': 'Qalxan dayandı: LX itirilmədi',
+      'gateHeld': 'Qapı keşikçisi dayanır. Yenidən cəhd et!',
+      'capped': 'Günlük LX limitinə çatdın',
+      'coins': '+{n} sikkə'
+    },
+    'notice': {
+      'dailyCap': 'Bu gün daha reytinq döyüşü yoxdur. Sabah yenə gəl!',
+      'noFights': 'Bu gün döyüş qalmadı.',
+      'retry': 'Döyüş başlamadı. Yenidən cəhd et!'
+    },
+    'unlock': {
+      'title': 'Liqa açıldı!',
+      'body': 'Digər oyunçuların komandaları ilə döyüş və Taxtadan Çempiona qalx.',
+      'point1': 'Daha asan, bərabər və ya daha çətin rəqib seç',
+      'point2': 'Yeni pilləyə çatmaq üçün qapı keşikçisi bossu məğlub et',
+      'point3': 'Hər mövsümün sonunda mükafat qazan',
+      'enter': 'Liqaya gir',
+      'later': 'Sonra'
+    },
+    'time': {
+      'dh': '{d} g {h} s',
+      'hm': '{h} s {m} dəq',
+      'm': '{m} dəq'
+    }
   },
   'graphicsQuality': 'Qrafika',
   'graphicsQualityNote': 'Avtomatik rejim cihazın 25 FPS-dən aşağı düşəndə effektləri azaldır.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x döyüş sürəti',
         'rewardRespin': 'daha bir fırlatma',
         'rewardSkinAd': 'yeni dəri',
+        'rewardFights': '{count} liqa döyüşü daha | {count} liqa döyüşü daha',
         'watch': 'Reklama bax',
         'decline': 'Yox, sağ ol'
       }

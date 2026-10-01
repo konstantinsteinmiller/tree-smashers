@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'แฝดมายา',
     'cheat_split': 'ฝูงแตกกระจาย',
     'cheat_partners': 'พี่น้องเหล็กกล้า',
-    'cheat_healers': 'คอรัสเยียวยา'
+    'cheat_healers': 'คอรัสเยียวยา',
+    'cheat_thunder': 'ผู้เรียกพายุ',
+    'cheat_child_emitter': 'ราชินีฝูง',
+    'cheat_life_leech': 'ปลิงดูดวิญญาณ'
   },
   'node-w1': {
     'name': 'หน่วยสอดแนมโอเอซิส',
@@ -163,7 +166,85 @@ export default {
       'champion': 'แชมเปี้ยน'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} อันดับ {position}'
+    'tierPosition': '{tier} อันดับ {position}',
+    'title': 'ลีก',
+    'tabs': {
+      'fight': 'ต่อสู้',
+      'top': 'ท็อปซีซัน'
+    },
+    'standing': 'แรงก์ของคุณ',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} จาก {max} LP ในดิวิชันนี้',
+    'atGate': 'ต่อไป: ศึกเลื่อนขั้น!',
+    'shields': 'ป้องกัน {n} ครั้ง',
+    'streak': 'ชนะรวด {n} ครั้ง',
+    'fightsToday': 'การต่อสู้วันนี้',
+    'fightsLeft': 'เหลือ {n} ครั้ง',
+    'fightsReset': 'การต่อสู้ใหม่ใน {time}',
+    'topUp': '+{n} ครั้ง',
+    'topUpAria': 'ดูโฆษณาเพื่อรับการต่อสู้เพิ่ม {n} ครั้ง',
+    'hudAria': 'ลีก: {rank}, {fights}',
+    'opponents': 'เลือกคู่ต่อสู้',
+    'difficulty': {
+      'easier': 'อ่อนกว่า',
+      'even': 'สูสี',
+      'harder': 'เก่งกว่า'
+    },
+    'fight': 'ต่อสู้',
+    'fightAria': 'สู้กับ {name} ({difficulty})',
+    'gate': {
+      'title': 'ศึกเลื่อนขั้น',
+      'goal': 'ชนะเพื่อขึ้นสู่ {rank}',
+      'challenge': 'ท้าชิง',
+      'aria': 'ท้าชิง {name} เพื่อขึ้นสู่ {rank}'
+    },
+    'quiet': {
+      'title': 'คู่ต่อสู้กำลังมา',
+      'body': 'การต่อสู้แบบจัดอันดับจะพร้อมในอีกไม่ช้า'
+    },
+    'top': {
+      'title': 'สุดยอดประจำซีซัน',
+      'empty': 'ซีซันนี้ยังไม่มีใครไต่อันดับ เป็นคนแรกเลย!'
+    },
+    'season': {
+      'label': 'ซีซัน {n}',
+      'endsIn': 'สิ้นสุดใน {time}',
+      'complete': 'ซีซัน {n} จบแล้ว',
+      'peak': 'แรงก์สูงสุด: {tier}',
+      'coinsAria': '{n} เหรียญ',
+      'diamondsAria': '{n} เพชร',
+      'frame': 'กรอบแชมเปี้ยน',
+      'claim': 'รับ'
+    },
+    'result': {
+      'promoted': 'เลื่อนขั้นเป็น {rank}!',
+      'up': 'ขึ้นเป็น {rank}',
+      'down': 'ตกไป {rank}',
+      'shielded': 'โล่ป้องกันไว้: ไม่เสีย LP',
+      'gateHeld': 'ผู้เฝ้าประตูยังยืนหยัด ลองอีกครั้ง!',
+      'capped': 'ถึงขีดจำกัด LP รายวันแล้ว',
+      'coins': '+{n} เหรียญ'
+    },
+    'notice': {
+      'dailyCap': 'วันนี้หมดการต่อสู้แบบจัดอันดับแล้ว พรุ่งนี้มาใหม่นะ!',
+      'noFights': 'วันนี้ไม่เหลือการต่อสู้แล้ว',
+      'retry': 'เริ่มการต่อสู้ไม่ได้ ลองอีกครั้ง!'
+    },
+    'unlock': {
+      'title': 'ปลดล็อกลีกแล้ว!',
+      'body': 'สู้กับทีมของผู้เล่นคนอื่น แล้วไต่จากไม้สู่แชมเปี้ยน',
+      'point1': 'เลือกคู่ต่อสู้ที่อ่อนกว่า สูสี หรือเก่งกว่า',
+      'point2': 'ชนะบอสผู้เฝ้าประตูเพื่อขึ้นสู่ระดับใหม่',
+      'point3': 'รับรางวัลเมื่อจบแต่ละซีซัน',
+      'enter': 'เข้าลีก',
+      'later': 'ไว้ทีหลัง'
+    },
+    'time': {
+      'dh': '{d} วัน {h} ชม.',
+      'hm': '{h} ชม. {m} นาที',
+      'm': '{m} นาที'
+    }
   },
   'graphicsQuality': 'กราฟิก',
   'graphicsQualityNote': 'โหมดอัตโนมัติจะลดเอฟเฟกต์เมื่ออุปกรณ์ของคุณเล่นได้ต่ำกว่า 25 FPS',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'ความเร็วการต่อสู้ 2 เท่า',
         'rewardRespin': 'การหมุนอีกครั้ง',
         'rewardSkinAd': 'สกินใหม่',
+        'rewardFights': 'การต่อสู้ในลีกเพิ่ม {count} ครั้ง',
         'watch': 'ดูโฆษณา',
         'decline': 'ไม่เป็นไร'
       }

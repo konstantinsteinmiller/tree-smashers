@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Vaiduoklis dvynys',
     'cheat_split': 'Byrantis spiečius',
     'cheat_partners': 'Geležinė brolija',
-    'cheat_healers': 'Gydytojų choras'
+    'cheat_healers': 'Gydytojų choras',
+    'cheat_thunder': 'Audrų šaukėjas',
+    'cheat_child_emitter': 'Spiečiaus karalienė',
+    'cheat_life_leech': 'Sielų dėlė'
   },
   'node-w1': {
     'name': 'Oazės žvalgas',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Čempionas'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Lyga',
+    'tabs': {
+      'fight': 'Kovoti',
+      'top': 'Sezono top'
+    },
+    'standing': 'Tavo rangas',
+    'lp': '{n} LT',
+    'lpProgress': '{n} / {max} LT',
+    'lpAria': '{n} iš {max} LT šiame divizione',
+    'atGate': 'Toliau: paaukštinimo kova!',
+    'shields': '{n} apsaugota kova | {n} apsaugotos kovos | {n} apsaugotų kovų',
+    'streak': 'Pergalių serija: {n}',
+    'fightsToday': 'Kovos šiandien',
+    'fightsLeft': 'Liko {n} kova | Liko {n} kovos | Liko {n} kovų',
+    'fightsReset': 'Naujos kovos po {time}',
+    'topUp': '+{n} kova | +{n} kovos | +{n} kovų',
+    'topUpAria': 'Žiūrėk reklamą ir gauk dar {n} kovą | Žiūrėk reklamą ir gauk dar {n} kovas | Žiūrėk reklamą ir gauk dar {n} kovų',
+    'hudAria': 'Lyga: {rank}, {fights}',
+    'opponents': 'Pasirink varžovą',
+    'difficulty': {
+      'easier': 'Silpnesnis',
+      'even': 'Lygus',
+      'harder': 'Stipresnis'
+    },
+    'fight': 'Kovoti',
+    'fightAria': 'Kovoti: {name} ({difficulty})',
+    'gate': {
+      'title': 'Paaukštinimo kova',
+      'goal': 'Laimėk ir pasiek {rank}',
+      'challenge': 'Iššūkis',
+      'aria': 'Mesk iššūkį: {name}, ir pasiek {rank}'
+    },
+    'quiet': {
+      'title': 'Varžovai jau pakeliui',
+      'body': 'Reitinginės kovos netrukus bus paruoštos.'
+    },
+    'top': {
+      'title': 'Sezono geriausi',
+      'empty': 'Šį sezoną dar niekas nepakilo. Būk pirmas!'
+    },
+    'season': {
+      'label': '{n} sezonas',
+      'endsIn': 'Baigiasi po {time}',
+      'complete': '{n} sezonas baigtas',
+      'peak': 'Geriausias rangas: {tier}',
+      'coinsAria': '{n} moneta | {n} monetos | {n} monetų',
+      'diamondsAria': '{n} deimantas | {n} deimantai | {n} deimantų',
+      'frame': 'Čempiono rėmelis',
+      'claim': 'Atsiimti'
+    },
+    'result': {
+      'promoted': 'Paaukštinta: {rank}!',
+      'up': 'Aukštyn: {rank}',
+      'down': 'Žemyn: {rank}',
+      'shielded': 'Skydas atlaikė: LT neprarasta',
+      'gateHeld': 'Vartų sargas atsilaiko. Bandyk dar kartą!',
+      'capped': 'Pasiektas dienos LT limitas',
+      'coins': 'Monetos: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Šiandien reitinginių kovų nebėra. Grįžk rytoj!',
+      'noFights': 'Šiandien kovų nebeliko.',
+      'retry': 'Kovos pradėti nepavyko. Bandyk dar kartą!'
+    },
+    'unlock': {
+      'title': 'Lyga atrakinta!',
+      'body': 'Kovok su kitų žaidėjų komandomis ir kopk nuo Medienos iki Čempiono.',
+      'point1': 'Rinkis silpnesnį, lygų ar stipresnį varžovą',
+      'point2': 'Nugalėk vartų sargą bosą ir pasiek naują pakopą',
+      'point3': 'Gauk prizų kiekvieno sezono pabaigoje',
+      'enter': 'Į lygą',
+      'later': 'Vėliau'
+    },
+    'time': {
+      'dh': '{d} d. {h} val.',
+      'hm': '{h} val. {m} min.',
+      'm': '{m} min.'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automatinis režimas sumažina efektus, kai įrenginys nukrenta žemiau 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'kovos greitis ×2',
         'rewardRespin': 'dar vienas sukimas',
         'rewardSkinAd': 'nauja išvaizda',
+        'rewardFights': 'dar {count} lygos kova | dar {count} lygos kovos | dar {count} lygos kovų',
         'watch': 'Žiūrėti',
         'decline': 'Ne, ačiū'
       }

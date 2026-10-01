@@ -116,7 +116,10 @@ export default {
     'cheat_ghost': '팬텀 트윈',
     'cheat_split': '분쇄의 떼',
     'cheat_partners': '철의 형제단',
-    'cheat_healers': '치유의 합창단'
+    'cheat_healers': '치유의 합창단',
+    'cheat_thunder': '폭풍을 부르는 자',
+    'cheat_child_emitter': '무리의 여왕',
+    'cheat_life_leech': '영혼 흡수자'
   },
   'node-w1': {
     'name': '오아시스 정찰병',
@@ -162,7 +165,85 @@ export default {
       'champion': '챔피언'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} {position}위'
+    'tierPosition': '{tier} {position}위',
+    'title': '리그',
+    'tabs': {
+      'fight': '전투',
+      'top': '시즌 상위'
+    },
+    'standing': '내 랭크',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '이 디비전에서 {n}/{max} LP',
+    'atGate': '다음: 승급전!',
+    'shields': '보호 {n}회',
+    'streak': '{n}연승',
+    'fightsToday': '오늘의 전투',
+    'fightsLeft': '{n}회 남음',
+    'fightsReset': '{time} 후 새 전투',
+    'topUp': '+{n}회',
+    'topUpAria': '광고 보고 전투 {n}회 추가',
+    'hudAria': '리그: {rank}, {fights}',
+    'opponents': '상대를 선택하세요',
+    'difficulty': {
+      'easier': '약함',
+      'even': '대등',
+      'harder': '강함'
+    },
+    'fight': '전투',
+    'fightAria': '{name}와(과) 전투 ({difficulty})',
+    'gate': {
+      'title': '승급전',
+      'goal': '승리하면 {rank}',
+      'challenge': '도전',
+      'aria': '{name}에게 도전해 {rank} 달성'
+    },
+    'quiet': {
+      'title': '상대가 오고 있어요',
+      'body': '랭크 전투가 곧 준비됩니다.'
+    },
+    'top': {
+      'title': '이번 시즌 최고',
+      'empty': '이번 시즌엔 아직 아무도 오르지 못했어요. 첫 번째가 되세요!'
+    },
+    'season': {
+      'label': '시즌 {n}',
+      'endsIn': '{time} 후 종료',
+      'complete': '시즌 {n} 종료',
+      'peak': '최고 랭크: {tier}',
+      'coinsAria': '코인 {n}개',
+      'diamondsAria': '다이아 {n}개',
+      'frame': '챔피언 프레임',
+      'claim': '받기'
+    },
+    'result': {
+      'promoted': '{rank} 승급!',
+      'up': '{rank}(으)로 상승',
+      'down': '{rank}(으)로 하락',
+      'shielded': '보호막 발동: LP 손실 없음',
+      'gateHeld': '문지기가 버텼어요. 다시 도전하세요!',
+      'capped': '일일 LP 한도 도달',
+      'coins': '+{n} 코인'
+    },
+    'notice': {
+      'dailyCap': '오늘의 랭크 전투는 끝났어요. 내일 다시 오세요!',
+      'noFights': '오늘 남은 전투가 없어요.',
+      'retry': '전투를 시작할 수 없어요. 다시 시도하세요!'
+    },
+    'unlock': {
+      'title': '리그 해금!',
+      'body': '다른 플레이어의 팀과 싸워 우드부터 챔피언까지 올라가세요.',
+      'point1': '약한, 대등한, 강한 상대 중에서 선택',
+      'point2': '문지기 보스를 꺾고 새 티어로',
+      'point3': '시즌이 끝날 때마다 보상 획득',
+      'enter': '리그 입장',
+      'later': '나중에'
+    },
+    'time': {
+      'dh': '{d}일 {h}시간',
+      'hm': '{h}시간 {m}분',
+      'm': '{m}분'
+    }
   },
   'graphicsQuality': '그래픽',
   'graphicsQualityNote': '자동 모드는 기기가 25FPS 아래로 떨어지면 효과를 줄입니다.',
@@ -505,6 +586,7 @@ export default {
         'rewardSpeed': '전투 속도 2배',
         'rewardRespin': '한 번 더 돌리기',
         'rewardSkinAd': '새 스킨',
+        'rewardFights': '리그 전투 {count}회 추가',
         'watch': '광고 보기',
         'decline': '괜찮아요'
       }

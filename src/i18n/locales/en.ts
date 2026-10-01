@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Phantom Twin',
     'cheat_split': 'Shattering Swarm',
     'cheat_partners': 'Iron Brotherhood',
-    'cheat_healers': 'Mending Choir'
+    'cheat_healers': 'Mending Choir',
+    'cheat_thunder': 'Storm Caller',
+    'cheat_child_emitter': 'Brood Queen',
+    'cheat_life_leech': 'Soul Leech'
   },
   'node-w1': {
     'name': 'Oasis Scout',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Champion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'League',
+    'tabs': {
+      'fight': 'Fight',
+      'top': 'Season top'
+    },
+    'standing': 'Your rank',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} of {max} LP in this division',
+    'atGate': 'Promotion fight next!',
+    'shields': '{n} protected fight | {n} protected fights',
+    'streak': '{n} win streak',
+    'fightsToday': 'Fights today',
+    'fightsLeft': '{n} fight left | {n} fights left',
+    'fightsReset': 'New fights in {time}',
+    'topUp': '+{n} fight | +{n} fights',
+    'topUpAria': 'Watch an ad for {n} more fight | Watch an ad for {n} more fights',
+    'hudAria': 'League: {rank}, {fights}',
+    'opponents': 'Choose your opponent',
+    'difficulty': {
+      'easier': 'Easier',
+      'even': 'Even',
+      'harder': 'Harder'
+    },
+    'fight': 'Fight',
+    'fightAria': 'Fight {name} ({difficulty})',
+    'gate': {
+      'title': 'Promotion fight',
+      'goal': 'Win to reach {rank}',
+      'challenge': 'Challenge',
+      'aria': 'Challenge {name} to reach {rank}'
+    },
+    'quiet': {
+      'title': 'Opponents are on their way',
+      'body': 'Ranked fights will be ready in a moment.'
+    },
+    'top': {
+      'title': 'This season\'s best',
+      'empty': 'No one has climbed yet this season. Be the first!'
+    },
+    'season': {
+      'label': 'Season {n}',
+      'endsIn': 'Ends in {time}',
+      'complete': 'Season {n} complete',
+      'peak': 'Best rank: {tier}',
+      'coinsAria': '{n} coin | {n} coins',
+      'diamondsAria': '{n} diamond | {n} diamonds',
+      'frame': 'Champion frame',
+      'claim': 'Claim'
+    },
+    'result': {
+      'promoted': 'Promoted to {rank}!',
+      'up': 'Up to {rank}',
+      'down': 'Dropped to {rank}',
+      'shielded': 'Shield held: no LP lost',
+      'gateHeld': 'The gatekeeper holds. Try again!',
+      'capped': 'Daily LP limit reached',
+      'coins': '+{n} coins'
+    },
+    'notice': {
+      'dailyCap': 'No more ranked fights today. Come back tomorrow!',
+      'noFights': 'No fights left today.',
+      'retry': 'The fight could not start. Try again!'
+    },
+    'unlock': {
+      'title': 'League unlocked!',
+      'body': 'Battle other players\' teams and climb from Wood to Champion.',
+      'point1': 'Pick an easier, even or harder opponent',
+      'point2': 'Beat the gatekeeper boss to reach a new tier',
+      'point3': 'Earn rewards at the end of every season',
+      'enter': 'Enter league',
+      'later': 'Later'
+    },
+    'time': {
+      'dh': '{d}d {h}h',
+      'hm': '{h}h {m}m',
+      'm': '{m}m'
+    }
   },
   'graphicsQuality': 'Graphics',
   'graphicsQualityNote': 'Automatic lowers effects when your device drops below 25 FPS.',
@@ -510,6 +591,7 @@ export default {
         'rewardSpeed': '2x battle speed',
         'rewardRespin': 'another spin',
         'rewardSkinAd': 'a new skin',
+        'rewardFights': '{count} more league fight | {count} more league fights',
         'watch': 'Watch ad',
         'decline': 'No thanks'
       }

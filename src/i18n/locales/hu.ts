@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Fantomiker',
     'cheat_split': 'Széthulló raj',
     'cheat_partners': 'Vastestvériség',
-    'cheat_healers': 'Gyógyító kórus'
+    'cheat_healers': 'Gyógyító kórus',
+    'cheat_thunder': 'Viharidéző',
+    'cheat_child_emitter': 'Fészekkirálynő',
+    'cheat_life_leech': 'Lélekpióca'
   },
   'node-w1': {
     'name': 'Oázisfelderítő',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Bajnok'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Harc',
+      'top': 'Szezon toplista'
+    },
+    'standing': 'Rangod',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n}/{max} LP ebben a divízióban',
+    'atGate': 'Következik: feljutó meccs!',
+    'shields': '{n} védett meccs | {n} védett meccs',
+    'streak': '{n} győzelmes sorozat',
+    'fightsToday': 'Mai meccsek',
+    'fightsLeft': '{n} meccs maradt | {n} meccs maradt',
+    'fightsReset': 'Új meccsek {time} múlva',
+    'topUp': '+{n} meccs | +{n} meccs',
+    'topUpAria': 'Nézz meg egy reklámot {n} további meccsért | Nézz meg egy reklámot {n} további meccsért',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Válassz ellenfelet',
+    'difficulty': {
+      'easier': 'Könnyebb',
+      'even': 'Egyenlő',
+      'harder': 'Nehezebb'
+    },
+    'fight': 'Harc',
+    'fightAria': 'Harc: {name} ({difficulty})',
+    'gate': {
+      'title': 'Feljutó meccs',
+      'goal': 'Nyerj, és jöhet: {rank}',
+      'challenge': 'Kihívás',
+      'aria': 'Hívd ki: {name}, és jöhet: {rank}'
+    },
+    'quiet': {
+      'title': 'Úton vannak az ellenfelek',
+      'body': 'A rangsorolt meccsek mindjárt készen állnak.'
+    },
+    'top': {
+      'title': 'A szezon legjobbjai',
+      'empty': 'Ebben a szezonban még senki sem jutott feljebb. Légy az első!'
+    },
+    'season': {
+      'label': '{n}. szezon',
+      'endsIn': '{time} múlva vége',
+      'complete': '{n}. szezon véget ért',
+      'peak': 'Legjobb rang: {tier}',
+      'coinsAria': '{n} érme | {n} érme',
+      'diamondsAria': '{n} gyémánt | {n} gyémánt',
+      'frame': 'Bajnoki keret',
+      'claim': 'Átvétel'
+    },
+    'result': {
+      'promoted': 'Feljutottál: {rank}!',
+      'up': 'Fel: {rank}',
+      'down': 'Le: {rank}',
+      'shielded': 'A pajzs kitartott: nem vesztettél LP-t',
+      'gateHeld': 'A kapuőr kitart. Próbáld újra!',
+      'capped': 'Elérted a napi LP-limitet',
+      'coins': '+{n} érme'
+    },
+    'notice': {
+      'dailyCap': 'Ma már nincs több rangsorolt meccs. Gyere vissza holnap!',
+      'noFights': 'Mára nem maradt meccs.',
+      'retry': 'A meccs nem tudott elindulni. Próbáld újra!'
+    },
+    'unlock': {
+      'title': 'Liga feloldva!',
+      'body': 'Mérkőzz meg más játékosok csapataival, és juss fel Fától Bajnokig.',
+      'point1': 'Válassz könnyebb, egyenlő vagy nehezebb ellenfelet',
+      'point2': 'Győzd le a kapuőr bosst, és lépj új szintre',
+      'point3': 'Szerezz jutalmakat minden szezon végén',
+      'enter': 'Irány a liga',
+      'later': 'Később'
+    },
+    'time': {
+      'dh': '{d} n {h} ó',
+      'hm': '{h} ó {m} p',
+      'm': '{m} p'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Az automatikus mód csökkenti az effekteket, ha az eszköz 25 FPS alá esik.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2× csatasebesség',
         'rewardRespin': 'még egy pörgetés',
         'rewardSkinAd': 'egy új skin',
+        'rewardFights': '{count} további ligameccs | {count} további ligameccs',
         'watch': 'Megnézem',
         'decline': 'Nem, kösz'
       }

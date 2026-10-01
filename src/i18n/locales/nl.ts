@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Spooktweeling',
     'cheat_split': 'Splijtende Zwerm',
     'cheat_partners': 'IJzeren Broederschap',
-    'cheat_healers': 'Helend Koor'
+    'cheat_healers': 'Helend Koor',
+    'cheat_thunder': 'Stormroeper',
+    'cheat_child_emitter': 'Broedkoningin',
+    'cheat_life_leech': 'Zielenzuiger'
   },
   'node-w1': {
     'name': 'Oaseverkenner',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Kampioen'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Competitie',
+    'tabs': {
+      'fight': 'Vechten',
+      'top': 'Seizoenstop'
+    },
+    'standing': 'Jouw rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} van {max} LP in deze divisie',
+    'atGate': 'Volgende: promotiegevecht!',
+    'shields': '{n} beschermd gevecht | {n} beschermde gevechten',
+    'streak': '{n} zeges op rij',
+    'fightsToday': 'Gevechten vandaag',
+    'fightsLeft': 'Nog {n} gevecht | Nog {n} gevechten',
+    'fightsReset': 'Nieuwe gevechten over {time}',
+    'topUp': '+{n} gevecht | +{n} gevechten',
+    'topUpAria': 'Bekijk een advertentie voor {n} extra gevecht | Bekijk een advertentie voor {n} extra gevechten',
+    'hudAria': 'Competitie: {rank}, {fights}',
+    'opponents': 'Kies je tegenstander',
+    'difficulty': {
+      'easier': 'Zwakker',
+      'even': 'Gelijk',
+      'harder': 'Sterker'
+    },
+    'fight': 'Vechten',
+    'fightAria': 'Vecht tegen {name} ({difficulty})',
+    'gate': {
+      'title': 'Promotiegevecht',
+      'goal': 'Win om {rank} te bereiken',
+      'challenge': 'Uitdagen',
+      'aria': 'Daag {name} uit om {rank} te bereiken'
+    },
+    'quiet': {
+      'title': 'Tegenstanders zijn onderweg',
+      'body': 'Rankedgevechten zijn zo klaar.'
+    },
+    'top': {
+      'title': 'Beste van dit seizoen',
+      'empty': 'Nog niemand is dit seizoen gestegen. Wees de eerste!'
+    },
+    'season': {
+      'label': 'Seizoen {n}',
+      'endsIn': 'Eindigt over {time}',
+      'complete': 'Seizoen {n} voltooid',
+      'peak': 'Beste rang: {tier}',
+      'coinsAria': '{n} munt | {n} munten',
+      'diamondsAria': '{n} diamant | {n} diamanten',
+      'frame': 'Kampioenskader',
+      'claim': 'Ophalen'
+    },
+    'result': {
+      'promoted': 'Gepromoveerd naar {rank}!',
+      'up': 'Omhoog naar {rank}',
+      'down': 'Gezakt naar {rank}',
+      'shielded': 'Schild hield stand: geen LP verloren',
+      'gateHeld': 'De poortwachter houdt stand. Probeer opnieuw!',
+      'capped': 'Dagelijkse LP-limiet bereikt',
+      'coins': '+{n} munten'
+    },
+    'notice': {
+      'dailyCap': 'Vandaag geen rankedgevechten meer. Kom morgen terug!',
+      'noFights': 'Vandaag geen gevechten meer over.',
+      'retry': 'Het gevecht kon niet starten. Probeer opnieuw!'
+    },
+    'unlock': {
+      'title': 'Competitie ontgrendeld!',
+      'body': 'Vecht tegen teams van andere spelers en klim van Hout naar Kampioen.',
+      'point1': 'Kies een zwakkere, gelijke of sterkere tegenstander',
+      'point2': 'Versla de poortwachter-baas voor een nieuwe rang',
+      'point3': 'Verdien beloningen aan het eind van elk seizoen',
+      'enter': 'Naar de competitie',
+      'later': 'Straks'
+    },
+    'time': {
+      'dh': '{d} d {h} u',
+      'hm': '{h} u {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Beeldkwaliteit',
   'graphicsQualityNote': 'Automatisch verlaagt de effecten als je apparaat onder de 25 FPS zakt.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x gevechtssnelheid',
         'rewardRespin': 'nog een draai',
         'rewardSkinAd': 'een nieuwe skin',
+        'rewardFights': '{count} extra competitiegevecht | {count} extra competitiegevechten',
         'watch': 'Bekijk reclame',
         'decline': 'Nee, bedankt'
       }

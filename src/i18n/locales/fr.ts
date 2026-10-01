@@ -116,7 +116,10 @@ export default {
     'cheat_ghost': 'Jumeau Fantôme',
     'cheat_split': 'Essaim Fracassant',
     'cheat_partners': 'Confrérie de Fer',
-    'cheat_healers': 'Chœur Guérisseur'
+    'cheat_healers': 'Chœur Guérisseur',
+    'cheat_thunder': 'Mande-Tempête',
+    'cheat_child_emitter': 'Reine de la Couvée',
+    'cheat_life_leech': 'Sangsue d\'âmes'
   },
   'node-w1': {
     'name': 'Éclaireur de l\'Oasis',
@@ -162,7 +165,85 @@ export default {
       'champion': 'Champion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Ligue',
+    'tabs': {
+      'fight': 'Combattre',
+      'top': 'Top saison'
+    },
+    'standing': 'Ton rang',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} sur {max} LP dans cette division',
+    'atGate': 'Prochain : combat de promotion !',
+    'shields': '{n} combat protégé | {n} combats protégés',
+    'streak': 'Série de {n} victoires',
+    'fightsToday': 'Combats du jour',
+    'fightsLeft': '{n} combat restant | {n} combats restants',
+    'fightsReset': 'Nouveaux combats dans {time}',
+    'topUp': '+{n} combat | +{n} combats',
+    'topUpAria': 'Regarde une pub pour {n} combat de plus | Regarde une pub pour {n} combats de plus',
+    'hudAria': 'Ligue : {rank}, {fights}',
+    'opponents': 'Choisis ton adversaire',
+    'difficulty': {
+      'easier': 'Faible',
+      'even': 'Équilibré',
+      'harder': 'Fort'
+    },
+    'fight': 'Combattre',
+    'fightAria': 'Combattre {name} ({difficulty})',
+    'gate': {
+      'title': 'Combat de promotion',
+      'goal': 'Gagne pour atteindre {rank}',
+      'challenge': 'Défier',
+      'aria': 'Défie {name} pour atteindre {rank}'
+    },
+    'quiet': {
+      'title': 'Des adversaires arrivent',
+      'body': 'Les combats classés seront prêts dans un instant.'
+    },
+    'top': {
+      'title': 'Les meilleurs de la saison',
+      'empty': 'Personne n\'a encore grimpé cette saison. Sois le premier !'
+    },
+    'season': {
+      'label': 'Saison {n}',
+      'endsIn': 'Fin dans {time}',
+      'complete': 'Saison {n} terminée',
+      'peak': 'Meilleur rang : {tier}',
+      'coinsAria': '{n} pièce | {n} pièces',
+      'diamondsAria': '{n} diamant | {n} diamants',
+      'frame': 'Cadre de champion',
+      'claim': 'Récupérer'
+    },
+    'result': {
+      'promoted': 'Promotion : {rank} !',
+      'up': 'Montée : {rank}',
+      'down': 'Descente : {rank}',
+      'shielded': 'Bouclier actif : aucun LP perdu',
+      'gateHeld': 'Le gardien tient bon. Réessaie !',
+      'capped': 'Limite quotidienne de LP atteinte',
+      'coins': '+{n} pièces'
+    },
+    'notice': {
+      'dailyCap': 'Plus de combats classés aujourd\'hui. Reviens demain !',
+      'noFights': 'Plus de combats aujourd\'hui.',
+      'retry': 'Le combat n\'a pas pu démarrer. Réessaie !'
+    },
+    'unlock': {
+      'title': 'Ligue débloquée !',
+      'body': 'Affronte les équipes d\'autres joueurs et grimpe de Bois à Champion.',
+      'point1': 'Choisis un adversaire faible, équilibré ou fort',
+      'point2': 'Bats le boss gardien pour atteindre un nouveau palier',
+      'point3': 'Gagne des récompenses à la fin de chaque saison',
+      'enter': 'Entrer dans la ligue',
+      'later': 'Plus tard'
+    },
+    'time': {
+      'dh': '{d} j {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Graphismes',
   'graphicsQualityNote': 'Le mode automatique réduit les effets si votre appareil descend sous 25 FPS.',
@@ -505,6 +586,7 @@ export default {
         'rewardSpeed': 'vitesse de combat x2',
         'rewardRespin': 'un tour de plus',
         'rewardSkinAd': 'un nouveau skin',
+        'rewardFights': '{count} combat de ligue en plus | {count} combats de ligue en plus',
         'watch': 'Regarder la pub',
         'decline': 'Non merci'
       }

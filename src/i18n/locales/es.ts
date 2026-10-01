@@ -116,7 +116,10 @@ export default {
     'cheat_ghost': 'Gemelo Fantasma',
     'cheat_split': 'Enjambre Destructor',
     'cheat_partners': 'Hermandad de Hierro',
-    'cheat_healers': 'Coro Sanador'
+    'cheat_healers': 'Coro Sanador',
+    'cheat_thunder': 'Invocatormentas',
+    'cheat_child_emitter': 'Reina de la Nidada',
+    'cheat_life_leech': 'Sorbealmas'
   },
   'node-w1': {
     'name': 'Explorador del Oasis',
@@ -162,7 +165,85 @@ export default {
       'champion': 'Campeón'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Luchar',
+      'top': 'Top temporada'
+    },
+    'standing': 'Tu rango',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} de {max} PL en esta división',
+    'atGate': '¡Ahora toca combate de ascenso!',
+    'shields': '{n} combate protegido | {n} combates protegidos',
+    'streak': 'Racha de {n} victorias',
+    'fightsToday': 'Combates hoy',
+    'fightsLeft': 'Queda {n} combate | Quedan {n} combates',
+    'fightsReset': 'Nuevos combates en {time}',
+    'topUp': '+{n} combate | +{n} combates',
+    'topUpAria': 'Mira un anuncio para {n} combate más | Mira un anuncio para {n} combates más',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Elige a tu rival',
+    'difficulty': {
+      'easier': 'Más débil',
+      'even': 'Igualado',
+      'harder': 'Más fuerte'
+    },
+    'fight': 'Luchar',
+    'fightAria': 'Luchar contra {name} ({difficulty})',
+    'gate': {
+      'title': 'Combate de ascenso',
+      'goal': 'Gana para llegar a {rank}',
+      'challenge': 'Desafiar',
+      'aria': 'Desafía a {name} para llegar a {rank}'
+    },
+    'quiet': {
+      'title': 'Los rivales están en camino',
+      'body': 'Los combates clasificatorios estarán listos en un momento.'
+    },
+    'top': {
+      'title': 'Lo mejor de la temporada',
+      'empty': 'Nadie ha subido aún esta temporada. ¡Sé el primero!'
+    },
+    'season': {
+      'label': 'Temporada {n}',
+      'endsIn': 'Termina en {time}',
+      'complete': 'Temporada {n} completada',
+      'peak': 'Mejor rango: {tier}',
+      'coinsAria': '{n} moneda | {n} monedas',
+      'diamondsAria': '{n} diamante | {n} diamantes',
+      'frame': 'Marco de campeón',
+      'claim': 'Reclamar'
+    },
+    'result': {
+      'promoted': '¡Ascenso a {rank}!',
+      'up': 'Subes a {rank}',
+      'down': 'Bajas a {rank}',
+      'shielded': 'Escudo activo: no pierdes PL',
+      'gateHeld': 'El guardián resiste. ¡Inténtalo de nuevo!',
+      'capped': 'Límite diario de PL alcanzado',
+      'coins': '+{n} monedas'
+    },
+    'notice': {
+      'dailyCap': 'No quedan combates clasificatorios hoy. ¡Vuelve mañana!',
+      'noFights': 'No te quedan combates hoy.',
+      'retry': 'No se pudo iniciar el combate. ¡Inténtalo de nuevo!'
+    },
+    'unlock': {
+      'title': '¡Liga desbloqueada!',
+      'body': 'Lucha contra los equipos de otros jugadores y sube de Madera a Campeón.',
+      'point1': 'Elige un rival más débil, igualado o más fuerte',
+      'point2': 'Vence al jefe guardián para alcanzar un nuevo rango',
+      'point3': 'Gana recompensas al final de cada temporada',
+      'enter': 'Entrar en la liga',
+      'later': 'Más tarde'
+    },
+    'time': {
+      'dh': '{d} d {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Gráficos',
   'graphicsQualityNote': 'El modo automático reduce los efectos si tu dispositivo baja de 25 FPS.',
@@ -505,6 +586,7 @@ export default {
         'rewardSpeed': 'velocidad de combate x2',
         'rewardRespin': 'otro giro',
         'rewardSkinAd': 'un aspecto nuevo',
+        'rewardFights': '{count} combate de liga más | {count} combates de liga más',
         'watch': 'Ver anuncio',
         'decline': 'No, gracias'
       }

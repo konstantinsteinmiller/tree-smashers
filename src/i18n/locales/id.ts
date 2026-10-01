@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Kembaran Hantu',
     'cheat_split': 'Kawanan Pemecah',
     'cheat_partners': 'Persaudaraan Besi',
-    'cheat_healers': 'Kor Penyembuh'
+    'cheat_healers': 'Kor Penyembuh',
+    'cheat_thunder': 'Pemanggil Badai',
+    'cheat_child_emitter': 'Ratu Induk',
+    'cheat_life_leech': 'Lintah Jiwa'
   },
   'node-w1': {
     'name': 'Pengintai Oasis',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Juara'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Bertarung',
+      'top': 'Top musim'
+    },
+    'standing': 'Peringkatmu',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} dari {max} LP di divisi ini',
+    'atGate': 'Berikutnya: laga promosi!',
+    'shields': '{n} laga terlindungi',
+    'streak': '{n} kemenangan beruntun',
+    'fightsToday': 'Laga hari ini',
+    'fightsLeft': 'Sisa {n} laga',
+    'fightsReset': 'Laga baru dalam {time}',
+    'topUp': '+{n} laga',
+    'topUpAria': 'Tonton iklan untuk {n} laga tambahan',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Pilih lawanmu',
+    'difficulty': {
+      'easier': 'Lemah',
+      'even': 'Seimbang',
+      'harder': 'Kuat'
+    },
+    'fight': 'Bertarung',
+    'fightAria': 'Lawan {name} ({difficulty})',
+    'gate': {
+      'title': 'Laga promosi',
+      'goal': 'Menangkan untuk mencapai {rank}',
+      'challenge': 'Tantang',
+      'aria': 'Tantang {name} untuk mencapai {rank}'
+    },
+    'quiet': {
+      'title': 'Lawan sedang dalam perjalanan',
+      'body': 'Laga peringkat akan siap sebentar lagi.'
+    },
+    'top': {
+      'title': 'Terbaik musim ini',
+      'empty': 'Belum ada yang naik musim ini. Jadilah yang pertama!'
+    },
+    'season': {
+      'label': 'Musim {n}',
+      'endsIn': 'Berakhir dalam {time}',
+      'complete': 'Musim {n} selesai',
+      'peak': 'Peringkat terbaik: {tier}',
+      'coinsAria': '{n} koin',
+      'diamondsAria': '{n} berlian',
+      'frame': 'Bingkai juara',
+      'claim': 'Klaim'
+    },
+    'result': {
+      'promoted': 'Promosi ke {rank}!',
+      'up': 'Naik ke {rank}',
+      'down': 'Turun ke {rank}',
+      'shielded': 'Perisai bertahan: LP tidak berkurang',
+      'gateHeld': 'Penjaga gerbang bertahan. Coba lagi!',
+      'capped': 'Batas LP harian tercapai',
+      'coins': '+{n} koin'
+    },
+    'notice': {
+      'dailyCap': 'Tidak ada laga peringkat lagi hari ini. Kembali besok!',
+      'noFights': 'Tidak ada laga tersisa hari ini.',
+      'retry': 'Laga gagal dimulai. Coba lagi!'
+    },
+    'unlock': {
+      'title': 'Liga terbuka!',
+      'body': 'Lawan tim pemain lain dan naik dari Kayu ke Juara.',
+      'point1': 'Pilih lawan yang lemah, seimbang, atau kuat',
+      'point2': 'Kalahkan bos penjaga gerbang untuk naik ke tingkat baru',
+      'point3': 'Dapatkan hadiah di akhir setiap musim',
+      'enter': 'Masuk liga',
+      'later': 'Nanti'
+    },
+    'time': {
+      'dh': '{d} hr {h} j',
+      'hm': '{h} j {m} mnt',
+      'm': '{m} mnt'
+    }
   },
   'graphicsQuality': 'Grafis',
   'graphicsQualityNote': 'Otomatis mengurangi efek saat perangkatmu turun di bawah 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'kecepatan tempur 2x',
         'rewardRespin': 'satu putaran lagi',
         'rewardSkinAd': 'skin baru',
+        'rewardFights': '{count} laga liga tambahan',
         'watch': 'Tonton Iklan',
         'decline': 'Lain kali'
       }

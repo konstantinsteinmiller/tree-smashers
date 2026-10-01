@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Geamănul Fantomă',
     'cheat_split': 'Roiul Spulberat',
     'cheat_partners': 'Frăția de Fier',
-    'cheat_healers': 'Corul Vindecător'
+    'cheat_healers': 'Corul Vindecător',
+    'cheat_thunder': 'Chemătorul Furtunii',
+    'cheat_child_emitter': 'Regina Roiului',
+    'cheat_life_leech': 'Sugătorul de Suflete'
   },
   'node-w1': {
     'name': 'Cercetașul Oazei',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Campion'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Ligă',
+    'tabs': {
+      'fight': 'Luptă',
+      'top': 'Top sezon'
+    },
+    'standing': 'Rangul tău',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} din {max} PL în această divizie',
+    'atGate': 'Urmează: lupta de promovare!',
+    'shields': '{n} luptă protejată | {n} lupte protejate | {n} de lupte protejate',
+    'streak': 'Serie de victorii: {n}',
+    'fightsToday': 'Lupte azi',
+    'fightsLeft': '{n} luptă rămasă | {n} lupte rămase | {n} de lupte rămase',
+    'fightsReset': 'Lupte noi în {time}',
+    'topUp': '+{n} luptă | +{n} lupte | +{n} de lupte',
+    'topUpAria': 'Vezi o reclamă pentru încă {n} luptă | Vezi o reclamă pentru încă {n} lupte | Vezi o reclamă pentru încă {n} de lupte',
+    'hudAria': 'Ligă: {rank}, {fights}',
+    'opponents': 'Alege-ți adversarul',
+    'difficulty': {
+      'easier': 'Mai ușor',
+      'even': 'Egal',
+      'harder': 'Mai greu'
+    },
+    'fight': 'Luptă',
+    'fightAria': 'Luptă cu {name} ({difficulty})',
+    'gate': {
+      'title': 'Lupta de promovare',
+      'goal': 'Câștigă și urci la {rank}',
+      'challenge': 'Provoacă',
+      'aria': 'Provoacă-l pe {name} și urci la {rank}'
+    },
+    'quiet': {
+      'title': 'Adversarii sunt pe drum',
+      'body': 'Luptele clasate vor fi gata imediat.'
+    },
+    'top': {
+      'title': 'Cei mai buni ai sezonului',
+      'empty': 'Nimeni n-a urcat încă în acest sezon. Fii primul!'
+    },
+    'season': {
+      'label': 'Sezonul {n}',
+      'endsIn': 'Se termină în {time}',
+      'complete': 'Sezonul {n} încheiat',
+      'peak': 'Cel mai bun rang: {tier}',
+      'coinsAria': '{n} monedă | {n} monede | {n} de monede',
+      'diamondsAria': '{n} diamant | {n} diamante | {n} de diamante',
+      'frame': 'Ramă de campion',
+      'claim': 'Revendică'
+    },
+    'result': {
+      'promoted': 'Promovat la {rank}!',
+      'up': 'Urci la {rank}',
+      'down': 'Cobori la {rank}',
+      'shielded': 'Scutul a rezistat: niciun PL pierdut',
+      'gateHeld': 'Paznicul rezistă. Mai încearcă!',
+      'capped': 'Limita zilnică de PL atinsă',
+      'coins': 'Monede: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Nu mai sunt lupte clasate azi. Revino mâine!',
+      'noFights': 'Nu mai ai lupte azi.',
+      'retry': 'Lupta nu a putut începe. Mai încearcă!'
+    },
+    'unlock': {
+      'title': 'Liga deblocată!',
+      'body': 'Luptă cu echipele altor jucători și urcă de la Lemn la Campion.',
+      'point1': 'Alege un adversar mai ușor, egal sau mai greu',
+      'point2': 'Învinge boss-ul paznic și urcă pe o treaptă nouă',
+      'point3': 'Câștigă recompense la finalul fiecărui sezon',
+      'enter': 'Intră în ligă',
+      'later': 'Mai târziu'
+    },
+    'time': {
+      'dh': '{d} z {h} h',
+      'hm': '{h} h {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafică',
   'graphicsQualityNote': 'Modul automat reduce efectele când dispozitivul scade sub 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'viteză de luptă ×2',
         'rewardRespin': 'încă o învârtire',
         'rewardSkinAd': 'un skin nou',
+        'rewardFights': 'încă {count} luptă de ligă | încă {count} lupte de ligă | încă {count} de lupte de ligă',
         'watch': 'Vezi reclama',
         'decline': 'Nu, mersi'
       }

@@ -116,7 +116,10 @@ export default {
     'cheat_ghost': '幻影双子',
     'cheat_split': '粉碎虫群',
     'cheat_partners': '钢铁兄弟会',
-    'cheat_healers': '治愈唱诗班'
+    'cheat_healers': '治愈唱诗班',
+    'cheat_thunder': '风暴召唤者',
+    'cheat_child_emitter': '虫巢女王',
+    'cheat_life_leech': '噬魂蛭'
   },
   'node-w1': {
     'name': '绿洲斥候',
@@ -162,7 +165,85 @@ export default {
       'champion': '冠军'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} 第{position}名'
+    'tierPosition': '{tier} 第{position}名',
+    'title': '联赛',
+    'tabs': {
+      'fight': '对战',
+      'top': '赛季排行'
+    },
+    'standing': '你的段位',
+    'lp': '{n} 胜点',
+    'lpProgress': '{n} / {max} 胜点',
+    'lpAria': '本分段 {n}/{max} 胜点',
+    'atGate': '下一场：晋级赛！',
+    'shields': '保护 {n} 场',
+    'streak': '{n} 连胜',
+    'fightsToday': '今日对战',
+    'fightsLeft': '剩余 {n} 场',
+    'fightsReset': '{time}后刷新对战',
+    'topUp': '+{n} 场',
+    'topUpAria': '观看广告再获得 {n} 场对战',
+    'hudAria': '联赛：{rank}，{fights}',
+    'opponents': '选择对手',
+    'difficulty': {
+      'easier': '较弱',
+      'even': '相当',
+      'harder': '较强'
+    },
+    'fight': '对战',
+    'fightAria': '与{name}对战（{difficulty}）',
+    'gate': {
+      'title': '晋级赛',
+      'goal': '获胜即可晋级{rank}',
+      'challenge': '挑战',
+      'aria': '挑战{name}，晋级{rank}'
+    },
+    'quiet': {
+      'title': '对手正在赶来',
+      'body': '排位赛马上就绪。'
+    },
+    'top': {
+      'title': '本赛季最佳',
+      'empty': '本赛季还没有人晋级。争当第一人！'
+    },
+    'season': {
+      'label': '第{n}赛季',
+      'endsIn': '{time}后结束',
+      'complete': '第{n}赛季结束',
+      'peak': '最高段位：{tier}',
+      'coinsAria': '{n} 金币',
+      'diamondsAria': '{n} 钻石',
+      'frame': '冠军头像框',
+      'claim': '领取'
+    },
+    'result': {
+      'promoted': '晋级{rank}！',
+      'up': '升至{rank}',
+      'down': '降至{rank}',
+      'shielded': '护盾生效：未扣胜点',
+      'gateHeld': '守门人屹立不倒。再试一次！',
+      'capped': '已达今日胜点上限',
+      'coins': '+{n} 金币'
+    },
+    'notice': {
+      'dailyCap': '今日排位赛已用完，明天再来！',
+      'noFights': '今日对战次数已用完。',
+      'retry': '对战无法开始，请再试一次！'
+    },
+    'unlock': {
+      'title': '联赛已解锁！',
+      'body': '与其他玩家的队伍对战，从木头一路攀升到冠军。',
+      'point1': '可选较弱、相当或较强的对手',
+      'point2': '击败守门首领即可晋升新段位',
+      'point3': '每个赛季结束时领取奖励',
+      'enter': '进入联赛',
+      'later': '稍后'
+    },
+    'time': {
+      'dh': '{d}天{h}小时',
+      'hm': '{h}小时{m}分',
+      'm': '{m}分钟'
+    }
   },
   'graphicsQuality': '画质',
   'graphicsQualityNote': '自动模式会在设备帧率低于 25 FPS 时降低特效。',
@@ -505,6 +586,7 @@ export default {
         'rewardSpeed': '2 倍战斗速度',
         'rewardRespin': '再转一次',
         'rewardSkinAd': '一个新皮肤',
+        'rewardFights': '额外 {count} 场联赛对战',
         'watch': '观看广告',
         'decline': '不用了'
       }

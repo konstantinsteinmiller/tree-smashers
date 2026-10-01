@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Widmowy Bliźniak',
     'cheat_split': 'Pękający Rój',
     'cheat_partners': 'Żelazne Bractwo',
-    'cheat_healers': 'Chór Uzdrowicieli'
+    'cheat_healers': 'Chór Uzdrowicieli',
+    'cheat_thunder': 'Przywoływacz Burzy',
+    'cheat_child_emitter': 'Królowa Roju',
+    'cheat_life_leech': 'Pijawka Dusz'
   },
   'node-w1': {
     'name': 'Zwiadowca Oazy',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Mistrz'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Liga',
+    'tabs': {
+      'fight': 'Walcz',
+      'top': 'Top sezonu'
+    },
+    'standing': 'Twoja ranga',
+    'lp': '{n} PL',
+    'lpProgress': '{n} / {max} PL',
+    'lpAria': '{n} z {max} PL w tej dywizji',
+    'atGate': 'Następna: walka o awans!',
+    'shields': '{n} chroniona walka | {n} chronione walki | {n} chronionych walk',
+    'streak': 'Seria zwycięstw: {n}',
+    'fightsToday': 'Walki dziś',
+    'fightsLeft': 'Została {n} walka | Zostały {n} walki | Zostało {n} walk',
+    'fightsReset': 'Nowe walki za {time}',
+    'topUp': '+{n} walka | +{n} walki | +{n} walk',
+    'topUpAria': 'Obejrzyj reklamę i zdobądź {n} walkę więcej | Obejrzyj reklamę i zdobądź {n} walki więcej | Obejrzyj reklamę i zdobądź {n} walk więcej',
+    'hudAria': 'Liga: {rank}, {fights}',
+    'opponents': 'Wybierz rywala',
+    'difficulty': {
+      'easier': 'Słabszy',
+      'even': 'Równy',
+      'harder': 'Silniejszy'
+    },
+    'fight': 'Walcz',
+    'fightAria': 'Walcz: {name} ({difficulty})',
+    'gate': {
+      'title': 'Walka o awans',
+      'goal': 'Wygraj i awansuj: {rank}',
+      'challenge': 'Wyzwij',
+      'aria': 'Wyzwij: {name} i awansuj: {rank}'
+    },
+    'quiet': {
+      'title': 'Rywale są w drodze',
+      'body': 'Walki rankingowe będą gotowe za chwilę.'
+    },
+    'top': {
+      'title': 'Najlepsi sezonu',
+      'empty': 'W tym sezonie nikt jeszcze nie awansował. Bądź pierwszy!'
+    },
+    'season': {
+      'label': 'Sezon {n}',
+      'endsIn': 'Koniec za {time}',
+      'complete': 'Sezon {n} zakończony',
+      'peak': 'Najlepsza ranga: {tier}',
+      'coinsAria': '{n} moneta | {n} monety | {n} monet',
+      'diamondsAria': '{n} diament | {n} diamenty | {n} diamentów',
+      'frame': 'Ramka mistrza',
+      'claim': 'Odbierz'
+    },
+    'result': {
+      'promoted': 'Awans: {rank}!',
+      'up': 'W górę: {rank}',
+      'down': 'Spadek: {rank}',
+      'shielded': 'Tarcza wytrzymała: bez utraty PL',
+      'gateHeld': 'Strażnik się broni. Spróbuj jeszcze raz!',
+      'capped': 'Osiągnięto dzienny limit PL',
+      'coins': 'Monety: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Na dziś koniec walk rankingowych. Wróć jutro!',
+      'noFights': 'Na dziś nie masz już walk.',
+      'retry': 'Nie udało się rozpocząć walki. Spróbuj jeszcze raz!'
+    },
+    'unlock': {
+      'title': 'Liga odblokowana!',
+      'body': 'Walcz z drużynami innych graczy i wspinaj się od Drewna do Mistrza.',
+      'point1': 'Wybierz słabszego, równego lub silniejszego rywala',
+      'point2': 'Pokonaj bossa-strażnika, by wejść na nowy poziom',
+      'point3': 'Zdobywaj nagrody na koniec każdego sezonu',
+      'enter': 'Do ligi',
+      'later': 'Później'
+    },
+    'time': {
+      'dh': '{d} d {h} godz.',
+      'hm': '{h} godz. {m} min',
+      'm': '{m} min'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Tryb automatyczny ogranicza efekty, gdy urządzenie spada poniżej 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': 'prędkość walki ×2',
         'rewardRespin': 'dodatkowy obrót',
         'rewardSkinAd': 'nowa skórka',
+        'rewardFights': '{count} dodatkowa walka ligowa | {count} dodatkowe walki ligowe | {count} dodatkowych walk ligowych',
         'watch': 'Obejrzyj',
         'decline': 'Nie, dzięki'
       }

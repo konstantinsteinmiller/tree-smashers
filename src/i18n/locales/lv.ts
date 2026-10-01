@@ -117,7 +117,10 @@ export default {
     'cheat_ghost': 'Spoku dvīnis',
     'cheat_split': 'Šķeļošais bars',
     'cheat_partners': 'Dzelzs brālība',
-    'cheat_healers': 'Dziedinātāju koris'
+    'cheat_healers': 'Dziedinātāju koris',
+    'cheat_thunder': 'Vētru Saucējs',
+    'cheat_child_emitter': 'Spieta Karaliene',
+    'cheat_life_leech': 'Dvēseļu Dēle'
   },
   'node-w1': {
     'name': 'Oāzes izlūks',
@@ -163,7 +166,85 @@ export default {
       'champion': 'Čempions'
     },
     'tierDivision': '{tier} {division}',
-    'tierPosition': '{tier} #{position}'
+    'tierPosition': '{tier} #{position}',
+    'title': 'Līga',
+    'tabs': {
+      'fight': 'Cīnīties',
+      'top': 'Sezonas tops'
+    },
+    'standing': 'Tavs rangs',
+    'lp': '{n} LP',
+    'lpProgress': '{n} / {max} LP',
+    'lpAria': '{n} no {max} LP šajā divīzijā',
+    'atGate': 'Nākamā: paaugstinājuma cīņa!',
+    'shields': '{n} aizsargātas cīņas | {n} aizsargāta cīņa | {n} aizsargātas cīņas',
+    'streak': 'Uzvaru sērija: {n}',
+    'fightsToday': 'Cīņas šodien',
+    'fightsLeft': 'Atlikušas {n} cīņas | Atlikusi {n} cīņa | Atlikušas {n} cīņas',
+    'fightsReset': 'Jaunas cīņas pēc {time}',
+    'topUp': '+{n} cīņas | +{n} cīņa | +{n} cīņas',
+    'topUpAria': 'Skaties reklāmu un saņem vēl {n} cīņas | Skaties reklāmu un saņem vēl {n} cīņu | Skaties reklāmu un saņem vēl {n} cīņas',
+    'hudAria': 'Līga: {rank}, {fights}',
+    'opponents': 'Izvēlies pretinieku',
+    'difficulty': {
+      'easier': 'Vājāks',
+      'even': 'Līdzīgs',
+      'harder': 'Stiprāks'
+    },
+    'fight': 'Cīnīties',
+    'fightAria': 'Cīnīties: {name} ({difficulty})',
+    'gate': {
+      'title': 'Paaugstinājuma cīņa',
+      'goal': 'Uzvari un sasniedz {rank}',
+      'challenge': 'Izaicināt',
+      'aria': 'Izaicini: {name}, un sasniedz {rank}'
+    },
+    'quiet': {
+      'title': 'Pretinieki jau ceļā',
+      'body': 'Reitinga cīņas drīz būs gatavas.'
+    },
+    'top': {
+      'title': 'Sezonas labākie',
+      'empty': 'Šosezon vēl neviens nav pakāpies. Esi pirmais!'
+    },
+    'season': {
+      'label': '{n}. sezona',
+      'endsIn': 'Beigsies pēc {time}',
+      'complete': '{n}. sezona beigusies',
+      'peak': 'Labākais rangs: {tier}',
+      'coinsAria': '{n} monētas | {n} monēta | {n} monētas',
+      'diamondsAria': '{n} dimanti | {n} dimants | {n} dimanti',
+      'frame': 'Čempiona rāmis',
+      'claim': 'Saņemt'
+    },
+    'result': {
+      'promoted': 'Paaugstināts: {rank}!',
+      'up': 'Uz augšu: {rank}',
+      'down': 'Uz leju: {rank}',
+      'shielded': 'Vairogs izturēja: LP nav zaudēti',
+      'gateHeld': 'Vārtu sargs notur. Mēģini vēlreiz!',
+      'capped': 'Sasniegts dienas LP limits',
+      'coins': 'Monētas: +{n}'
+    },
+    'notice': {
+      'dailyCap': 'Šodien reitinga cīņu vairs nav. Atgriezies rīt!',
+      'noFights': 'Šodien cīņas vairs nav atlikušas.',
+      'retry': 'Cīņu neizdevās sākt. Mēģini vēlreiz!'
+    },
+    'unlock': {
+      'title': 'Līga atbloķēta!',
+      'body': 'Cīnies pret citu spēlētāju komandām un kāp no Koka līdz Čempionam.',
+      'point1': 'Izvēlies vājāku, līdzīgu vai stiprāku pretinieku',
+      'point2': 'Uzvari vārtu sarga bosu un sasniedz jaunu pakāpi',
+      'point3': 'Saņem balvas katras sezonas beigās',
+      'enter': 'Uz līgu',
+      'later': 'Vēlāk'
+    },
+    'time': {
+      'dh': '{d} d. {h} st.',
+      'hm': '{h} st. {m} min.',
+      'm': '{m} min.'
+    }
   },
   'graphicsQuality': 'Grafika',
   'graphicsQualityNote': 'Automātiskais režīms samazina efektus, ja ierīce nokrītas zem 25 FPS.',
@@ -504,6 +585,7 @@ export default {
         'rewardSpeed': '2x kaujas ātrums',
         'rewardRespin': 'vēl viens griziens',
         'rewardSkinAd': 'jauns skins',
+        'rewardFights': 'vēl {count} līgas cīņas | vēl {count} līgas cīņa | vēl {count} līgas cīņas',
         'watch': 'Skatīties',
         'decline': 'Nē, paldies'
       }
