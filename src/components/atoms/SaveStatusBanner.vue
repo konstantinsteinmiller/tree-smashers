@@ -100,16 +100,31 @@ watch(hasBonusToShow, (on) => {
 </template>
 
 <style scoped lang="sass">
-// Banners sit on the arena: a flat fabric plate with an ink outline and a hard
-// 0-blur drop. Bonus = leaf (celebratory), offline = wood (informational).
+// Banners sit on the arena: a flat plate with flat stripes, an ink outline
+// and a hard 0-blur drop, sliding up with a little overshoot. Bonus = leaf
+// (celebratory), offline = royal (informational).
 .save-banner
   border: 3px solid var(--color-ink)
   border-radius: var(--radius-ui)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
+  background-image: var(--ui-stripes)
+  animation: save-banner-in 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) both
   &.is-bonus
     background-color: var(--color-leaf-500)
-    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -4px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
   &.is-offline
-    background-color: var(--color-wood-600)
-    box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -3px 0 var(--color-wood-800), 0 4px 0 var(--color-ink)
+    background-color: var(--color-royal-600)
+    box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -4px 0 var(--color-royal-800), 0 4px 0 var(--color-ink)
+
+@keyframes save-banner-in
+  0%
+    transform: translateY(120%) rotate(-2deg)
+    opacity: 0
+  100%
+    transform: none
+    opacity: 1
+
+@media (prefers-reduced-motion: reduce)
+  .save-banner
+    animation: none
 </style>

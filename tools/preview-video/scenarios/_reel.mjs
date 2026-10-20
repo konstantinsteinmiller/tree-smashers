@@ -29,7 +29,7 @@ const reelSave = (over = {}) =>
   g.saveFixture({
     // The first-launch cutscene gate (src/use/introGate.ts) must never pick a
     // recording profile as a first-timer.
-    spinner_intro_seen: '1',
+    smashers_intro_seen: '1',
     ...over
   })
 
@@ -50,8 +50,8 @@ export const stageScene = async (ctx, o) => {
   const { stage, seed = 1337, hp = null, place = [], aim = null, save = {} } = o
   await g.boot(ctx, {
     save: reelSave({
-      spinner_campaign_stage: String(stage),
-      spinner_player_max_stage: String(stage), ...save
+      smashers_campaign_stage: String(stage),
+      smashers_player_max_stage: String(stage), ...save
     }), seed, stage
   })
   if (hp) await g.stageHp(ctx, hp)

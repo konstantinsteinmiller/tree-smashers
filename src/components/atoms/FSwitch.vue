@@ -1,8 +1,9 @@
 <template lang="pug">
   div(
-    class="flex items-center gap-3 cursor-pointer select-none group"
+    class="f-switch flex items-center gap-3 cursor-pointer select-none group"
     role="switch"
     tabindex="0"
+    data-sfx="self"
     :aria-checked="modelValue"
     @click="toggle"
     @keydown.enter.prevent="toggle"
@@ -10,18 +11,30 @@
   )
     span(class="ui-label switch-label")
       slot
-    //- Track: leaf when on, wood when off; knob: cream button.
+    //- Track: lime with flat stripes when on, deep navy when off. The knob is
+    //- a little 3D button (lip + drop) that springs across with an overshoot
+    //- and shows a check / cross glyph, so the state reads without colour.
     div(
-      class="switch-track relative w-16 h-9 rounded-full transition-colors duration-200"
+      class="switch-track relative w-[4.25rem] h-10 rounded-full"
       :class="{ 'is-on': modelValue }"
     )
-      div(
-        class="switch-knob absolute top-0.5 left-0.5 w-6 h-6 rounded-full transition-transform duration-200"
-        :class="modelValue ? 'translate-x-7' : 'translate-x-0'"
-      )
+      div(class="switch-knob absolute rounded-full flex items-center justify-center")
+        svg(viewBox="0 0 24 24" class="w-4 h-4" aria-hidden="true")
+          path(
+            v-if="modelValue"
+            d="M5 12.5l4.2 4.2L19 7"
+            fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"
+          )
+          path(
+            v-else
+            d="M7 7l10 10M17 7L7 17"
+            fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"
+          )
 </template>
 
 <script setup lang="ts">
+import { playUiSfx } from '@/use/uiSfx'
+
 interface Props {
   modelValue: boolean
 }
@@ -30,6 +43,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
 const toggle = () => {
+  playUiSfx(props.modelValue ? 'toggleOff' : 'toggleOn')
   emit('update:modelValue', !props.modelValue)
 }
 </script>
@@ -38,21 +52,52 @@ const toggle = () => {
 .switch-label
   color: var(--ui-text)
 
+// 44 px+ tall hit area (the whole row is the switch).
+.f-switch
+  min-height: 2.75rem
+  -webkit-tap-highlight-color: transparent
+
 .switch-track
   border: 3px solid var(--color-ink)
-  background-color: var(--color-wood-500)
-  box-shadow: inset 0 3px 0 var(--color-wood-700)
+  background-color: var(--color-royal-900)
+  box-shadow: inset 0 4px 0 var(--color-ink), 0 3px 0 var(--color-ink)
+  transition: background-color 0.15s ease
   &.is-on
     background-color: var(--color-leaf-500)
-    box-shadow: inset 0 3px 0 var(--color-leaf-700)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 4px 0 var(--color-leaf-700), 0 3px 0 var(--color-ink)
 
 .switch-knob
-  top: 0.25rem
-  background-color: var(--color-cream-50)
-  border: 2px solid var(--color-ink)
-  box-shadow: inset 0 -3px 0 var(--color-cream-300)
+  top: 0.15rem
+  left: 0.2rem
+  width: 1.75rem
+  height: 1.75rem
+  color: var(--color-steel-600)
+  background-color: var(--color-ice-50)
+  border: 3px solid var(--color-ink)
+  box-shadow: inset 0 -4px 0 var(--color-ice-300), 0 3px 0 var(--color-ink)
+  // Springy slide: a back-out curve overshoots the end stop a hair.
+  transition: transform 0.3s var(--ui-spring), color 0.15s ease, box-shadow 0.07s ease
+
+.is-on .switch-knob
+  transform: translateX(1.7rem)
+  color: var(--color-leaf-600)
+
+// The knob presses like a button while the switch is held.
+.f-switch:active .switch-knob
+  box-shadow: inset 0 -2px 0 var(--color-ice-300), 0 1px 0 var(--color-ink)
+  translate: 0 2px
+
+@media (hover: hover)
+  .f-switch:hover .switch-knob
+    translate: 0 -1px
 
 [role='switch']:focus-visible .switch-track
   outline: 3px solid var(--ui-focus)
-  outline-offset: 2px
+  outline-offset: 3px
+
+@media (prefers-reduced-motion: reduce)
+  .switch-knob
+    transition-duration: 0.08s
+    transition-timing-function: ease-out
 </style>

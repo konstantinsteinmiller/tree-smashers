@@ -364,8 +364,8 @@ describe('Frost Lock — cold touch (Rule A)', () => {
     expect(frostTouchKeep(withSkills(blade('player'), ['guard_shell']))).toBe(0.1)
   })
 
-  it('shares the 250 ms game-time shock gate (shock walls, Static Charge)', () => {
-    const v = blade('player', { lastShockMs: 1000 }) // a shock-wall zap just now
+  it('shares the 250 ms game-time shock gate (Static Charge)', () => {
+    const v = blade('player', { lastShockMs: 1000 }) // a Static Charge shock just now
     expect(frostTouch(v, 1249)).toBe(0)
     expect(v.vx).toBe(10)
     expect(frostTouch(v, 1250)).toBe(0.1)

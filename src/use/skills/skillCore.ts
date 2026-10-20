@@ -22,9 +22,9 @@ import type { BladeSkills } from '@/types/skills'
 export const PHASE_WINDOW_MS = 300
 /** Homing Rockets: flight time from volley to impact, game time (§4.6). */
 export const ROCKET_FLIGHT_MS = 400
-/** Static Charge shares the shock-wall re-zap gate `lastShockMs` (§4.10). */
+/** Static Charge shares the re-shock gate `lastShockMs` with Frost Lock (§4.10). */
 export const STATIC_SHOCK_COOLDOWN_MS = 250
-/** Speed kept after a shock (wall/bouncer zap or Static Charge proc). */
+/** Speed kept after a Static Charge proc. */
 export const SHOCK_BASE_KEEP = 0.1
 /** refHit: fraction of the bearer's max launch speed (§4.6). */
 export const REF_HIT_SPEED_FRACTION = 0.5
@@ -46,6 +46,10 @@ export const B_MOMENTUM = 64 // momentum
 export const B_WARD = 128 // hazard_ward
 export const B_STATIC = 256 // static_charge
 export const B_MIRROR = 512 // mirror_plate
+export const B_BANK = 1024 // bank_shot
+export const B_ANCHOR = 2048 // anchor
+export const B_TOWER = 4096 // tower_breaker
+export const B_THORNS = 8192 // thorns
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +60,7 @@ export type HpLossKind =
   | 'lava' // lava wall burn
   | 'burn' // Ember Nova (boss trait, bosses-100-feature.md §4.1) — a hazard: Hazard Ward cuts it like lava
   | 'thunder' // thunder-boss aura
-  | 'reflect' // Mirror Plate reflection
+  | 'reflect' // Mirror Plate reflection / Thorns recoil
   | 'rocket' // Homing Rockets impact
   | 'salvo' // Opening Salvo
   | 'link' // ghost-link mirror of another blade's loss
@@ -118,6 +122,10 @@ export interface SkillRuntime extends BladeSkills {
   wardThunder: number
   wardChip: number
   wardShockKeep: number
+  bankPct: number
+  anchorResist: number
+  towerPct: number
+  thornsShare: number
 }
 
 export interface OutgoingSkillResult {
@@ -129,6 +137,8 @@ export interface OutgoingSkillResult {
   momentumStacks: number
   /** The product hit SKILL_HIT_MUL_CAP. */
   clamped: boolean
+  /** Bank Shot cashed its rebound bonus on this hit. */
+  bank: boolean
 }
 
 export interface IncomingSkillResult {
@@ -176,7 +186,7 @@ export interface ContactSkillResult<T extends SkillBlade = SkillBlade> {
 }
 
 export const createOutgoingResult = (): OutgoingSkillResult =>
-  ({ mul: 1, lucky: false, momentumStacks: 0, clamped: false })
+  ({ mul: 1, lucky: false, momentumStacks: 0, clamped: false, bank: false })
 
 export const createIncomingResult = (): IncomingSkillResult =>
   ({ taken: 0, reflect: 0, dodged: false, phased: false, mirrored: false })
@@ -219,13 +229,6 @@ export function hazardScale(blade: SkillBlade, kind: HpLossKind): number {
   if (kind === 'thunder') return 1 - s.wardThunder
   if (kind === 'chip') return 1 - s.wardChip
   return 1
-}
-
-/** Speed fraction a blade keeps on a shock wall / bouncer zap (§4.9). */
-export function hazardShockKeep(blade: SkillBlade): number {
-  const s = blade.skills as SkillRuntime | undefined
-  if (s === undefined || (s.has & B_WARD) === 0) return SHOCK_BASE_KEEP
-  return SHOCK_BASE_KEEP + (1 - SHOCK_BASE_KEEP) * s.wardShockKeep
 }
 
 /**
@@ -292,7 +295,13 @@ export function applyHpLoss(
 
 /** Call from `beginLaunch(blade)` for every launch: Momentum stacks reset. */
 export function beginLaunchSkills(blade: SkillBlade): void {
-  if (blade.skills !== undefined) blade.skills.stacks = 0
+  const s = blade.skills
+  if (s === undefined) return
+  s.stacks = 0
+  if (s.banked !== undefined) {
+    s.banked = false
+    s.bankUsed = false
+  }
 }
 
 /** Wall / bouncer rebound of `blade`: +1 Momentum stack during its own launch. */
@@ -300,6 +309,44 @@ export function onOwnBounce(blade: SkillBlade, launchedBladeId: number | null): 
   const s = blade.skills as SkillRuntime | undefined
   if (s === undefined || (s.has & B_MOMENTUM) === 0 || launchedBladeId !== blade.id) return
   if (s.stacks < s.momentumMaxStacks) s.stacks++
+}
+
+// ─── Smasher-only effects (no RNG) ─────────────────────────────────────────
+
+/** Bank Shot: a rebound (wall, island, bumper, tower) of `blade` during its
+ *  own launch arms this launch's one bonus hit. */
+export function onBankRebound(blade: SkillBlade, launchedBladeId: number | null): void {
+  const s = blade.skills as SkillRuntime | undefined
+  if (s === undefined || (s.has & B_BANK) === 0 || launchedBladeId !== blade.id || s.bankUsed === true) return
+  s.banked = true
+}
+
+/** Anchor: fraction of the knockback speed `blade` keeps when an enemy
+ *  contact pushes it while it is NOT the launched blade (1 = no anchor). */
+export function anchorKeep(blade: SkillBlade, launchedBladeId: number | null): number {
+  const s = blade.skills as SkillRuntime | undefined
+  if (s === undefined || (s.has & B_ANCHOR) === 0 || launchedBladeId === blade.id) return 1
+  return 1 - s.anchorResist
+}
+
+/** Tower Breaker: multiplier on `blade`'s damage to a team tower. */
+export function towerDamageMul(blade: SkillBlade): number {
+  const s = blade.skills as SkillRuntime | undefined
+  if (s === undefined || (s.has & B_TOWER) === 0) return 1
+  return 1 + s.towerPct
+}
+
+/** Thorns: recoil onto `att` for an enemy hit of `dmg` that landed on the
+ *  bearer's SPIKED side (`spikedHit`: its reinforced cone — the back when
+ *  its armour is stronger behind, else the front),
+ *  `share·dmg / max(1, attackerDefense)` (the Mirror Plate rule). Apply with
+ *  kind 'reflect' — it never procs anything. */
+export function thornsRecoil(
+  def: SkillBlade, att: SkillBlade, dmg: number, spikedHit: boolean, attackerDefense: number
+): number {
+  const s = def.skills as SkillRuntime | undefined
+  if (s === undefined || (s.has & B_THORNS) === 0 || !spikedHit || !(dmg > 0) || att.owner === def.owner) return 0
+  return (dmg * s.thornsShare) / Math.max(1, attackerDefense)
 }
 
 // ─── Stun turn semantics (§4.10) ───────────────────────────────────────────

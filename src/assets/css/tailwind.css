@@ -3,82 +3,106 @@
 /*
  * ─── Tree Smashers design tokens — the ONE place colours / radii / type live ──
  *
- * Read src/assets/css/DESIGN.md before adding UI. Every token here is also a
- * CSS custom property on :root (Tailwind v4 @theme), so it works both as a
- * utility (`bg-leaf-500`, `text-ink`, `border-wood-700`, `rounded-ui`) and in
- * scoped sass (`var(--color-leaf-500)`). Component recipes (buttons, panels,
- * banners, chips) live in design.sass.
+ * "Toy-box arena" language (see ui-catalog.md + DESIGN.md): bright, saturated,
+ * family-friendly. Deep NAVY outlines and hard shadows, ROYAL-blue frames,
+ * ICE-white cards, punchy SUN yellow, LEAF lime CTAs, BERRY hot pink danger,
+ * SKY cyan ads, PLUM purple premium. No brown anywhere.
+ *
+ * Every token is also a CSS custom property on :root (Tailwind v4 @theme), so
+ * it works as a utility (`bg-leaf-500`, `text-ink`, `border-royal-700`) and in
+ * scoped sass (`var(--color-leaf-500)`). Recipes live in design.sass.
  *
  * Perf rules: flat fills, hard (0-blur) shadows only, no blur / backdrop-filter
  * / radial-gradient anywhere.
  */
 @theme {
-  /* Ink — the dark brown used for outlines, hard shadows and body text. */
-  --color-ink: #3a2314;
-  --color-ink-soft: #6b4a33;
+  /* Ink — deep navy: every outline, hard shadow and body text on light. */
+  --color-ink: #161a40;
+  --color-ink-soft: #3f4a85;
 
-  /* Wood — frames, secondary buttons, planks. */
-  --color-wood-900: #3a2314;
-  --color-wood-800: #52321d;
-  --color-wood-700: #6e4527;
-  --color-wood-600: #8c5a32;
-  --color-wood-500: #a9733f;
-  --color-wood-400: #c89058;
-  --color-wood-300: #deb07a;
+  /* Royal — frames, HUD plates, secondary-on-dark buttons, modal frame. */
+  --color-royal-900: #10164f;
+  --color-royal-800: #1b2a7a;
+  --color-royal-700: #2338a8;
+  --color-royal-600: #2f4fd6;
+  --color-royal-500: #4570f0;
+  --color-royal-400: #6f95ff;
+  --color-royal-300: #a3bcff;
 
-  /* Cream / parchment — modal content, cards, light text on dark. */
-  --color-cream-50: #fffaf0;
-  --color-cream-100: #fdf2d8;
-  --color-cream-200: #f7e3b8;
-  --color-cream-300: #eccd92;
-  --color-cream-400: #dcb46e;
+  /* Ice — readable light surfaces (modal cards, rows, wells). */
+  --color-ice-50: #ffffff;
+  --color-ice-100: #eef5ff;
+  --color-ice-200: #dbe8ff;
+  --color-ice-300: #bcd2fb;
+  --color-ice-400: #93b2ee;
 
-  /* Leaf — PRIMARY actions, positive values, HP. */
-  --color-leaf-300: #b5e67a;
-  --color-leaf-400: #82cf4a;
-  --color-leaf-500: #5aae2e;
-  --color-leaf-600: #46931f;
-  --color-leaf-700: #357317;
-  --color-leaf-800: #24520f;
+  /* Legacy names (pre-redesign call sites) — aliases, never brown again. */
+  --color-wood-900: var(--color-ink);
+  --color-wood-800: var(--color-royal-800);
+  --color-wood-700: var(--color-royal-700);
+  --color-wood-600: var(--color-royal-600);
+  --color-wood-500: var(--color-royal-500);
+  --color-wood-400: var(--color-royal-400);
+  --color-wood-300: var(--color-royal-300);
+  --color-cream-50: var(--color-ice-50);
+  --color-cream-100: var(--color-ice-100);
+  --color-cream-200: var(--color-ice-200);
+  --color-cream-300: var(--color-ice-300);
+  --color-cream-400: var(--color-ice-400);
+
+  /* Leaf — PRIMARY / GO actions, positive values, HP. Lime-bright. */
+  --color-leaf-300: #c8f76a;
+  --color-leaf-400: #8be33a;
+  --color-leaf-500: #55c81e;
+  --color-leaf-600: #3ea814;
+  --color-leaf-700: #2a830d;
+  --color-leaf-800: #1a5a08;
 
   /* Forest — the arena backdrop green. */
-  --color-forest-700: #2c5a2e;
-  --color-forest-800: #234726;
-  --color-forest-900: #1a351d;
+  --color-forest-700: #2a6b34;
+  --color-forest-800: #1f5429;
+  --color-forest-900: #173f20;
 
-  /* Berry — DANGER / close / lose / attack. */
-  --color-berry-300: #ff9e93;
-  --color-berry-400: #f26a5e;
-  --color-berry-500: #dc4637;
-  --color-berry-600: #b8332a;
-  --color-berry-700: #8a2420;
+  /* Berry — hot pink-red: DANGER / close / lose / attack / notify dot. */
+  --color-berry-300: #ffa3c4;
+  --color-berry-400: #ff5c8f;
+  --color-berry-500: #f2306b;
+  --color-berry-600: #c81d54;
+  --color-berry-700: #8a0f3a;
 
-  /* Sun — PREMIUM / coins / win highlight. */
-  --color-sun-200: #fff0a8;
-  --color-sun-300: #ffe066;
-  --color-sun-400: #ffc933;
-  --color-sun-500: #f4ab12;
-  --color-sun-600: #c98208;
+  /* Sun — punchy yellow: coins, claim, win, titles on dark. */
+  --color-sun-200: #fff7a3;
+  --color-sun-300: #ffeb3b;
+  --color-sun-400: #ffd21a;
+  --color-sun-500: #ffae00;
+  --color-sun-600: #d98500;
 
-  /* Sky — ADS / rewarded video (one colour for every ad CTA) + info accent. */
-  --color-sky-200: #c4ebff;
-  --color-sky-300: #8fd6fb;
-  --color-sky-400: #55bdf2;
-  --color-sky-500: #2a9fdc;
-  --color-sky-600: #1d7fb6;
-  --color-sky-700: #155f8a;
+  /* Sky — cyan: ADS / rewarded video (only) + info accent. */
+  --color-sky-200: #c6f2ff;
+  --color-sky-300: #7fdcff;
+  --color-sky-400: #38c4ff;
+  --color-sky-500: #13a3f2;
+  --color-sky-600: #0b80d0;
+  --color-sky-700: #075a9c;
 
-  /* Plum — diamonds / honour / rare skins (accent only, never a button). */
-  --color-plum-300: #d7b0ff;
-  --color-plum-400: #b67df2;
-  --color-plum-500: #8e55cf;
-  --color-plum-700: #5a2f8a;
+  /* Plum — purple: diamonds / battle pass / rare / premium tier. */
+  --color-plum-300: #e2b6ff;
+  --color-plum-400: #c47dff;
+  --color-plum-500: #9c46f0;
+  --color-plum-600: #7b2fd4;
+  --color-plum-700: #5c1eb0;
+
+  /* Steel — the ONE disabled / locked look (flat, cold, clearly "off"). */
+  --color-steel-300: #c9d1e3;
+  --color-steel-400: #aab4cc;
+  --color-steel-500: #8f9ab8;
+  --color-steel-600: #6f7a99;
 
   /* Radii */
-  --radius-ui-sm: 0.5rem;
-  --radius-ui: 0.875rem;
-  --radius-ui-lg: 1.25rem;
-  --radius-ui-xl: 1.75rem;
+  --radius-ui-sm: 0.55rem;
+  --radius-ui: 0.95rem;
+  --radius-ui-lg: 1.35rem;
+  --radius-ui-xl: 1.85rem;
 
   /* Type */
   --font-ui: var(--font-game);

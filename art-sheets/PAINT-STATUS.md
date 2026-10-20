@@ -11,3 +11,13 @@
 | ! | Power-up boxes — attack, defense, speed (`ui-power-up-boxes`) | `PROMPTS-ui.md` | `painted/ui-power-up-boxes.png` (rev `68d9edf6a229`) | repaint — the reference changed (9115b2d64430 → 68d9edf6a229) | — |
 
 Marks: ✓ sliced and current · ! repaint (reference changed / old painting parked) · ? painted, no receipt · · not painted yet.
+
+## Arena art (floors, backdrop, props)
+
+> **Gemini account limitation (since the Oct 2026 account switch):** this account REFUSES reference-based edits
+> ("Sorry, I can't edit images for you yet. Can I generate an image instead") — paint with TEXT-ONLY prompts
+> (`paint.mjs` without `--ref`) and describe the subject precisely; a job that needs a reference falls back to text.
+
+- Arena floors painted: layout 0, layout 1, layout 2 of 50 — `arena-floors/floor-<id>.prompt.txt` → `painted/arena-floor-<id>.png` → `node tools/arena-floors/make-floors.mjs`
+- Backdrop: highland plain painted — `bg/highland.prompt.txt` → `node tools/bg-tile/make-tile.mjs <png> public/images/bg/highland-tile_768x768.webp --size 768 --hard`
+- Prop sheets painted: bedroom-a, forest-a, forest-b — `props/<sheet>.prompt.txt` → `painted/props-<sheet>.png` → `node tools/arena-props/pack.mjs`

@@ -1,0 +1,1230 @@
+{
+  "generated": "2026-10-20T12:21:16.044Z",
+  "items": {
+    "clash-1": {
+      "file": "public/audio/v2/sfx/clash-1.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -13.4,
+        "gainDb": -0.6,
+        "limited": true,
+        "tpBeforeLimit": -0.8
+      },
+      "qa": {
+        "integrated": -14.3,
+        "momentaryMax": -14.3,
+        "shortTermMax": null,
+        "samplePeak": -1.2,
+        "truePeak": -1.2,
+        "durationSec": 0.357,
+        "channels": 1,
+        "bytes": 5358,
+        "highShare8k": 0,
+        "subShare40": 0.3,
+        "dcOffset": 0.000063
+      }
+    },
+    "clash-2": {
+      "file": "public/audio/v2/sfx/clash-2.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -13.7,
+        "gainDb": -0.3,
+        "limited": true,
+        "tpBeforeLimit": -0.5
+      },
+      "qa": {
+        "integrated": -14.5,
+        "momentaryMax": -14.5,
+        "shortTermMax": null,
+        "samplePeak": -1.5,
+        "truePeak": -1.5,
+        "durationSec": 0.357,
+        "channels": 1,
+        "bytes": 5371,
+        "highShare8k": 0,
+        "subShare40": 0,
+        "dcOffset": 0.000318
+      }
+    },
+    "clash-3": {
+      "file": "public/audio/v2/sfx/clash-3.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -12.7,
+        "gainDb": -1.3,
+        "limited": true,
+        "tpBeforeLimit": -1.4
+      },
+      "qa": {
+        "integrated": -13.9,
+        "momentaryMax": -13.9,
+        "shortTermMax": null,
+        "samplePeak": -1.2,
+        "truePeak": -1.2,
+        "durationSec": 0.357,
+        "channels": 1,
+        "bytes": 5312,
+        "highShare8k": 0,
+        "subShare40": 1.3,
+        "dcOffset": 0.001053
+      }
+    },
+    "clash-4": {
+      "file": "public/audio/v2/sfx/clash-4.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -13.2,
+        "gainDb": -0.8,
+        "limited": true,
+        "tpBeforeLimit": -1.1
+      },
+      "qa": {
+        "integrated": -14.3,
+        "momentaryMax": -14.3,
+        "shortTermMax": null,
+        "samplePeak": -1.5,
+        "truePeak": -1.5,
+        "durationSec": 0.357,
+        "channels": 1,
+        "bytes": 5534,
+        "highShare8k": 0,
+        "subShare40": 0.1,
+        "dcOffset": 0.000295
+      }
+    },
+    "clash-5": {
+      "file": "public/audio/v2/sfx/clash-5.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -13,
+        "gainDb": -1,
+        "limited": true,
+        "tpBeforeLimit": -1.1
+      },
+      "qa": {
+        "integrated": -14,
+        "momentaryMax": -14,
+        "shortTermMax": null,
+        "samplePeak": -1.5,
+        "truePeak": -1.5,
+        "durationSec": 0.357,
+        "channels": 1,
+        "bytes": 5175,
+        "highShare8k": 0,
+        "subShare40": 0.2,
+        "dcOffset": 0.000328
+      }
+    },
+    "explosion-1": {
+      "file": "public/audio/v2/sfx/explosion-1.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -13,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -10.3,
+        "gainDb": -2.7,
+        "limited": false,
+        "tpBeforeLimit": -3.3
+      },
+      "qa": {
+        "integrated": -17.6,
+        "momentaryMax": -13,
+        "shortTermMax": null,
+        "samplePeak": -3.1,
+        "truePeak": -3.1,
+        "durationSec": 1.05,
+        "channels": 1,
+        "bytes": 13474,
+        "highShare8k": 0,
+        "subShare40": 2.1,
+        "dcOffset": 0.000005
+      }
+    },
+    "skill-zap": {
+      "file": "public/audio/v2/sfx/skill-zap.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -11.3,
+        "gainDb": -4.7,
+        "limited": false,
+        "tpBeforeLimit": -5.8
+      },
+      "qa": {
+        "integrated": -16.2,
+        "momentaryMax": -16.2,
+        "shortTermMax": null,
+        "samplePeak": -5.4,
+        "truePeak": -5.4,
+        "durationSec": 0.377,
+        "channels": 1,
+        "bytes": 8018,
+        "highShare8k": 0,
+        "subShare40": 0,
+        "dcOffset": 0.000075
+      }
+    },
+    "celebration-1": {
+      "file": "public/audio/v2/sfx/celebration-1.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -15,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -8.9,
+        "gainDb": -6.1,
+        "limited": false,
+        "tpBeforeLimit": -4.3
+      },
+      "qa": {
+        "integrated": -15.4,
+        "momentaryMax": -15,
+        "shortTermMax": null,
+        "samplePeak": -4.3,
+        "truePeak": -4.3,
+        "durationSec": 1.35,
+        "channels": 1,
+        "bytes": 14229,
+        "highShare8k": 0,
+        "subShare40": 0.1,
+        "dcOffset": 0.000028
+      }
+    },
+    "celebration-2": {
+      "file": "public/audio/v2/sfx/celebration-2.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -15,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -5.7,
+        "gainDb": -9.3,
+        "limited": false,
+        "tpBeforeLimit": -3
+      },
+      "qa": {
+        "integrated": -17.3,
+        "momentaryMax": -15,
+        "shortTermMax": null,
+        "samplePeak": -3,
+        "truePeak": -2.9,
+        "durationSec": 1.35,
+        "channels": 1,
+        "bytes": 12193,
+        "highShare8k": 0,
+        "subShare40": 0.1,
+        "dcOffset": 0.000037
+      }
+    },
+    "tower-fall": {
+      "file": "public/audio/v2/sfx/tower-fall.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -13,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -11.5,
+        "gainDb": -1.5,
+        "limited": true,
+        "tpBeforeLimit": -1.3
+      },
+      "qa": {
+        "integrated": -16.2,
+        "momentaryMax": -13.2,
+        "shortTermMax": null,
+        "samplePeak": -3,
+        "truePeak": -2.3,
+        "durationSec": 1.5,
+        "channels": 1,
+        "bytes": 19064,
+        "highShare8k": 0.3,
+        "subShare40": 6.5,
+        "dcOffset": 0.000311
+      }
+    },
+    "happy": {
+      "file": "public/audio/v2/sfx/happy.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -3.8,
+        "gainDb": -12.2,
+        "limited": false,
+        "tpBeforeLimit": -6.7
+      },
+      "qa": {
+        "integrated": -18.6,
+        "momentaryMax": -16,
+        "shortTermMax": null,
+        "samplePeak": -6.7,
+        "truePeak": -6.7,
+        "durationSec": 1.3,
+        "channels": 1,
+        "bytes": 13118,
+        "highShare8k": 0.2,
+        "subShare40": 0,
+        "dcOffset": 0.000025
+      }
+    },
+    "level-up": {
+      "file": "public/audio/v2/sfx/level-up.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -17,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -5.8,
+        "gainDb": -11.2,
+        "limited": false,
+        "tpBeforeLimit": -7.5
+      },
+      "qa": {
+        "integrated": -18.5,
+        "momentaryMax": -17,
+        "shortTermMax": null,
+        "samplePeak": -7.7,
+        "truePeak": -7.6,
+        "durationSec": 0.747,
+        "channels": 1,
+        "bytes": 9512,
+        "highShare8k": 0.3,
+        "subShare40": 0,
+        "dcOffset": 0.000032
+      }
+    },
+    "reward-continue": {
+      "file": "public/audio/v2/sfx/reward-continue.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -22,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -9.8,
+        "gainDb": -12.2,
+        "limited": false,
+        "tpBeforeLimit": -12.3
+      },
+      "qa": {
+        "integrated": -21.9,
+        "momentaryMax": -21.9,
+        "shortTermMax": null,
+        "samplePeak": -12.6,
+        "truePeak": -12.6,
+        "durationSec": 0.447,
+        "channels": 1,
+        "bytes": 5589,
+        "highShare8k": 0.1,
+        "subShare40": 0,
+        "dcOffset": 0.00006
+      }
+    },
+    "skill-shield": {
+      "file": "public/audio/v2/sfx/skill-shield.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -18,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -13.5,
+        "gainDb": -4.5,
+        "limited": false,
+        "tpBeforeLimit": -3.4
+      },
+      "qa": {
+        "integrated": -17.9,
+        "momentaryMax": -17.9,
+        "shortTermMax": null,
+        "samplePeak": -3.2,
+        "truePeak": -3.2,
+        "durationSec": 0.477,
+        "channels": 1,
+        "bytes": 5674,
+        "highShare8k": 0,
+        "subShare40": 0.1,
+        "dcOffset": 0.00003
+      }
+    },
+    "skill-rocket": {
+      "file": "public/audio/v2/sfx/skill-rocket.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -15,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -22.6,
+        "gainDb": 7.6,
+        "limited": false,
+        "tpBeforeLimit": -2.5
+      },
+      "qa": {
+        "integrated": -15.5,
+        "momentaryMax": -15.2,
+        "shortTermMax": null,
+        "samplePeak": -1.5,
+        "truePeak": -1.5,
+        "durationSec": 0.547,
+        "channels": 1,
+        "bytes": 8599,
+        "highShare8k": 0.2,
+        "subShare40": 0,
+        "dcOffset": 0.000024
+      }
+    },
+    "skill-crit": {
+      "file": "public/audio/v2/sfx/skill-crit.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -8.8,
+        "gainDb": -7.2,
+        "limited": false,
+        "tpBeforeLimit": -7.3
+      },
+      "qa": {
+        "integrated": -16,
+        "momentaryMax": -16,
+        "shortTermMax": null,
+        "samplePeak": -6.8,
+        "truePeak": -6.6,
+        "durationSec": 0.397,
+        "channels": 1,
+        "bytes": 7236,
+        "highShare8k": 0.4,
+        "subShare40": 0,
+        "dcOffset": 0.000228
+      }
+    },
+    "skill-whoosh": {
+      "file": "public/audio/v2/sfx/skill-whoosh.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -17,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -27,
+        "gainDb": 10,
+        "limited": true,
+        "tpBeforeLimit": -0.8
+      },
+      "qa": {
+        "integrated": -17.3,
+        "momentaryMax": -17.3,
+        "shortTermMax": null,
+        "samplePeak": -2.5,
+        "truePeak": -2.1,
+        "durationSec": 0.317,
+        "channels": 1,
+        "bytes": 6775,
+        "highShare8k": 3.4,
+        "subShare40": 0,
+        "dcOffset": 0.000041
+      }
+    },
+    "skill-boost": {
+      "file": "public/audio/v2/sfx/skill-boost.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -18,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -16.5,
+        "gainDb": -1.5,
+        "limited": true,
+        "tpBeforeLimit": -0.8
+      },
+      "qa": {
+        "integrated": -18.2,
+        "momentaryMax": -18.2,
+        "shortTermMax": null,
+        "samplePeak": -2.4,
+        "truePeak": -2.4,
+        "durationSec": 0.217,
+        "channels": 1,
+        "bytes": 4806,
+        "highShare8k": 0,
+        "subShare40": 0,
+        "dcOffset": 0.000676
+      }
+    },
+    "boss-ember-pulse": {
+      "file": "public/audio/v2/sfx/boss-ember-pulse.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -12.5,
+        "gainDb": -3.5,
+        "limited": false,
+        "tpBeforeLimit": -4.7
+      },
+      "qa": {
+        "integrated": -19.4,
+        "momentaryMax": -15.9,
+        "shortTermMax": null,
+        "samplePeak": -4.7,
+        "truePeak": -4.7,
+        "durationSec": 0.672,
+        "channels": 1,
+        "bytes": 10350,
+        "highShare8k": 0,
+        "subShare40": 2.2,
+        "dcOffset": 0.000047
+      }
+    },
+    "boss-freeze": {
+      "file": "public/audio/v2/sfx/boss-freeze.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -17,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -10.4,
+        "gainDb": -6.6,
+        "limited": true,
+        "tpBeforeLimit": -1.8
+      },
+      "qa": {
+        "integrated": -17.3,
+        "momentaryMax": -17.2,
+        "shortTermMax": null,
+        "samplePeak": -2.3,
+        "truePeak": -2.1,
+        "durationSec": 0.517,
+        "channels": 1,
+        "bytes": 8979,
+        "highShare8k": 3.7,
+        "subShare40": 0.3,
+        "dcOffset": 0.000087
+      }
+    },
+    "boss-crack": {
+      "file": "public/audio/v2/sfx/boss-crack.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -19,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -16.4,
+        "gainDb": -2.6,
+        "limited": true,
+        "tpBeforeLimit": -1.1
+      },
+      "qa": {
+        "integrated": -19.2,
+        "momentaryMax": -19.2,
+        "shortTermMax": null,
+        "samplePeak": -2.2,
+        "truePeak": -1.8,
+        "durationSec": 0.417,
+        "channels": 1,
+        "bytes": 6799,
+        "highShare8k": 6,
+        "subShare40": 0,
+        "dcOffset": 0.000008
+      }
+    },
+    "boss-chill": {
+      "file": "public/audio/v2/sfx/boss-chill.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -18,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -14.8,
+        "gainDb": -3.2,
+        "limited": false,
+        "tpBeforeLimit": -3.1
+      },
+      "qa": {
+        "integrated": -18.1,
+        "momentaryMax": -18.1,
+        "shortTermMax": null,
+        "samplePeak": -3.6,
+        "truePeak": -3.6,
+        "durationSec": 0.257,
+        "channels": 1,
+        "bytes": 5121,
+        "highShare8k": 1,
+        "subShare40": 0,
+        "dcOffset": 0.000003
+      }
+    },
+    "battle-1": {
+      "file": "public/audio/v2/music/battle-1.ogg",
+      "kind": "music",
+      "bpm": 144,
+      "loopBeats": 128,
+      "loopSec": 53.333,
+      "target": {
+        "integrated": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -12.6,
+        "gainDb": -3.4,
+        "limited": true,
+        "tpBeforeLimit": -0.4
+      },
+      "qa": {
+        "integrated": -16,
+        "momentaryMax": -14.1,
+        "shortTermMax": -14.9,
+        "samplePeak": -1.6,
+        "truePeak": -1.5,
+        "durationSec": 53.333,
+        "channels": 2,
+        "bytes": 575492,
+        "highShare8k": 0.5,
+        "subShare40": 1.5,
+        "dcOffset": 0.000118,
+        "seam": {
+          "rmsEndDb": -23.8,
+          "rmsStartDb": -10.1,
+          "levelStepDb": 13.7,
+          "jumpVsSlope": 0.07
+        },
+        "stereoCorrelation": 0.97
+      }
+    },
+    "battle-2": {
+      "file": "public/audio/v2/music/battle-2.ogg",
+      "kind": "music",
+      "bpm": 152,
+      "loopBeats": 128,
+      "loopSec": 50.526,
+      "target": {
+        "integrated": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -12.6,
+        "gainDb": -3.4,
+        "limited": true,
+        "tpBeforeLimit": -0.8
+      },
+      "qa": {
+        "integrated": -16,
+        "momentaryMax": -15,
+        "shortTermMax": -15.6,
+        "samplePeak": -1.4,
+        "truePeak": -1.4,
+        "durationSec": 50.526,
+        "channels": 2,
+        "bytes": 542592,
+        "highShare8k": 0.3,
+        "subShare40": 1.8,
+        "dcOffset": 0.000024,
+        "seam": {
+          "rmsEndDb": -25.7,
+          "rmsStartDb": -11.1,
+          "levelStepDb": 14.6,
+          "jumpVsSlope": 0.49
+        },
+        "stereoCorrelation": 0.98
+      }
+    },
+    "battle-3": {
+      "file": "public/audio/v2/music/battle-3.ogg",
+      "kind": "music",
+      "bpm": 132,
+      "loopBeats": 128,
+      "loopSec": 58.182,
+      "target": {
+        "integrated": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -13.2,
+        "gainDb": -2.8,
+        "limited": true,
+        "tpBeforeLimit": 1.6
+      },
+      "qa": {
+        "integrated": -16.1,
+        "momentaryMax": -13.6,
+        "shortTermMax": -14.7,
+        "samplePeak": -1.6,
+        "truePeak": -1.6,
+        "durationSec": 58.182,
+        "channels": 2,
+        "bytes": 608979,
+        "highShare8k": 0.2,
+        "subShare40": 1.6,
+        "dcOffset": 0.000062,
+        "seam": {
+          "rmsEndDb": -20.3,
+          "rmsStartDb": -8.9,
+          "levelStepDb": 11.4,
+          "jumpVsSlope": 0.37
+        },
+        "stereoCorrelation": 0.98
+      }
+    },
+    "menu-1": {
+      "file": "public/audio/v2/music/menu-1.ogg",
+      "kind": "music",
+      "bpm": 92,
+      "loopBeats": 64,
+      "loopSec": 41.739,
+      "target": {
+        "integrated": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -14.4,
+        "gainDb": -1.6,
+        "limited": true,
+        "tpBeforeLimit": 0.3
+      },
+      "qa": {
+        "integrated": -16.1,
+        "momentaryMax": -13.9,
+        "shortTermMax": -15.5,
+        "samplePeak": -1.4,
+        "truePeak": -1.3,
+        "durationSec": 41.739,
+        "channels": 2,
+        "bytes": 417136,
+        "highShare8k": 0.5,
+        "subShare40": 0.5,
+        "dcOffset": 0.000105,
+        "seam": {
+          "rmsEndDb": -25.8,
+          "rmsStartDb": -10.9,
+          "levelStepDb": 14.9,
+          "jumpVsSlope": 0.12
+        },
+        "stereoCorrelation": 0.95
+      }
+    },
+    "boss-1": {
+      "file": "public/audio/v2/music/boss-1.ogg",
+      "kind": "music",
+      "bpm": 126,
+      "loopBeats": 96,
+      "loopSec": 45.714,
+      "target": {
+        "integrated": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -12.4,
+        "gainDb": -3.6,
+        "limited": true,
+        "tpBeforeLimit": -0.4
+      },
+      "qa": {
+        "integrated": -16,
+        "momentaryMax": -14.3,
+        "shortTermMax": -15.2,
+        "samplePeak": -1.8,
+        "truePeak": -1.8,
+        "durationSec": 45.714,
+        "channels": 2,
+        "bytes": 493427,
+        "highShare8k": 0.1,
+        "subShare40": 1,
+        "dcOffset": 0.000039,
+        "seam": {
+          "rmsEndDb": -18.7,
+          "rmsStartDb": -11.6,
+          "levelStepDb": 7.1,
+          "jumpVsSlope": 0.74
+        },
+        "stereoCorrelation": 0.98
+      }
+    },
+    "win": {
+      "file": "public/audio/v2/sfx/win.ogg",
+      "kind": "stinger",
+      "bpm": 132,
+      "loopBeats": null,
+      "loopSec": null,
+      "target": {
+        "momentary": -11,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -14.2,
+        "gainDb": -0.1,
+        "limited": true,
+        "tpBeforeLimit": 3.3
+      },
+      "qa": {
+        "integrated": -13.6,
+        "momentaryMax": -11.2,
+        "shortTermMax": -13.9,
+        "samplePeak": -1.7,
+        "truePeak": -1.7,
+        "durationSec": 4.2,
+        "channels": 2,
+        "bytes": 58829,
+        "highShare8k": 0.6,
+        "subShare40": 0.6,
+        "dcOffset": 0.00003,
+        "stereoCorrelation": 0.97
+      }
+    },
+    "lose": {
+      "file": "public/audio/v2/sfx/lose.ogg",
+      "kind": "stinger",
+      "bpm": 96,
+      "loopBeats": null,
+      "loopSec": null,
+      "target": {
+        "momentary": -11.5,
+        "truePeak": -1
+      },
+      "render": {
+        "rawIntegrated": -15.5,
+        "gainDb": 1.5,
+        "limited": true,
+        "tpBeforeLimit": 0.5
+      },
+      "qa": {
+        "integrated": -13.7,
+        "momentaryMax": -11.7,
+        "shortTermMax": -13.3,
+        "samplePeak": -1.7,
+        "truePeak": -1.7,
+        "durationSec": 3.4,
+        "channels": 2,
+        "bytes": 44447,
+        "highShare8k": 0,
+        "subShare40": 0.9,
+        "dcOffset": 0.000067,
+        "stereoCorrelation": 0.97
+      }
+    },
+    "ui-press": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -34.3,
+          "momentaryMax": -34.3,
+          "shortTermMax": null,
+          "samplePeak": -8.2,
+          "truePeak": -8.2
+        },
+        "new": {
+          "integrated": -34.4,
+          "momentaryMax": -34.4,
+          "shortTermMax": null,
+          "samplePeak": -7.3,
+          "truePeak": -7.3
+        },
+        "loudnessDiffDb": -0.1
+      }
+    },
+    "ui-pressHero": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -30.4,
+          "momentaryMax": -30.4,
+          "shortTermMax": null,
+          "samplePeak": -7.6,
+          "truePeak": -7.5
+        },
+        "new": {
+          "integrated": -30.4,
+          "momentaryMax": -30.4,
+          "shortTermMax": null,
+          "samplePeak": -9.4,
+          "truePeak": -9.4
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-release": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -40.8,
+          "momentaryMax": -40.8,
+          "shortTermMax": null,
+          "samplePeak": -17.4,
+          "truePeak": -17.4
+        },
+        "new": {
+          "integrated": -40.7,
+          "momentaryMax": -40.7,
+          "shortTermMax": null,
+          "samplePeak": -15.7,
+          "truePeak": -15.7
+        },
+        "loudnessDiffDb": 0.1
+      }
+    },
+    "ui-toggleOn": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -34.6,
+          "momentaryMax": -34.6,
+          "shortTermMax": null,
+          "samplePeak": -12.6,
+          "truePeak": -12.5
+        },
+        "new": {
+          "integrated": -35.1,
+          "momentaryMax": -35.1,
+          "shortTermMax": null,
+          "samplePeak": -11.1,
+          "truePeak": -11
+        },
+        "loudnessDiffDb": -0.5
+      }
+    },
+    "ui-toggleOff": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -36.4,
+          "momentaryMax": -36.4,
+          "shortTermMax": null,
+          "samplePeak": -14.2,
+          "truePeak": -14.2
+        },
+        "new": {
+          "integrated": -36.5,
+          "momentaryMax": -36.5,
+          "shortTermMax": null,
+          "samplePeak": -11.9,
+          "truePeak": -11.9
+        },
+        "loudnessDiffDb": -0.1
+      }
+    },
+    "ui-tab": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -38.7,
+          "momentaryMax": -38.7,
+          "shortTermMax": null,
+          "samplePeak": -11.8,
+          "truePeak": -11.8
+        },
+        "new": {
+          "integrated": -38.7,
+          "momentaryMax": -38.7,
+          "shortTermMax": null,
+          "samplePeak": -11.8,
+          "truePeak": -11.8
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-open": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -34.9,
+          "momentaryMax": -34.9,
+          "shortTermMax": null,
+          "samplePeak": -14,
+          "truePeak": -14
+        },
+        "new": {
+          "integrated": -34.9,
+          "momentaryMax": -34.9,
+          "shortTermMax": null,
+          "samplePeak": -13.5,
+          "truePeak": -13.5
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-close": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -36.6,
+          "momentaryMax": -36.6,
+          "shortTermMax": null,
+          "samplePeak": -15.2,
+          "truePeak": -15.2
+        },
+        "new": {
+          "integrated": -36.7,
+          "momentaryMax": -36.7,
+          "shortTermMax": null,
+          "samplePeak": -14.3,
+          "truePeak": -14.2
+        },
+        "loudnessDiffDb": -0.1
+      }
+    },
+    "ui-tick": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -36.7,
+          "momentaryMax": -35.2,
+          "shortTermMax": null,
+          "samplePeak": -19.6,
+          "truePeak": -19.6
+        },
+        "new": {
+          "integrated": -36.6,
+          "momentaryMax": -35.2,
+          "shortTermMax": null,
+          "samplePeak": -16.1,
+          "truePeak": -16.1
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-reward": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -24.3,
+          "momentaryMax": -24.3,
+          "shortTermMax": null,
+          "samplePeak": -10.1,
+          "truePeak": -10.1
+        },
+        "new": {
+          "integrated": -24.3,
+          "momentaryMax": -24.3,
+          "shortTermMax": null,
+          "samplePeak": -10.6,
+          "truePeak": -10.6
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-deny": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -34.9,
+          "momentaryMax": -34.9,
+          "shortTermMax": null,
+          "samplePeak": -12.3,
+          "truePeak": -12.3
+        },
+        "new": {
+          "integrated": -34.9,
+          "momentaryMax": -34.9,
+          "shortTermMax": null,
+          "samplePeak": -15.6,
+          "truePeak": -15.6
+        },
+        "loudnessDiffDb": 0
+      }
+    },
+    "ui-slide": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -42,
+          "momentaryMax": -40.3,
+          "shortTermMax": null,
+          "samplePeak": -20,
+          "truePeak": -20
+        },
+        "new": {
+          "integrated": -42,
+          "momentaryMax": -39.8,
+          "shortTermMax": null,
+          "samplePeak": -18.3,
+          "truePeak": -18.3
+        },
+        "loudnessDiffDb": 0.5
+      }
+    },
+    "intro-tick": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -44.3,
+          "momentaryMax": -42.8,
+          "shortTermMax": null,
+          "samplePeak": -24.7,
+          "truePeak": -24.7
+        },
+        "new": {
+          "integrated": -43.3,
+          "momentaryMax": -42.3,
+          "shortTermMax": null,
+          "samplePeak": -21.4,
+          "truePeak": -21.4
+        },
+        "loudnessDiffDb": 0.5
+      }
+    },
+    "intro-thud": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -25.8,
+          "momentaryMax": -23.1,
+          "shortTermMax": null,
+          "samplePeak": -6.6,
+          "truePeak": -6.6
+        },
+        "new": {
+          "integrated": -23.7,
+          "momentaryMax": -23.7,
+          "shortTermMax": null,
+          "samplePeak": -5.8,
+          "truePeak": -5.8
+        },
+        "loudnessDiffDb": -0.6
+      }
+    },
+    "intro-heart": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -29.6,
+          "momentaryMax": -27.1,
+          "shortTermMax": null,
+          "samplePeak": -8.8,
+          "truePeak": -8.8
+        },
+        "new": {
+          "integrated": -29.7,
+          "momentaryMax": -27.2,
+          "shortTermMax": null,
+          "samplePeak": -8,
+          "truePeak": -8
+        },
+        "loudnessDiffDb": -0.1
+      }
+    },
+    "intro-whoosh": {
+      "kind": "procedural",
+      "file": null,
+      "target": {
+        "momentary": "old sound ±1 dB at the same call-site gain"
+      },
+      "qa": {
+        "old": {
+          "integrated": -50,
+          "momentaryMax": -47.4,
+          "shortTermMax": null,
+          "samplePeak": -29.9,
+          "truePeak": -29.7
+        },
+        "new": {
+          "integrated": -47.2,
+          "momentaryMax": -47.2,
+          "shortTermMax": null,
+          "samplePeak": -27.9,
+          "truePeak": -27.8
+        },
+        "loudnessDiffDb": 0.2
+      }
+    }
+  }
+}

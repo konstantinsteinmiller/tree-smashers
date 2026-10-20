@@ -106,12 +106,14 @@ watch(model, (open) => {
       div.board__state(v-else-if="showEmpty") {{ t('leaderboard.empty') }}
 
       div.board__list(v-else)
-        div.board-row(
+        div.board-row.ui-pop-in(
           v-for="(entry, i) in entries"
           :key="`${entry.rank}-${entry.name}-${i}`"
-          :class="{ 'is-you': isYou(entry.name) }"
+          :class="{ 'is-you': isYou(entry.name), [`is-top${entry.rank}`]: entry.rank <= 3 }"
+          :style="{ '--i': Math.min(i, 12) }"
         )
-          span.board-row__rank {{ entry.rank }}
+          span.board-row__rank
+            span {{ entry.rank }}
           span.board-row__name
             span.board-row__name-text {{ entry.name }}
             span.board-row__you(v-if="isYou(entry.name)") {{ t('leaderboard.you') }}
@@ -143,7 +145,7 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   grid-template-columns: $cols
   gap: clamp(0.3rem, 2vw, 0.6rem)
   padding: 0 clamp(0.3rem, 1.6vw, 0.6rem) clamp(0.15rem, 0.8vw, 0.3rem)
-  border-bottom: 2px dashed var(--color-wood-300)
+  border-bottom: 3px solid var(--color-ink)
 
 .board__col
   color: var(--ui-text-muted)
@@ -166,25 +168,61 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   align-items: center
   gap: clamp(0.3rem, 2vw, 0.6rem)
   padding: clamp(0.22rem, 1.2vw, 0.42rem) clamp(0.3rem, 1.6vw, 0.6rem)
-  border: 2px solid var(--color-cream-400)
+  border: 2px solid var(--color-ice-400)
   border-radius: clamp(0.35rem, 1.8vw, 0.6rem)
-  background-color: var(--color-cream-200)
+  background-color: var(--color-ice-200)
+  // Rows pop in staggered; the fill must not pin a transform afterwards.
+  animation-fill-mode: backwards
 
   // Zebra striping rather than a border per row: 100 rows of border is a wall.
   &:nth-child(even)
-    background-color: var(--color-cream-50)
+    background-color: var(--color-ice-50)
 
-  // The row the player came here to find.
+  // Podium rows: an ink edge and a coloured left band (gold / silver / bronze
+  // read as sun / ice / berry in this palette) plus their rank plate.
+  &.is-top1, &.is-top2, &.is-top3
+    border-color: var(--color-ink)
+    box-shadow: 0 2px 0 var(--color-ink)
+  &.is-top1
+    background-color: var(--color-sun-200)
+    background-image: var(--ui-stripes)
+
+  // The row the player came here to find: sky edge + lip, lifted.
   &.is-you
-    border: 3px solid var(--color-leaf-600)
-    background-color: var(--color-leaf-300)
-    box-shadow: 0 3px 0 var(--color-leaf-700)
+    border: 3px solid var(--color-ink)
+    background-color: var(--color-sky-200)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--color-sky-500), inset 0 -4px 0 var(--color-sky-500), 0 3px 0 var(--color-ink)
+    transform: scale(1.015)
 
 .board-row__rank
-  color: var(--color-wood-700)
+  justify-self: start
+  color: var(--color-royal-700)
   font-weight: 900
   font-size: clamp(0.62rem, 2.8vw, 0.85rem)
   text-align: left
+
+// Top-3: the rank becomes an angled plate (sun / ice / berry).
+.is-top1 .board-row__rank, .is-top2 .board-row__rank, .is-top3 .board-row__rank
+  display: inline-flex
+  justify-content: center
+  min-width: 1.6em
+  padding: 0.05em 0.35em 0.1em
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem
+  box-shadow: 0 2px 0 var(--color-ink)
+  transform: skewX(-10deg)
+  color: var(--color-ink)
+  > span
+    display: inline-block
+    transform: skewX(10deg)
+
+.is-top1 .board-row__rank
+  background-color: var(--color-sun-400)
+.is-top2 .board-row__rank
+  background-color: var(--color-ice-300)
+.is-top3 .board-row__rank
+  background-color: var(--color-berry-300)
 
 .board-row__name
   display: flex
@@ -206,8 +244,9 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   padding: 0.05em 0.45em 0.1em
   border: 2px solid var(--color-ink)
   border-radius: 999px
-  background-color: var(--color-cream-50)
-  color: var(--color-leaf-800)
+  background-color: var(--color-sky-500)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
   font-weight: 900
   letter-spacing: 0.03em
   font-size: clamp(0.5rem, 2.1vw, 0.65rem)
@@ -245,8 +284,9 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   padding: clamp(0.3rem, 1.6vw, 0.55rem) clamp(0.4rem, 2vw, 0.8rem)
   border: 3px solid var(--color-ink)
   border-radius: clamp(0.35rem, 1.8vw, 0.6rem)
-  background-color: var(--color-wood-600)
-  box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -3px 0 var(--color-wood-800), 0 3px 0 var(--color-ink)
+  background-color: var(--color-royal-600)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -3px 0 var(--color-royal-800), 0 3px 0 var(--color-ink)
 
 .board__footer-rank
   color: var(--color-sun-300)
@@ -255,7 +295,11 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   text-shadow: 0 2px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
 
 .board__footer-total
-  color: var(--color-cream-200)
+  color: var(--color-ice-200)
   font-weight: 800
   font-size: clamp(0.6rem, 2.4vw, 0.8rem)
+
+@media (prefers-reduced-motion: reduce)
+  .board-row.is-you
+    transform: none
 </style>

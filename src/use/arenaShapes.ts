@@ -17,18 +17,14 @@
 // outward normals come from the SDF gradient (finite differences) so one
 // implementation covers all shapes uniformly.
 
-export type ArenaShape = 'circle' | 'oval' | 'hexagon' | 'diamond' | 'roundedRect' | 'clover' | 'squircle' | 'roundHex'
+/** Parametric forest clearing (see CLEARING_SPECS), one per terrain layout ≥ 3. */
+export type ClearingShape = `clearing${number}`
+export type ArenaShape = 'circle' | 'oval' | 'hexagon' | 'diamond' | 'roundedRect' | 'clover' | 'squircle' | 'roundHex' | ClearingShape
 
 /** All shapes including the classic circle. */
 export const ARENA_SHAPES: ArenaShape[] = ['circle', 'oval', 'hexagon', 'diamond', 'roundedRect']
 /** The non-circular shapes. */
 export const NON_CIRCLE_SHAPES: ArenaShape[] = ['oval', 'hexagon', 'diamond', 'roundedRect', 'clover', 'squircle', 'roundHex']
-
-/** Tree Smashers forest clearings, one per terrain layout (arenaTerrain.ts):
- *  0 Mossy Glade = four-leaf clover, 1 Mud Hollow = rounded diamond,
- *  2 Twin Islands = rounded pointy-top hexagon. All mirror-symmetric in y, so
- *  the PvP guest's flipped view is the same arena. */
-export const TERRAIN_SHAPES: readonly ArenaShape[] = ['clover', 'squircle', 'roundHex']
 
 // Shape proportions, expressed as fractions of the bounding radius R.
 const OVAL_RY_RATIO = 0.72
@@ -87,10 +83,10 @@ const roundedRectSdf = (x: number, y: number, R: number): number => {
   return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - cr
 }
 
-// Clover: polar r(θ) = R(0.86 − 0.10·cos 4θ) — four lobes on the diagonals
+// Clover: polar r(θ) = R(0.86 − 0.055·cos 4θ) — four lobes on the diagonals
 // (where the spawn rows sit), pinched on the axes (where the towers are set). Distance ≈ (|p| − r)·r/√(r² + r'²).
 const CLOVER_BASE = 0.86
-const CLOVER_AMP = 0.1
+const CLOVER_AMP = 0.055
 const cloverSdf = (x: number, y: number, R: number): number => {
   const d = Math.hypot(x, y)
   const t = Math.atan2(y, x)
@@ -132,10 +128,10 @@ const roundHexSdf = (x: number, y: number, R: number): number => {
 // the left ↔ right symmetry and the mixed k break the 4-/6-fold regularity.
 // The base is shrunk by 1 / max w so the warped outline stays inside R (the
 // camera fit frames the R circle in both orientations).
-type Wobble = readonly (readonly [k: number, amp: number])[]
+export type Wobble = readonly (readonly [k: number, amp: number])[]
 const WOBBLE: Record<'clover' | 'squircle' | 'roundHex', Wobble> = {
   clover: [[1, 0.03], [3, -0.035], [5, 0.025], [7, 0.015]],
-  squircle: [[1, -0.06], [2, 0.03], [3, 0.03], [5, -0.02], [9, 0.012]],
+  squircle: [[1, -0.05], [2, 0.03], [3, 0.015], [5, -0.02], [9, 0.012]],
   roundHex: [[1, 0.02], [3, 0.04], [4, -0.025], [7, 0.018]]
 }
 const wobbleAt = (w: Wobble, t: number): number => {
@@ -160,8 +156,120 @@ const organicSdf = (
   return base(x / f, y / f, R) * f
 }
 
-/** Signed distance to the arena boundary (negative inside). */
+// ── Parametric clearings ─────────────────────────────────────────────────
+// Layouts 3+ are DATA: a base kind warped by a cosine-only harmonic table
+// (cos kθ keeps top ↔ bottom mirror symmetry — fairness + the PvP guest's
+// flipped view), normalised by max w so the outline stays inside R.
+//  · 'round' — pure polar star r(θ) = R·w(θ)/max w, distance
+//              (|p| − r)·r/√(r² + r'²) (accurate near the wall);
+//  · 'clover' / 'squircle' / 'roundHex' — the legacy base SDFs, warped.
+export type ClearingBase = 'round' | 'clover' | 'squircle' | 'roundHex'
+export interface ClearingSpec {
+  base: ClearingBase
+  harmonics: Wobble
+  /** Short descriptor (QA / contact sheet). */
+  label: string
+}
+
+/** One spec per terrain layout id 3..49 (key = layout id; 0..2 are the
+ *  legacy named shapes with their own wobble). */
+export const CLEARING_SPECS: Readonly<Record<number, ClearingSpec>> = {
+  3: { base: 'round', label: 'trefoil', harmonics: [[3, 0.07], [1, 0.03], [6, 0.012]] },
+  4: { base: 'round', label: 'scalloped ring', harmonics: [[8, 0.03], [2, 0.05], [1, -0.02]] },
+  5: { base: 'round', label: 'wide bean', harmonics: [[2, 0.09], [1, 0.05], [3, -0.025]] },
+  6: { base: 'round', label: 'lily-pad notch', harmonics: [[1, -0.06], [2, 0.05], [12, 0.012], [3, 0.02]] },
+  7: { base: 'round', label: 'tall capsule', harmonics: [[2, -0.07], [4, -0.025], [1, 0.02]] },
+  8: { base: 'squircle', label: 'bramble diamond', harmonics: [[1, 0.03], [5, 0.025], [10, 0.012]] },
+  9: { base: 'round', label: 'pinched peanut', harmonics: [[2, 0.11], [4, 0.04], [1, 0.02]] },
+  10: { base: 'roundHex', label: 'pine-cone hex', harmonics: [[1, -0.04], [2, -0.03], [5, 0.02]] },
+  11: { base: 'round', label: 'six-lobe honeycomb', harmonics: [[6, 0.035], [2, 0.04], [1, 0.02]] },
+  12: { base: 'round', label: 'snow-drift egg', harmonics: [[1, 0.07], [2, 0.04], [5, 0.015]] },
+  13: { base: 'clover', label: 'leaning clover', harmonics: [[1, 0.05], [2, -0.03], [3, -0.02]] },
+  14: { base: 'round', label: 'pentagon', harmonics: [[5, 0.05], [2, 0.03], [1, -0.02]] },
+  15: { base: 'round', label: 'bell', harmonics: [[1, 0.05], [3, -0.04], [2, 0.03], [7, 0.01]] },
+  16: { base: 'round', label: 'meadow oval', harmonics: [[2, 0.06], [4, -0.02], [6, 0.015], [1, -0.03]] },
+  17: { base: 'roundHex', label: 'spiky hex', harmonics: [[1, 0.02], [9, 0.018], [2, 0.03]] },
+  18: { base: 'round', label: 'willow bend', harmonics: [[1, 0.06], [2, 0.06], [3, 0.03]] },
+  19: { base: 'squircle', label: 'kite', harmonics: [[1, -0.05], [3, 0.03], [2, 0.03]] },
+  20: { base: 'round', label: 'seven-lobe berry', harmonics: [[7, 0.03], [2, 0.03], [1, 0.03]] },
+  21: { base: 'round', label: 'curled tail', harmonics: [[1, -0.07], [2, 0.03], [4, 0.025], [3, 0.02]] },
+  22: { base: 'roundHex', label: 'boulder hex', harmonics: [[3, 0.045], [1, -0.03], [6, 0.012]] },
+  23: { base: 'clover', label: 'cross clover', harmonics: [[2, -0.04], [6, 0.015], [1, 0.02]] },
+  24: { base: 'round', label: 'toadstool cap', harmonics: [[1, -0.04], [2, 0.07], [3, -0.03], [4, 0.02]] },
+  25: { base: 'round', label: 'river bank', harmonics: [[2, 0.1], [3, 0.03], [5, -0.015], [1, 0.03]] },
+  26: { base: 'round', label: 'teardrop', harmonics: [[1, 0.08], [3, 0.025], [2, -0.02]] },
+  27: { base: 'squircle', label: 'tilted lozenge', harmonics: [[1, 0.06], [2, -0.03], [4, 0.02]] },
+  28: { base: 'round', label: 'thistle star', harmonics: [[5, 0.035], [10, 0.012], [1, 0.03], [2, 0.02]] },
+  29: { base: 'round', label: 'root lobes', harmonics: [[4, 0.05], [1, 0.03], [3, 0.03]] },
+  30: { base: 'round', label: 'long puddle', harmonics: [[2, 0.08], [6, 0.02], [1, -0.04]] },
+  31: { base: 'roundHex', label: 'stretched hex', harmonics: [[2, 0.05], [1, 0.03], [4, -0.02]] },
+  32: { base: 'round', label: 'maple leaf', harmonics: [[3, 0.05], [5, 0.025], [1, 0.03], [2, 0.02]] },
+  33: { base: 'round', label: 'kidney', harmonics: [[1, -0.08], [2, 0.06], [3, 0.03]] },
+  34: { base: 'clover', label: 'warren clover', harmonics: [[1, -0.04], [3, 0.03], [5, -0.02]] },
+  35: { base: 'round', label: 'daisy petals', harmonics: [[9, 0.022], [2, 0.03], [1, 0.02]] },
+  36: { base: 'round', label: 'cloud', harmonics: [[4, 0.035], [7, 0.02], [1, 0.03], [2, 0.03]] },
+  37: { base: 'squircle', label: 'wide lozenge', harmonics: [[2, 0.05], [1, 0.03], [6, 0.012]] },
+  38: { base: 'round', label: 'brook bend', harmonics: [[1, 0.05], [2, 0.08], [4, 0.025], [5, 0.01]] },
+  39: { base: 'roundHex', label: 'chestnut hex', harmonics: [[1, 0.05], [3, -0.03], [2, 0.025]] },
+  40: { base: 'round', label: 'crescent', harmonics: [[1, -0.09], [2, 0.04], [3, 0.035], [4, 0.015]] },
+  41: { base: 'round', label: 'dandelion puff', harmonics: [[11, 0.016], [3, 0.03], [1, 0.02]] },
+  42: { base: 'round', label: 'birch capsule', harmonics: [[2, -0.06], [6, 0.018], [1, 0.03]] },
+  43: { base: 'clover', label: 'nest clover', harmonics: [[2, -0.035], [1, 0.03], [8, 0.008]] },
+  44: { base: 'round', label: 'four lobes', harmonics: [[4, 0.04], [2, 0.05], [1, -0.03]] },
+  45: { base: 'round', label: 'creek bean', harmonics: [[2, 0.09], [1, 0.04], [7, 0.012], [3, 0.02]] },
+  46: { base: 'roundHex', label: 'den hex', harmonics: [[1, -0.05], [2, 0.04], [3, 0.03]] },
+  47: { base: 'round', label: 'sap drop', harmonics: [[1, 0.09], [2, 0.02], [4, 0.015]] },
+  48: { base: 'round', label: 'rainbow arch', harmonics: [[1, 0.06], [2, 0.07], [3, -0.02], [5, 0.012]] },
+  49: { base: 'squircle', label: 'ancient grove', harmonics: [[1, 0.04], [4, -0.02], [7, 0.01], [2, 0.02]] }
+}
+
+/** Tree Smashers forest clearings, one per terrain layout (arenaTerrain.ts):
+ *  0 Mossy Glade = clover, 1 Mud Hollow = rounded diamond, 2 Twin Islands =
+ *  rounded hex, 3..49 = CLEARING_SPECS. All mirror-symmetric in y. */
+export const TERRAIN_SHAPES: readonly ArenaShape[] = [
+  'clover', 'squircle', 'roundHex',
+  ...Object.keys(CLEARING_SPECS).map(k => `clearing${k}` as ClearingShape)
+]
+
+const clearingSpecOf = (shape: string): ClearingSpec | undefined => CLEARING_SPECS[+shape.slice(8)]
+
+const wobbleDeriv = (w: Wobble, t: number): number => {
+  let v = 0
+  for (const [k, a] of w) v -= a * k * Math.sin(k * t)
+  return v
+}
+
+const polarSdf = (w: Wobble, x: number, y: number, R: number): number => {
+  const d = Math.hypot(x, y)
+  const t = Math.atan2(y, x)
+  const s = R / maxWobble(w)
+  const r = s * wobbleAt(w, t)
+  const dr = s * wobbleDeriv(w, t)
+  return (d - r) * r / Math.hypot(r, dr)
+}
+
+const BASE_SDF: Record<Exclude<ClearingBase, 'round'>, (x: number, y: number, R: number) => number> = {
+  clover: (x, y, R) => cloverSdf(x, y, R),
+  squircle: (x, y, R) => squircleSdf(x, y, R),
+  roundHex: (x, y, R) => roundHexSdf(x, y, R)
+}
+
+const clearingSdf = (spec: ClearingSpec, x: number, y: number, R: number): number =>
+  spec.base === 'round' ? polarSdf(spec.harmonics, x, y, R) : organicSdf(BASE_SDF[spec.base], spec.harmonics, x, y, R)
+
+/** True for shapes drawn from their sampled outline (no analytic path). */
+export const isOutlineShape = (shape: ArenaShape): boolean =>
+  shape === 'clover' || shape === 'squircle' || shape === 'roundHex' || shape.startsWith('clearing')
+
+/** Signed distance to the arena boundary (negative inside).
+ *  The forest clearings are evaluated at |y|: they are mirror-symmetric in
+ *  theory, and this makes them BITWISE symmetric too (a rotated-hexagon SDF
+ *  is not), so a PvP guest's y-flipped wall hits match the host's exactly. */
 export const sdf = (shape: ArenaShape, x: number, y: number, R: number): number => {
+  if (shape.startsWith('clearing')) {
+    const spec = clearingSpecOf(shape)
+    if (spec !== undefined) return clearingSdf(spec, x, Math.abs(y), R)
+  }
   switch (shape) {
     case 'oval':
       return ovalSdf(x, y, R)
@@ -172,11 +280,11 @@ export const sdf = (shape: ArenaShape, x: number, y: number, R: number): number 
     case 'roundedRect':
       return roundedRectSdf(x, y, R)
     case 'clover':
-      return organicSdf(cloverSdf, WOBBLE.clover, x, y, R)
+      return organicSdf(cloverSdf, WOBBLE.clover, x, Math.abs(y), R)
     case 'squircle':
-      return organicSdf(squircleSdf, WOBBLE.squircle, x, y, R)
+      return organicSdf(squircleSdf, WOBBLE.squircle, x, Math.abs(y), R)
     case 'roundHex':
-      return organicSdf(roundHexSdf, WOBBLE.roundHex, x, y, R)
+      return organicSdf(roundHexSdf, WOBBLE.roundHex, x, Math.abs(y), R)
     case 'circle':
     default:
       return circleSdf(x, y, R)
@@ -318,7 +426,7 @@ export const shapeOutline = (shape: ArenaShape, R: number): Float32Array => {
 
 export const traceArenaPath = (ctx: AnyCtx, shape: ArenaShape, R: number, scale = 1): void => {
   ctx.beginPath()
-  if (shape === 'clover' || shape === 'squircle' || shape === 'roundHex') {
+  if (isOutlineShape(shape)) {
     const pts = shapeOutline(shape, R)
     for (let i = 0; i < pts.length; i += 2) {
       const px = pts[i]! * scale

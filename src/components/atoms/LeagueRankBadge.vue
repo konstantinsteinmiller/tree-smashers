@@ -88,5 +88,5 @@ const ariaLabel = computed(() => {
   font-variant-numeric: tabular-nums
   // Hard ink outline (no blur — Firefox), the game's own hard-shadow look, so
   // the tier colour reads on a dark HUD and a light plate alike.
-  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink), 0 2px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 </style>

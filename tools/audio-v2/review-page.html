@@ -1,0 +1,452 @@
+<title>Tree Smashers Sound Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field notebook — sticky tally bar on top, group index on the left
+   (chips on phones), one card per sound with old/new players side by side and
+   the verdict row at the card's foot. Moss paper, bark ink, pine-teal action. */
+:root {
+  --bg: #edf1e7;
+  --surface: #fbfcf7;
+  --surface-2: #e3e9db;
+  --ink: #1d281b;
+  --muted: #586753;
+  --line: #cfd8c4;
+  --bark: #7b4a22;
+  --accent: #1d6c66;
+  --accent-ink: #ffffff;
+  --approve: #2c7a37;
+  --approve-soft: #dcefd9;
+  --reject: #b0372b;
+  --reject-soft: #f6dcd8;
+  --pending: #946000;
+  --pending-soft: #f4e6c4;
+  --focus: #1d6c66;
+  --font-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121811; --surface: #1a2219; --surface-2: #232d21; --ink: #e4ebdc; --muted: #9dab95; --line: #2f3b2d;
+    --bark: #d6a06c; --accent: #5ec4b9; --accent-ink: #0d1a18; --approve: #6fcf7c; --approve-soft: #1f3a22;
+    --reject: #f08a7e; --reject-soft: #42211d; --pending: #e7b453; --pending-soft: #3b2f15; --focus: #5ec4b9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121811; --surface: #1a2219; --surface-2: #232d21; --ink: #e4ebdc; --muted: #9dab95; --line: #2f3b2d;
+  --bark: #d6a06c; --accent: #5ec4b9; --accent-ink: #0d1a18; --approve: #6fcf7c; --approve-soft: #1f3a22;
+  --reject: #f08a7e; --reject-soft: #42211d; --pending: #e7b453; --pending-soft: #3b2f15; --focus: #5ec4b9;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; font-weight: 600; }
+button, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1180px; margin: 0 auto; }
+header.intro { display: grid; gap: 10px; padding-block: 28px 18px; }
+header.intro h1 { font-size: clamp(26px, 4vw, 36px); color: var(--bark); letter-spacing: 0.2px; }
+header.intro p { margin: 0; max-width: 68ch; color: var(--muted); }
+.notice { border: 1px solid var(--pending); background: var(--pending-soft); color: var(--ink); border-radius: var(--r); padding: 10px 14px; }
+
+.tally { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.tally .bar { flex: 1 1 220px; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: flex; min-width: 0; }
+.tally .bar span { display: block; height: 100%; }
+.tally .bar .a { background: var(--approve); } .tally .bar .r { background: var(--reject); }
+.counts { display: flex; gap: 14px; font-size: 14px; flex-wrap: wrap; }
+.counts b { font-family: var(--font-mono); font-weight: 500; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 4px 12px; cursor: pointer; font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding-top: 18px; }
+nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 70px); align-self: start; display: grid; gap: 2px; font-size: 14px; }
+nav.index a { color: var(--ink); text-decoration: none; padding: 5px 10px; border-radius: 8px; display: flex; justify-content: space-between; gap: 8px; }
+nav.index a:hover { background: var(--surface-2); }
+nav.index a .n { font-family: var(--font-mono); color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.index { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.index a { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 10px; }
+}
+
+section.group { display: grid; gap: 14px; margin-bottom: 34px; scroll-margin-top: 80px; }
+section.group > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--bark); padding-bottom: 6px; }
+section.group > header h2 { font-size: 22px; color: var(--bark); }
+section.group > header .sub { color: var(--muted); font-size: 13px; }
+
+article.item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; display: grid; gap: 12px; scroll-margin-top: 80px; }
+article.item[data-status="approve"] { border-color: color-mix(in srgb, var(--approve) 55%, var(--line)); }
+article.item[data-status="reject"] { border-color: color-mix(in srgb, var(--reject) 55%, var(--line)); }
+.item-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.item-head h3 { font-family: var(--font-mono); font-size: 16px; font-weight: 500; }
+.badge { font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase; border-radius: 6px; padding: 2px 7px; background: var(--surface-2); color: var(--muted); }
+.status { margin-left: auto; font-size: 12.5px; font-weight: 700; border-radius: 99px; padding: 3px 10px; }
+.status.pending { background: var(--pending-soft); color: var(--pending); }
+.status.approve { background: var(--approve-soft); color: var(--approve); }
+.status.reject { background: var(--reject-soft); color: var(--reject); }
+.item-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 18px; }
+@media (max-width: 760px) { .item-body { grid-template-columns: minmax(0, 1fr); } }
+.text { display: grid; gap: 8px; min-width: 0; }
+.text dl { margin: 0; display: grid; gap: 8px; }
+.text dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+.text dd { margin: 0; }
+.prev { font-size: 13.5px; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.players { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.player { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 8px 8px; }
+.player.new { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.player .play { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--surface-2); cursor: pointer; display: grid; place-items: center; grid-row: span 2; }
+.player.new .play { background: var(--accent); color: var(--accent-ink); }
+.player .play svg { width: 16px; height: 16px; fill: currentColor; }
+.player .label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+.player .label .t { font-family: var(--font-mono); font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.player input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+.player .meta { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.player.none { grid-template-columns: minmax(0, 1fr); color: var(--muted); font-size: 13px; padding: 12px; border-style: dashed; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.ghost { border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+.ghost:hover { background: var(--surface-2); }
+.verdict { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; border-top: 1px dashed var(--line); padding-top: 12px; }
+@media (max-width: 600px) { .verdict { grid-template-columns: minmax(0, 1fr); } }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: none; background: var(--surface); padding: 8px 14px; cursor: pointer; font-weight: 700; font-size: 14px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[data-v="approve"][aria-pressed="true"] { background: var(--approve); color: var(--accent-ink); }
+.seg button[data-v="reject"][aria-pressed="true"] { background: var(--reject); color: var(--accent-ink); }
+.seg button:disabled { cursor: not-allowed; opacity: 0.55; }
+.comment { display: grid; gap: 4px; min-width: 0; }
+.comment textarea { width: 100%; min-height: 42px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); }
+.comment .state { font-size: 12px; color: var(--muted); min-height: 16px; }
+.comment .state.err { color: var(--reject); }
+.unused { color: var(--muted); font-size: 14px; }
+.unused li { margin-bottom: 4px; }
+.unused code { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+.empty { color: var(--muted); padding: 10px 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Tree Smashers Sound Review</h1>
+    <p>Every sound and music track in the game, the old one next to its redesign. Approve or reject each new version and say what should change. Your verdicts are saved for Claude: approved sounds get switched on in the game, rejected ones come back here as a new revision that answers your comment.</p>
+    <p>Old and new files play at their real in-game level relative to each other. The live UI and intro sounds are very quiet in the game, so their preview is raised by the same amount for both versions.</p>
+    <div class="notice" id="dbNotice" hidden></div>
+  </header>
+
+  <div class="tally" role="region" aria-label="Review progress">
+    <div class="counts" aria-live="polite">
+      <span>Approved <b id="cA">0</b></span>
+      <span>Rejected <b id="cR">0</b></span>
+      <span>Waiting <b id="cP">0</b></span>
+    </div>
+    <div class="bar" aria-hidden="true"><span class="a" id="barA"></span><span class="r" id="barR"></span></div>
+    <div class="filters" role="group" aria-label="Show">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="pending" aria-pressed="false">Waiting</button>
+      <button class="chip" data-f="approve" aria-pressed="false">Approved</button>
+      <button class="chip" data-f="reject" aria-pressed="false">Rejected</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="index" id="index" aria-label="Sound groups"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+const MANIFEST = /*__MANIFEST__*/null
+const COLLECTION = 'verdicts'
+
+const $ = (s, el = document) => el.querySelector(s)
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag)
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue
+    if (k === 'class') n.className = v
+    else if (k === 'text') n.textContent = v
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v)
+    else n.setAttribute(k, v === true ? '' : v)
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined) n.append(c.nodeType ? c : document.createTextNode(String(c)))
+  return n
+}
+const ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>'
+const ICON_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>'
+const fmtT = (s) => !Number.isFinite(s) ? '0:00' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}${s < 10 ? '.' + Math.floor((s % 1) * 10) : ''}`
+const num = (v, d = 1) => (v === null || v === undefined || !Number.isFinite(v)) ? '–' : (v > 0 ? '+' : '') + v.toFixed(d).replace('-', '−')
+const KIND = { file: 'file', procedural: 'live synth', proposal: 'new slot' }
+
+// ── state ──
+const state = { docs: {}, filter: 'all', db: null, uid: null, canWrite: true, writing: {} }
+try { const f = localStorage.getItem('ts-sound-review-filter'); if (f) state.filter = f } catch {}
+
+const statusOf = (item) => {
+  const d = state.docs[item.id]
+  return d && d.rev === item.rev && (d.verdict === 'approve' || d.verdict === 'reject') ? d.verdict : 'pending'
+}
+
+// ── audio: one player at a time; pairs can swap A/B at the same moment ──
+let current = null
+const players = new Map()
+const stopCurrent = () => { if (current) { current.audio.pause(); current.sync() } }
+const makePlayer = (item, ver, media, metaText) => {
+  if (!media) {
+    return el('div', { class: 'player none' }, ver === 'old' ? 'No old sound: this is a new slot the game does not have yet.' : 'Not rendered.')
+  }
+  const src = media.url
+  const audio = new Audio()
+  audio.preload = 'none'
+  const btn = el('button', { class: 'play', type: 'button', 'aria-label': `Play ${ver === 'old' ? 'old' : 'new'} ${item.id}` })
+  btn.innerHTML = ICON_PLAY
+  const range = el('input', { type: 'range', min: '0', max: '1000', value: '0', 'aria-label': `Seek ${ver} ${item.id}` })
+  const time = el('span', { class: 't', text: '0:00' })
+  const label = ver === 'old' ? 'Old (v1)' : `New (v2 · r${item.rev})`
+  const box = el('div', { class: `player ${ver}` }, btn,
+    el('div', { class: 'label' }, el('span', { text: label }), time), range,
+    el('div', { class: 'meta', text: metaText || '' }))
+  const p = {
+    item, ver, audio, box,
+    sync() {
+      const playing = !audio.paused
+      btn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY
+      btn.setAttribute('aria-label', `${playing ? 'Pause' : 'Play'} ${ver} ${item.id}`)
+      const d = audio.duration
+      time.textContent = Number.isFinite(d) ? `${fmtT(audio.currentTime)} / ${fmtT(d)}` : fmtT(audio.currentTime)
+      if (Number.isFinite(d) && d > 0 && document.activeElement !== range) range.value = String(Math.round((audio.currentTime / d) * 1000))
+    },
+    play(at = null) {
+      if (!src) { box.querySelector('.meta').textContent = 'Preview not uploaded yet.'; return }
+      if (current && current !== p) stopCurrent()
+      current = p
+      if (!audio.src) audio.src = src
+      if (at !== null) {
+        const seek = () => { try { audio.currentTime = Math.min(at, Math.max(0, (audio.duration || at) - 0.05)) } catch {} }
+        if (audio.readyState >= 1) seek(); else audio.addEventListener('loadedmetadata', seek, { once: true })
+      }
+      audio.play().catch(() => {})
+    }
+  }
+  btn.addEventListener('click', () => (audio.paused ? p.play() : (audio.pause(), p.sync())))
+  range.addEventListener('input', () => {
+    if (!audio.src) audio.src = src
+    const d = audio.duration
+    if (Number.isFinite(d)) audio.currentTime = (Number(range.value) / 1000) * d
+  })
+  for (const ev of ['play', 'pause', 'timeupdate', 'loadedmetadata', 'ended']) audio.addEventListener(ev, () => p.sync())
+  audio.addEventListener('ended', () => { audio.loop = false })
+  players.set(`${item.id}|${ver}`, p)
+  return box
+}
+
+const swapAB = (item) => {
+  const a = players.get(`${item.id}|old`), b = players.get(`${item.id}|new`)
+  if (!a || !b) return
+  const from = current && current.item === item ? current : null
+  const to = from === b ? a : b
+  const t = from ? from.audio.currentTime : 0
+  if (from) from.audio.pause()
+  to.play(from ? t : 0)
+}
+
+const hearSeam = (item) => {
+  const b = players.get(`${item.id}|new`)
+  if (!b) return
+  const go = () => {
+    const d = b.audio.duration
+    b.audio.loop = true
+    b.play(Math.max(0, d - 4))
+    setTimeout(() => { if (current === b) { b.audio.pause(); b.audio.loop = false; b.sync() } }, 8500)
+  }
+  if (!b.audio.src) b.audio.src = b.item.media.new.url
+  if (b.audio.readyState >= 1) go(); else { b.audio.preload = 'metadata'; b.audio.addEventListener('loadedmetadata', go, { once: true }); b.audio.load() }
+}
+
+// ── metrics text ──
+const metaFor = (item, ver) => {
+  const m = item.metrics
+  if (!m) return ''
+  if (item.kind === 'procedural') {
+    const v = ver === 'old' ? m.oldMomentary : m.newMomentary
+    return `${num(v)} LUFS max · preview +${(m.previewGainDb ?? 0).toFixed(1)} dB on both${ver === 'new' ? ` · ${num(m.diffDb)} dB vs old` : ''}`
+  }
+  if (ver === 'old') {
+    const o = m.old
+    if (!o) return ''
+    return item.group === 'music' ? `${num(o.integrated)} LUFS · TP ${num(o.truePeak)} dB · ${o.durationSec.toFixed(1)} s` : `${num(o.momentaryMax)} LUFS max · TP ${num(o.truePeak)} dB${o.truePeak > 0 ? ' (clips)' : ''} · ${o.durationSec.toFixed(2)} s`
+  }
+  const kb = m.bytes ? ` · ${Math.round(m.bytes / 1024)} KB` : ''
+  if (item.group === 'music') return `${num(m.integrated)} LUFS · TP ${num(m.truePeak)} dB · ${m.loopSec ? `${m.loopSec.toFixed(1)} s seamless loop · ${m.bpm} BPM` : `${m.durationSec.toFixed(1)} s`}${kb}`
+  return `${num(m.momentaryMax)} LUFS max (target ${num(m.target?.momentary)}) · TP ${num(m.truePeak)} dB · ${m.durationSec.toFixed(2)} s${kb}`
+}
+
+// ── verdict writes (one at a time per document) ──
+const save = (item, patch) => {
+  const db = state.db
+  if (!db || !state.canWrite) return Promise.resolve(false)
+  const prev = state.docs[item.id] || null
+  let history = Array.isArray(prev?.history) ? prev.history.slice(-19) : []
+  if (prev && prev.rev !== item.rev && (prev.verdict || prev.comment)) history = [...history, { rev: prev.rev, verdict: prev.verdict ?? null, comment: prev.comment ?? '', at: prev.updatedAt ?? null }]
+  const base = prev && prev.rev === item.rev ? prev : { verdict: null, comment: '' }
+  const body = {
+    id: item.id, group: item.group, rev: item.rev,
+    verdict: 'verdict' in patch ? patch.verdict : (base.verdict ?? null),
+    comment: 'comment' in patch ? patch.comment : (base.comment ?? ''),
+    updatedAt: new Date().toISOString(), by: state.uid, history
+  }
+  state.docs[item.id] = body
+  const run = (state.writing[item.id] || Promise.resolve()).then(() => db.collection(COLLECTION).doc(item.id).set(body))
+  state.writing[item.id] = run.catch(() => {})
+  return run.then(() => true)
+}
+
+// ── render ──
+const cards = new Map()
+const render = () => {
+  const main = $('#main'), index = $('#index')
+  main.replaceChildren(); index.replaceChildren()
+  for (const g of MANIFEST.groups) {
+    const list = MANIFEST.items.filter((i) => i.group === g.id)
+    if (!list.length) continue
+    index.append(el('a', { href: `#${g.id}`, 'data-g': g.id }, el('span', { text: g.title }), el('span', { class: 'n', text: String(list.length) })))
+    const sec = el('section', { class: 'group', id: g.id }, el('header', {}, el('h2', { text: g.title }), el('span', { class: 'sub', text: `${list.length} sound${list.length > 1 ? 's' : ''}` })))
+    for (const item of list) sec.append(renderItem(item))
+    main.append(sec)
+  }
+  const un = el('section', { class: 'group', id: 'unused' }, el('header', {}, el('h2', { text: 'Not reviewed: unused files' }), el('span', { class: 'sub', text: 'nothing plays these' })),
+    el('ul', { class: 'unused' }, MANIFEST.unused.map((u) => el('li', {}, el('code', { text: u.file }), ' — ', u.note))))
+  main.append(un)
+  index.append(el('a', { href: '#unused' }, el('span', { text: 'Unused files' }), el('span', { class: 'n', text: String(MANIFEST.unused.length) })))
+  refresh()
+}
+
+const renderItem = (item) => {
+  const statusEl = el('span', { class: 'status pending', text: 'Waiting' })
+  const prevNote = el('div', { class: 'prev', hidden: true })
+  const revNotes = (item.revisions || []).filter((r) => r.rev > 1).map((r) => el('dd', { text: `r${r.rev}: ${r.note}` }))
+  const text = el('div', { class: 'text' },
+    el('dl', {},
+      el('dt', { text: 'Where it plays' }), el('dd', { text: item.plays }),
+      el('dt', { text: 'In-game level' }), el('dd', { class: 'mono', text: item.ratio }),
+      el('dt', { text: 'The new sound' }), el('dd', { text: item.intent }),
+      revNotes.length ? [el('dt', { text: 'Revision notes' }), ...revNotes] : null),
+    prevNote)
+  const tools = el('div', { class: 'tools' })
+  if (item.media.old && item.media.new) tools.append(el('button', { class: 'ghost', type: 'button', onclick: () => swapAB(item), text: 'Switch old ↔ new at the same moment' }))
+  if (item.group === 'music' && item.metrics?.loopSec) tools.append(el('button', { class: 'ghost', type: 'button', onclick: () => hearSeam(item), text: 'Hear the loop point' }))
+  const playersBox = el('div', { class: 'players' },
+    makePlayer(item, 'old', item.media.old, metaFor(item, 'old')),
+    makePlayer(item, 'new', item.media.new, metaFor(item, 'new')),
+    tools.childElementCount ? tools : null)
+
+  const bA = el('button', { type: 'button', 'data-v': 'approve', 'aria-pressed': 'false', text: 'Approve' })
+  const bR = el('button', { type: 'button', 'data-v': 'reject', 'aria-pressed': 'false', text: 'Reject' })
+  const ta = el('textarea', { id: `c-${item.id}`, rows: '2', placeholder: 'What should change? (optional for approve, helps a lot for reject)', 'aria-label': `Comment on ${item.id}` })
+  const st = el('div', { class: 'state', 'aria-live': 'polite' })
+  const setState = (t, err = false) => { st.textContent = t; st.classList.toggle('err', err) }
+  const doSave = (patch, label) => {
+    setState('Saving…')
+    save(item, patch).then((ok) => setState(ok ? `${label} · saved` : 'Not saved: this view cannot store verdicts.', !ok))
+      .catch((e) => setState(e?.code === 'invalid_argument' ? 'Not saved: you can view this page but not change it.' : 'Not saved. Check your connection and try again.', true))
+    refresh()
+  }
+  for (const b of [bA, bR]) b.addEventListener('click', () => {
+    const v = b.dataset.v
+    const cur = statusOf(item)
+    doSave({ verdict: cur === v ? null : v, comment: ta.value }, cur === v ? 'Verdict cleared' : v === 'approve' ? 'Approved' : 'Rejected')
+  })
+  let timer = null
+  const flush = () => {
+    clearTimeout(timer); timer = null
+    const d = state.docs[item.id]
+    const curC = d && d.rev === item.rev ? (d.comment || '') : ''
+    if (ta.value !== curC) doSave({ comment: ta.value }, 'Comment')
+  }
+  ta.addEventListener('input', () => { setState('Typing…'); clearTimeout(timer); timer = setTimeout(flush, 1200) })
+  ta.addEventListener('blur', () => { if (timer) flush() })
+
+  const card = el('article', { class: 'item', id: `item-${item.id}`, 'data-status': 'pending' },
+    el('div', { class: 'item-head' }, el('h3', { text: item.id }), el('span', { class: 'badge', text: KIND[item.kind] || item.kind }), el('span', { class: 'badge', text: `r${item.rev}` }), statusEl),
+    el('div', { class: 'item-body' }, text, playersBox),
+    el('div', { class: 'verdict' }, el('div', { class: 'seg', role: 'group', 'aria-label': `Verdict for ${item.id}` }, bA, bR), el('div', { class: 'comment' }, ta, st)))
+  cards.set(item.id, { card, statusEl, bA, bR, ta, prevNote, item })
+  return card
+}
+
+const refresh = () => {
+  let a = 0, r = 0, p = 0
+  for (const c of cards.values()) {
+    const s = statusOf(c.item)
+    if (s === 'approve') a++; else if (s === 'reject') r++; else p++
+    c.card.dataset.status = s
+    c.statusEl.className = `status ${s}`
+    c.statusEl.textContent = s === 'approve' ? 'Approved' : s === 'reject' ? 'Rejected' : 'Waiting'
+    c.bA.setAttribute('aria-pressed', String(s === 'approve'))
+    c.bR.setAttribute('aria-pressed', String(s === 'reject'))
+    c.bA.disabled = c.bR.disabled = !state.canWrite || !state.db
+    c.ta.disabled = !state.canWrite || !state.db
+    const d = state.docs[c.item.id]
+    if (d && d.rev === c.item.rev && document.activeElement !== c.ta) c.ta.value = d.comment || ''
+    const older = d && d.rev !== c.item.rev ? [{ rev: d.rev, verdict: d.verdict, comment: d.comment }] : []
+    const hist = [...(d?.history || []), ...older].filter((h) => h.rev < c.item.rev)
+    if (hist.length) {
+      const h = hist[hist.length - 1]
+      c.prevNote.hidden = false
+      c.prevNote.textContent = `Your verdict on r${h.rev}: ${h.verdict === 'reject' ? 'rejected' : h.verdict === 'approve' ? 'approved' : 'no verdict'}${h.comment ? ` — “${h.comment}”` : ''}. This is r${c.item.rev}.`
+    } else c.prevNote.hidden = true
+    c.card.hidden = state.filter !== 'all' && state.filter !== s
+  }
+  $('#cA').textContent = a; $('#cR').textContent = r; $('#cP').textContent = p
+  const n = a + r + p || 1
+  $('#barA').style.width = `${(a / n) * 100}%`; $('#barR').style.width = `${(r / n) * 100}%`
+  for (const sec of document.querySelectorAll('section.group')) {
+    if (sec.id === 'unused') { sec.hidden = state.filter !== 'all'; continue }
+    sec.hidden = ![...sec.querySelectorAll('article.item')].some((x) => !x.hidden)
+  }
+  for (const ch of document.querySelectorAll('.chip')) ch.setAttribute('aria-pressed', String(ch.dataset.f === state.filter))
+}
+
+for (const ch of document.querySelectorAll('.chip')) ch.addEventListener('click', () => {
+  state.filter = ch.dataset.f
+  try { localStorage.setItem('ts-sound-review-filter', state.filter) } catch {}
+  refresh()
+})
+
+const notice = (t) => { const n = $('#dbNotice'); n.textContent = t; n.hidden = !t }
+
+render()
+
+// ── capabilities: db for verdicts, user for who wrote them ──
+;(async () => {
+  if (!window.claude || typeof window.claude.use !== 'function') {
+    notice('Verdicts are saved only when this page is opened on claude.ai. Listening works here; the buttons stay off.')
+    state.canWrite = false; refresh(); return
+  }
+  const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')])
+  if (!db) {
+    notice('Verdicts cannot be saved in this view (sign in on claude.ai to approve or reject). Listening still works.')
+    state.canWrite = false; refresh(); return
+  }
+  state.db = db
+  if (user) {
+    try { state.uid = await user.id() } catch {}
+    try { const c = await user.can('data.write'); if (c === false) { state.canWrite = false; notice('You can listen and read the verdicts, but only the owner and editors can change them.') } } catch {}
+  }
+  db.collection(COLLECTION).onSnapshot((snap) => {
+    for (const d of snap.docs) state.docs[d.id] = d.data()
+    for (const ch of snap.docChanges()) if (ch.type === 'removed') delete state.docs[ch.doc.id]
+    refresh()
+  }, (e) => notice(e?.code === 'revoked' ? 'Access to the saved verdicts ended for this view.' : 'Saved verdicts could not be loaded. Reload the page to try again.'))
+  refresh()
+})()
+</script>

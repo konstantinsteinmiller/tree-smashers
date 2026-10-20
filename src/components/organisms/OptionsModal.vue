@@ -183,7 +183,7 @@ const openPrivacyPolicy = () => {
           )
           span(class="ui-body text-[0.7rem] md:text-[0.85rem] text-center px-2") {{ t('graphicsQualityNote') }}
 
-        hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
+        div.opt-divider(class="my-1 md:my-2" aria-hidden="true")
 
         //- Privacy policy + ad-consent choice (native builds only).
         div(v-if="showPrivacyLinks" class="flex flex-wrap justify-center gap-2 scale-90 sm:scale-100")
@@ -198,7 +198,7 @@ const openPrivacyPolicy = () => {
             @click="showPrivacyOptions"
           ) {{ t('privacySettings') }}
 
-        hr(v-if="showPrivacyLinks" class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
+        div.opt-divider(v-if="showPrivacyLinks" class="my-1 md:my-2" aria-hidden="true")
 
         //- Danger zone: wipe all progress (keeps settings + purchased skins).
         //- Guarded by the confirmation modal below.
@@ -213,19 +213,20 @@ const openPrivacyPolicy = () => {
     //- Difficulty Tab
     div(v-else-if="currentTab === 'diff'")
       div(class="flex flex-col gap-1")
-        FButton(
-          v-for="difficulty in [DIFFICULTY.EASY, DIFFICULTY.MEDIUM, DIFFICULTY.HARD]"
+        FButton.ui-pop-in(
+          v-for="(difficulty, i) in [DIFFICULTY.EASY, DIFFICULTY.MEDIUM, DIFFICULTY.HARD]"
           :key="difficulty"
+          :style="{ '--i': i }"
           :type="userDifficulty === difficulty ? 'primary' : 'secondary'"
           @click="setSettingValue('difficulty', difficulty)"
         ) {{ t(difficulty) }}
-        hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
+        div.opt-divider(class="my-1 md:my-2" aria-hidden="true")
 
     //- Audio Tab
     div(v-else-if="currentTab === 'audio'").flex.flex-col.justify-between.items-center
       FSlider.px-4(class="!py-1 !pb-3 !max-w-[300px]" :model-value="userSoundVolume" @update:modelValue="setSettingValue('sound', $event)" :label="t('soundEffects')" :min="0" :max="1" :step="0.01")
       FSlider.px-4(class="!py-1 !pb-2 !max-w-[300px]" :model-value="userMusicVolume" @update:modelValue="setSettingValue('music', $event)" :label="t('music')" :min="0" :max="1" :step="0.01")
-      hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
+      div.opt-divider(class="my-1 md:my-2" aria-hidden="true")
 
     template(#footer)
       FButton.w-full(tone="primary" @click="emit('close')") {{ t('close') }}
@@ -254,3 +255,10 @@ const openPrivacyPolicy = () => {
       ) {{ t('reset') }}
 </template>
 
+<style scoped lang="sass">
+// Section divider: a flat band of diagonal ink hatching (no dashed rule).
+.opt-divider
+  height: 6px
+  border-radius: 999px
+  background-image: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.22) 0 4px, transparent 4px 9px)
+</style>

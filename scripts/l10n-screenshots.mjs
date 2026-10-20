@@ -147,10 +147,10 @@ const MOBILE_UA =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36'
 
 const save = saveFixture({
-  spinner_intro_seen: '1',
-  ...(locale ? { spinner_user_language: locale } : {})
+  smashers_intro_seen: '1',
+  ...(locale ? { smashers_user_language: locale } : {})
 })
-if (!locale) delete save.spinner_user_language
+if (!locale) delete save.smashers_user_language
 
 /** Wait until the game is interactive: seam up, both splashes gone. */
 const waitForGame = async (page) => {

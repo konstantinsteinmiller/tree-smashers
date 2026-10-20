@@ -312,7 +312,7 @@ auto-selected or launched on that turn (the AI and PvP paths use the same filter
 | parameter           | value                                                      |
 |---------------------|------------------------------------------------------------|
 | speed kept on touch | 10 % (Hazard Ward L10: 19 %)                               |
-| touch gate          | 250 ms per victim (`lastShockMs`, shared with shock walls) |
+| touch gate          | 250 ms per victim (`lastShockMs`, shared with Static Charge) |
 | lock trigger        | carrier is the launched blade                              |
 | lock length         | the victim team's next turn                                |
 | re-lock             | not on the following turn; never the last launchable blade |

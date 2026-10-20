@@ -265,7 +265,6 @@ const patchEngine = () => {
           phase = 'npc_turn'
           npcThink = 0
           launchedId = null
-          comboState.clear()
           turns++
           for (const b of npc) if (b.statSwitchPhase) {
             b.statSwitchPhase = 'attack'

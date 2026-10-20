@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { playUiSfx } from '@/use/uiSfx'
 
 const emit = defineEmits<{
   (e: 'surrender'): void
@@ -10,7 +11,10 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const showConfirm = ref(false)
 
-watch(showConfirm, (open) => emit('open-change', open))
+watch(showConfirm, (open) => {
+  playUiSfx(open ? 'open' : 'close')
+  emit('open-change', open)
+})
 
 const onIconClick = () => {
   showConfirm.value = true
@@ -28,8 +32,12 @@ const onCancel = () => {
 
 <template lang="pug">
   //- Surrender button — white flag icon
-  button.pointer-events-auto.group.cursor-pointer.z-10(
-    class="hover:scale-[103%] transition-transform active:scale-90 scale-80 sm:scale-100"
+  //- Danger tone, deliberately calm: no idle motion (it must not invite taps).
+  //- The inner ui-btn sinks on press (global press handler); the flag only
+  //- flutters on hover.
+  button.surrender-btn.pointer-events-auto.group.cursor-pointer.z-10(
+    class="scale-80 sm:scale-100"
+    :aria-label="t('spinner.surrender')"
     @click="onIconClick"
   )
     div.relative
@@ -40,7 +48,7 @@ const onCancel = () => {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          class="h-5 w-5 sm:h-6 sm:w-6 text-cream-50 ml-2"
+          class="surrender-flag h-5 w-5 sm:h-6 sm:w-6 text-cream-50 ml-2"
         )
           //- Pole
           line(x1="5" y1="2" x2="5" y2="22" stroke-width="2" stroke-linecap="round")
@@ -74,10 +82,12 @@ const onCancel = () => {
         div(class="absolute inset-0 bg-[var(--ui-backdrop)]" @click="onCancel")
 
         //- Dialog
-        div(class="relative ui-panel ui-stitch-dark p-6 max-w-xs w-full text-center")
+        //- Dialog: an ice card that swings in, the question on a berry
+        //- skewed tag. Quit = danger, stay = secondary (the calm default).
+        div(class="relative ui-panel surrender-dialog p-6 max-w-xs w-full text-center")
           //- Flag icon
           div.flex.justify-center.mb-3
-            svg(
+            svg.surrender-flag(
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="none"
@@ -93,8 +103,9 @@ const onCancel = () => {
               )
 
           //- Title
-          div.text-ink.font-black.uppercase.ui-title(class="mb-2")
-            | {{ t('spinner.surrender') }}
+          div.ui-tag.ui-tag--berry(class="mb-3")
+            span.ui-outline.font-black.uppercase.ui-title
+              | {{ t('spinner.surrender') }}
 
           //- Subtitle
           div.ui-body(class="mb-5")
@@ -111,3 +122,37 @@ const onCancel = () => {
               @click="onConfirm"
             ) {{ t('spinner.surrenderQuit') }}
 </template>
+
+<style scoped lang="sass">
+.surrender-dialog
+  animation: surrender-swing 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) both
+
+@keyframes surrender-swing
+  0%
+    transform: rotate(-4deg) scale(0.9)
+  60%
+    transform: rotate(1deg) scale(1.02)
+  100%
+    transform: none
+
+// The flag flutters on hover (pointer devices) and in the dialog.
+.surrender-flag
+  transform-origin: 20% 50%
+
+@media (hover: hover)
+  .surrender-btn:hover .surrender-flag
+    animation: surrender-flutter 0.5s ease-in-out infinite
+
+.surrender-dialog .surrender-flag
+  animation: surrender-flutter 0.9s ease-in-out 3
+
+@keyframes surrender-flutter
+  0%, 100%
+    transform: skewY(0)
+  50%
+    transform: skewY(-8deg)
+
+@media (prefers-reduced-motion: reduce)
+  .surrender-dialog, .surrender-flag, .surrender-btn:hover .surrender-flag
+    animation: none !important
+</style>

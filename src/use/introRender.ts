@@ -763,7 +763,7 @@ export const createIntroRenderer = (
         c = mkCanvas(w * d, px * 1.5 * d)
         const g = ctx2d(c)
         g.scale(d, d)
-        text(g, str, w / 2, px * 0.75, px, gold ? '#ffe066' : '#ff6b6b', gold ? '#5a2800' : '#3a0006', px * 0.16)
+        text(g, str, w / 2, px * 0.75, px, gold ? '#ffeb3b' : '#ff6b6b', gold ? '#5a2800' : '#3a0006', px * 0.16)
         dmgCache.set(key, c)
       }
       dmgSprites.push(c)

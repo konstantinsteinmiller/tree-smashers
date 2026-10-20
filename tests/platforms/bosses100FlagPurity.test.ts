@@ -19,14 +19,18 @@
 //
 // Same audit, by hand: node scripts/feature-flag-audit.mjs --flag bosses100
 
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import path from 'node:path'
+import { rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 // @ts-expect-error — plain .mjs script, no types
 import { FLAGS, buildVariant, scanBuild } from '../../scripts/feature-flag-audit.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const OUT = path.join(ROOT, 'node_modules/.cache/bosses100-flag-purity')
+// Per-process build dir: two concurrent runs (two sessions / agents) must not
+// rm each other's build mid-scan. Removed again after the suite.
+const OUT = path.join(ROOT, 'node_modules/.cache', `bosses100-flag-purity-${process.pid}`)
+afterAll(() => rmSync(OUT, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }))
 
 interface Scan {
   jsBytes: number

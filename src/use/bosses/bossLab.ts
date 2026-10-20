@@ -14,7 +14,7 @@
 //     his real team), `matched` = every enemy part at the player's peak
 //     upgrade level (buildCheatBossStage's rule; the arena then gives the
 //     player the usual cheat +25 so the fight stays winnable);
-//   • arena: as authored, or forced to boss / lava / ice / shock.
+//   • arena: as authored, or forced to boss / lava / ice / forest.
 
 import { ref } from 'vue'
 import type { BossTrait } from '@/types/spinner'
@@ -78,8 +78,8 @@ export const BOSS_LAB_ENTRIES: readonly BossLabEntry[] = Object.freeze([
 ])
 
 export type BossLabLevelMode = 'campaign' | 'matched'
-export type BossLabArena = 'authored' | Extract<ArenaType, 'boss' | 'lava' | 'ice' | 'shock'>
-export const BOSS_LAB_ARENAS: readonly BossLabArena[] = ['authored', 'boss', 'lava', 'ice', 'shock']
+export type BossLabArena = 'authored' | Extract<ArenaType, 'boss' | 'lava' | 'ice' | 'forest'>
+export const BOSS_LAB_ARENAS: readonly BossLabArena[] = ['authored', 'boss', 'lava', 'ice', 'forest']
 
 export interface BossLabOptions {
   levelMode: BossLabLevelMode

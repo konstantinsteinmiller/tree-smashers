@@ -9,6 +9,8 @@
  *
  * window.__smasherSheet(id, cell, boss) → PNG data URL of the 4 × 4 sheet on
  * the magenta key (#FF00FF) the art pipeline expects; no labels on the sheet.
+ * disc=false → the character alone (the painting reference: the disc stays a
+ * live, spinning procedural layer under the painted character).
  */
 import { SMASHER_IDS, type SmasherId } from '@/data/smasherCatalog'
 import {
@@ -20,7 +22,11 @@ import { DISC_SQUASH, DISC_THICKNESS, mixHex } from '@/smashers/smasherRig'
 const KEY = '#FF00FF'
 
 /** Disc + character into a cell whose disc centre is (x, y). */
-const drawCell = (ctx: CanvasRenderingContext2D, id: SmasherId, frame: number, x: number, y: number, ppu: number, boss: boolean) => {
+const drawCell = (ctx: CanvasRenderingContext2D, id: SmasherId, frame: number, x: number, y: number, ppu: number, boss: boolean, disc = true) => {
+  if (!disc) {
+    drawSmasher(ctx, id, SIGNATURE_PALETTES[id], frameYaw(frame), x, y, ppu, { boss })
+    return
+  }
   const rim = '#3f7fd8'
   const sq = DISC_SQUASH
   const side = ppu * DISC_THICKNESS * Math.sqrt(1 - sq * sq)
@@ -43,7 +49,7 @@ const drawCell = (ctx: CanvasRenderingContext2D, id: SmasherId, frame: number, x
   drawSmasher(ctx, id, SIGNATURE_PALETTES[id], frameYaw(frame), x, y, ppu, { boss })
 }
 
-export const renderSheet = (id: SmasherId, cell = 384, boss = false, key = KEY): HTMLCanvasElement => {
+export const renderSheet = (id: SmasherId, cell = 384, boss = false, key = KEY, disc = true): HTMLCanvasElement => {
   const c = document.createElement('canvas')
   c.width = cell * YAW_COLS
   c.height = cell * Math.ceil(YAW_FRAMES / YAW_COLS)
@@ -54,7 +60,7 @@ export const renderSheet = (id: SmasherId, cell = 384, boss = false, key = KEY):
   for (let f = 0; f < YAW_FRAMES; f++) {
     const cx = (f % YAW_COLS) * cell + cell / 2
     const cy = Math.floor(f / YAW_COLS) * cell + cell / 2 - ((FRAME_BOX.top + FRAME_BOX.bottom) / 2) * ppu
-    drawCell(ctx, id, f, cx, cy, ppu, boss)
+    drawCell(ctx, id, f, cx, cy, ppu, boss, disc)
   }
   return c
 }
@@ -75,7 +81,7 @@ export const renderOverview = (cell = 160, frames = [0, 4, 8, 12, 16, 24], boss 
 }
 
 const w = window as unknown as Record<string, unknown>
-w.__smasherSheet = (id: SmasherId, cell = 384, boss = false) => renderSheet(id, cell, boss).toDataURL('image/png')
+w.__smasherSheet = (id: SmasherId, cell = 384, boss = false, disc = true) => renderSheet(id, cell, boss, KEY, disc).toDataURL('image/png')
 w.__smasherOverview = (cell = 160, boss = false) => renderOverview(cell, undefined, boss).toDataURL('image/png')
 w.__smasherIds = [...SMASHER_IDS]
 

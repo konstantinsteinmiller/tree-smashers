@@ -22,10 +22,12 @@ const { t } = useI18n()
     class="gap-2 sm:gap-3"
     :data-boss-trophy="skinId"
   )
-    div.roulette-grant-tag.font-black.uppercase.game-text.text-sun-200(
+    div.roulette-grant-tag.trophy-tag.ui-tag.ui-tag--plum.font-black.uppercase.game-text(
       class="text-xs sm:text-sm tracking-[0.04em]"
     ) {{ t('trophySkin.label') }}
     div.trophy-glow.flex.flex-col.items-center.gap-2
+      //- A turning flat sun star behind the trophy skin (no glow, no filter).
+      span.trophy-star(aria-hidden="true")
       img.trophy-icon.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
         :src="modelImgPath(skinId)"
         :alt="t(`skins.${skinId}`)"
@@ -43,9 +45,39 @@ const { t } = useI18n()
   max-width: 15rem
 
 .trophy-glow
-  animation: trophy-glow 2s ease-in-out infinite
+  position: relative
+  isolation: isolate
+
+.trophy-tag
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  padding: 0.2em 0.9em 0.3em
+  animation: trophy-tag-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) 0.2s both
+
+.trophy-star
+  position: absolute
+  left: 50%
+  top: 0
+  width: 7.5rem
+  height: 7.5rem
+  margin-left: -3.75rem
+  margin-top: -1.25rem
+  z-index: -1
+  background-color: var(--color-sun-400)
+  background-image: var(--ui-stripes)
+  clip-path: polygon(50% 0, 60% 30%, 93% 21%, 72% 46%, 100% 64%, 66% 66%, 71% 100%, 50% 77%, 29% 100%, 34% 66%, 0 64%, 28% 46%, 7% 21%, 40% 30%)
+  animation: trophy-star-turn 10s linear infinite
+  @media (min-width: 640px)
+    width: 10rem
+    height: 10rem
+    margin-left: -5rem
+    margin-top: -1.5rem
 
 .trophy-icon
+  animation: trophy-bob 2s ease-in-out infinite
+
+.trophy-icon
+  position: relative
   width: 5rem
   height: 5rem
   @media (min-width: 640px)
@@ -97,9 +129,40 @@ const { t } = useI18n()
     line-height: 1.1
     white-space: normal
 
-@keyframes trophy-glow
+@keyframes trophy-star-turn
+  to
+    transform: rotate(360deg)
+
+@keyframes trophy-bob
   0%, 100%
-    filter: brightness(1)
+    transform: translateY(0)
   50%
-    filter: brightness(1.18)
+    transform: translateY(-4px) rotate(-2deg)
+
+@keyframes trophy-tag-in
+  0%
+    opacity: 0
+    transform: scale(1.8) rotate(-6deg)
+  60%
+    opacity: 1
+    transform: scale(0.92)
+  100%
+    opacity: 1
+    transform: none
+
+@media (prefers-reduced-motion: reduce)
+  .trophy-star, .trophy-icon, .trophy-tag
+    animation: none
+
+:global(.is-double .trophy-star)
+  width: 5.5rem
+  height: 5.5rem
+  margin-left: -2.75rem
+
+@media (orientation: landscape) and (max-height: 500px)
+  .trophy-star, :global(.is-double .trophy-star)
+    width: 4.5rem
+    height: 4.5rem
+    margin-left: -2.25rem
+    margin-top: -0.75rem
 </style>

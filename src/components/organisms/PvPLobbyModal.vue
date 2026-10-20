@@ -2,9 +2,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FModal from '@/components/molecules/FModal.vue'
+import { playUiSfx } from '@/use/uiSfx'
 import usePVP, { type PvPGameConfig } from '@/use/usePVP'
 import usePvpStats from '@/use/usePvpStats'
-import { ARENA_TYPES, type ArenaType } from '@/use/useSpinnerCampaign'
+import { ARENA_TYPES, sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import { getSelectedSkin } from '@/use/useModels'
 import { isSdkActive } from '@/use/useCrazyGames'
@@ -78,9 +79,7 @@ const ARENA_CARDS: Record<string, { color: string; bg: string; border: string }>
   default: { color: 'var(--color-sky-400)', bg: 'bg-sky-200', border: 'border-ink' },
   lava: { color: 'var(--color-berry-500)', bg: 'bg-berry-300', border: 'border-ink' },
   ice: { color: 'var(--color-sky-300)', bg: 'bg-sky-200', border: 'border-ink' },
-  forest: { color: 'var(--color-leaf-500)', bg: 'bg-leaf-300', border: 'border-ink' },
-  thunder: { color: 'var(--color-sun-400)', bg: 'bg-sun-200', border: 'border-ink' },
-  shock: { color: 'var(--color-plum-400)', bg: 'bg-plum-300', border: 'border-ink' }
+  forest: { color: 'var(--color-leaf-500)', bg: 'bg-leaf-300', border: 'border-ink' }
 }
 
 // Filter out 'boss' — not selectable for PvP
@@ -251,6 +250,16 @@ const onToggleLevelOne = () => {
   }
 }
 
+// The Level-1 box is a custom checkbox: it plays the switch ticks itself.
+const onToggleLevelOneTick = () => {
+  if (!isHost.value && status.value === 'lobby') {
+    playUiSfx('deny')
+    return
+  }
+  playUiSfx(levelOne.value ? 'toggleOff' : 'toggleOn')
+  onToggleLevelOne()
+}
+
 const onCopyLink = async () => {
   if (await copyInviteLink()) {
     copied.value = true
@@ -297,7 +306,7 @@ const onClose = () => {
 
 // Sync game config from host to guest's local UI
 watch(gameConfig, (cfg) => {
-  selectedArena.value = cfg.arenaType
+  selectedArena.value = sanitizeArenaType(cfg.arenaType)
   selectedTeamSize.value = cfg.teamSize
   levelOne.value = cfg.levelOne
 }, { deep: true })
@@ -339,14 +348,16 @@ watch(() => props.isOpen, (open) => {
           div
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.selectArena') }}
             div.grid.gap-2(class="grid-cols-3 sm:grid-cols-6")
-              div(
+              button.pvp-arena(
                 v-for="arena in selectableArenas"
                 :key="arena"
+                type="button"
+                data-press
+                :aria-pressed="selectedArena === arena"
                 @click="onSelectArena(arena)"
-                class="relative cursor-pointer rounded-lg p-2 text-center transition-all duration-150 hover:scale-105 active:scale-95 border-2"
-                :class="selectedArena === arena \
-                  ? [ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'shadow-[0_3px_0_var(--color-ink)]'] \
-                  : 'bg-cream-200 border-cream-400 hover:border-wood-500'"
+                class="relative cursor-pointer p-2 text-center"
+                :class="selectedArena === arena ? ['is-picked', ARENA_CARDS[arena]?.bg] : ''"
+                :style="{ '--arena': ARENA_CARDS[arena]?.color }"
               )
                 //- Color dot
                 div.mx-auto.rounded-full.mb-1.border-2.border-ink(
@@ -359,26 +370,33 @@ watch(() => props.isOpen, (open) => {
           div
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
-              button(
+              button.pvp-seg(
                 v-for="size in [1, 2]"
                 :key="size"
+                type="button"
+                role="radio"
+                :aria-checked="selectedTeamSize === size"
                 @click="onSelectTeamSize(size)"
-                class="flex-1 min-h-[2.75rem] py-2 rounded-lg border-2 font-black transition-all cursor-pointer text-sm"
-                :class="selectedTeamSize === size \
-                  ? 'bg-leaf-500 border-ink ui-outline-sm shadow-[0_3px_0_var(--color-ink)]' \
-                  : 'bg-cream-200 border-cream-400 text-ink hover:border-wood-500'"
+                class="flex-1 min-h-[2.75rem] py-2 font-black cursor-pointer text-sm"
+                :class="{ 'is-picked': selectedTeamSize === size }"
               ) {{ size }}v{{ size }}
 
           //- Level 1 toggle
-          div.flex.items-center.gap-3.cursor-pointer(@click="onToggleLevelOne")
-            div.rounded-full.border-2.flex.items-center.justify-center.transition-colors(
-              class="w-5 h-5"
-              :class="levelOne ? 'bg-leaf-500 border-ink' : 'bg-cream-50 border-wood-700'"
+          div.pvp-check.flex.items-center.gap-3.cursor-pointer(
+            role="checkbox"
+            tabindex="0"
+            :aria-checked="levelOne"
+            @click="onToggleLevelOneTick"
+            @keydown.enter.prevent="onToggleLevelOneTick"
+            @keydown.space.prevent="onToggleLevelOneTick"
+          )
+            div.pvp-check__box.flex.items-center.justify-center(
+              :class="{ 'is-on': levelOne }"
             )
               svg(
                 v-if="levelOne"
                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-cream-50)"
-                class="w-3 h-3"
+                class="w-4 h-4"
               )
                 path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
             span.text-ink.font-black(class="text-sm") {{ t('pvp.levelOne') }}
@@ -481,7 +499,7 @@ watch(() => props.isOpen, (open) => {
 
           //- Status badge
           div.text-center
-            div.text-leaf-700.font-black(class="text-lg") {{ t('pvp.connected') }}
+            div.pvp-connected.ui-slam {{ t('pvp.connected') }}
             div.text-ink-soft.font-bold(class="text-xs mt-1")
               span(v-if="isHost") {{ t('pvp.youAreHost') }}
               span(v-else) {{ t('pvp.youAreGuest') }}
@@ -489,32 +507,32 @@ watch(() => props.isOpen, (open) => {
           //- Win:Loss stats
           div.ui-inset.flex.items-center.justify-center.gap-4.py-2.px-4
             div.flex.flex-col.items-center
-              span.text-leaf-700.font-black(class="text-lg") {{ wins }}
+              span.pvp-stat.pvp-stat--win {{ wins }}
               span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.wins') }}
             div.text-ink-soft.font-black(class="text-lg") :
             div.flex.flex-col.items-center
-              span.text-berry-600.font-black(class="text-lg") {{ losses }}
+              span.pvp-stat.pvp-stat--loss {{ losses }}
               span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.losses') }}
             div.border-l-2.border-cream-400.h-8
             div.flex.flex-col.items-center
-              span.text-plum-700.font-black(class="text-lg") {{ honor }}
+              span.pvp-stat.pvp-stat--honor {{ honor }}
               span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.honor') }}
 
           //- Arena Selection (host can change, guest sees read-only)
           div
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.arena') }}
             div.grid.gap-2(class="grid-cols-3 sm:grid-cols-6")
-              div(
+              button.pvp-arena(
                 v-for="arena in selectableArenas"
                 :key="arena"
+                type="button"
+                data-press
+                :aria-pressed="gameConfig.arenaType === arena"
+                :aria-disabled="!isHost ? 'true' : undefined"
                 @click="onSelectArena(arena)"
-                class="relative rounded-lg p-2 text-center transition-all duration-150 border-2"
-                :class="[\
-                  gameConfig.arenaType === arena \
-                    ? [ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'shadow-[0_3px_0_var(--color-ink)]'] \
-                    : 'bg-cream-200 border-cream-400',\
-                  isHost ? 'cursor-pointer hover:scale-105 active:scale-95 hover:border-wood-500' : 'cursor-default opacity-70'\
-                ]"
+                class="relative p-2 text-center"
+                :class="[gameConfig.arenaType === arena ? ['is-picked', ARENA_CARDS[arena]?.bg] : '', isHost ? 'cursor-pointer' : 'is-readonly']"
+                :style="{ '--arena': ARENA_CARDS[arena]?.color }"
               )
                 div.mx-auto.rounded-full.mb-1.border-2.border-ink(
                   class="w-4 h-4 sm:w-5 sm:h-5"
@@ -526,33 +544,36 @@ watch(() => props.isOpen, (open) => {
           div
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
-              button(
+              button.pvp-seg(
                 v-for="size in [1, 2]"
                 :key="size"
+                type="button"
+                role="radio"
+                :aria-checked="gameConfig.teamSize === size"
                 @click="onSelectTeamSize(size)"
                 :disabled="!isHost"
-                class="flex-1 min-h-[2.75rem] py-2 rounded-lg border-2 font-black transition-all text-sm"
-                :class="[\
-                  gameConfig.teamSize === size \
-                    ? 'bg-leaf-500 border-ink ui-outline-sm shadow-[0_3px_0_var(--color-ink)]' \
-                    : 'bg-cream-200 border-cream-400 text-ink',\
-                  isHost ? 'cursor-pointer hover:border-wood-500' : 'cursor-default'\
-                ]"
+                class="flex-1 min-h-[2.75rem] py-2 font-black text-sm"
+                :class="[{ 'is-picked': gameConfig.teamSize === size }, isHost ? 'cursor-pointer' : 'is-readonly']"
               ) {{ size }}v{{ size }}
 
           //- Level 1 toggle (host can change, guest sees read-only)
-          div.flex.items-center.gap-3(
-            :class="isHost ? 'cursor-pointer' : 'cursor-default opacity-70'"
-            @click="onToggleLevelOne"
+          div.pvp-check.flex.items-center.gap-3(
+            role="checkbox"
+            :tabindex="isHost ? 0 : -1"
+            :aria-checked="gameConfig.levelOne"
+            :aria-disabled="!isHost ? 'true' : undefined"
+            :class="isHost ? 'cursor-pointer' : 'is-readonly'"
+            @click="onToggleLevelOneTick"
+            @keydown.enter.prevent="onToggleLevelOneTick"
+            @keydown.space.prevent="onToggleLevelOneTick"
           )
-            div.rounded-full.border-2.flex.items-center.justify-center.transition-colors(
-              class="w-5 h-5"
-              :class="gameConfig.levelOne ? 'bg-leaf-500 border-ink' : 'bg-cream-50 border-wood-700'"
+            div.pvp-check__box.flex.items-center.justify-center(
+              :class="{ 'is-on': gameConfig.levelOne }"
             )
               svg(
                 v-if="gameConfig.levelOne"
                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-cream-50)"
-                class="w-3 h-3"
+                class="w-4 h-4"
               )
                 path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
             span.text-ink.font-black(class="text-sm") {{ t('pvp.levelOne') }}
@@ -561,13 +582,11 @@ watch(() => props.isOpen, (open) => {
           //- skill loadout (icon + level). The local side previews what
           //- Ready will send; the opponent's shows once they are ready.
           div.grid.grid-cols-2.gap-2(v-if="showSkillRows")
-            div.ready-side.rounded-lg.border-2.px-2.py-2.flex.flex-col.items-center(
+            div.ready-side.px-2.py-2.flex.flex-col.items-center(
               v-for="side in READY_SIDES"
               :key="side"
               class="gap-1.5"
-              :class="sideReady(side) \
-                ? 'border-leaf-600 bg-leaf-300' \
-                : 'border-cream-400 bg-cream-200'"
+              :class="{ 'is-ready': sideReady(side) }"
               :data-side="side"
             )
               div.flex.items-center.gap-2
@@ -609,24 +628,25 @@ watch(() => props.isOpen, (open) => {
     template(#footer)
       //- Idle: Create Lobby
       template(v-if="status === 'idle'")
-        button.w-full(
-          @click="onCreateLobby"
-          class="ui-btn ui-btn--primary uppercase text-sm"
-        ) {{ t('pvp.createLobby') }}
+        div.w-full.ui-breathe
+          button.w-full(
+            @click="onCreateLobby"
+            class="ui-btn ui-btn--primary ui-btn--hero ui-shine text-base"
+          ) {{ t('pvp.createLobby') }}
 
       //- Lobby: Ready / Start
       template(v-else-if="status === 'lobby' || status === 'ready'")
-        button.w-full(
-          v-if="isHost && bothReady"
-          @click="onStartMatch"
-          class="ui-btn ui-btn--primary uppercase text-sm"
-        ) {{ t('pvp.startMatch') }}
-        button.w-full(
-          v-else
-          @click="onToggleReady"
-          class="ui-btn uppercase text-sm"
-          :class="localReady ? 'ui-btn--secondary' : 'ui-btn--primary'"
-        ) {{ localReady ? t('pvp.ready') : t('pvp.setReady') }}
+        div.w-full.ui-breathe(v-if="isHost && bothReady")
+          button.w-full(
+            @click="onStartMatch"
+            class="ui-btn ui-btn--primary ui-btn--hero ui-shine text-base"
+          ) {{ t('pvp.startMatch') }}
+        div.w-full(v-else :class="{ 'ui-breathe': !localReady }")
+          button.w-full(
+            @click="onToggleReady"
+            class="ui-btn uppercase text-sm"
+            :class="localReady ? 'ui-btn--secondary' : 'ui-btn--primary ui-btn--hero ui-shine'"
+          ) {{ localReady ? t('pvp.ready') : t('pvp.setReady') }}
 
       //- Error states: Back to Menu
       template(v-else-if="status === 'disconnected' || status === 'error' || status === 'expired'")
@@ -642,15 +662,189 @@ watch(() => props.isOpen, (open) => {
 @media (pointer: coarse)
   .pvp-scroll
     scrollbar-width: thin
-    scrollbar-color: var(--color-wood-500) transparent
+    scrollbar-color: var(--color-royal-500) transparent
 
     &::-webkit-scrollbar
       width: 6px
 
     &::-webkit-scrollbar-thumb
-      background: var(--color-wood-500)
+      background: var(--color-royal-500)
       border-radius: 3px
 
     &::-webkit-scrollbar-track
       background: transparent
+
+// ── Arena tiles: selectable mini cards ───────────────────────────────────
+// Idle: recessed ice well with the arena's colour dot. Hover: lifts 2px.
+// Pressed: sinks (70 ms). Picked: stands up — arena tint, ink outline, a
+// hard drop and a sun corner flag, popping in with an overshoot. Read-only
+// (guest): flat and dimmed; a tap gets the refusal shake + bonk.
+.pvp-arena
+  min-height: 2.75rem
+  border: 2px solid var(--color-ice-400)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
+  transition: transform 0.26s var(--ui-spring)
+  -webkit-tap-highlight-color: transparent
+
+  @media (hover: hover)
+    &:not(.is-readonly):hover
+      transform: translateY(-2px)
+      border-color: var(--color-royal-400)
+
+  &:not(.is-readonly):active, &:not(.is-readonly).is-pressed
+    transform: translateY(2px) scale(0.95)
+    transition-duration: var(--ui-press-down)
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
+
+  &.is-picked
+    border: 3px solid var(--color-ink)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--arena), inset 0 -4px 0 rgba(22, 26, 64, 0.18), 0 4px 0 var(--color-ink)
+    transform: translateY(-2px)
+    animation: pvp-pick 0.34s var(--ui-spring)
+
+    &::after
+      content: ''
+      position: absolute
+      top: -2px
+      right: -2px
+      width: 0.95rem
+      height: 0.95rem
+      background-color: var(--color-sun-400)
+      border-left: 2px solid var(--color-ink)
+      border-bottom: 2px solid var(--color-ink)
+      border-radius: 0 calc(var(--radius-ui) - 3px) 0 0.3rem
+
+  &.is-readonly
+    cursor: default
+    opacity: 0.7
+
+@keyframes pvp-pick
+  0%
+    transform: translateY(2px) scale(0.86)
+  100%
+    transform: translateY(-2px) scale(1)
+
+// ── Team size: segmented 3D buttons (the picked one is a raised lime key) ─
+.pvp-seg
+  border: 2px solid var(--color-ice-400)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-200)
+  color: var(--color-ink)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
+  transition: transform 0.26s var(--ui-spring)
+  -webkit-tap-highlight-color: transparent
+
+  @media (hover: hover)
+    &:not(.is-readonly):not(.is-picked):hover
+      transform: translateY(-2px)
+      border-color: var(--color-royal-400)
+
+  &:not(:disabled):active
+    transform: translateY(2px) scale(0.96)
+    transition-duration: var(--ui-press-down)
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
+
+  &.is-picked
+    border: 3px solid var(--color-ink)
+    background-color: var(--color-leaf-500)
+    color: var(--color-ice-50)
+    text-shadow: var(--ui-stroke-sm)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 0.9em 0 rgba(255, 255, 255, 0.16), inset 0 -4px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
+    transform: translateY(-2px)
+    animation: pvp-pick 0.34s var(--ui-spring)
+
+  &.is-readonly
+    cursor: default
+
+// ── Level 1: a chunky check box ──────────────────────────────────────────
+.pvp-check
+  min-height: 2.75rem
+  -webkit-tap-highlight-color: transparent
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
+    border-radius: var(--radius-ui-sm)
+
+  &.is-readonly
+    cursor: default
+    opacity: 0.7
+
+.pvp-check__box
+  width: 1.75rem
+  height: 1.75rem
+  flex: 0 0 auto
+  border: 3px solid var(--color-ink)
+  border-radius: 0.45rem
+  background-color: var(--color-ice-50)
+  box-shadow: inset 0 -3px 0 var(--color-ice-300), 0 3px 0 var(--color-ink)
+  transition: transform 0.26s var(--ui-spring), background-color 0.1s ease
+
+  &.is-on
+    background-color: var(--color-leaf-500)
+    box-shadow: inset 0 2px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 3px 0 var(--color-ink)
+    animation: pvp-pick 0.34s var(--ui-spring)
+
+  svg
+    filter: drop-shadow(0 1.5px 0 var(--color-ink))
+
+.pvp-check:not(.is-readonly):active .pvp-check__box
+  transform: translateY(2px) scale(0.92)
+  transition-duration: var(--ui-press-down)
+
+// ── Stats + connected ────────────────────────────────────────────────────
+.pvp-stat
+  font-size: 1.6rem
+  font-weight: 900
+  line-height: 1.05
+  font-variant-numeric: tabular-nums
+  text-shadow: var(--ui-stroke)
+
+.pvp-stat--win
+  color: var(--color-leaf-400)
+.pvp-stat--loss
+  color: var(--color-berry-400)
+.pvp-stat--honor
+  color: var(--color-plum-400)
+
+.pvp-connected
+  font-size: 1.3rem
+  font-weight: 900
+  text-transform: uppercase
+  letter-spacing: 0.03em
+  color: var(--color-leaf-400)
+  text-shadow: var(--ui-stroke)
+
+// ── Ready cards: ice until ready, then a lime card that pops ─────────────
+.ready-side
+  border: 2px solid var(--color-ice-400)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
+
+  &.is-ready
+    border: 3px solid var(--color-ink)
+    background-color: var(--color-leaf-300)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--color-leaf-500), 0 4px 0 var(--color-ink)
+    animation: pvp-ready 0.4s cubic-bezier(0.2, 1.6, 0.4, 1)
+
+@keyframes pvp-ready
+  0%
+    transform: scale(0.9) rotate(-2deg)
+  100%
+    transform: none
+
+@media (prefers-reduced-motion: reduce)
+  .pvp-arena, .pvp-seg, .pvp-check__box, .ready-side
+    animation: none !important
 </style>

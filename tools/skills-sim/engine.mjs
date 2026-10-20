@@ -47,8 +47,6 @@ const GHOST_SPLIT_OFFSET = 2.1
 const HEALER_RADIUS_MULT = 1.2
 const HEALER_CONTACT_HEAL = 2
 const HEALER_HEAL_COOLDOWN_MS = 250
-const COMBO_WINDOW_MS = 3000
-const COMBO_GRACE_MS = 100
 const FRIENDLY_FIRE_MUL = 0.25
 const THUNDER_RADIUS_MUL = 1.8
 const THUNDER_COOLDOWN_MS = 1000
@@ -354,7 +352,6 @@ export const runBattle = (opts) => {
   const lastCritAt = new Map()
   const spikyCd = new Map()
   const healerCd = new Map()
-  const comboState = new Map()
   const rockets = [] // { arriveAt, targetId, dmg }
 
   // powerups (4480-4675), enabled from stage 2 in the campaign
@@ -559,18 +556,6 @@ export const runBattle = (opts) => {
       const healed = Math.min(1, b.maxHp - b.hp)
       b.hp = Math.min(b.maxHp, b.hp + 1)
       if (b.owner === 'player') m.healed += healed
-    } else if (arena === 'shock') {
-      shock(b)
-    }
-  }
-  const shock = (b) => {
-    const now = gameTime()
-    if (now - b.lastShockMs >= 250) {
-      b.lastShockMs = now
-      const hw = skillOf(b, 'hazard_ward')
-      const keep = hw ? 0.1 + 0.9 * P('hazard_ward', hw.level).shockKeep : 0.1
-      b.vx *= keep
-      b.vy *= keep
     }
   }
 
@@ -593,7 +578,6 @@ export const runBattle = (opts) => {
       b.vx = (b.vx - 2 * dot * nx) * boost
       b.vy = (b.vy - 2 * dot * ny) * boost
       chargeMomentum(b)
-      if (arena === 'shock') shock(b)
     }
   }
 
@@ -771,24 +755,6 @@ export const runBattle = (opts) => {
     let hadKill = false
     const aAdv = (bSpeed > 0 && aSpeed >= bSpeed * 2) ? 0.75 : 1
     const bAdv = (aSpeed > 0 && bSpeed >= aSpeed * 2) ? 0.75 : 1
-    let aCombo = 1, bCombo = 1
-    if (arena === 'thunder') {
-      const upd = (x, y, spd) => {
-        if (spd <= STOP_THRESHOLD) return 1
-        const c = comboState.get(x.id)
-        if (c && c.targetId === y.id && now - c.lastTime <= COMBO_WINDOW_MS) {
-          if (now - c.lastTime >= COMBO_GRACE_MS) {
-            c.stacks++
-            c.lastTime = now
-          }
-          return 1 + c.stacks * 0.1
-        }
-        comboState.set(x.id, { targetId: y.id, lastTime: now, stacks: 0 })
-        return 1
-      }
-      aCombo = upd(a, b, aSpeed)
-      bCombo = upd(b, a, bSpeed)
-    }
     if (armed) {
       let dAB = 0, dBA = 0, aCrit = false, bCrit = false
       if (aSpeed > STOP_THRESHOLD && !aBack) {
@@ -798,7 +764,7 @@ export const runBattle = (opts) => {
         let defMul = aCrit ? 1 : bSt.defenseMultiplier
         if (a.config.topPartId === 'piercer') defMul = 1 + (defMul - 1) * 0.25
         else if (a.config.topPartId === 'star') defMul = 1 + (defMul - 1) * 0.75
-        dAB = (closing * aSt.damageMultiplier * (aCrit ? 1.25 : 1) * aSt.totalWeight) / (bSt.totalWeight * defMul) * DAMAGE_SCALE * bAdv * aCombo * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
+        dAB = (closing * aSt.damageMultiplier * (aCrit ? 1.25 : 1) * aSt.totalWeight) / (bSt.totalWeight * defMul) * DAMAGE_SCALE * bAdv * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
       }
       if (bSpeed > STOP_THRESHOLD && !bBack) {
         const ready = now - (lastCritAt.get(a.id) ?? -Infinity) >= CRIT_COOLDOWN_MS
@@ -807,7 +773,7 @@ export const runBattle = (opts) => {
         let defMul = bCrit ? 1 : aSt.defenseMultiplier
         if (b.config.topPartId === 'piercer') defMul = 1 + (defMul - 1) * 0.25
         else if (b.config.topPartId === 'star') defMul = 1 + (defMul - 1) * 0.75
-        dBA = (closing * bSt.damageMultiplier * (bCrit ? 1.25 : 1) * bSt.totalWeight) / (aSt.totalWeight * defMul) * DAMAGE_SCALE * aAdv * bCombo * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
+        dBA = (closing * bSt.damageMultiplier * (bCrit ? 1.25 : 1) * bSt.totalWeight) / (aSt.totalWeight * defMul) * DAMAGE_SCALE * aAdv * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
       }
       // ── skills: outgoing multipliers, then incoming dodge/mirror ─────────
       dAB = outgoing(a, b, dAB, aCrit).dmg
@@ -1054,7 +1020,6 @@ export const runBattle = (opts) => {
       phase = 'npc_turn'
       npcThink = 0
       launchedId = null
-      comboState.clear()
       for (const b of npc) if (b.statSwitchPhase) {
         b.statSwitchPhase = 'attack'
         b._st = null
@@ -1063,7 +1028,6 @@ export const runBattle = (opts) => {
     if (phase === 'npc_launched' && stopped) {
       phase = 'player_turn'
       launchedId = null
-      comboState.clear()
       playerThink = 0
       for (const b of npc) if (b.statSwitchPhase) {
         b.statSwitchPhase = 'defense'

@@ -45,7 +45,7 @@ const disc = (x: number, y: number, owner: 'player' | 'npc', shield = 0): SkillV
 })
 
 const event = (kind: SkillEventKind, b: SkillVfxBlade, value = 1, skill: SkillId = 'guard_shell'): SkillEvent => ({
-  seq: 1, t: 0, kind, skill, bladeId: b.id, syncKey: b.id, owner: b.owner, x: b.x, y: b.y, value
+  seq: 1, t: 0, kind, skill, bladeId: b.id, syncKey: b.id, owner: b.owner, x: b.x, y: b.y, value, key: ''
 })
 
 const idleRocket = (): SkillRocketView => ({

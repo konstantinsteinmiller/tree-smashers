@@ -40,7 +40,7 @@ import {
 } from '@/data/skillCatalog'
 import { createRng } from '@/use/useDeterministicRng'
 import {
-  B_LUCKY, B_MIRROR, B_MOMENTUM, B_PHASE, B_ROCKETS, B_SALVO, B_SHELL, B_STATIC, B_WARD, B_WIND,
+  B_BANK, B_LUCKY, B_MIRROR, B_MOMENTUM, B_PHASE, B_ROCKETS, B_SALVO, B_SHELL, B_STATIC, B_WARD, B_WIND,
   SHOCK_BASE_KEEP, STATIC_SHOCK_COOLDOWN_MS, PHASE_WINDOW_MS, ROCKET_FLIGHT_MS,
   REF_HIT_SPEED_FRACTION, REF_HIT_SPEED_MUL_CAP, applyHpLoss, isPhased,
   type ContactSkillResult, type HpLossKind, type HpLossResult, type IncomingSkillResult,
@@ -172,7 +172,11 @@ export function createBladeSkills(
     wardLava: 0,
     wardThunder: 0,
     wardChip: 0,
-    wardShockKeep: 0
+    wardShockKeep: 0,
+    bankPct: 0,
+    anchorResist: 0,
+    towerPct: 0,
+    thornsShare: 0
   }
   for (const id of ids) {
     const level = lv[id] as number
@@ -233,6 +237,20 @@ export function createBladeSkills(
         s.wardShockKeep = p.shockKeep
         break
       }
+      case 'bank_shot':
+        s.bankPct = applySkillMods(skillParams('bank_shot', level), mods.bank_shot).pct
+        s.banked = false
+        s.bankUsed = false
+        break
+      case 'anchor':
+        s.anchorResist = Math.min(0.8, applySkillMods(skillParams('anchor', level), mods.anchor).resist)
+        break
+      case 'tower_breaker':
+        s.towerPct = applySkillMods(skillParams('tower_breaker', level), mods.tower_breaker).pct
+        break
+      case 'thorns':
+        s.thornsShare = applySkillMods(skillParams('thorns', level), mods.thorns).share
+        break
     }
   }
   return s
@@ -266,6 +284,7 @@ export function outgoingSkillMul(
   out.lucky = false
   out.momentumStacks = 0
   out.clamped = false
+  out.bank = false
   const s = att.skills as SkillRuntime | undefined
   if (s === undefined || kind !== 'hit' || !(dmg > 0) || att.owner === def.owner) return 1
   let mul = 1
@@ -277,6 +296,11 @@ export function outgoingSkillMul(
     out.momentumStacks = s.stacks
     mul *= 1 + s.momentumPerStack * s.stacks
     if (s.stacks < s.momentumMaxStacks) s.stacks++
+  }
+  if ((s.has & B_BANK) !== 0 && launchedBladeId === att.id && s.banked === true && s.bankUsed !== true) {
+    mul *= 1 + s.bankPct
+    s.bankUsed = true
+    out.bank = true
   }
   if (mul > SKILL_HIT_MUL_CAP) {
     mul = SKILL_HIT_MUL_CAP

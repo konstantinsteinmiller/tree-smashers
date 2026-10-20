@@ -158,7 +158,7 @@ const blade = (id: number, owner: 'player' | 'npc', x = 100 + id * 60, y = 200, 
 })
 
 const ev = (kind: SkillEventKind, b: SkillVfxBlade, value = 1, skill: SkillId = 'guard_shell'): SkillEvent => ({
-  seq: 1, t: 0, kind, skill, bladeId: b.id, syncKey: b.id, owner: b.owner, x: b.x, y: b.y, value
+  seq: 1, t: 0, kind, skill, bladeId: b.id, syncKey: b.id, owner: b.owner, x: b.x, y: b.y, value, key: ''
 })
 
 const rockets = (n: number, targets: SkillVfxBlade[], now = 0): SkillRocketView[] =>

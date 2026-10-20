@@ -59,6 +59,14 @@ export function smasherSkillDescParams(skill: SmasherSkillDef, level: number, lo
       const p = applySkillMods(skillParams('static_charge', lv), skill.mods)
       return { chance: per(p.chance) }
     }
+    case 'bank_shot':
+      return { pct: per(applySkillMods(skillParams('bank_shot', lv), skill.mods).pct) }
+    case 'anchor':
+      return { pct: per(Math.min(0.8, applySkillMods(skillParams('anchor', lv), skill.mods).resist)) }
+    case 'tower_breaker':
+      return { pct: per(applySkillMods(skillParams('tower_breaker', lv), skill.mods).pct) }
+    case 'thorns':
+      return { pct: per(applySkillMods(skillParams('thorns', lv), skill.mods).share) }
   }
 }
 

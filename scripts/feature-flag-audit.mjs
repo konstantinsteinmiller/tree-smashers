@@ -56,7 +56,7 @@ export const FLAGS = {
       // storage keys (src/skills/skillKeys.ts)
       'smashers_skills', 'smashers_skill_loadout', 'smashers_skill_ui',
       // synthesised SFX (src/use/skills/skillSfx.ts)
-      'skill-shield', 'skill-rocket', 'skill-zap', 'skill-drumroll',
+      'skill-shield', 'skill-rocket', 'skill-zap', 'skill-drumroll', 'skill-crit', 'skill-whoosh', 'skill-boost',
       // component names (Vue keeps `__name` in production)
       'SkillPickerModal', 'SkillRevealOverlay', 'SkillsIntroScreen', 'SkillHudIcon',
       'SkillDropChip', 'SkillSlotTile', 'SkillIntroDemo', 'SkillTopUpButton', 'SkillIcon',
@@ -69,6 +69,8 @@ export const FLAGS = {
       'createBladeSkills', 'outgoingSkillMul', 'incomingSkill', 'onEnemyContact', 'teamSalvoPct', 'salvoDamage',
       'createSkillVfx', 'resetSkillVfx', 'tickSkillVfx', 'skillVfxEvent', 'renderSkillLayer', 'renderBladeSkillFx',
       'skillBladeAlpha', 'drawSkillGlyph',
+      'createSkillCallouts', 'pushSkillCallout', 'renderSkillCallouts', 'resetSkillCallouts', 'renderSkillFlavour',
+      'smasherSkillKey',
       // pokiMeasure category + dev globals
       /['"]skills['"],\s*['"](?:intro|reveal)['"]/, '__skillVfx',
       // per-smasher skill text (use/skills/smasherSkillText.ts, read by the team modal)
@@ -171,7 +173,10 @@ export function buildVariant({ mode, outDir, env: extra }) {
   // not the bytes that ship. `pnpm build:<mode>` has no NODE_ENV.
   delete env.NODE_ENV
   Object.assign(env, extra)
-  fs.rmSync(outDir, { recursive: true, force: true })
+  // Clean build into a dir that exists: Windows can hold a just-deleted
+  // folder briefly (EBUSY/ENOTEMPTY), so retry the rm, then recreate it.
+  fs.rmSync(outDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+  fs.mkdirSync(outDir, { recursive: true })
   return new Promise((resolve, reject) => {
     execFile(
       process.execPath,

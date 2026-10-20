@@ -55,11 +55,12 @@ const watchAd = async () => {
 </script>
 
 <template lang="pug">
-  button.league-topup(
+  button.league-topup.ui-btn.ui-btn--ad(
     v-if="isVisible"
     type="button"
     data-league="fights-topup"
     data-placement="league_fights"
+    :class="{ 'ui-shine': !pending }"
     :disabled="pending"
     :aria-label="t('league.topUpAria', { n: AD_BONUS }, AD_BONUS)"
     @click.stop="watchAd"
@@ -75,32 +76,17 @@ const watchAd = async () => {
 </template>
 
 <style scoped lang="sass">
-// Rewarded-video CTA: ad tone (sky), same look as .ui-btn--ad.
+// Rewarded-video CTA: the .ui-btn--ad recipe (sky, thick lip, press sink,
+// springy release) plus the shine sweep — an ad offer that is available
+// RIGHT NOW should look alive. Disabled while the ad is pending.
 .league-topup
-  position: relative
-  display: inline-flex
-  align-items: center
-  gap: 0.3rem
-  min-height: 2.75rem
-  padding: 0.2rem 0.75rem
-  border-radius: var(--radius-ui)
-  border: 2px solid var(--color-ink)
-  background-color: var(--color-sky-500)
-  box-shadow: inset 0 2px 0 var(--color-sky-300), inset 0 -3px 0 var(--color-sky-700), 0 3px 0 var(--color-ink)
-  color: var(--color-cream-50)
-  font-size: 0.9rem
-  font-weight: 900
+  padding: 0.25rem 0.85rem 0.35rem
+  font-size: 0.92rem
   white-space: nowrap
-  cursor: pointer
 
   img
     width: 1.5rem
     height: 1.5rem
     object-fit: contain
-
-  &:active:not(:disabled)
-    transform: translateY(2px) scale(0.97)
-  &:focus-visible
-    outline: 3px solid var(--ui-focus)
-    outline-offset: 2px
+    filter: drop-shadow(0 1.5px 0 var(--color-ink))
 </style>

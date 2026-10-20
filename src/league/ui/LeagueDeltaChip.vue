@@ -2,12 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isLowQuality } from '@/use/useQuality'
+import { playUiSfx } from '@/use/uiSfx'
 
 /**
  * ─── League LP delta chip (LG5a) ────────────────────────────────────────────
  *
- * "+24 LP" in green, "−12 LP" in red, "±0 LP" in wood brown. With `animate` the
- * number counts up from 0 and the chip pops in; low render quality and
+ * "+24 LP" in green, "−12 LP" in red, "±0 LP" in steel, on an angled plate.
+ * With `animate` the number counts up from 0 (a pitched tick per step) and
+ * the chip slams in; low render quality and
  * prefers-reduced-motion show the final value at once. Screen readers get
  * the final value only (the ticking text is aria-hidden).
  */
@@ -44,7 +46,12 @@ const run = () => {
   const step = (now: number) => {
     const k = Math.min(1, (now - start) / dur)
     const e = 1 - Math.pow(1 - k, 3)
-    shown.value = Math.round(from + (to - from) * e)
+    const v = Math.round(from + (to - from) * e)
+    if (v !== shown.value) {
+      shown.value = v
+      // A pitched tick per visible step (the uiSfx throttle caps the rate).
+      playUiSfx('tick', { pitch: 1 + e * 0.5 })
+    }
     if (k < 1) raf = requestAnimationFrame(step)
   }
   raf = requestAnimationFrame(step)
@@ -75,32 +82,54 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
 </template>
 
 <style scoped lang="sass">
+// Angled tag (a parallelogram, not a pill): the plate is skewed, the number
+// stays upright. It SLAMS in (big → overshoot → settle) while the number
+// counts, each step a tiny pitched tick. Hard ink edge + drop, flat stripes.
 .ldc
+  --ldc-bg: var(--color-royal-500)
+  --ldc-lip: var(--color-royal-300)
+  --ldc-band: var(--color-royal-700)
+  position: relative
   display: inline-flex
   align-items: center
   gap: 0.25rem
-  padding: 0.2rem 0.6rem 0.2rem 0.45rem
-  border-radius: 999px
-  border: 2px solid var(--color-ink)
-  box-shadow: 0 3px 0 var(--color-ink)
+  padding: 0.22rem 0.7rem 0.26rem 0.55rem
   font-weight: 900
   line-height: 1
   white-space: nowrap
   font-variant-numeric: tabular-nums
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
+  isolation: isolate
+
+  // The skewed plate.
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.35rem
+    background-color: var(--ldc-bg)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 2px 0 var(--ldc-lip), inset 0 -3px 0 var(--ldc-band), 0 3px 0 var(--color-ink)
+    transform: skewX(-12deg)
 
 .ldc__text
-  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 
 .ldc--up
-  background-color: var(--color-leaf-500)
-  box-shadow: inset 0 2px 0 var(--color-leaf-300), 0 3px 0 var(--color-ink)
+  --ldc-bg: var(--color-leaf-500)
+  --ldc-lip: var(--color-leaf-300)
+  --ldc-band: var(--color-leaf-700)
 .ldc--down
-  background-color: var(--color-berry-500)
-  box-shadow: inset 0 2px 0 var(--color-berry-300), 0 3px 0 var(--color-ink)
+  --ldc-bg: var(--color-berry-500)
+  --ldc-lip: var(--color-berry-300)
+  --ldc-band: var(--color-berry-700)
+// No change: cold steel, not a colour that means anything.
 .ldc--flat
-  background-color: var(--color-wood-500)
-  box-shadow: inset 0 2px 0 var(--color-wood-300), 0 3px 0 var(--color-ink)
+  --ldc-bg: var(--color-steel-500)
+  --ldc-lip: var(--color-steel-300)
+  --ldc-band: var(--color-steel-600)
 
 .ldc--sm
   font-size: 0.75rem
@@ -108,21 +137,30 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
   font-size: 0.95rem
 .ldc--lg
   font-size: 1.35rem
-  padding: 0.3rem 0.85rem 0.3rem 0.6rem
+  padding: 0.3rem 0.95rem 0.34rem 0.7rem
+  .ldc__text
+    text-shadow: var(--ui-stroke)
 
 .ldc__arrow
   display: inline-block
   width: 0.8em
   height: 0.8em
-  filter: drop-shadow(0 1px 0 var(--color-ink))
+  filter: drop-shadow(0 1.5px 0 var(--color-ink))
 
 .ldc--pop
-  animation: ldc-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both
+  animation: ldc-slam 0.46s cubic-bezier(0.2, 1.5, 0.4, 1) both
+  animation-delay: var(--ldc-delay, 0ms)
 
-@keyframes ldc-pop
-  from
-    transform: scale(0.4)
+@keyframes ldc-slam
+  0%
+    transform: scale(2) rotate(-8deg)
     opacity: 0
+  55%
+    transform: scale(0.9) rotate(2deg)
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
 
 @media (prefers-reduced-motion: reduce)
   .ldc--pop

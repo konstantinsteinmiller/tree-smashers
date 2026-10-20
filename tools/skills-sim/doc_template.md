@@ -97,7 +97,7 @@ skills"), and makes the per-stage choice the decision: 2 of 10, swapped between 
   (`STOP_THRESHOLD = 0.25`). A resting blade deals **zero** damage.
 - **Damage per contact entry** (`resolveCollision`, one roll per side per contact —
   `CONTACT_REARM_MS = 50`):
-  `dmg = closingSpeed · atkMul · (crit ? 1.25 : 1) · wA / (wB · defMul) · DAMAGE_SCALE(1.4) · speedAdv · thunderCombo`.
+  `dmg = closingSpeed · atkMul · (crit ? 1.25 : 1) · wA / (wB · defMul) · DAMAGE_SCALE(1.4) · speedAdv`.
   `defMul` is ignored on positional crits; Piercer keeps only 25 % of the defender's
   defence bonus, Star 75 %; Star also has a hidden 8 % lucky crit. (`damage-calculation-physics.md`
   predates two changes — closing speed instead of raw speed, and `DAMAGE_SCALE` 1 → 1.4;
@@ -107,8 +107,8 @@ skills"), and makes the per-stage choice the decision: 2 of 10, swapped between 
   player (level 6, see §3.2): Star/Balanced has **48 HP**, a clean hit on the Quad/Tanky
   enemy (82 HP) does **~29**. Fights are short and swingy: most regular stages end in
   3–25 turns.
-- **Hazards.** Lava wall: `ceil(2.5 % maxHp)` per bounce; forest wall: +1 HP; shock wall /
-  bouncer: −90 % speed (250 ms per-blade cooldown); thunder boss aura: 1 HP/s in range;
+- **Hazards.** Lava wall: `ceil(2.5 % maxHp)` per bounce; forest wall: +1 HP; Frost Lock
+  cold touch (stage 101+ bosses): −90 % speed (250 ms per-blade gate); thunder boss aura: 1 HP/s in range;
   Spiky chip: `max(1, 2.5 % victim maxHp)` per pair per 150 ms (outside the contact gate).
 - **Bosses.** Every 5th stage; abilities ghost / split / partners / healers /
   child-emitter / stat-switch / life-leech / thunder (`initGame` wiring). Consecutive boss
@@ -151,8 +151,8 @@ it:
   acceleration ramp (`ACCEL_FRAMES 28`), decay incl. ice, low-speed brake and no-hit drag,
   circle walls with wall boost + bounce decay, bouncers, all-pairs collision incl. friendly
   fire, elastic bounce, contact re-arm gate, hug-break, back-hit crits + crit cooldown,
-  Star lucky crit, Piercer/Star defence rules, speed advantage, thunder combo, anti-draw,
-  Spiky chip, lava/forest/shock/thunder-aura hazards, powerups (stage ≥ 2), turn-order
+  Star lucky crit, Piercer/Star defence rules, speed advantage, anti-draw,
+  Spiky chip, lava/forest/thunder-aura hazards, powerups (stage ≥ 2), turn-order
   switching, NPC AI (`launchNpc` incl. ally-blocking lanes), every boss ability (ghost
   twin + damage link, split children + invulnerability, partners/healers groups + healing,
   child-emitter, stat-switch phases, life-leech, thunder aura, teleporter skin).
@@ -169,9 +169,12 @@ it:
   income (§6.3) went into those 3 parts. Robustness runs use the "lockstep" level (mean
   enemy part level of nearby regular stages) and other builds (§3.7).
 - **Stages:** 13 representative stages covering every arena and boss type:
-  15 (ghost boss), 17 (lava, 3 enemies), 30 (life-leech boss), 31 (shock), 35 (split
+  15 (ghost boss), 17 (lava, 3 enemies), 30 (life-leech boss), 31 (forest), 35 (split
   boss), 49 (forest, 3), 50 (4 healers), 55 (child-emitter), 77 (lava), 80 (stat-switch
-  boss), 95 (partners + thunder boss), 99 (thunder arena, 4 enemies), 100 (4 healers).
+  boss), 95 (partners + thunder boss), 99 (lava, 4 enemies), 100 (4 healers).
+  (Stages 11, 14, 31 and 99 were shock/thunder arenas when the v1–v8 numbers below were
+  measured; those arenas are gone — 11/14/31 are forest, 99 is lava — so re-run before
+  quoting their per-stage figures.)
 - **Noise control:** common random numbers (identical seeds per stage across all configs;
   skill procs draw from a **separate** RNG stream so they don't shift physics/AI rolls),
   alternating first turn. "worst+2SE" columns use a deliberately conservative standard
@@ -327,7 +330,7 @@ Win rate of the full battle (both sides mortal), same seeds:
 Skills now arrive at stage 10, so the early stages were checked separately: every single
 skill and every pair at L1, L3 and L5 (a player at stage 10–20 cannot own more — the first
 levels cost 150–350 coins against a stage win of 140–500), default team at the economic part
-level, stages 10 (split boss), 11 (shock + thunder boss), 12 (lava), 13 (ice), 14 (thunder),
+level, stages 10 (split boss), 11 (forest + thunder boss), 12 (lava), 13 (ice), 14 (forest),
 15 (ghost boss), 17 (lava) and 20 (partners boss). Slot 2 only opens at stage 20, so the pair
 rows before 20 are a worst case that cannot happen in the game — as are skills that unlock
 later than the stage shown (all ten are tested everywhere).
@@ -362,7 +365,7 @@ Conventions for every card:
 Inside `resolveCollision`, for each direction A→B, **in this order**:
 
 1. Base damage exactly as today (closing speed, crits, Piercer/Star defence, speed
-   advantage, thunder combo, split-sibling 25 %).
+   advantage, split-sibling 25 %).
 2. **Attacker skills** (only if B is an enemy of A): Lucky Edge roll (skipped if the hit is
    already a positional or Star-lucky crit) → Momentum (`1 + k·stacks`, then `stacks + 1`).
    Clamp the product of attacker skill multipliers to **`SKILL_HIT_MUL_CAP = 2.2`**.
@@ -939,15 +942,13 @@ export interface BladeSkills {
 5. **`launchNpc`:** increment `npcTurnIndex`; pick from
    `living.filter(b => b.stunnedForTurn !== npcTurnIndex)`; if that list is empty →
    stun-skip: glyph popup over the stunned blades, `passToPlayer()`, same bookkeeping as the
-   `npc_launched → player_turn` transition (stat-switch phase back to `'defense'`,
-   `comboState.clear()`).
+   `npc_launched → player_turn` transition (stat-switch phase back to `'defense'`).
 6. **`bounceOffWalls` (≈2974):** after `blade.wallBounceCount++` → `onOwnBounce(blade)`
    (Momentum, only if `launchedBladeId === blade.id`). Lava branch: replace the direct
    `blade.hp = …` with `applyHpLoss(blade, lavaDmg, 'lava')` (the number shown is the
-   post-ward, post-shield amount). Shock branch: `const keep = 0.1 + 0.9 ·
-   hazardShockKeep(blade)`; `vx *= keep; vy *= keep`.
-7. **`bounceOffBouncers` (≈3092):** after the reflect → `onOwnBounce(blade)`; shock keep
-   as above.
+   post-ward, post-shield amount). (No shock branch any more: Hazard Ward's
+   `shockKeep` only softens the Frost Lock cold touch, `frostTouchKeep` in bossTraits.ts.)
+7. **`bounceOffBouncers` (≈3092):** after the reflect → `onOwnBounce(blade)`.
 8. **`resolveCollision` (≈3142)** inside `if (contactArmed)`, after `dmgAtoB`/`dmgBtoA` are
    computed and **before** the anti-draw block — the §5 order; the anti-draw survivability
    check becomes `hp + (skills?.shield ?? 0)`. Fast path: skip everything when

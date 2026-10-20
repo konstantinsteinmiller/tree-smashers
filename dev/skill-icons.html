@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--
+  DEV-ONLY reference sheet of the smasher skill art (src/use/skills/smasherSkillArt.ts):
+  the 36 skill icons as drawn in battle, then the 15 flavour particle shapes
+  and one proc callout per side. The art desk paints from this sheet.
+
+    pnpm dev   →   http://localhost:5173/dev/skill-icons.html
+          ?key=1     magenta chroma background, no labels (painter reference)
+
+  Vite serves every .html under the root in dev; nothing here ships.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tree Smashers — skill icons (dev)</title>
+  <style>
+      html, body { margin: 0; background: #1a351d; color: #fdf2d8; font: 12px system-ui, sans-serif; }
+      canvas { display: block; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module" src="/src/dev/skillIconSheet.ts"></script>
+</body>
+</html>

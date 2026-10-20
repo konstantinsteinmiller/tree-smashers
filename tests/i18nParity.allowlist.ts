@@ -18,12 +18,20 @@
 export const BRAND_KEYS: readonly string[] = [
   'gameName', // "Tree Smashers" — the product name is never translated
   'pvp.shareTitle', // "Tree Smashers PvP"
+  'pvp.short', // "PvP" — the HUD button's tiny label; every locale's own pvp.title already uses the abbreviation
   'vs', // "VS" — universal fight-card token
   'leaderboard.rank', // "#"
+  'skills.callout.heal', // "+{n} HP" — the battle proc callout; HP is the universal gaming hit-point token
   'rewardReveal.minutes', // "{n} min" — the SI-style minute abbreviation most Latin-script locales share
   'sfc.BGSkinModal.bg.skins.prism', // "K-Pop" — a genre name
   // smasher names (proper nouns; Latin-script locales keep them, others transliterate)
-  'smasher_bramble', 'smasher_thumper', 'smasher_grizzle', 'smasher_chomper', 'smasher_ramsey', 'smasher_vixie', 'smasher_shellby', 'smasher_pecks', 'smasher_mossy', 'smasher_zippy', 'smasher_hootsie', 'smasher_tuskar'
+  'smasher_bramble', 'smasher_thumper', 'smasher_grizzle', 'smasher_chomper', 'smasher_ramsey', 'smasher_vixie', 'smasher_shellby', 'smasher_pecks', 'smasher_mossy', 'smasher_zippy', 'smasher_hootsie', 'smasher_tuskar',
+  // batch A smasher names
+  'smasher_brock', 'smasher_bandit', 'smasher_croaky', 'smasher_slinky', 'smasher_digger', 'smasher_snooze', 'smasher_pongo', 'smasher_pincer', 'smasher_rolly', 'smasher_prickles', 'smasher_newtie', 'smasher_gastro',
+  // batch B smasher names
+  'smasher_humphrey', 'smasher_boxa', 'smasher_howler', 'smasher_snapjaw', 'smasher_leon', 'smasher_antlo', 'smasher_gronk', 'smasher_bambam', 'smasher_buford', 'smasher_horace', 'smasher_wallow', 'smasher_rumble',
+  // batch C smasher names
+  'smasher_waddles', 'smasher_flamenca', 'smasher_gulpy', 'smasher_paddles', 'smasher_inky', 'smasher_pinchy', 'smasher_puffton', 'smasher_nardo', 'smasher_fangsy', 'smasher_camo', 'smasher_curly', 'smasher_blubbo'
 ]
 
 /**
@@ -49,7 +57,7 @@ export const PENDING_TRANSLATION: readonly string[] = []
 export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // ── The original eight — reviewed legacy values (cognates, loanwords,
   //    gaming abbreviations) when the parity test was introduced ──
-  de: [
+  de: [ /* batch B species: true cognates */ 'smasher_howler_species', 'smasher_gronk_species', 'smasher_bambam_species', 'smasher_buford_species',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
     'smasher_skill_stampede',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
@@ -67,7 +75,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
 
  // same "MAX" badge as sfc.BattlePass.max
   ],
-  es: [
+  es: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -80,7 +88,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.OptionsModal.general',
     'sfc.OptionsModal.audio'
   ],
-  fr: [
+  fr: [ /* batch B species: true cognates */ 'smasher_snapjaw_species', 'smasher_leon_species', 'smasher_bambam_species', 'smasher_buford_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -113,7 +121,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // ── New locales: add entries in the translator's batch ──
   // pl: loanwords / proper nouns Polish players use as-is (Arena, Honor, Demon, Tornado, Tsunami,
   //     Ninja, Kraken, Taiko, Hydra, Teleporter), genre names, "Log", "D{n}" (Dzień)
-  pl: [
+  pl: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -129,7 +137,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     Ninja, Kraken, Taiko, Hydra, Teleporter, Scorpion, Cactus, Piranha, Popular), the proper
   //     noun Wulf, genre names (Fidget, Brainrot, Steampunk), "Log", "MAX", "Lv." (hu),
   //     "D{n}" (den / dan / diena)
-  cs: [
+  cs: [ /* batch C species: true cognate */ 'smasher_camo_species', /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
@@ -139,7 +147,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short', 'sfc.DailyRewards.dayShort',
  // skills: "Slot" — the Czech gaming term; "MAX" badge
   ],
-  hr: [
+  hr: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.demon', 'skins.tornado', 'skins.teleporter',
@@ -147,7 +155,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short',
     'sfc.DailyRewards.dayShort'
   ],
-  ro: [
+  ro: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -157,7 +165,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.InAppPurchaseShop.shop.popular',
  // skills: "Slot" — the Romanian gaming term
   ],
-  hu: [
+  hu: [ /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
@@ -166,7 +174,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
  // skills: "MAX" badge
   ],
-  lt: [
+  lt: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
     'sfc.SmasherTeamModal.statAtk','labBadge',
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
@@ -175,7 +183,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // it / pt-BR / pt-PT / ca / gl / nl: cognates and loanwords that are the native word (Arena,
   //     Lava, Psi, Tornado, Tsunami, Ninja, Kraken, Taiko, Prisma, Chip…), proper nouns (Wulf),
   //     genre names (Fidget, Brainrot, Steampunk), "D{n}" (dia / día / dag), "Popular", "MAX"
-  it: [
+  it: [ /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -185,7 +193,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.max', 'sfc.OptionsModal.audio', 'sfc.CombatLog.short',
  // skills: "Slot" and "MAX" as players say them
   ],
-  'pt-BR': [
+  'pt-BR': [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -198,7 +206,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
-  'pt-PT': [
+  'pt-PT': [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -211,7 +219,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
-  ca: [
+  ca: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -223,7 +231,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.OptionsModal.general'
   ],
-  gl: [
+  gl: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -234,7 +242,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular'
   ],
-  nl: [
+  nl: [ /* batch C species: true cognate */ 'smasher_blubbo_species', /* batch B species: true cognates */ 'smasher_howler_species', 'smasher_gronk_species', 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -251,7 +259,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   ],
   // tr / az / uz / lv / vi / el: loanwords that are the native word (Arena, Lava, Metal, Tsunami),
   //     proper nouns (Wulf, Hydra, Kraken), Ninja, genre names (Brainrot, Steampunk), "Lv." (vi)
-  tr: [
+  tr: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
@@ -260,14 +268,14 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'pvp.arena', 'elements.metal', 'skins.wulf', 'skins.tsunami', 'skins.ninja', 'skins.kraken',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  az: [
+  az: [ /* batch B species: true cognates */ 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'elements.metal', 'skins.wulf', 'skins.ninja', 'skins.kraken',
     'sfc.BGSkinModal.bg.skins.nebula'
   ],
-  uz: [
+  uz: [ /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -276,7 +284,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.ninja', 'skins.kraken', 'sfc.BGSkinModal.bg.skins.nebula'
   ],
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
-  lv: ['league.lp', 'league.lpProgress', 'labBadge', 'arenas.lava', 'skins.wulf', 'sfc.BGSkinModal.bg.skins.nebula'],
+  lv: [ /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species','league.lp', 'league.lpProgress', 'labBadge', 'arenas.lava', 'skins.wulf', 'sfc.BGSkinModal.bg.skins.nebula'],
   vi: [
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
@@ -292,7 +300,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     Piranha, Teleporter), proper nouns (Hydra), genre names (Fidget, Brainrot, Steampunk), "MAX",
   //     "HP" (hederspoäng / honorpoentoj), "Log" (da/id), "Lv." and "Battle Pass" (id — the terms
   //     Indonesian players use)
-  sv: [
+  sv: [ /* batch C species: true cognate */ 'smasher_flamenca_species', /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species', 'smasher_buford_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -309,7 +317,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BattlePass.honorAbbr',
  // skills: "MAX" badge
   ],
-  nb: [
+  nb: [ /* batch C species: true cognate */ 'smasher_flamenca_species', /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species', 'smasher_buford_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -321,7 +329,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.dark', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  da: [
+  da: [ /* batch C species: true cognate */ 'smasher_flamenca_species', /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species', 'smasher_buford_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -336,7 +344,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short'
   ],
-  fi: [
+  fi: [ /* batch B species: true cognates */ 'smasher_gronk_species', 'smasher_bambam_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates
@@ -346,7 +354,7 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'elements.psi', 'skins.prisma', 'skins.dark', 'skins.ninja', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  id: [
+  id: [ /* batch B species: true cognates */ 'smasher_bambam_species', 'smasher_buford_species',
     // "Smasher" — the loanword this locale keeps for the unit name
     'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // smasher team UI: gaming abbreviations / the game's own unit name / cognates

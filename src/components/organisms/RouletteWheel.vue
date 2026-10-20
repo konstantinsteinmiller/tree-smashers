@@ -14,6 +14,7 @@ import { isNative } from '@/use/useUser'
 import { isLowQuality } from '@/use/useQuality'
 import { preloadRouletteArt, rouletteArtReady as art, rouletteArtSrc as artSrc } from '@/use/useRouletteArt'
 import { prependBaseUrl } from '@/utils/function'
+import { playUiSfx } from '@/use/uiSfx'
 
 export interface RouletteResult {
   type: 'multiplier' | 'skin' | 'diamonds'
@@ -71,10 +72,10 @@ const { t } = useI18n()
 // Skins (5 + 5 + 1) and the jackpot sit on top of that 100.
 
 const MULTIPLIER_DEFS: { label: string; multiplier: number; color: string; count: number; weight: number }[] = [
-  { label: '0.75x', multiplier: 0.75, color: '#fdf2d8', count: 2, weight: 12.5 / 2 },
-  { label: '1x', multiplier: 1, color: '#b5e67a', count: 3, weight: 27.5 / 3 },
-  { label: '2x', multiplier: 2, color: '#c4ebff', count: 2, weight: 40 / 2 },
-  { label: '3x', multiplier: 3, color: '#ff9e93', count: 2, weight: 20 / 2 }
+  { label: '0.75x', multiplier: 0.75, color: '#eef5ff', count: 2, weight: 12.5 / 2 },
+  { label: '1x', multiplier: 1, color: '#c8f76a', count: 3, weight: 27.5 / 3 },
+  { label: '2x', multiplier: 2, color: '#c6f2ff', count: 2, weight: 40 / 2 },
+  { label: '3x', multiplier: 3, color: '#ffa3c4', count: 2, weight: 20 / 2 }
 ]
 
 /** Diamonds granted by the jackpot segment. */
@@ -109,7 +110,7 @@ const FEATURED_SKIN_WEIGHT = 3
 /** Other unowned skins drawn onto the skin roulette next to the featured one. */
 const SKIN_ROULETTE_OTHERS = 7
 // Cozy palette (tailwind.css tokens): leaf-300, cream-200, sky-200, berry-300, wood-300, plum-300, sun-200.
-const SKIN_ROULETTE_COLORS = ['#b5e67a', '#f7e3b8', '#c4ebff', '#ff9e93', '#deb07a', '#d7b0ff', '#fff0a8']
+const SKIN_ROULETTE_COLORS = ['#c8f76a', '#dbe8ff', '#c6f2ff', '#ffa3c4', '#a3bcff', '#e2b6ff', '#fff7a3']
 
 const skinSegment = (skin: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }, color: string, weight: number): Segment => ({
   kind: 'skin',
@@ -129,7 +130,7 @@ const buildSkinSegments = (): Segment[] => {
   const others = unowned.filter(s => s.modelId !== featuredId).sort(() => Math.random() - 0.5)
     .slice(0, SKIN_ROULETTE_OTHERS)
   const segs = others.map((s, i) => skinSegment(s, SKIN_ROULETTE_COLORS[i % SKIN_ROULETTE_COLORS.length]!, 1))
-  if (featured) segs.push(skinSegment(featured, '#ffc933', FEATURED_SKIN_WEIGHT))
+  if (featured) segs.push(skinSegment(featured, '#ffd21a', FEATURED_SKIN_WEIGHT))
   return segs.sort(() => Math.random() - 0.5)
 }
 
@@ -159,7 +160,7 @@ const buildSegments = (): Segment[] => {
   segments.push({
     kind: 'diamonds',
     label: String(jackpotDisplay.amount),
-    color: '#ffc933',
+    color: '#ffd21a',
     result: { type: 'diamonds', diamonds: DIAMOND_JACKPOT },
     weight: DIAMOND_JACKPOT_WEIGHT
   })
@@ -168,7 +169,7 @@ const buildSegments = (): Segment[] => {
   const normalSkins = unowned.filter(s => !s.isSpecial).sort(() => Math.random() - 0.5)
   const specialSkins = unowned.filter(s => s.isSpecial).sort(() => Math.random() - 0.5)
 
-  const skinColors = ['#d7b0ff', '#d7b0ff']
+  const skinColors = ['#e2b6ff', '#e2b6ff']
   const normalSlots = Math.min(2, normalSkins.length)
   for (let i = 0; i < normalSlots; i++) {
     const skin = normalSkins[i]!
@@ -187,7 +188,7 @@ const buildSegments = (): Segment[] => {
     segments.push({
       kind: 'skin',
       label: '',
-      color: '#d7b0ff',
+      color: '#e2b6ff',
       result: { type: 'skin', skin: { topPartId: special.topPartId, modelId: special.modelId } },
       imgSrc: modelImgPath(special.modelId),
       weight: 1
@@ -406,19 +407,19 @@ if (coinImg) whenLoaded(coinImg)
 // read CSS variables cheaply, so the hexes are repeated here). Flat fills only:
 // no gradients, no shadowBlur, no ctx.filter.
 const C = {
-  ink: '#3a2314',
-  wood700: '#6e4527',
-  wood600: '#8c5a32',
-  wood300: '#deb07a',
-  cream50: '#fffaf0',
-  cream200: '#f7e3b8',
-  leaf300: '#b5e67a',
-  sun200: '#fff0a8',
-  sun400: '#ffc933',
-  sun600: '#c98208',
-  sky200: '#c4ebff',
-  berry300: '#ff9e93',
-  plum300: '#d7b0ff'
+  ink: '#161a40',
+  wood700: '#2338a8',
+  wood600: '#2f4fd6',
+  wood300: '#a3bcff',
+  cream50: '#ffffff',
+  cream200: '#dbe8ff',
+  leaf300: '#c8f76a',
+  sun200: '#fff7a3',
+  sun400: '#ffd21a',
+  sun600: '#d98500',
+  sky200: '#c6f2ff',
+  berry300: '#ffa3c4',
+  plum300: '#e2b6ff'
 } as const
 
 /** Rotation the multiplier wedges cycle through: leaf / cream / sun / sky /
@@ -723,6 +724,14 @@ const tickPointer = (rotation: number, arc: number, now: number) => {
     tickBoundary = boundary
     tickPrevAt = tickAt
     tickAt = now
+    // A peg clicks past the pointer: one tiny tick, pitched by how fast the
+    // pegs are coming (fast = higher). uiSfx's own throttle (~42 ms) thins
+    // the blur of the first turns to a rattle, and the last slow clicks
+    // before the stop land one by one — the whole tension of a wheel. No
+    // Math.random in this path (see the REWARD LOGIC note): 'tick' has no
+    // pitch jitter.
+    const gap = tickAt - tickPrevAt
+    playUiSfx('tick', { pitch: gap < 60 ? 1.35 : gap < 140 ? 1.15 : 0.95 })
   }
   const v = pos - boundary
   const push = v > 0.7 ? -POINTER_MAX_DEG * ((v - 0.7) / 0.3) : 0
@@ -804,6 +813,7 @@ const spin = () => {
       const landed = segments.value[outcomeIndex]!.result
       lastResult.value = landed
       showWin.value = true
+      playUiSfx('reward')
 
       // Paid NOW, before any ad is offered — see the note on `emit`.
       grantResult(landed)
@@ -984,15 +994,15 @@ onUnmounted(() => {
           //- Flat wooden ticker with ink outline: plank tip + round cap + cream bolt.
           path(
             d="M20 55 L80 55 L50 148 Z"
-            fill="#a9733f"
-            stroke="#3a2314"
+            fill="#4570f0"
+            stroke="#161a40"
             stroke-width="6"
             stroke-linejoin="round"
           )
-          path(d="M50 70 L50 128" stroke="#c89058" stroke-width="5" stroke-linecap="round")
-          circle(cx="50" cy="44" r="38" fill="#8c5a32" stroke="#3a2314" stroke-width="6")
-          circle(cx="50" cy="44" r="26" fill="none" stroke="#fdf2d8" stroke-width="3" stroke-dasharray="7 6")
-          circle(cx="50" cy="44" r="11" fill="#fdf2d8" stroke="#3a2314" stroke-width="4")
+          path(d="M50 70 L50 128" stroke="#6f95ff" stroke-width="5" stroke-linecap="round")
+          circle(cx="50" cy="44" r="38" fill="#2f4fd6" stroke="#161a40" stroke-width="6")
+          circle(cx="50" cy="44" r="26" fill="none" stroke="#eef5ff" stroke-width="3" stroke-dasharray="7 6")
+          circle(cx="50" cy="44" r="11" fill="#eef5ff" stroke="#161a40" stroke-width="4")
       //- One-shot burst when the wheel stops.
       div.wheel-burst(v-if="showWin && !isLowQuality" aria-hidden="true")
         span.burst-ring
@@ -1012,7 +1022,7 @@ onUnmounted(() => {
       //- "Skip" link sits inline with the "Spin Again" CTA instead of
       //- stacking under it.
       div.flex.items-center.gap-4(v-if="showAdButton")
-        button.respin-btn.ui-btn.ui-btn--ad(
+        button.respin-btn.ui-btn.ui-btn--ad.ui-shine.ui-pop-in(
           class="text-sm sm:text-base"
           @click="onAdRespin"
         )
@@ -1036,6 +1046,32 @@ onUnmounted(() => {
 // Cozy flat style: wood, cream, ink outlines — no filter, no blur, no radial
 // gradients, every shadow 0-blur.
 
+// ─── Stage punches ──────────────────────────────────────────────────────────
+// The whole wheel kicks when a spin starts (a shove, then the release) and
+// thumps once when it lands. One-shot transforms on the static stage box —
+// the turning rotor is untouched.
+.wheel-stage.is-spinning
+  animation: wheel-kick 0.42s cubic-bezier(0.2, 1.4, 0.4, 1)
+
+.wheel-stage.is-won
+  animation: wheel-land 0.4s cubic-bezier(0.2, 1.6, 0.4, 1)
+
+@keyframes wheel-kick
+  0%
+    transform: none
+  30%
+    transform: scale(0.95) rotate(-2deg)
+  100%
+    transform: none
+
+@keyframes wheel-land
+  0%
+    transform: none
+  35%
+    transform: scale(1.06)
+  100%
+    transform: none
+
 // ─── Backdrop ───────────────────────────────────────────────────────────────
 
 .wheel-backdrop
@@ -1051,10 +1087,10 @@ onUnmounted(() => {
 .wheel-halo
   opacity: 0.85
   border-radius: 50%
-  background: rgba(255, 240, 168, 0.22)
+  background: rgba(69, 112, 240, 0.5)
 
 .wheel-rays
-  background: repeating-conic-gradient(from 0deg, rgba(255, 240, 168, 0.28) 0deg 6deg, rgba(255, 240, 168, 0) 6deg 22.5deg)
+  background: repeating-conic-gradient(from 0deg, rgba(255, 235, 59, 0.42) 0deg 6deg, rgba(255, 235, 59, 0) 6deg 22.5deg)
   // clipped to the halo disc instead of a radial mask
   clip-path: circle(50%)
   opacity: 0.7
@@ -1093,7 +1129,7 @@ onUnmounted(() => {
   animation: win-pulse 0.55s ease-in-out infinite alternate
 
 .win-glow
-  fill: rgba(255, 250, 240, 0.35)
+  fill: rgba(255, 255, 255, 0.35)
   stroke: var(--color-sun-400)
   stroke-width: 0.07
   stroke-linejoin: round
@@ -1346,6 +1382,9 @@ onUnmounted(() => {
   .wheel-rays, .wheel-halo, .bulb-group, .wheel-win
     animation: none !important
 
+.wheel-stage.is-low
+  animation: none !important
+
   .bulb-group
     opacity: 0
 
@@ -1353,7 +1392,7 @@ onUnmounted(() => {
     opacity: 1
 
 @media (prefers-reduced-motion: reduce)
-  .wheel-rays, .bulb-group
+  .wheel-rays, .bulb-group, .wheel-stage
     animation: none !important
 
   .g1, .g3

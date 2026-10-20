@@ -113,7 +113,6 @@ export const noteCampaignResult = (stage: Stage, result: 'win' | 'lose') => {
 export type TipId =
   | 'levelUp'
   | 'tankBreaker'
-  | 'teleporterShock'
   | 'teamMix'
   | 'arenaWall'
 
@@ -148,7 +147,6 @@ const GENERAL_TIP_CHANCE = 0.40
  */
 export const pickLoseScreenTip = (stage: Stage): TipPickResult => {
   const pool: TipId[] = []
-  if (stage.arenaType === 'shock') pool.push('teleporterShock')
   if (tankLossStreak.value >= 2) pool.push('tankBreaker')
   if (lossesOnStage.value >= 2) pool.push('levelUp')
   if (Math.random() < GENERAL_TIP_CHANCE) pool.push('arenaWall')

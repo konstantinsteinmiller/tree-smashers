@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
   burst?: boolean
   tone?: string
   count?: number
-}>(), { burst: false, tone: '#ffc933', count: 42 })
+}>(), { burst: false, tone: '#ffd21a', count: 42 })
 
 interface Piece { key: number; style: Record<string, string>; cls: string }
 const pieces = ref<Piece[]>([])
@@ -26,8 +26,8 @@ const reducedMotion = (): boolean => {
 }
 
 const build = (): Piece[] => {
-  // Cozy token colours: sky, berry, leaf, plum, cream + the prize tone.
-  const palette = ['#55bdf2', '#f26a5e', '#82cf4a', '#b67df2', '#fffaf0', props.tone, props.tone]
+  // Token colours (tailwind.css): sky, berry, leaf, plum, sun, ice + the prize tone.
+  const palette = ['var(--color-sky-400)', 'var(--color-berry-400)', 'var(--color-leaf-400)', 'var(--color-plum-400)', 'var(--color-sun-300)', 'var(--color-ice-50)', props.tone, props.tone]
   const out: Piece[] = []
   gen++
   for (let i = 0; i < props.count; i++) {
@@ -46,7 +46,7 @@ const build = (): Piece[] => {
     const fall = 70 + r() * 40
     out.push({
       key: gen * 1000 + i,
-      cls: i % 4 === 0 ? 'is-ribbon' : (i % 5 === 0 ? 'is-dot' : ''),
+      cls: i % 4 === 0 ? 'is-ribbon' : (i % 5 === 0 ? 'is-dot' : (i % 7 === 0 ? 'is-star' : '')),
       style: {
         left: `${x0}%`,
         top: `${y0}%`,
@@ -99,7 +99,9 @@ watch(() => props.burst, (b) => {
   animation-name: confetti-fly
   animation-timing-function: linear
   animation-fill-mode: both
-  box-shadow: inset 0 -0.12rem 0 rgba(58, 35, 20, 0.22)
+  // A thin navy edge, like every other toy in the box: crisp on the rays.
+  border: 1.5px solid var(--color-ink)
+  box-shadow: inset 0 -0.12rem 0 rgba(22, 26, 64, 0.22)
 
   &.is-ribbon
     width: 0.35rem
@@ -108,6 +110,12 @@ watch(() => props.burst, (b) => {
     width: 0.55rem
     height: 0.55rem
     border-radius: 50%
+  // A little flat star (clip-path drops the edge, so it is a pure colour chip).
+  &.is-star
+    width: 0.95rem
+    height: 0.95rem
+    border: 0
+    clip-path: polygon(50% 0, 62% 36%, 100% 38%, 70% 60%, 81% 100%, 50% 76%, 19% 100%, 30% 60%, 0 38%, 38% 36%)
 
 // Up to the peak, then a long fall with drift — two segments of one
 // keyframe track, eased per segment.

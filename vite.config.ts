@@ -550,7 +550,7 @@ export default defineConfig(({ mode, command }) => {
             '^(phase_step|guard_shell|second_wind|lucky_edge|homing_rockets|opening_salvo|momentum|hazard_ward|static_charge|mirror_plate)$',
             // ...and the members the engine calls on the skill port (named
             // in bracket form there, same reason as the trait port below).
-            '^(createBladeSkills|createSkillVfx|drawSkillGlyph|incomingSkill|onEnemyContact|outgoingSkillMul|renderBladeSkillFx|renderSkillLayer|resetSkillVfx|salvoDamage|skillBladeAlpha|skillVfxEvent|teamSalvoPct|tickSkillVfx)$',
+            '^(createBladeSkills|createSkillCallouts|createSkillVfx|drawSkillGlyph|incomingSkill|onEnemyContact|outgoingSkillMul|pushSkillCallout|renderBladeSkillFx|renderSkillCallouts|renderSkillFlavour|renderSkillLayer|resetSkillCallouts|resetSkillVfx|salvoDamage|skillBladeAlpha|skillVfxEvent|smasherSkillKey|teamSalvoPct|tickSkillVfx)$',
             // Same for the boss-trait glue behind `BOSSES100_BUILD` (event
             // kinds, trait names, the snowflake glyph) and the members the
             // engine calls on the trait port — the obfuscator rewrites

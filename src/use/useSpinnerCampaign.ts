@@ -31,9 +31,26 @@ export interface StageBladeConfig {
   shardTrait?: BossTrait
 }
 
-export type ArenaType = 'default' | 'boss' | 'lava' | 'ice' | 'forest' | 'thunder' | 'shock'
+export type ArenaType = 'default' | 'boss' | 'lava' | 'ice' | 'forest'
 
-export const ARENA_TYPES: ArenaType[] = ['default', 'boss', 'lava', 'ice', 'forest', 'thunder', 'shock']
+export const ARENA_TYPES: ArenaType[] = ['default', 'boss', 'lava', 'ice', 'forest']
+
+/** Arena types that existed in older builds and were retired ('thunder' combo
+ *  arena, 'shock' wall arena), mapped to the arena that replaced them. Old
+ *  saves, ghosts, league snapshots and PvP peers may still name them. */
+const RETIRED_ARENAS: Readonly<Record<string, ArenaType>> = { thunder: 'forest', shock: 'default' }
+
+/**
+ * Load-boundary guard: any arena name (persisted, received from a peer or
+ * a server snapshot) becomes a live {@link ArenaType}. Retired names map to
+ * their replacement, anything unknown to `fallback`. Pure and deterministic,
+ * so both PvP clients resolve the same arena.
+ */
+export function sanitizeArenaType(value: unknown, fallback: ArenaType = 'default'): ArenaType {
+  if (typeof value !== 'string') return fallback
+  if ((ARENA_TYPES as string[]).includes(value)) return value as ArenaType
+  return RETIRED_ARENAS[value] ?? fallback
+}
 
 export interface Stage {
   id: number
@@ -151,7 +168,7 @@ const BASE_STAGES: Stage[] = [
   s(6, 'stage_6', [
     e('piercer', 'speedy', 2, 1, 'teleporter'),
     e('round', 'tanky', 1, 2, 'galaxy')
-  ], 140, 45, { arenaType: 'shock' }),
+  ], 140, 45, { arenaType: 'forest' }),
   s(7, 'stage_7', [
     e('star', 'speedy', 2, 2, 'tornado'),
     e('triangle', 'speedy', 2, 1, 'thunder'),
@@ -173,7 +190,7 @@ const BASE_STAGES: Stage[] = [
   s(11, 'stage_11', [
     e('triangle', 'speedy', 3, 3, 'thunderstorm', 'thunder'),
     e('cushioned', 'tanky', 3, 3, 'shell')
-  ], 200, 65, { arenaType: 'shock' }),
+  ], 200, 65, { arenaType: 'forest' }),
   s(12, 'stage_12', [
     e('star', 'speedy', 4, 3, 'axe'),
     e('round', 'tanky', 3, 4, 'turtle'),
@@ -187,7 +204,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 4, 4, 'ice'),
     e('triangle', 'speedy', 4, 3, 'eagle'),
     e('quadratic', 'tanky', 3, 3, 'chip')
-  ], 230, 70, { arenaType: 'thunder' }),
+  ], 230, 70, { arenaType: 'forest' }),
   // 15 — GHOST boss (archetype 3)
   s(15, 'stage_15', [
     e('triangle', 'speedy', 8, 10, 'snake', 'ghost')
@@ -209,7 +226,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 6, 5, 'ice'),
     e('triangle', 'speedy', 5, 5, 'salamaner'),
     e('quadratic', 'tanky', 5, 5, 'mysticaleye')
-  ], 280, 85, { arenaType: 'thunder' }),
+  ], 280, 85, { arenaType: 'forest' }),
   // 20 — PARTNERS boss (archetype 4)
   s(20, 'stage_20', [
     e('cushioned', 'tanky', 5, 3, 'castle', 'partners'),
@@ -227,7 +244,7 @@ const BASE_STAGES: Stage[] = [
     e('triangle', 'speedy', 6, 6, 'eagle'),
     e('piercer', 'speedy', 3, 2, 'teleporter'),
     e('round', 'tanky', 6, 7, 'galaxy')
-  ], 320, 95, { arenaType: 'shock' }),
+  ], 320, 95, { arenaType: 'ice' }),
   s(23, 'stage_23', [
     e('star', 'balanced', 7, 8, 'blades'),
     e('quadratic', 'tanky', 7, 8, 'prisma')
@@ -268,7 +285,7 @@ const BASE_STAGES: Stage[] = [
   s(31, 'stage_31', [
     e('triangle', 'speedy', 12, 9, 'phoenix'),
     e('quadratic', 'tanky', 9, 9, 'angelic')
-  ], 430, 125, { arenaType: 'shock', bouncers: 1 }),
+  ], 430, 125, { arenaType: 'forest', bouncers: 1 }),
   s(32, 'stage_32', [
     e('star', 'speedy', 10, 9, 'axe'),
     e('cushioned', 'tanky', 9, 10, 'gear'),
@@ -304,7 +321,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 12, 11, 'ice'),
     e('triangle', 'speedy', 11, 11, 'eagle'),
     e('quadratic', 'tanky', 11, 11, 'chip')
-  ], 510, 150, { arenaType: 'thunder' }),
+  ], 510, 150, { arenaType: 'ice' }),
   // 40 — GHOST boss
   s(40, 'stage_40', [
     e('triangle', 'tanky', 22, 20, 'salamaner', 'ghost')
@@ -312,7 +329,7 @@ const BASE_STAGES: Stage[] = [
   s(41, 'stage_41', [
     e('star', 'speedy', 15, 18, 'blades'),
     e('triangle', 'balanced', 13, 15, 'snake')
-  ], 520, 155, { arenaType: 'shock' }),
+  ], 520, 155, { arenaType: 'forest' }),
   s(42, 'stage_42', [
     e('star', 'speedy', 13, 14, 'axe'),
     e('cushioned', 'tanky', 12, 15, 'gear'),
@@ -336,7 +353,7 @@ const BASE_STAGES: Stage[] = [
   s(46, 'stage_46', [
     e('star', 'speedy', 14, 13, 'tornado'),
     e('triangle', 'speedy', 13, 14, 'eagle')
-  ], 560, 170, { arenaType: 'shock', bouncers: 2 }),
+  ], 560, 170, { arenaType: 'forest', bouncers: 2 }),
   s(47, 'stage_47', [
     e('star', 'speedy', 14, 14, 'axe'),
     e('cushioned', 'tanky', 13, 14, 'gear')
@@ -363,7 +380,7 @@ const BASE_STAGES: Stage[] = [
   s(51, 'stage_51', [
     e('star', 'speedy', 15, 14, 'tornado'),
     e('quadratic', 'tanky', 14, 15, 'chip')
-  ], 600, 180, { arenaType: 'shock' }),
+  ], 600, 180, { arenaType: 'ice' }),
   s(52, 'stage_52', [
     e('star', 'speedy', 15, 15, 'axe'),
     e('triangle', 'speedy', 15, 14, 'snake'),
@@ -377,7 +394,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 16, 15, 'ice'),
     e('triangle', 'speedy', 15, 16, 'eagle'),
     e('quadratic', 'tanky', 15, 15, 'mysticaleye')
-  ], 640, 190, { arenaType: 'thunder' }),
+  ], 640, 190, { arenaType: 'lava' }),
   // 55 — CHILD-EMITTER boss
   s(55, 'stage_55', [
     e('round', 'tanky', 25, 30, 'dark', 'child-emitter')
@@ -399,7 +416,7 @@ const BASE_STAGES: Stage[] = [
   s(59, 'stage_59', [
     e('star', 'speedy', 17, 16, 'ice'),
     e('triangle', 'speedy', 16, 17, 'eagle')
-  ], 680, 205, { arenaType: 'thunder' }),
+  ], 680, 205, { arenaType: 'forest' }),
   // 60 — SPLIT boss
   s(60, 'stage_60', [
     e('quadratic', 'tanky', 26, 29, 'mysticaleye', 'split')
@@ -408,7 +425,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 17, 17, 'blades'),
     e('triangle', 'speedy', 17, 17, 'snake'),
     e('cushioned', 'tanky', 17, 17, 'gear')
-  ], 690, 210, { arenaType: 'shock', bouncers: 1 }),
+  ], 690, 210, { arenaType: 'ice', bouncers: 1 }),
   s(62, 'stage_62', [
     e('star', 'speedy', 18, 17, 'axe'),
     e('round', 'tanky', 17, 21, 'bear')
@@ -421,7 +438,7 @@ const BASE_STAGES: Stage[] = [
   s(64, 'stage_64', [
     e('star', 'speedy', 18, 23, 'ice'),
     e('triangle', 'speedy', 23, 17, 'salamaner')
-  ], 730, 220, { arenaType: 'thunder' }),
+  ], 730, 220, { arenaType: 'lava' }),
   // 65 — GHOST boss
   s(65, 'stage_65', [
     e('star', 'balanced', 34, 28, 'reddragon', 'ghost')
@@ -455,7 +472,7 @@ const BASE_STAGES: Stage[] = [
   s(71, 'stage_71', [
     e('star', 'speedy', 20, 19, 'blades'),
     e('triangle', 'speedy', 26, 24, 'life-leech', 'life-leech')
-  ], 780, 235, { arenaType: 'shock' }),
+  ], 780, 235, { arenaType: 'forest' }),
   s(72, 'stage_72', [
     e('star', 'speedy', 20, 20, 'axe'),
     e('cushioned', 'tanky', 19, 20, 'gear'),
@@ -481,7 +498,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 21, 20, 'ice'),
     e('triangle', 'speedy', 20, 21, 'salamaner'),
     e('quadratic', 'tanky', 20, 20, 'chip')
-  ], 830, 250, { arenaType: 'thunder' }),
+  ], 830, 250, { arenaType: 'ice' }),
   s(77, 'stage_77', [
     e('star', 'speedy', 21, 21, 'axe'),
     e('piercer', 'speedy', 20, 21, 'scorpion')
@@ -494,7 +511,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 22, 21, 'tornado'),
     e('triangle', 'speedy', 21, 22, 'eagle'),
     e('quadratic', 'tanky', 21, 21, 'mysticaleye')
-  ], 870, 260, { arenaType: 'thunder' }),
+  ], 870, 260, { arenaType: 'lava' }),
   // 80 — STAT-SWITCH boss
   s(80, 'stage_80', [
     e('cushioned', 'tanky', 36, 32, 'boulder', 'stat-switch')
@@ -544,7 +561,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 25, 24, 'ice'),
     e('triangle', 'speedy', 24, 25, 'salamaner'),
     e('quadratic', 'tanky', 24, 24, 'chip')
-  ], 990, 295, { arenaType: 'thunder' }),
+  ], 990, 295, { arenaType: 'forest' }),
   // 90 — GHOST boss
   s(90, 'stage_90', [
     e('star', 'speedy', 45, 48, 'reddragon', 'ghost')
@@ -581,7 +598,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 27, 26, 'tornado'),
     e('triangle', 'speedy', 27, 26, 'snake'),
     e('cushioned', 'tanky', 26, 27, 'gear')
-  ], 1080, 320, { arenaType: 'shock' }),
+  ], 1080, 320, { arenaType: 'ice' }),
   s(97, 'stage_97', [
     e('star', 'speedy', 27, 27, 'axe'),
     e('piercer', 'speedy', 26, 27, 'scorpion'),
@@ -597,7 +614,7 @@ const BASE_STAGES: Stage[] = [
     e('triangle', 'speedy', 28, 27, 'phoenix'),
     e('quadratic', 'tanky', 27, 28, 'angelic'),
     e('cushioned', 'balanced', 27, 27, 'mountain')
-  ], 1150, 340, { arenaType: 'thunder' }),
+  ], 1150, 340, { arenaType: 'lava' }),
   // 100 — HEALERS boss (grand finale)
   s(100, 'stage_100', [
     e('cushioned', 'balanced', 29, 32, 'mountain', 'healers'),
@@ -747,6 +764,42 @@ export const BOTTOM_UPGRADE_BONUS: Record<BottomPartId, { speed: number; decay: 
   speedy: { speed: 0.09, decay: 0.00015, hp: 1 },  // leans into speed
   tanky: { speed: 0.02, decay: 0.00020, hp: 4 },  // leans into survival
   balanced: { speed: 0.04, decay: 0.00018, hp: 2 }   // balanced
+}
+
+// ─── Legacy-part NPC compensation (part-level balance pass) ─────────────────
+//
+// Smashers read their own tuned part tables (useSpinnerConfig
+// SMASHER_TOP_PARTS …) while part-only enemies — every campaign stage, boss
+// encounter, league gatekeeper and ghost — keep the legacy ones. A PART-ONLY
+// NPC blade (outside PvP) gets an HP multiplier keyed on its own part level
+// (mean of top and bottom; piecewise linear, flat past the ends) so the
+// player's smasher team meets the same stage-by-stage resistance as before
+// the pass. Fitted per 10-stage band with `scripts/balance-sim.mjs camp`
+// (balance-report.md): the starting team got stronger at low levels (Speedy's
+// HP no longer starts at 0) and a little weaker around smasher level 17–20.
+//   enemy level  ~1.4 (stages 1–10) … ~8 (21–30)  → ×1.25
+//                ~11 (31–40)                      → ×0.92
+//                ~14–17 (41–60)                   → ×0.97–1.0
+//                ~19–27 (61–100)                  → ×1.15
+//                ≥ 33 (101+)                      → ×1.07
+export const CAMPAIGN_NPC_TUNING: { hpCurve: [number, number][]; dmgMul: number } = {
+  hpCurve: [[0, 0.8], [3, 0.92], [5, 1.1], [8, 1.25], [11, 0.92], [14, 0.97], [17, 1.0], [20, 1.15], [27, 1.15], [33, 1.07]],
+  dmgMul: 1
+}
+
+/** HP multiplier of a part-only NPC blade at part level `level`. */
+export const campaignNpcHpMul = (level: number): number => {
+  const c = CAMPAIGN_NPC_TUNING.hpCurve
+  if (c.length === 0) return 1
+  if (level <= c[0]![0]) return c[0]![1]
+  for (let i = 1; i < c.length; i++) {
+    const [l1, m1] = c[i]!
+    if (level <= l1) {
+      const [l0, m0] = c[i - 1]!
+      return m0 + ((m1 - m0) * (level - l0)) / (l1 - l0)
+    }
+  }
+  return c[c.length - 1]![1]
 }
 
 // ─── Boss Rubber-Banding ────────────────────────────────────────────────────

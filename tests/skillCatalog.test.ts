@@ -32,6 +32,7 @@ import {
   SKILL_HIT_MUL_CAP,
   SKILL_POWER_SCALE,
   SKILL_AUTOFILL_ORDER,
+  TEAM_SKILL_IDS,
   applySkillPowerScale,
   canEquipTogether,
   isSkillId,
@@ -50,15 +51,22 @@ const rows = (id: SkillId): Row[] => SKILLS[id].levels as unknown as Row[]
 const L10 = (id: SkillId): Row => rows(id)[SKILL_MAX_LEVEL - 1] as Row
 
 describe('skillCatalog — ids and unlocks', () => {
-  it('has exactly 10 unique ids, and SKILLS is keyed by them', () => {
-    expect(SKILL_IDS).toHaveLength(10)
-    expect(new Set(SKILL_IDS).size).toBe(10)
+  it('has 10 team skills + 4 smasher-only effects, unique ids, and SKILLS is keyed by them', () => {
+    expect(SKILL_IDS).toHaveLength(14)
+    expect(new Set(SKILL_IDS).size).toBe(14)
+    expect(TEAM_SKILL_IDS).toHaveLength(10)
+    // Append-only: the ten team skills keep their bits, smasher-only come after.
+    expect(SKILL_IDS.slice(0, 10)).toEqual([...TEAM_SKILL_IDS])
+    for (const id of SKILL_IDS.slice(10)) {
+      expect(SKILLS[id].smasherOnly, id).toBe(true)
+      expect(SKILLS[id].unlockStage, id).toBe(0)
+    }
     expect(Object.keys(SKILLS).sort()).toEqual([...SKILL_IDS].sort())
     for (const id of SKILL_IDS) expect(SKILLS[id].id).toBe(id)
   })
 
   it('unlock stages are unique, one per boss, exactly 10, 15, …, 55', () => {
-    const stages = SKILL_IDS.map(id => SKILLS[id].unlockStage).sort((a, b) => a - b)
+    const stages = TEAM_SKILL_IDS.map(id => SKILLS[id].unlockStage).sort((a, b) => a - b)
     expect(stages).toEqual([10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
   })
 
@@ -88,7 +96,7 @@ describe('skillCatalog — ids and unlocks', () => {
 
   it('SKILL_BIT is 1 << index, all distinct', () => {
     SKILL_IDS.forEach((id, i) => expect(SKILL_BIT[id]).toBe(1 << i))
-    expect(new Set(Object.values(SKILL_BIT)).size).toBe(10)
+    expect(new Set(Object.values(SKILL_BIT)).size).toBe(SKILL_IDS.length)
   })
 
   it('isSkillId guards unknown values', () => {
@@ -204,7 +212,7 @@ describe('skillCatalog — costs (§6.1)', () => {
   it('learn 150, then 100 … 575, 2,650 per skill, 26,500 for all ten', () => {
     expect([...SKILL_COST]).toEqual([150, 100, 125, 150, 200, 250, 300, 350, 450, 575])
     expect(SKILL_TOTAL_COST).toBe(2650)
-    expect(SKILL_TOTAL_COST * SKILL_IDS.length).toBe(26500)
+    expect(SKILL_TOTAL_COST * TEAM_SKILL_IDS.length).toBe(26500)
   })
 
   it('the sim reads SKILL_COST from the catalog (skills.mjs → skillecon.mjs)', () => {
@@ -277,16 +285,16 @@ describe('skillCatalog — PARITY with tools/skills-sim/skills.mjs', () => {
   const sim = SKILL_DEFS as Record<string, { tag: string; levels: Row[] }>
 
   it('same id set', () => {
-    expect([...(SIM_SKILL_IDS as string[])].sort()).toEqual([...SKILL_IDS].sort())
+    expect([...(SIM_SKILL_IDS as string[])].sort()).toEqual([...TEAM_SKILL_IDS].sort())
   })
 
   it('same tag per skill', () => {
-    for (const id of SKILL_IDS) expect(SKILLS[id].tag, id).toBe(sim[id]!.tag)
+    for (const id of TEAM_SKILL_IDS) expect(SKILLS[id].tag, id).toBe(sim[id]!.tag)
   })
 
   it('every level, every field, exactly equal', () => {
     let compared = 0
-    for (const id of SKILL_IDS) {
+    for (const id of TEAM_SKILL_IDS) {
       const mine = rows(id)
       const theirs = sim[id]!.levels
       expect(mine.length, id).toBe(theirs.length)

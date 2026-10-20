@@ -17,7 +17,7 @@ WIP: [playable demo](https://konstantinsteinmiller.github.io/tree-smashers/)
 - **Skills** — every smasher skill runs on one of the 10 skill-engine effects (`src/use/skills/*`) with its own
   multipliers (`mods`), so similar skills have different strengths and weaknesses.
 - **Arenas** — 3 layouts repeating by stage (Mossy Glade, Mud Hollow, Twin Islands) with islands, speed boosters and
-  pot holes, on top of the arena types (lava, ice, thunder, shock, forest, boss).
+  pot holes, on top of the arena types (lava, ice, forest, boss).
 - **Team Towers** — from stage 3 on (and in PvP / league), destroying the enemy tower wins the battle instantly.
 - **Art** — smashers are drawn procedurally from a 3D rig (`src/smashers/*`) in 16 consistent angles;
   `pnpm art:smashers` exports the reference sheets for the art desk (`art-sheets/smashers/`).

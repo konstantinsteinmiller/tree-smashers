@@ -170,15 +170,27 @@ const resetKnobs = () => {
   gap: 0.15rem
   padding: 0.4rem 0.3rem
   border-radius: 0.6rem
-  border: 2px solid var(--color-wood-700)
-  background: var(--color-wood-600)
-  color: var(--color-cream-50)
+  border: 2px solid var(--color-ink)
+  background: var(--color-royal-600)
+  color: var(--color-ice-50)
+  box-shadow: inset 0 2px 0 var(--color-royal-400), 0 3px 0 var(--color-ink)
   cursor: pointer
   text-align: center
+  transition: transform 0.24s var(--ui-spring), box-shadow 0.24s var(--ui-spring)
 
-  &:hover, &:focus-visible
-    border-color: var(--color-berry-500)
-    outline: none
+  @media (hover: hover)
+    &:hover
+      transform: translateY(-2px)
+      box-shadow: inset 0 2px 0 var(--color-royal-400), 0 5px 0 var(--color-ink)
+
+  &:active
+    transform: translateY(2px)
+    box-shadow: inset 0 2px 0 var(--color-royal-400), 0 1px 0 var(--color-ink)
+    transition-duration: var(--ui-press-down)
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
 
   &.is-sandbox
     background: var(--color-sky-600)
@@ -205,9 +217,9 @@ const resetKnobs = () => {
   line-height: 1.1
 
 .boss-lab__select, .boss-lab__num
-  background: var(--color-cream-50)
+  background: var(--color-ice-50)
   color: var(--color-ink)
-  border: 1px solid var(--color-wood-700)
+  border: 1px solid var(--color-ink)
   border-radius: 0.3rem
   padding: 0.1rem 0.3rem
 
@@ -215,10 +227,10 @@ const resetKnobs = () => {
   width: 4.5rem
 
 .boss-lab__reset
-  border: 1px solid var(--color-wood-700)
+  border: 1px solid var(--color-ink)
   border-radius: 0.3rem
   padding: 0.1rem 0.5rem
-  background: var(--color-cream-200)
+  background: var(--color-ice-200)
   color: var(--color-ink)
   cursor: pointer
 </style>

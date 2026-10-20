@@ -53,8 +53,15 @@ const body = src.slice(skillsStart)
 
 const BLOCK = /(\w+): def\(\{\s*id: '(\w+)', tag: '(\w+)'[\s\S]*?zipLevels<[^>]*>\((\{[^{}]*\})\)/g
 const parsed = {}
+// Smasher-only effects (`smasherOnly: true`) are not team skills: the sim
+// models the ten team skills only, so those blocks are skipped here.
+const SMASHER_ONLY = new Set()
 for (const m of body.matchAll(BLOCK)) {
   const [, key, id, tag, colsSrc] = m
+  if (/smasherOnly: true/.test(m[0])) {
+    SMASHER_ONLY.add(id)
+    continue
+  }
   if (key !== id) fail(`block key ${key} != id ${id}`)
   if (parsed[id]) fail(`duplicate skill ${id}`)
   let cols
@@ -85,7 +92,7 @@ if (got !== want) fail(`skill ids differ — catalog [${got}] vs sim [${want}]`)
 const typesSrc = readFileSync(`${REPO}/src/skills/skillIds.ts`, 'utf8')
 const typeIds = /export const SKILL_IDS = \[([\s\S]*?)\]/.exec(typesSrc)?.[1]
 if (!typeIds) fail('SKILL_IDS not found in src/skills/skillIds.ts')
-const typeSet = [...typeIds.matchAll(/'(\w+)'/g)].map(x => x[1]).sort().join(',')
+const typeSet = [...typeIds.matchAll(/'(\w+)'/g)].map(x => x[1]).filter(id => !SMASHER_ONLY.has(id)).sort().join(',')
 if (typeSet !== want) fail(`src/skills/skillIds.ts SKILL_IDS [${typeSet}] != sim [${want}]`)
 
 export const SKILL_DEFS = Object.fromEntries(SKILL_IDS.map(id => [id, parsed[id]]))

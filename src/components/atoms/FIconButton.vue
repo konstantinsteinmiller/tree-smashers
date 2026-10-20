@@ -10,7 +10,7 @@ import { computed } from 'vue'
 interface Props {
   icon?: 'close' | 'left' | 'right'
   imgSrc?: string
-  type?: 'danger' | 'primary' | 'secondary' | 'premium' | 'ad'
+  type?: 'danger' | 'primary' | 'secondary' | 'royal' | 'premium' | 'plum' | 'ad'
   size?: 'sm' | 'md' | 'lg'
   /** Accessible name when the button shows only an image. */
   ariaLabel?: string
@@ -62,10 +62,11 @@ const sizeClasses = computed(() => {
     :aria-label="ariaLabel"
     :class="[toneClass, sizeClasses.btn, sizeClasses.scale, 'z-10']"
   )
-    img(
+    img.f-icon-img(
       v-if="imgSrc"
       :src="imgSrc"
       alt=""
+      draggable="false"
       :class="sizeClasses.img"
       class="object-contain"
     )
@@ -85,3 +86,19 @@ const sizeClasses = computed(() => {
         :d="selectedIcon.path"
       )
 </template>
+
+<style scoped lang="sass">
+// The square sinks into its lip on press (.ui-btn recipe + global press
+// handler). On hover the painted icon tilts and grows a hair — it looks
+// alive under the pointer without moving the button's footprint.
+.f-icon-img
+  transition: transform 0.26s var(--ui-spring)
+  -webkit-user-drag: none
+
+@media (hover: hover)
+  .f-icon-button:hover .f-icon-img
+    transform: rotate(-8deg) scale(1.1)
+
+.f-icon-button:active .f-icon-img
+  transform: scale(0.94)
+</style>

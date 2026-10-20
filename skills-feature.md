@@ -111,7 +111,7 @@ skills"), and makes the per-stage choice the decision: 2 of 10, swapped between 
   (`STOP_THRESHOLD = 0.25`). A resting blade deals **zero** damage.
 - **Damage per contact entry** (`resolveCollision`, one roll per side per contact —
   `CONTACT_REARM_MS = 50`):
-  `dmg = closingSpeed · atkMul · (crit ? 1.25 : 1) · wA / (wB · defMul) · DAMAGE_SCALE(1.4) · speedAdv · thunderCombo`.
+  `dmg = closingSpeed · atkMul · (crit ? 1.25 : 1) · wA / (wB · defMul) · DAMAGE_SCALE(1.4) · speedAdv` (the thunder-arena combo factor was retired with that arena).
   `defMul` is ignored on positional crits; Piercer keeps only 25 % of the defender's
   defence bonus, Star 75 %; Star also has a hidden 8 % lucky crit. (`damage-calculation-physics.md`
   predates two changes — closing speed instead of raw speed, and `DAMAGE_SCALE` 1 → 1.4;
@@ -121,8 +121,7 @@ skills"), and makes the per-stage choice the decision: 2 of 10, swapped between 
   player (level 6, see §3.2): Star/Balanced has **48 HP**, a clean hit on the Quad/Tanky
   enemy (82 HP) does **~29**. Fights are short and swingy: most regular stages end in
   3–25 turns.
-- **Hazards.** Lava wall: `ceil(2.5 % maxHp)` per bounce; forest wall: +1 HP; shock wall /
-  bouncer: −90 % speed (250 ms per-blade cooldown); thunder boss aura: 1 HP/s in range;
+- **Hazards.** Lava wall: `ceil(2.5 % maxHp)` per bounce; forest wall: +1 HP; thunder boss aura: 1 HP/s in range;
   Spiky chip: `max(1, 2.5 % victim maxHp)` per pair per 150 ms (outside the contact gate).
 - **Bosses.** Every 5th stage; abilities ghost / split / partners / healers /
   child-emitter / stat-switch / life-leech / thunder (`initGame` wiring). Consecutive boss
@@ -165,7 +164,7 @@ it:
   acceleration ramp (`ACCEL_FRAMES 28`), decay incl. ice, low-speed brake and no-hit drag,
   circle walls with wall boost + bounce decay, bouncers, all-pairs collision incl. friendly
   fire, elastic bounce, contact re-arm gate, hug-break, back-hit crits + crit cooldown,
-  Star lucky crit, Piercer/Star defence rules, speed advantage, thunder combo, anti-draw,
+  Star lucky crit, Piercer/Star defence rules, speed advantage, anti-draw,
   Spiky chip, lava/forest/shock/thunder-aura hazards, powerups (stage ≥ 2), turn-order
   switching, NPC AI (`launchNpc` incl. ally-blocking lanes), every boss ability (ghost
   twin + damage link, split children + invulnerability, partners/healers groups + healing,
@@ -185,7 +184,7 @@ it:
 - **Stages:** 13 representative stages covering every arena and boss type:
   15 (ghost boss), 17 (lava, 3 enemies), 30 (life-leech boss), 31 (shock), 35 (split
   boss), 49 (forest, 3), 50 (4 healers), 55 (child-emitter), 77 (lava), 80 (stat-switch
-  boss), 95 (partners + thunder boss), 99 (thunder arena, 4 enemies), 100 (4 healers).
+  boss), 95 (partners + thunder boss), 99 (lava arena, 4 enemies), 100 (4 healers).
 - **Noise control:** common random numbers (identical seeds per stage across all configs;
   skill procs draw from a **separate** RNG stream so they don't shift physics/AI rolls),
   alternating first turn. "worst+2SE" columns use a deliberately conservative standard
@@ -746,8 +745,8 @@ Conventions for every card:
 - **Softens:** Speedy bottoms, ice arena and bouncer stages, skilled players who aim off walls — the skill-expression
   pick of the ten. The simulated player never aims off walls on purpose, so its measured median (~1.04) is a floor;
   1.225 (every hit at 3 stacks) is the ceiling.
-- **Edge cases:** Shock walls still count the rebound (speed drained, stack kept). Thunder arena: stacks multiply with
-  the existing same-target combo. Worst case every hit at 3 stacks = ×1.225 at L10 (§3.8).
+- **Edge cases:** Worst case every hit at 3 stacks = ×1.225 at L10 (§3.8). (The shock-wall and thunder-arena combo
+  interactions are gone with those arenas.)
 - **Measured PI:** L1 median 1.01 · L5 median 1.03 · **L10 median 1.04, worst 1.08 (stage 95)** · L10 split OFF 1.04 ×
   DEF 1.00
 - **Icon / colour:** double chevron », `#38bdf8`. VFX, audio, budget and `FX.low`: §8.2–8.3.
@@ -764,7 +763,7 @@ Conventions for every card:
 *The Grove's bark-weave: fire, lightning and thorns slide off.*
 
 - **Effect:** Against the bearer: lava wall burn ×(1 − `lava`), thunder-boss aura ×(1 − `thunder`), Spiky chip ×(1 −
-  `chip`); on a shock wall/bouncer the bearer keeps `10 % + 90 % × shockKeep` of its speed instead of 10 %.
+  `chip`); on a Frost Lock cold touch the bearer keeps `10 % + 90 % × shockKeep` of its speed instead of 10 % (shock walls were retired).
 - **Proc / rules:** Applied first in `applyHpLoss` for kinds `lava`, `thunder`, `chip`; shock handled in
   `bounceOffWalls`/`bounceOffBouncers`. The lava popup shows the reduced amount (cyan tint).
 - **Counterplay / limits:** Does nothing on default/ice/forest arenas without Spiky or thunder enemies — a loadout
@@ -792,7 +791,7 @@ Conventions for every card:
 
 - **Effect:** On an armed contact between the bearer and an enemy blade **that is taking its own turn** (
   `launchedBladeId === enemy.id`) and still moving after the bounce, roll `chance` (shared 250 ms shock cooldown
-  `lastShockMs`): the enemy loses 90 % of its speed (as on a shock wall) and is **Stunned** — it cannot be picked in the
+  `lastShockMs`): the enemy loses 90 % of its speed and is **Stunned** — it cannot be picked in the
   enemy team's next turn. If every living enemy is stunned, that enemy turn is skipped. A blade stunned for turn T
   cannot be stunned for T + 1.
 - **Proc / rules:** `launchNpc` increments `npcTurnIndex` and filters `stunnedForTurn === npcTurnIndex`. Skipped turn =

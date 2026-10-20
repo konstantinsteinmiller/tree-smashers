@@ -12,7 +12,7 @@ import { ref, computed, watch, type Ref } from 'vue'
 // have zero runtime cost so the rest of the file compiles unchanged.
 import type Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
-import type { ArenaType } from '@/use/useSpinnerCampaign'
+import { sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
 import type { SpinnerConfig } from '@/types/spinner'
 import { isSdkActive } from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease, isDebug } from '@/use/useMatch'
@@ -411,7 +411,8 @@ const handleMessage = (msg: PvPMessage) => {
     if (!msg || typeof msg !== 'object' || !('type' in msg)) return
     switch (msg.type) {
       case 'game-config':
-        gameConfig.value = msg.config
+        // Retired arena names from an older host map to a live arena.
+        gameConfig.value = { ...msg.config, arenaType: sanitizeArenaType(msg.config.arenaType) }
         // Mirror the host's updateGameConfig: a config change un-readies
         // both sides, so every build is re-sent (and re-sanitised) under the
         // new team size / "level 1" rule — never a stale clamp.

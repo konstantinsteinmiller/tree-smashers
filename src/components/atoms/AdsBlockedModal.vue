@@ -54,7 +54,7 @@ const host = computed(() => {
         div.absolute.inset-0(class="bg-[var(--ui-backdrop)]")
 
         //- Card
-        div.ui-panel.ui-stitch-dark.relative.w-full.max-w-md.text-center(
+        div.ui-panel.ui-stitch-dark.ui-pop-in.relative.w-full.max-w-md.text-center(
           class="p-6 !border-4 !border-ink shadow-[0_6px_0_var(--color-ink)]"
           @click.stop
         )

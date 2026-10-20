@@ -46,10 +46,10 @@ describe('PvP RNG guard — useSpinnerGame damage/collision paths', () => {
     expect(body.match(/topPartId === 'star'[^\n]*matchRng\(\) < 0\.08/g)?.length).toBe(2)
   })
 
-  it('shock cooldowns run on the game clock, not the wall clock', () => {
+  it('walls and bouncers carry no shock zap (arena retired) and no wall clock', () => {
     for (const name of ['bounceOffWalls', 'bounceOffBouncers']) {
       const { body } = functionBody(name)
-      expect(body).toContain('lastShockMs')
+      expect(body).not.toContain('lastShockMs')
       expect(body).not.toMatch(/performance\.now\(\)/)
     }
   })

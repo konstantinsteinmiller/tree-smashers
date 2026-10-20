@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, full-bleed ground texture, 1:1, filling the whole canvas edge to edge — the grass floor of a small forest clearing that a game arena sits on. Not a scene, not a framed picture, no border.
+
+WHAT IT IS — the floor of "Twin Islands" in "Tree Smashers" (cute stuffed-animal fighters on spinning wooden discs): a lush riverside meadow. Short grass in a fresh, very slightly cool green (#76bd60 as the base, lighter irregular patches #88c96f, grass-blade clumps #4f9a48), small clumps of thin reed-like grass blades a shade darker, little clover leaf clusters, and a scattering of very small pale blue and white forget-me-not flowers, each no bigger than a fingernail on the canvas. No water anywhere.
+
+WHAT IT IS NOT — no dark blobs, no moss cushions, no bushes, no clumps darker than the grass-blade strokes; no objects of any kind: no rocks, no stones bigger than a pea, no tree stumps, no logs, no ponds, no puddles, no holes, no mushrooms, no arrows, no paths, no fences, no walls, no border, no frame, no vignette, no shadows of trees, no light rays, no characters, no animals, no text, no letters, no logo, no UI. Game pieces are drawn ON TOP of this ground later; the ground itself must stay empty and calm so they read at a glance.
+
+VIEW — seen STRAIGHT FROM ABOVE, like a map. No horizon, no sky, no perspective, no tilt.
+
+STYLE — a cosy, polished mobile-game ground in a stylised cartoon hand: flat cel-shaded colour areas with clean, rounded shapes, two or three tones of green per area, hard edges between the tones. NO blur, NO soft airbrush, NO radial gradient, NO glow, NO bloom, NO photorealism, NO noise grain. Light from the top-left.
+
+CONTRAST — low. The whole ground stays within a narrow band of mid greens; nothing is very bright, nothing is very dark, no white. Small grass strokes and blade clumps are tiny (each about 2–3% of the canvas wide), evenly spread over the whole canvas, so no single spot draws the eye. The middle of the canvas is as calm as the rest.
+
+BEFORE YOU CALL IT FINISHED: one square image, the ground fills it edge to edge, seen from straight above, flat cartoon colour areas, low contrast, no objects, no border, no text.
+
+OUTPUT: one square 1:1 image, the whole canvas is the ground texture.

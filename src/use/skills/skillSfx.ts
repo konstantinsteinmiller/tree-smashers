@@ -5,7 +5,13 @@
 //   skill-rocket    Homing Rockets volley launch
 //   skill-zap       Static Charge shock / stun, stun turn-skip
 //   skill-drumroll  skills intro build-up; the HIT lands at DRUMROLL_HIT_MS
+//   skill-crit     Lucky Edge crit / Opening Salvo — a wooden thwack + sparkle
+//   skill-whoosh   Phase Step dodge — a soft airy swish
+//   skill-boost    Momentum stack — a short rising blip
 // Second Wind reuses the existing `level-up`.
+//
+// Smasher skills (smasherSkillArt.ts) pick one of these per skill and play it
+// at their own playback rate, so each smasher has its own "voice".
 //
 // Rules:
 //   • One play per SFX name per SKILL_SFX_THROTTLE_MS (400 ms) — a volley of
@@ -31,7 +37,10 @@ import { preloadSfxList } from '@/use/useAssets'
 export const SKILL_BATTLE_SFX_ASSETS = [
   'audio/sfx/skill-shield.ogg',
   'audio/sfx/skill-rocket.ogg',
-  'audio/sfx/skill-zap.ogg'
+  'audio/sfx/skill-zap.ogg',
+  'audio/sfx/skill-crit.ogg',
+  'audio/sfx/skill-whoosh.ogg',
+  'audio/sfx/skill-boost.ogg'
 ] as const
 export const SKILL_INTRO_SFX_ASSETS = ['audio/sfx/skill-drumroll.ogg'] as const
 
@@ -44,10 +53,11 @@ export const DRUMROLL_HIT_MS = 1300
 export const DRUMROLL_MIN_MS = 1200
 export const DRUMROLL_MAX_MS = 1500
 
-export type SkillSfxName = 'skill-shield' | 'skill-rocket' | 'skill-zap' | 'level-up'
+export type SkillSfxName =
+  | 'skill-shield' | 'skill-rocket' | 'skill-zap' | 'skill-crit' | 'skill-whoosh' | 'skill-boost' | 'level-up'
 export const SKILL_DRUMROLL_SFX = 'skill-drumroll'
 
-type Player = (name: string, ratio: number, offsetSec?: number) => SoundHandle | null
+type Player = (name: string, ratio: number, offsetSec?: number, rate?: number) => SoundHandle | null
 
 let player: Player | null = null
 const resolvePlayer = (): Player => (player ??= useSounds().playSound)
@@ -57,6 +67,9 @@ const lastPlayedAt: Record<SkillSfxName, number> = {
   'skill-shield': -Infinity,
   'skill-rocket': -Infinity,
   'skill-zap': -Infinity,
+  'skill-crit': -Infinity,
+  'skill-whoosh': -Infinity,
+  'skill-boost': -Infinity,
   'level-up': -Infinity
 }
 let activeSkillSounds = 0
@@ -70,12 +83,12 @@ const ONCE: AddEventListenerOptions = { once: true }
  * is reached. Returns whether a sound was started. `now` defaults to
  * performance.now() (wall clock: audio is real time even in PvP).
  */
-export function playSkillSfx(name: SkillSfxName, ratio = SKILL_SFX_RATIO, now = performance.now()): boolean {
+export function playSkillSfx(name: SkillSfxName, ratio = SKILL_SFX_RATIO, now = performance.now(), rate = 1): boolean {
   if (now - lastPlayedAt[name] < SKILL_SFX_THROTTLE_MS) return false
   if (activeSkillSounds >= SKILL_SFX_MAX_ACTIVE) return false
   lastPlayedAt[name] = now
   try {
-    const h = resolvePlayer()(name, ratio)
+    const h = rate === 1 ? resolvePlayer()(name, ratio) : resolvePlayer()(name, ratio, 0, rate)
     if (h) {
       activeSkillSounds++
       h.addEventListener('ended', release, ONCE)

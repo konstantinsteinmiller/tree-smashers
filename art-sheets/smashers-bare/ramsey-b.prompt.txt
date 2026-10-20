@@ -1,0 +1,45 @@
+WHAT COMES BACK IS ONE SQUARE SHEET: THE SAME CHARACTER FROM 16 ANGLES, 4 ACROSS AND 4 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, sixteen equal square cells: 4 per row, 4 rows. Each cell holds the SAME character, exactly where the drawing sits in that cell of the layout reference.
+· 16 drawings of ONE character. Not 9, not 12, not 15, not 20. Not 16 different characters, not a scene.
+
+WHAT THE ATTACHMENTS ARE — read this before anything else.
+· ONE image is attached: the LAYOUT reference.
+· The LAYOUT reference is drawn by the game's own 3D rig. It fixes each cell's ANGLE, POSE, PROPORTIONS, POSITION and SIZE, and the character's colours. Keep all of those. Repaint its flat fills as a finished illustration — but never move, resize, re-pose, add or drop a limb.
+· Frame order, row by row: cell 1 (top-left) is the BACK view — NO face at all (no eyes, no nose, no mouth), only the back of the head, the back and the tail side. Every next cell is the character turned a further 11.25 degrees on the spot: the face comes back from the OTHER side — cell 9 (third row, first cell) is the other SIDE view, and cell 16 (bottom-right) is almost facing the viewer again. Cells 1 to 4 show no face; follow each reference cell for how much of the face shows. The face turns towards the SAME side as in the reference in every cell — never mirror a cell; check the nose direction of each reference cell and keep it. Follow the layout reference cell by cell.
+
+WHAT IT IS NOT.
+· NO DISC, NO BASE, NO GROUND, NO SHADOW under the character. The game draws a spinning disc itself, underneath your painting. The character floats on the magenta exactly as in the layout reference.
+· No text, no numbers, no labels, no cell borders, no grid lines, no gutters.
+
+WHAT IT IS — "Ramsey", a ram from "Tree Smashers", a cosy forest arena battler. A puffy cloud of cream wool (round tufts around the body and on the head), a dark charcoal-grey face, droopy side ears, big curled golden-tan horns spiralling on both sides of the head.
+· It is a STUFFED ANIMAL — a plush toy: soft rounded felt and fleece, a button-like shine in the eyes, slightly squashy shapes.
+· STITCHES: paint dashed stitch lines ONLY where the layout reference draws a dashed line, following that line's exact path. Invent NO other seams — no seam down the middle of the face, head, back or body unless the reference has one there. A stitch line is fixed to the plush: it turns with the character and keeps its place in every cell.
+· CUTE BUT ANGRY: big round cute eyes with a glossy highlight, heavy slanted angry eyebrows, a grumpy frown with tiny white fangs (or the teeth the note asks for). Chunky head, small body, stubby limbs.
+
+COLOUR — keep the layout reference's palette for every part. Pink parts are soft salmon / rose, never hot pink.
+
+THE VIEW — the camera looks down at the character from about 55 degrees (3/4 top-down), the same in every cell.
+
+FACE — eyes, pupils and brows exist ONLY where the layout reference cell shows them, always looking the way the character faces in that cell. A reference cell without a visible eye gets no painted eye.
+
+CONSISTENCY — ONE character turning on the spot: identical proportions, colours, markings, stitch lines, accessories, expression and line weight in all 16 cells.
+
+STYLE — a richly hand-painted plush toy, clearly MORE finished than the flat reference:
+· Soft painted shading that shows the felt and fleece: rounded volume, gentle fabric texture, visible stitched seams, a warm light from the top-left and a soft darker underside on every shape.
+· A bold dark brown contour around the whole silhouette (about 2% of a cell's width) so it still reads when shown at 50 pixels; thinner inner lines.
+· No glow, no bloom, no blur, no photorealism, no shiny 3D plastic, no realistic fur strands, nothing scary or gory.
+
+SIZE — each character fills the same share of its cell as in the layout reference, centred where the reference puts it. Keep a clear magenta gap between neighbouring characters; nothing crosses into the next cell.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the character with solid, flat, pure magenta #FF00FF, edge to edge — a green screen.
+· EXACTLY #FF00FF. NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo or shadow on the magenta.
+· The character contains no magenta and no hot pink anywhere.
+· Keep the bottom-right corner of the image clear of anything but the last character.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· 16 cells, 4 per row, 4 rows, the same character in each, NO disc under it.
+· The turn follows the layout reference cell by cell.
+· Every pixel that is not the character is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 4 × 4 cells, magenta ground, 16 characters, matching the layout reference cell for cell.

@@ -15,7 +15,7 @@
  * `bossPaintStatus(root)` is the same answer as data (tests/bossArt.test.ts).
  */
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { loadConfig } from '../../tools/art-desk/config.mjs'
@@ -105,7 +105,31 @@ export const renderStatus = (rows) => {
     lines.push(`| ${r.mark} | ${r.title} (\`${r.stem}\`) | ${r.doc ? `\`${r.doc}\`` : '—'} | ${ref} | ${r.needsPainting && r.mark === '✓' ? 'sliced, but the target is still the procedural drawing' : r.state} | ${ships} |`)
   }
   lines.push('', 'Marks: ✓ sliced and current · ! repaint (reference changed / old painting parked) · ? painted, no receipt · · not painted yet.', '')
+  lines.push(...arenaArtStatus(ROOT))
   return lines.join('\n')
+}
+
+/** Arena floors / backdrop / props (text-only paint pass) — read from disk. */
+const arenaArtStatus = (root) => {
+  let files = []
+  try {
+    files = readdirSync(join(root, 'art-sheets', 'painted'))
+  } catch {
+  }
+  const floors = files.map(f => /^arena-floor-(\d+)\.png$/.exec(f)?.[1]).filter(Boolean).map(Number).sort((a, b) => a - b)
+  const props = files.map(f => /^props-(.+)\.png$/.exec(f)?.[1]).filter(Boolean)
+  return [
+    '## Arena art (floors, backdrop, props)',
+    '',
+    '> **Gemini account limitation (since the Oct 2026 account switch):** this account REFUSES reference-based edits',
+    '> ("Sorry, I can\'t edit images for you yet. Can I generate an image instead") — paint with TEXT-ONLY prompts',
+    '> (`paint.mjs` without `--ref`) and describe the subject precisely; a job that needs a reference falls back to text.',
+    '',
+    `- Arena floors painted: ${floors.length ? floors.map(i => `layout ${i}`).join(', ') : 'none'} of 50 — \`arena-floors/floor-<id>.prompt.txt\` → \`painted/arena-floor-<id>.png\` → \`node tools/arena-floors/make-floors.mjs\``,
+    `- Backdrop: ${files.includes('backdrop-highland.png') ? 'highland plain painted' : 'not painted'} — \`bg/highland.prompt.txt\` → \`node tools/bg-tile/make-tile.mjs <png> public/images/bg/highland-tile_768x768.webp --size 768 --hard\``,
+    `- Prop sheets painted: ${props.length ? props.join(', ') : 'none'} — \`props/<sheet>.prompt.txt\` → \`painted/props-<sheet>.png\` → \`node tools/arena-props/pack.mjs\``,
+    ''
+  ]
 }
 
 export const writeStatus = (root = ROOT) => {

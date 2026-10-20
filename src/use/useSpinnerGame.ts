@@ -14,11 +14,16 @@ import type {
   BossTrait
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
-import { bossHpRubberBandMul } from '@/use/useSpinnerCampaign'
+import { bossHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
 import {
-  applyGround, buildTerrainLayout, createTower, decideResult, inDeepCore, newGroundState, towerHitDamage,
+  applyGround, buildTerrainLayout, collideSolids, createTower, decideResult, inDeepCore, newGroundState, newSolidEffect,
+  terrainCircles, terrainSolidCircles, towerHitDamage,
   type GroundEffect, type GroundState, type IslandKind, type TeamTower, type TerrainLayout
 } from '@/use/arenaTerrain'
+import { DECOR_DRAW, renderTerrainFeatures } from '@/use/arenaTerrainDraw'
+import { terrainArtRevision } from '@/use/arenaTerrainArt'
+import { drawPaintedFloor, floorArtRevision } from '@/use/arenaFloorArt'
+import { drawArenaBackdrop } from '@/use/arenaBackdrop'
 import {
   resolveWall as shapeResolveWall,
   clampInside as shapeClampInside,
@@ -32,7 +37,7 @@ import { computeStats } from '@/use/useSpinnerConfig'
 import { getSelectedSkin } from '@/use/useModels'
 import { isSmasherId, smasherForParts, type SmasherId } from '@/data/smasherCatalog'
 import { drawSmasherDisc, drawSmasherFrame } from '@/smashers/smasherAtlas'
-import { YAW_FRAMES, YAW_STEP } from '@/smashers/smasherRig'
+import { DISC_SQUASH as DISC_SQUASH_RENDER, YAW_FRAMES, YAW_STEP } from '@/smashers/smasherRig'
 import { isDebug } from '@/use/useMatch.ts'
 import { isMobileLandscape, isMobilePortrait, userDifficulty } from '@/use/useUser.ts'
 import { DIFFICULTY } from '@/utils/enums'
@@ -67,12 +72,18 @@ import type { SkillId, SkillLoadout } from '@/types/skills'
 import {
   applyHpLoss, beginLaunchSkills, blocksEnemyChip, countPickable,
   createContactResult, createHpLossResult, createIncomingResult, createOutgoingResult,
-  effectiveHp, hazardShockKeep, isStunnedFor, onOwnBounce,
+  effectiveHp, isStunnedFor, onOwnBounce,
+  anchorKeep, onBankRebound, thornsRecoil, towerDamageMul,
   type HpLossKind, type SkillBlade, type SkillRefStats
 } from '@/use/skills/skillCore'
+import {
+  armorMul, armorOf, armorZone, defaultHeadingY, discOf, followHeading,
+  ZONE_BACK, ZONE_FRONT, type ArmorZone
+} from '@/use/smasherMechanics'
 import type {
   SkillEvent, SkillEventKind, SkillRocketView, SkillVfx, SkillVfxBlade
 } from '@/use/skills/skillVfx'
+import type { CalloutInput, SkillCallouts } from '@/use/skills/skillCallouts'
 import { SKILLS_BUILD, type SkillEnginePort } from '@/skills/skillsGate'
 // Boss traits (bosses-100-feature.md §4, §12.2) reach the engine the same way
 // as skills: the rules, VFX and SFX are ONE port (`bosses/bossTraitEngine.ts`)
@@ -697,6 +708,8 @@ export interface SkillHudChipState {
 /** One equipped skill of one local blade. */
 export interface SkillHudSlot {
   id: SkillId
+  /** Smasher skill id (its name + drawn icon); '' = generic effect chip. */
+  key: string
   level: number
   state: SkillHudChipState
 }
@@ -765,6 +778,8 @@ export const useSpinnerGame = () => {
   const phase: Ref<GamePhase> = ref('idle')
   const gameResult: Ref<GameResult> = ref(null)
   const turnAnnouncement: Ref<string> = ref('')
+  /** performance.now() until which the centre turn banner is on screen. */
+  let turnBannerUntil = 0
 
   // Wall-clock timestamp when the current `player_turn` began. Drives the
   // early-game tutorial arrows that orbit the player's spinners (CG QA
@@ -866,7 +881,7 @@ export const useSpinnerGame = () => {
   // physics tick (so it also honours 2x sim speed); PvP keeps `gameTime()`,
   // which is already tick-based and part of the lockstep contract.
   // The per-blade contact GATES run on it too (bosses BW4): the shared 250 ms
-  // `lastShockMs` gate (shock wall / bouncer, Static Charge, Frost Lock's cold
+  // `lastShockMs` gate (Static Charge, Frost Lock's cold
   // touch), Frostbite's `lastChillAt`, Phase Step's `phasedUntil` and a split
   // child's `invulnerableUntil` are compared against each other's `now`, so
   // they move together — on the wall clock a platform pause (or a hidden tab)
@@ -937,6 +952,10 @@ export const useSpinnerGame = () => {
       // Boss traits (bosses-100 §9) — only in matches with a trait carrier,
       // so trait-free hashes stay byte-identical.
       if (BOSSES100_BUILD && traitsActive) e += `#${bossPort!['traitHashPart'](b)}`
+      // Directional armour: the gameplay heading decides the damage, so it is
+      // hashed — only in matches with an armoured blade (armour-free hashes
+      // stay byte-identical). Host frame: the guest un-mirrors y.
+      if (armorActive) e += `^${headingX(b).toFixed(4)},${(headingY(b) * flip).toFixed(4)}`
       // Terrain (booster budget/cooldown, deep-hole exemption) — only in
       // matches with a layout, so plain-arena hashes stay byte-identical.
       if (terrain !== null) {
@@ -1162,6 +1181,11 @@ export const useSpinnerGame = () => {
     w: number,
     h: number
   ) => {
+    // Default skin: painted highland ground + the layout's decorative props
+    // around the clearing (arenaBackdrop — its own device-resolution cached
+    // layer). Until that art has loaded: the flat FOREST_BACKDROP below.
+    if (selectedBgSkin.value.id === DEFAULT_BG_SKIN_ID &&
+      drawArenaBackdrop(ctx, w, h, terrain?.id ?? null, arenaShape.value, ARENA_RADIUS + ARENA_PADDING / 2)) return
     const key = `${selectedBgSkin.value.id}:${w}x${h}:${bgImageReady() ? 'r' : 'p'}`
     if (bgBufferKey !== key || !bgBuffer) {
       let buf: HTMLCanvasElement | OffscreenCanvas
@@ -1214,7 +1238,7 @@ export const useSpinnerGame = () => {
     ))
   }
 
-  // ── Shock-wall lightning bolt VFX ──────────────────────────────────────
+  // ── Static Charge lightning bolt VFX ──────────────────────────────────────
   interface ShockBolt {
     x0: number;
     y0: number
@@ -1276,6 +1300,7 @@ export const useSpinnerGame = () => {
     if (SKILLS_BUILD) {
       clearRockets()
       if (skillVfx !== null) skillPort?.['resetSkillVfx'](skillVfx)
+      if (skillCallouts !== null) skillPort?.['resetSkillCallouts'](skillCallouts)
     }
     if (BOSSES100_BUILD && bossTraitFx !== null) bossPort?.['resetBossTraitVfx'](bossTraitFx)
   }
@@ -1324,6 +1349,7 @@ export const useSpinnerGame = () => {
   /** Per-blade ground state (booster cooldown, deep-hole exemption), by id. */
   const groundStates = new Map<number, GroundState>()
   const groundOut: GroundEffect = { boosted: false, stopped: false, inMud: false }
+  const solidOut = newSolidEffect()
   /** Per blade→tower last contact (gameTime) for the one-hit-per-contact gate. */
   const towerContactTimes = new Map<string, number>()
   /** Destruction debris of a fallen tower (VFX only). */
@@ -1379,7 +1405,24 @@ export const useSpinnerGame = () => {
   // ── Blade looks (smasher on a turning disc) ────────────────────────────
   // Which smasher + skin a blade wears, cached per blade id. NPC blades
   // without a smasherId look like the smasher of their parts.
-  interface BladeLook { smasherId: SmasherId; modelId?: string; rim: string; yaw: number; lastRot: number }
+  /** Render-only facing of a smasher (never gameplay state). Yaw convention:
+   *  0 faces the camera (+y, screen-down); the rig turns clockwise on
+   *  screen, so the character looks along (−sin yaw, cos yaw). */
+  interface BladeLook {
+    smasherId: SmasherId; modelId?: string; rim: string
+    yaw: number
+    /** Yaw the character turns toward (launch / aim direction); null = hold. */
+    target: number | null
+    /** Spin from the last impact, rad per frame, decays to 0. */
+    spin: number
+    moving: boolean
+    lastHit: number
+    lastWalls: number
+    lastVx: number
+    lastVy: number
+    /** An impact spin is running: when it settles, ease to the gameplay heading. */
+    faceHeading: boolean
+  }
   const bladeYawState = new Map<number, BladeLook>()
 
   const getBladeLook = (blade: SpinnerState): BladeLook => {
@@ -1395,8 +1438,16 @@ export const useSpinnerGame = () => {
         smasherId,
         modelId,
         rim: blade.owner === 'player' ? '#3f7fd8' : '#d8433f',
-        yaw: 0,
-        lastRot: blade.rotation
+        // Start facing the opponents' side: player row looks up, NPCs down.
+        yaw: blade.owner === 'player' ? Math.PI : 0,
+        target: null,
+        spin: 0,
+        moving: false,
+        lastHit: blade.lastHitTime,
+        lastWalls: blade.wallBounceCount,
+        lastVx: blade.vx,
+        lastVy: blade.vy,
+        faceHeading: false
       }
       bladeYawState.set(blade.id, look)
     }
@@ -1672,7 +1723,7 @@ export const useSpinnerGame = () => {
     life: number     // remaining ms
     maxLife: number
     isCrit: boolean
-    comboText?: string  // thunder arena combo label
+    comboText?: string  // text popup (momentum stacks, armour, tower destroyed)
     /** Banner text: centred on x instead of left-aligned (tower smashed). */
     centered?: boolean
     /** Skill popup: 12 px skill icon left of the number (§8.2). With
@@ -1752,7 +1803,7 @@ export const useSpinnerGame = () => {
 
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.font = `900 ${Math.round(20 * scale)}px Arial, sans-serif`
+      ctx.font = `900 ${Math.round(20 * scale)}px Nunito, Arial, sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
@@ -1800,10 +1851,6 @@ export const useSpinnerGame = () => {
     }
   }
 
-  // Thunder arena combo tracking: per-blade last hit target + timestamp + stacks
-  const COMBO_WINDOW_MS = 3000
-  const COMBO_GRACE_MS = 100
-  const comboState = new Map<number, { targetId: number; lastTime: number; stacks: number }>()
 
   const spawnDamageNumber = (
     x: number, y: number, value: number, dealerOwner: 'player' | 'npc', isCrit = false,
@@ -1882,7 +1929,7 @@ export const useSpinnerGame = () => {
 
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.font = `bold ${Math.round(20 * scale)}px Arial`
+      ctx.font = `900 ${Math.round(20 * scale)}px Nunito, Arial, sans-serif`
       ctx.textAlign = dn.comboText && !dn.centered ? 'left' : 'center'
       ctx.textBaseline = 'middle'
 
@@ -1903,7 +1950,7 @@ export const useSpinnerGame = () => {
         // nothing else to draw
       } else if (dn.isLucky && !dn.isCrit) {
         // Lucky Edge: crit colours and size, never the crit shadowBlur.
-        ctx.strokeStyle = '#000000'
+        ctx.strokeStyle = '#161a40'
         ctx.lineWidth = 4
         ctx.lineJoin = 'round'
         ctx.strokeText(text, dn.x, dn.y)
@@ -1918,7 +1965,7 @@ export const useSpinnerGame = () => {
           ctx.lineJoin = 'round'
           ctx.strokeText(text, dn.x, dn.y)
         }
-        ctx.strokeStyle = '#000000'
+        ctx.strokeStyle = '#161a40'
         ctx.lineWidth = 4
         ctx.lineJoin = 'round'
         ctx.strokeText(text, dn.x, dn.y)
@@ -1926,7 +1973,7 @@ export const useSpinnerGame = () => {
         ctx.fillText(text, dn.x, dn.y)
       } else {
         // Text shadow (game-text style: black border)
-        ctx.strokeStyle = '#000000'
+        ctx.strokeStyle = '#161a40'
         ctx.lineWidth = 3
         ctx.lineJoin = 'round'
         ctx.strokeText(text, dn.x, dn.y)
@@ -1967,6 +2014,92 @@ export const useSpinnerGame = () => {
   const speed = (blade: SpinnerState): number =>
     Math.sqrt(blade.vx * blade.vx + blade.vy * blade.vy)
 
+  // ── Smasher mechanics: heading + directional armour (smasherMechanics.ts)
+  /** Any blade of this match carries directional armour (hash + hit path). */
+  let armorActive = false
+  const headingX = (b: SpinnerState): number => b.hx ?? 0
+  const headingY = (b: SpinnerState): number => b.hy ?? defaultHeadingY(b.owner)
+  /** Hit zone on `def` for a contact whose unit direction from def's centre
+   *  is (ux, uy). */
+  const zoneOf = (def: SpinnerState, ux: number, uy: number): ArmorZone =>
+    armorZone(headingX(def), headingY(def), ux, uy)
+  /** The side Thorns covers: the reinforced cone (back when the armour is
+   *  stronger behind, else the front — also for unarmoured bearers). */
+  const spikedZone = (b: SpinnerState): ArmorZone =>
+    b.armor !== undefined && b.armor.back < b.armor.front ? ZONE_BACK : ZONE_FRONT
+
+  /**
+   * Spawn settle for non-default disc sizes: push blades out of team towers
+   * and islands, apart from each other, and back inside the arena, a few
+   * deterministic passes in syncKey order. Runs only when a blade's disc is
+   * not 1×, so every 1×-disc spawn stays exactly where it always was.
+   */
+  const settleSpawnOverlaps = (): void => {
+    const blades = [...allBlades.value].sort((p, q) => p.syncKey - q.syncKey)
+    if (!blades.some(b => (b.disc ?? 1) !== 1)) return
+    const GAP = 3
+    for (let pass = 0; pass < 8; pass++) {
+      let moved = false
+      for (const b of blades) {
+        for (const t of towers) {
+          const dx = b.x - t.x
+          const dy = b.y - t.y
+          const d = Math.sqrt(dx * dx + dy * dy)
+          const min = b.radius + t.radius + GAP
+          if (d < min) {
+            const ux = d > 0.01 ? dx / d : 0
+            const uy = d > 0.01 ? dy / d : (b.owner === 'player' ? -1 : 1)
+            b.x = t.x + ux * min
+            b.y = t.y + uy * min
+            moved = true
+          }
+        }
+        for (const isl of arenaBouncers) {
+          if (isl.island === undefined) continue
+          const dx = b.x - isl.x
+          const dy = b.y - isl.y
+          const d = Math.sqrt(dx * dx + dy * dy)
+          const min = b.radius + isl.radius + GAP
+          if (d < min) {
+            const ux = d > 0.01 ? dx / d : 1
+            const uy = d > 0.01 ? dy / d : 0
+            b.x = isl.x + ux * min
+            b.y = isl.y + uy * min
+            moved = true
+          }
+        }
+      }
+      for (let i = 0; i < blades.length; i++) {
+        for (let j = i + 1; j < blades.length; j++) {
+          const a = blades[i]!
+          const c = blades[j]!
+          const dx = c.x - a.x
+          const dy = c.y - a.y
+          const d = Math.sqrt(dx * dx + dy * dy)
+          const min = a.radius + c.radius + GAP
+          if (d >= min) continue
+          const ux = d > 0.01 ? dx / d : 1
+          const uy = d > 0.01 ? dy / d : 0
+          const push = (min - d) / 2
+          a.x -= ux * push
+          a.y -= uy * push
+          c.x += ux * push
+          c.y += uy * push
+          moved = true
+        }
+      }
+      for (const b of blades) {
+        const cl = clampInArena(b.x, b.y, b.radius, 2)
+        if (cl.x !== b.x || cl.y !== b.y) {
+          b.x = cl.x
+          b.y = cl.y
+          moved = true
+        }
+      }
+      if (!moved) break
+    }
+  }
+
   const livingBlades = (blades: SpinnerState[]): SpinnerState[] =>
     blades.filter(b => b.hp > 0)
 
@@ -1979,6 +2112,11 @@ export const useSpinnerGame = () => {
   // never recomputes the same blade twice in one frame.
   const _statsCache = new Map<number, SpinnerStats>()
 
+  /** A part-only (no smasher) NPC blade outside PvP: campaign enemies, boss
+   *  encounters, league gatekeepers, ghosts — CAMPAIGN_NPC_TUNING applies. */
+  const isLegacyNpc = (owner: string, config: SpinnerConfig): boolean =>
+    owner === 'npc' && !pvpMode.value && !isSmasherId(config.smasherId)
+
   const statsFor = (blade: SpinnerState): SpinnerStats => {
     const cached = _statsCache.get(blade.id)
     if (cached) return cached
@@ -1987,6 +2125,7 @@ export const useSpinnerGame = () => {
     let def = stats.defenseMultiplier
     let spd = stats.speedMultiplier
     if (firstGameBoost && blade.owner === 'player') dmg *= 2
+    if (isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.dmgMul
     // Split-boss children hit for a fraction of the parent's damage so a
     // swarm can't simply out-DPS a focused target. Defense and weight are
     // also nerfed so each child reads as a fragile minion, not a clone of
@@ -2061,6 +2200,8 @@ export const useSpinnerGame = () => {
   const statsForSkill = (b: SkillBlade): SkillRefStats => statsFor(b as SpinnerState)
   /** Skill VFX pools — created from the port on the first skilled match. */
   let skillVfx: SkillVfx | null = null
+  /** Proc callouts (skill icon + name + what it did) — VFX only. */
+  let skillCallouts: SkillCallouts | null = null
 
   const turnIndexOf = (owner: 'player' | 'npc'): number =>
     owner === 'player' ? playerTurnIndex : npcTurnIndex
@@ -2241,7 +2382,7 @@ export const useSpinnerGame = () => {
   const skillEvents: SkillEvent[] = SKILLS_BUILD
     ? Array.from({ length: SKILL_EVENT_BUFFER }, () => ({
       seq: 0, t: 0, kind: 'salvo' as SkillEventKind, skill: 'opening_salvo' as SkillId,
-      bladeId: -1, syncKey: -1, owner: 'player' as 'player' | 'npc', x: 0, y: 0, value: 0
+      bladeId: -1, syncKey: -1, owner: 'player' as 'player' | 'npc', x: 0, y: 0, value: 0, key: ''
     }))
     : []
   let skillEventSeq = 0
@@ -2322,12 +2463,31 @@ export const useSpinnerGame = () => {
     skillHud.value = hudTracks.map(t => {
       const s = t.blade.skills
       if (s === undefined) return []
-      return s.ids.map((id, i) => ({ id, level: s.lv[id] ?? 1, state: hudChipState(t, id, i) }))
+      return s.ids.map((id, i) => ({ id, key: skillKeyOf(t.blade, id), level: s.lv[id] ?? 1, state: hudChipState(t, id, i) }))
     })
   }
 
-  /** Write one skill event into the ring, feed the VFX layer and the HUD. */
-  const pushSkillEvent = (kind: SkillEventKind, skill: SkillId, blade: SpinnerState, value: number): void => {
+  /** The smasher skill id `blade` runs on `effect` ('' = generic). */
+  const skillKeyOf = (blade: SpinnerState, effect: SkillId): string =>
+    skillPort !== null && blade.config.smasherId ? skillPort['smasherSkillKey'](blade.config.smasherId, effect) : ''
+  /** First living blade of `team` that carries `bit` (the skill's bearer). */
+  const skillBearerIn = (team: SpinnerState[], effect: SkillId): SpinnerState | null => {
+    for (const b of team) if (b.skills !== undefined && b.skills.ids.includes(effect)) return b
+    return null
+  }
+  // Reused callout input (no allocation per proc).
+  const calloutIn: CalloutInput = { kind: 'momentum', effect: 'momentum', key: '', value: 0, side: 'player' }
+
+  /**
+   * Write one skill event into the ring, feed the VFX layer, the HUD and the
+   * proc callout. `blade` = what the event is ABOUT (target for hits / stuns);
+   * `bearer` = whose skill it is (callout anchor + skill name), default the
+   * same blade; `mult` = the hit multiplier for Lucky Edge / Momentum.
+   */
+  const pushSkillEvent = (
+    kind: SkillEventKind, skill: SkillId, blade: SpinnerState, value: number,
+    bearer: SpinnerState = blade, mult?: number
+  ): void => {
     const ev = skillEvents[skillEventSeq % SKILL_EVENT_BUFFER]!
     skillEventSeq++
     ev.seq = skillEventSeq
@@ -2340,8 +2500,23 @@ export const useSpinnerGame = () => {
     ev.x = blade.x
     ev.y = blade.y
     ev.value = value
+    ev.key = skillKeyOf(bearer, skill)
     if (skillVfx !== null) skillPort?.['skillVfxEvent'](skillVfx, ev, FX.low)
-    hudProc(blade, skill)
+    hudProc(bearer, skill)
+    if (skillCallouts !== null && !CLEAN_FEED) {
+      const skip = kind === 'stun_skip'
+      calloutIn.kind = kind
+      calloutIn.effect = skill
+      calloutIn.key = ev.key
+      calloutIn.value = value
+      calloutIn.mult = mult
+      calloutIn.stunned = kind === 'static' && value === 1
+      calloutIn.side = skip ? (blade.owner === 'player' ? 'npc' : 'player') : bearer.owner
+      // A proc while the centre turn banner is up (Opening Salvo) waits until
+      // the banner clears, so the pill is never hidden behind it.
+      const calloutAt = Math.max(performance.now(), turnBannerUntil)
+      skillPort?.['pushSkillCallout'](skillCallouts, calloutIn, skip ? blade : bearer, calloutAt, translate, activeLocale())
+    }
   }
   /** Glyph / popup colour of a skill effect that belongs to `owner`'s side. */
   const skillColor = (owner: 'player' | 'npc', own: string): string =>
@@ -2451,6 +2626,7 @@ export const useSpinnerGame = () => {
     const pct = skillPort!['teamSalvoPct'](team)
     if (!(pct > 0) || team.length === 0) return
     const src = team[0]!.owner
+    const bearer = skillBearerIn(team, 'opening_salvo') ?? team[0]!
     let sprites = 0
     for (const e of foes) {
       if (e.hp <= 0) continue
@@ -2458,7 +2634,7 @@ export const useSpinnerGame = () => {
       if (!(d > 0)) continue
       const hpBefore = e.hp
       applyBladeDamage(e, d, e.x, e.y, src, false, 'salvo', false, 'opening_salvo')
-      pushSkillEvent('salvo', 'opening_salvo', e, hpBefore - e.hp)
+      pushSkillEvent('salvo', 'opening_salvo', e, hpBefore - e.hp, bearer)
       // Existing explosion sheet at half scale, ≤ 5; FX.low: numbers + flash.
       if (!FX.low && sprites < 5) {
         activeExplosions.push(createSpritesheetAnim(
@@ -2491,9 +2667,12 @@ export const useSpinnerGame = () => {
   // ── Collision hooks (§5 steps 2, 3, 6) ─────────────────────────────────
   /** Events / popups for the attacker step `skillOut` just described. */
   const noteOutgoing = (att: SpinnerState, cx: number, cy: number): void => {
-    if (skillOut.lucky) pushSkillEvent('lucky', 'lucky_edge', att, 0)
+    if (skillOut.lucky) {
+      pushSkillEvent('lucky', 'lucky_edge', att, 0, att, (att.skills as { luckyMult?: number } | undefined)?.luckyMult)
+    }
     if (skillOut.momentumStacks > 0 && att.skills !== undefined) {
-      pushSkillEvent('momentum', 'momentum', att, skillOut.momentumStacks)
+      pushSkillEvent('momentum', 'momentum', att, skillOut.momentumStacks, att,
+        1 + att.skills.momentumPerStack * skillOut.momentumStacks)
       if (damageNumbers.length < 60) {
         damageNumbers.push({
           x: cx, y: cy - 10, value: 0,
@@ -2505,6 +2684,27 @@ export const useSpinnerGame = () => {
       }
       hudTouch(att)
     }
+    if (skillOut.bank && att.skills !== undefined) {
+      pushSkillEvent('bank', 'bank_shot', att, 0, att, 1 + att.skills.bankPct)
+      hudTouch(att)
+    }
+  }
+  /** Directional-armour feedback: "Blocked!" (reinforced plate) or "Weak
+   *  spot!" floating up from the contact. VFX only (every build). */
+  let armorTagAt = -Infinity
+  const spawnArmorTag = (x: number, y: number, blocked: boolean): void => {
+    if (CLEAN_FEED || damageNumbers.length >= 60) return
+    const now = performance.now()
+    if (now - armorTagAt < 120) return
+    armorTagAt = now
+    damageNumbers.push({
+      x, y: y - 14, value: 0,
+      vx: 0, vy: -0.06,
+      color: blocked ? '#dbe4ee' : '#ffb347', life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
+      isCrit: !blocked,
+      comboText: translate(blocked ? 'skills.callout.armorBlocked' : 'skills.callout.armorWeak'),
+      centered: true
+    })
   }
   /** Events / popups for the defender step `skillIn` just described. */
   const noteIncoming = (def: SpinnerState): void => {
@@ -2526,7 +2726,7 @@ export const useSpinnerGame = () => {
     if (contactOut.shocked) {
       enemy.hitFlash = HIT_FLASH_FRAMES
       spawnShockBolt(bearer.x, bearer.y, enemy.x, enemy.y)
-      pushSkillEvent('static', 'static_charge', enemy, contactOut.stunned ? 1 : 0)
+      pushSkillEvent('static', 'static_charge', enemy, contactOut.stunned ? 1 : 0, bearer)
       if (contactOut.stunned) {
         // The launch lock is shared with Frost Lock; the kind tells the
         // never-lose-a-turn thaw to leave Static Charge stuns alone.
@@ -2612,6 +2812,8 @@ export const useSpinnerGame = () => {
   const beginLaunch = (blade: SpinnerState): void => {
     blade.vx = 0
     blade.vy = 0
+    // Gameplay heading = the launch direction (armour faces where it flies).
+    followHeading(blade.ax, blade.ay, 0, blade)
     blade.accelFramesLeft = ACCEL_FRAMES
     blade.wallBounceCount = 0
     if (terrain !== null) {
@@ -2644,14 +2846,13 @@ export const useSpinnerGame = () => {
         for (const b of team) {
           if (b.hp > 0) {
             spawnSkillGlyph(b, 'static_charge', SKILL_COLOR_ENEMY)
-            pushSkillEvent('stun_skip', 'static_charge', b, playerTurnIndex)
+            pushSkillEvent('stun_skip', 'static_charge', b, playerTurnIndex, skillBearerIn(npcBlades.value, 'static_charge') ?? b)
           }
         }
         traitTurnEnd('player')
         phase.value = 'npc_turn'
         npcThinkingElapsed = 0
         launchedBladeId.value = null
-        comboState.clear()
         for (const b of npcBlades.value) {
           if (b.statSwitchPhase) b.statSwitchPhase = 'attack'
         }
@@ -2663,11 +2864,10 @@ export const useSpinnerGame = () => {
         for (const b of team) {
           if (b.hp > 0) {
             spawnSkillGlyph(b, 'static_charge', SKILL_COLOR_SHIELD)
-            pushSkillEvent('stun_skip', 'static_charge', b, npcTurnIndex)
+            pushSkillEvent('stun_skip', 'static_charge', b, npcTurnIndex, skillBearerIn(playerBlades.value, 'static_charge') ?? b)
           }
         }
         traitTurnEnd('npc')
-        comboState.clear()
         for (const b of npcBlades.value) {
           if (b.statSwitchPhase) b.statSwitchPhase = 'defense'
         }
@@ -2737,8 +2937,12 @@ export const useSpinnerGame = () => {
     if (isBoss) {
       radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : 1.6
     }
-    const bossRadius = BLADE_RADIUS * radiusMult
-    const finalHp = stats.maxHp * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier
+    // Smasher disc size (catalog `disc`, 0.75 … 1.35); boss sizes stack on top.
+    const disc = discOf(config)
+    const bossRadius = BLADE_RADIUS * radiusMult * disc
+    const armor = armorOf(config)
+    const legacyNpcHpMul = isLegacyNpc(owner, config) ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2) : 1
+    const finalHp = stats.maxHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier
     return {
       id: nextBladeId++,
       // Placeholder — every spawn site assigns the real peer-independent key.
@@ -2757,7 +2961,11 @@ export const useSpinnerGame = () => {
       lastHitTime: 0,
       config,
       owner,
-      isBoss
+      isBoss,
+      hx: 0,
+      hy: defaultHeadingY(owner),
+      ...(disc !== 1 ? { disc } : {}),
+      ...(armor !== null ? { armor } : {})
     }
   }
 
@@ -2797,6 +3005,8 @@ export const useSpinnerGame = () => {
     twin.ay = parent.ay
     twin.accelFramesLeft = parent.accelFramesLeft
     twin.ghostPending = false
+    twin.hx = parent.hx
+    twin.hy = parent.hy
     twin.syncKey = childSyncKey(parent)
     // Cross-link: each half mirrors damage to the other.
     parent.linkedIds = [...(parent.linkedIds ?? []), twin.id]
@@ -3120,6 +3330,7 @@ export const useSpinnerGame = () => {
     npcBlades.value.forEach((b, i) => {
       b.syncKey = otherBase + i
     })
+    armorActive = allBlades.value.some(b => b.armor !== undefined)
 
     // ── Skills (§10.3 item 1/2): both sides, owner-agnostic (G3). Empty /
     // missing loadout → `skills` stays unset (fast path, baseline hashes).
@@ -3137,6 +3348,8 @@ export const useSpinnerGame = () => {
       clearRockets()
       if (skillsActive && skillVfx === null && skillPort !== null) skillVfx = skillPort['createSkillVfx']()
       if (skillVfx !== null) skillPort?.['resetSkillVfx'](skillVfx)
+      if (skillsActive && skillCallouts === null && skillPort !== null) skillCallouts = skillPort['createSkillCallouts']()
+      if (skillCallouts !== null) skillPort?.['resetSkillCallouts'](skillCallouts)
       localSalvoSpent = false
       hudTracks = ownSkills
         ? playerBlades.value.map(blade => ({
@@ -3235,10 +3448,11 @@ export const useSpinnerGame = () => {
     // Respect the stage's declared arena. Boss stages carry an explicit
     // arenaType of 'boss' from the campaign table (see useSpinnerCampaign.s),
     // so boss visuals still apply — but a boss can now be staged in 'lava',
-    // 'shock', etc. by naming that arena, and non-boss modes
+    // 'ice', etc. by naming that arena, and non-boss modes
     // are never forced into the boss arena. `isBossStage` (above) still drives
-    // boss STATS independently of the arena visuals.
-    arenaType.value = arena
+    // boss STATS independently of the arena visuals. Sanitized: a retired
+    // arena name from an old save / ghost / peer maps to a live one.
+    arenaType.value = sanitizeArenaType(arena)
 
     isDragging.value = false
     selectedBladeId.value = null
@@ -3255,7 +3469,6 @@ export const useSpinnerGame = () => {
     cloudParticles.length = 0
     groundDecals.length = 0
     sandGrains.length = 0
-    comboState.clear()
     lastCritAt.clear()
     spikyChipCooldowns.clear()
     healerHealCooldowns.clear()
@@ -3315,10 +3528,13 @@ export const useSpinnerGame = () => {
     towerFallResult = null
     towerFallFrames = 0
     publishTowerHud()
+    // Big / small smasher discs: no spawn inside a tower, an island or a
+    // neighbour (no-op when every disc is 1×).
+    settleSpawnOverlaps()
     const terrainBlocks = (x: number, y: number, r: number): boolean => {
       for (const t of towers) if (Math.hypot(t.x - x, t.y - y) < t.radius + r + 8) return true
       if (terrain !== null) {
-        for (const c of [...terrain.boosters, ...terrain.holes]) {
+        for (const c of terrainCircles(terrain)) {
           if (Math.hypot(c.x - x, c.y - y) < c.radius + r + 4) return true
         }
       }
@@ -3329,9 +3545,10 @@ export const useSpinnerGame = () => {
     if (clampedBouncerCount > 0) {
       const minSepBouncer = BOUNCER_RADIUS * 2 + 12
       const minSepBlade = BLADE_RADIUS + BOUNCER_RADIUS + 8
-      const spawns: { x: number; y: number }[] = [
-        ...playerBlades.value.map(b => ({ x: b.x, y: b.y })),
-        ...npcBlades.value.map(b => ({ x: b.x, y: b.y }))
+      // `extra`: a bigger smasher disc keeps the bumper further away.
+      const spawns: { x: number; y: number; extra: number }[] = [
+        ...playerBlades.value.map(b => ({ x: b.x, y: b.y, extra: BLADE_RADIUS * ((b.disc ?? 1) - 1) })),
+        ...npcBlades.value.map(b => ({ x: b.x, y: b.y, extra: BLADE_RADIUS * ((b.disc ?? 1) - 1) }))
       ]
       for (let i = 0; i < clampedBouncerCount; i++) {
         let placed: Bouncer | null = null
@@ -3353,7 +3570,7 @@ export const useSpinnerGame = () => {
           if (ok && terrainBlocks(x, y, BOUNCER_RADIUS)) ok = false
           if (ok) {
             for (const sp of spawns) {
-              if (Math.hypot(sp.x - x, sp.y - y) < minSepBlade) {
+              if (Math.hypot(sp.x - x, sp.y - y) < minSepBlade + sp.extra) {
                 ok = false
                 break
               }
@@ -3388,6 +3605,7 @@ export const useSpinnerGame = () => {
       phase.value = 'deciding_turn'
       const startsWithPlayer = pvp.myTurnFirst
       turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.opponentTurn')
+      turnBannerUntil = performance.now() + 1200
       startPhysics()
       spawnMeteorShower(80, 50, 65)
       // PvP has no meteor intro: Opening Salvo fires here, host team then
@@ -3767,7 +3985,7 @@ export const useSpinnerGame = () => {
     // another target has a clear line. No extra draws without towers.
     const enemyTower = towers.find(t => t.side === 'player' && t.hp > 0)
     if (enemyTower && (enemyTower.hp / enemyTower.maxHp < 0.35 || gameplayRand() < 0.2)) target = enemyTower
-    const islands = arenaBouncers.filter(b => b.island !== undefined)
+    const islands: { x: number; y: number; radius: number }[] = terrain !== null ? terrainSolidCircles(terrain) : []
     if (islands.length > 0) {
       const blockedTo = (p: { x: number; y: number }): boolean => {
         const lx = p.x - blade.x
@@ -3822,7 +4040,7 @@ export const useSpinnerGame = () => {
         if (proj < 0) continue // ally is behind the launcher
         // Perpendicular distance from ally to the launch line
         const perp = Math.abs(-ax * sin + ay * cos)
-        if (perp < BLADE_RADIUS * 3) return true
+        if (perp < BLADE_RADIUS * ((blade.disc ?? 1) + (ally.disc ?? 1) + 1)) return true
       }
       return false
     }
@@ -3890,6 +4108,8 @@ export const useSpinnerGame = () => {
       if (meteorIntroTimer >= 1600) {
         // Opening Salvo lands as the meteors do (§10.3 item 3), before the
         // first turn is decided. Draws nothing from matchRng.
+        // The turn banner shows next; salvo callouts wait for it to clear.
+        turnBannerUntil = performance.now() + 500
         if (SKILLS_BUILD) fireOpeningSalvo()
         phase.value = 'deciding_turn'
         // Bias the starting turn based on the previous match outcome:
@@ -3903,6 +4123,7 @@ export const useSpinnerGame = () => {
         const turnRoll = matchRng()
         const startsWithPlayer = forcedFirstTurn !== null ? forcedFirstTurn === 'player' : turnRoll < playerStartChance
         turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.npcTurn')
+        turnBannerUntil = performance.now() + 500
         setTimeout(() => {
           phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
           turnAnnouncement.value = ''
@@ -3997,15 +4218,15 @@ export const useSpinnerGame = () => {
         if (spd < STOP_THRESHOLD && blade.accelFramesLeft === 0) {
           blade.vx = 0
           blade.vy = 0
+        } else {
+          // Gameplay heading follows the travel direction; kept when stopped.
+          followHeading(blade.vx, blade.vy, STOP_THRESHOLD, blade)
         }
 
         // Spin proportional to speed, scaled by HP (100% at full → 40% at 5% HP)
         const hpPct = Math.max(0.05, blade.hp / blade.maxHp)
         const hpSpinScale = 0.4 + 0.6 * hpPct
-        const comboRotMul = arenaType.value === 'thunder'
-          ? 1 + (comboState.get(blade.id)?.stacks ?? 0) * 0.2
-          : 1
-        blade.rotation += (blade.rotationSpeed + spd * 0.02) * hpSpinScale * comboRotMul
+        blade.rotation += (blade.rotationSpeed + spd * 0.02) * hpSpinScale
 
         // Wall collision with BOOST
         bounceOffWalls(blade)
@@ -4114,7 +4335,7 @@ export const useSpinnerGame = () => {
       }
     }
 
-    // Update shock-wall lightning bolts
+    // Update Static Charge lightning bolts
     for (let i = activeShockBolts.length - 1; i >= 0; i--) {
       activeShockBolts[i]!.life -= 16
       if (activeShockBolts[i]!.life <= 0) activeShockBolts.splice(i, 1)
@@ -4136,11 +4357,19 @@ export const useSpinnerGame = () => {
     // turn hand-off frozen meanwhile so nothing else can change the outcome.
     const playerAlive = livingBlades(playerBlades.value).length
     const npcAlive = livingBlades(npcBlades.value).length
+    // Simultaneous loss (mutual wipe-out, both towers down): the side whose
+    // launch is resolving takes it. That side is the same TEAM on both PvP
+    // clients (host's 'player_launched' is the guest's 'npc_launched'), so the
+    // two results stay complementary; outside a launch the host side wins.
+    const tieWinner: 'player' | 'npc' = !pvpMode.value ? 'player'
+      : phase.value.startsWith('npc_') ? 'npc'
+        : phase.value.startsWith('player_') ? 'player'
+          : (pvpLocalIsGuest ? 'npc' : 'player')
     if (towers.length > 0 && towerFallResult === null && !gameResult.value) {
       const pDown = towers.some(t => t.side === 'player' && t.hp <= 0)
       const nDown = towers.some(t => t.side === 'npc' && t.hp <= 0)
       if (pDown || nDown) {
-        towerFallResult = decideResult(playerAlive, npcAlive, pDown, nDown)
+        towerFallResult = decideResult(playerAlive, npcAlive, pDown, nDown, tieWinner)
         towerFallFrames = 0
       }
     }
@@ -4149,7 +4378,7 @@ export const useSpinnerGame = () => {
     }
 
     if ((playerAlive === 0 || npcAlive === 0 || towerFallResult !== null) && !gameResult.value) {
-      gameResult.value = towerFallResult ?? (npcAlive === 0 ? 'win' : 'lose')
+      gameResult.value = towerFallResult ?? decideResult(playerAlive, npcAlive, false, false, tieWinner)
       // A league fight (seeded first turn, DT1) never feeds the campaign's
       // last-result first-turn bias: its outcome must not tilt the next
       // campaign fight's odds.
@@ -4188,7 +4417,6 @@ export const useSpinnerGame = () => {
       phase.value = 'npc_turn'
       npcThinkingElapsed = 0
       launchedBladeId.value = null
-      comboState.clear()
       // Stat-switch boss: switch to attack phase on NPC turn
       for (const b of npcBlades.value) {
         if (b.statSwitchPhase) b.statSwitchPhase = 'attack'
@@ -4214,7 +4442,6 @@ export const useSpinnerGame = () => {
       traitTurnEnd('npc')
       phase.value = 'player_turn'
       launchedBladeId.value = null
-      comboState.clear()
       npcActiveBladeId.value = null
       // Stat-switch boss: switch to defense phase on player turn
       for (const b of npcBlades.value) {
@@ -4304,6 +4531,7 @@ export const useSpinnerGame = () => {
     // Momentum: +1 stack per rebound during the blade's own launch.
     if (SKILLS_BUILD && blade.skills !== undefined) {
       onOwnBounce(blade, launchedBladeId.value)
+      onBankRebound(blade, launchedBladeId.value)
       hudTouch(blade)
     }
 
@@ -4369,23 +4597,6 @@ export const useSpinnerGame = () => {
           color: '#44cc66', isCrit: false
         })
       }
-    } else if (arenaType.value === 'shock') {
-      // Shock arena: remove 90% of blade speed on wall contact.
-      // 250ms per-blade cooldown prevents zap spam (and the lag it caused)
-      // when a blade grinds along the wall over multiple frames. Sim clock,
-      // not wall clock: the cooldown gates physics, so PvP peers must agree
-      // and a pause must not open it.
-      const now = skillClock()
-      if (now - (blade.lastShockMs ?? -Infinity) >= 250) {
-        blade.lastShockMs = now
-        // Speed kept: 10 % (SHOCK_BASE_KEEP), more with Hazard Ward.
-        const keep = hazardShockKeep(blade)
-        blade.vx *= keep
-        blade.vy *= keep
-        blade.hitFlash = HIT_FLASH_FRAMES
-        // Bolt originates at the actual wall contact point (shape-aware).
-        spawnShockBolt(blade.x + nx * blade.radius, blade.y + ny * blade.radius, blade.x, blade.y)
-      }
     }
   }
 
@@ -4430,25 +4641,13 @@ export const useSpinnerGame = () => {
       blade.vy = (blade.vy - 2 * dot * ny) * effectiveBoost
       if (SKILLS_BUILD && blade.skills !== undefined) {
         onOwnBounce(blade, launchedBladeId.value)
+        onBankRebound(blade, launchedBladeId.value)
         hudTouch(blade)
       }
 
       bouncer.flash = 1
       triggerShake('small')
 
-      // Shock arena bouncers also drain 90% speed on impact (same 250ms
-      // per-blade cooldown as the wall to avoid zap spam during overlap).
-      if (arenaType.value === 'shock') {
-        const now = skillClock()
-        if (now - (blade.lastShockMs ?? -Infinity) >= 250) {
-          blade.lastShockMs = now
-          const keep = hazardShockKeep(blade)
-          blade.vx *= keep
-          blade.vy *= keep
-          blade.hitFlash = HIT_FLASH_FRAMES
-          spawnShockBolt(bouncer.x + nx * bouncer.radius, bouncer.y + ny * bouncer.radius, blade.x, blade.y)
-        }
-      }
     }
   }
 
@@ -4457,6 +4656,17 @@ export const useSpinnerGame = () => {
     if (terrain === null) return
     const gs = groundStateOf(blade)
     const maxSpd = BASE_MAX_FORCE * statsFor(blade).speedMultiplier
+    // Mushroom caps + logs (solids; teleporters pass through like bouncers).
+    if (!blade.isTeleporter && (terrain.mushrooms.length > 0 || terrain.logs.length > 0)) {
+      collideSolids(terrain, blade, gs, maxSpd, skillClock(), solidOut)
+      if (solidOut.bounced) {
+        if (SKILLS_BUILD && blade.skills !== undefined) {
+          onOwnBounce(blade, launchedBladeId.value)
+          hudTouch(blade)
+        }
+        triggerShake('small')
+      }
+    }
     applyGround(terrain, blade, gs, maxSpd, skillClock(), groundOut)
     if (groundOut.boosted) {
       // A boost restarts the no-hit drag clock so the extra speed is felt.
@@ -4500,6 +4710,7 @@ export const useSpinnerGame = () => {
       blade.vx = (blade.vx - 2 * dot * nx) * BOUNCE_DAMPENING
       blade.vy = (blade.vy - 2 * dot * ny) * BOUNCE_DAMPENING
       tower.flash = Math.max(tower.flash, 0.6)
+      if (SKILLS_BUILD && blade.skills !== undefined) onBankRebound(blade, launchedBladeId.value)
 
       if (blade.owner === tower.side || tower.hp <= 0 || isInvulnerable(blade)) continue
       if (closing <= STOP_THRESHOLD) continue
@@ -4509,8 +4720,16 @@ export const useSpinnerGame = () => {
       towerContactTimes.set(key, now)
       if (now - last <= CONTACT_REARM_MS) continue
       blade.lastHitTime = now
-      const dmg = towerHitDamage(closing, statsFor(blade).damageMultiplier, DAMAGE_SCALE)
+      let dmg = towerHitDamage(closing, statsFor(blade).damageMultiplier, DAMAGE_SCALE)
       if (dmg <= 0) continue
+      // Tower Breaker (smasher skill): bonus damage against team towers.
+      if (SKILLS_BUILD && blade.skills !== undefined) {
+        const tm = towerDamageMul(blade)
+        if (tm !== 1) {
+          pushSkillEvent('tower', 'tower_breaker', blade, dmg * (tm - 1))
+          dmg *= tm
+        }
+      }
       tower.hp = Math.max(0, tower.hp - dmg)
       tower.flash = 1
       triggerShake('small')
@@ -4719,6 +4938,24 @@ export const useSpinnerGame = () => {
     b.vx = (b.vx - bDot * nx + aDot * nx) * BOUNCE_DAMPENING
     b.vy = (b.vy - bDot * ny + aDot * ny) * BOUNCE_DAMPENING
 
+    // Anchor (smasher skill): a blade pushed while it is NOT the launched one
+    // keeps only part of the knockback. Enemy pairs only; no RNG.
+    if (SKILLS_BUILD && a.owner !== b.owner && (a.skills !== undefined || b.skills !== undefined)) {
+      const lidAnchor = launchedBladeId.value
+      const ka = anchorKeep(a, lidAnchor)
+      if (ka !== 1) {
+        a.vx *= ka
+        a.vy *= ka
+        if (contactArmed) pushSkillEvent('anchor', 'anchor', a, 1 - ka)
+      }
+      const kb = anchorKeep(b, lidAnchor)
+      if (kb !== 1) {
+        b.vx *= kb
+        b.vy *= kb
+        if (contactArmed) pushSkillEvent('anchor', 'anchor', b, 1 - kb)
+      }
+    }
+
     // Separate overlapping models
     const overlap = minDist - dist
     a.x -= (overlap / 2) * nx
@@ -4772,59 +5009,6 @@ export const useSpinnerGame = () => {
     const aSpeedAdv = (bSpeed > 0 && aSpeed >= bSpeed * 2) ? 0.75 : 1
     const bSpeedAdv = (aSpeed > 0 && bSpeed >= aSpeed * 2) ? 0.75 : 1
 
-    // Thunder arena combo tracking
-    let aComboMul = 1
-    let bComboMul = 1
-    if (arenaType.value === 'thunder') {
-      const comboAngle = (Math.random() - 0.5) * (Math.PI / 3) // vfx-rng — 60° cone pointing right (VFX only)
-      const comboSpd = 0.06 + Math.random() * 0.03 // vfx-rng
-      const now = gameTime()
-      // Update combo for a hitting b (only if a is moving fast enough to attack)
-      if (aSpeed > STOP_THRESHOLD) {
-        const aCombo = comboState.get(a.id)
-        if (aCombo && aCombo.targetId === b.id && now - aCombo.lastTime <= COMBO_WINDOW_MS) {
-          if (now - aCombo.lastTime >= COMBO_GRACE_MS) {
-            aCombo.stacks++
-            aCombo.lastTime = now
-            aComboMul = 1 + aCombo.stacks * 0.1
-            damageNumbers.push({
-              x: cx, y: cy,
-              value: 0, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
-              vx: Math.cos(comboAngle) * comboSpd, vy: Math.sin(comboAngle) * comboSpd,
-              color: '#ffcc22', isCrit: false,
-              comboText: `${aCombo.stacks}x COMBO`
-            })
-          } else {
-            aComboMul = 1 + aCombo.stacks * 0.1
-          }
-        } else {
-          comboState.set(a.id, { targetId: b.id, lastTime: now, stacks: 0 })
-        }
-      }
-      // Update combo for b hitting a (only if b is moving fast enough to attack)
-      if (bSpeed > STOP_THRESHOLD) {
-        const bCombo = comboState.get(b.id)
-        if (bCombo && bCombo.targetId === a.id && now - bCombo.lastTime <= COMBO_WINDOW_MS) {
-          if (now - bCombo.lastTime >= COMBO_GRACE_MS) {
-            bCombo.stacks++
-            bCombo.lastTime = now
-            bComboMul = 1 + bCombo.stacks * 0.1
-            damageNumbers.push({
-              x: cx, y: cy,
-              value: 0, life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE,
-              vx: Math.cos(comboAngle) * comboSpd, vy: Math.sin(comboAngle) * comboSpd,
-              color: '#ffcc22', isCrit: false,
-              comboText: `${bCombo.stacks}x COMBO`
-            })
-          } else {
-            bComboMul = 1 + bCombo.stacks * 0.1
-          }
-        } else {
-          comboState.set(b.id, { targetId: a.id, lastTime: now, stacks: 0 })
-        }
-      }
-    }
-
     const nowCrit = gameTime()
 
     // Gate the entire speed-based damage block on the contact-armed check:
@@ -4857,7 +5041,7 @@ export const useSpinnerGame = () => {
         const atkMul = aCrit ? 1.25 : 1
         dmgAtoB = (closingSpeed * aStats.damageMultiplier * atkMul * aStats.totalWeight)
           / (bStats.totalWeight * defMul)
-          * DAMAGE_SCALE * bSpeedAdv * aComboMul
+          * DAMAGE_SCALE * bSpeedAdv
           * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
       }
       // b attacks a
@@ -4877,8 +5061,28 @@ export const useSpinnerGame = () => {
         const atkMul = bCrit ? 1.25 : 1
         dmgBtoA = (closingSpeed * bStats.damageMultiplier * atkMul * bStats.totalWeight)
           / (aStats.totalWeight * defMul)
-          * DAMAGE_SCALE * aSpeedAdv * bComboMul
+          * DAMAGE_SCALE * aSpeedAdv
           * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
+      }
+
+      // ── Directional armour (smasher `armor`): damage TAKEN by where the
+      // hit lands on the defender's gameplay heading. The contact point sits
+      // at −n on b and +n on a. Thorns reads the zone and the unarmoured hit.
+      const zoneB = zoneOf(b, -nx, -ny)
+      const zoneA = zoneOf(a, nx, ny)
+      const thornsBaseAtoB = dmgAtoB
+      const thornsBaseBtoA = dmgBtoA
+      let armorTagB = 1
+      let armorTagA = 1
+      if (armorActive) {
+        if (dmgAtoB > 0 && b.armor !== undefined) {
+          armorTagB = armorMul(b.armor, zoneB)
+          dmgAtoB *= armorTagB
+        }
+        if (dmgBtoA > 0 && a.armor !== undefined) {
+          armorTagA = armorMul(a.armor, zoneA)
+          dmgBtoA *= armorTagA
+        }
       }
 
       // ── Skills (§5 steps 2–3), per direction: attacker multiplier
@@ -5001,7 +5205,29 @@ export const useSpinnerGame = () => {
         if (reflectOntoB > 0 && b.hp > 0) {
           if (applyBladeDamage(b, reflectOntoB, b.x, b.y, a.owner, false, 'reflect', false, 'mirror_plate')) hadKill = true
         }
+        // Thorns: a hit that landed on the bearer's spiked side recoils onto the
+        // attacker (kind 'reflect' — never procs, never reflected again).
+        if (dmgAtoB > 0 && a.hp > 0) {
+          const th = thornsRecoil(b, a, thornsBaseAtoB, zoneB === spikedZone(b), aStats.defenseMultiplier)
+          if (th > 0) {
+            const hpBefore = a.hp
+            if (applyBladeDamage(a, th, a.x, a.y, b.owner, false, 'reflect', false, 'thorns')) hadKill = true
+            pushSkillEvent('thorns', 'thorns', a, hpBefore - a.hp, b)
+          }
+        }
+        if (dmgBtoA > 0 && b.hp > 0) {
+          const th = thornsRecoil(a, b, thornsBaseBtoA, zoneA === spikedZone(a), bStats.defenseMultiplier)
+          if (th > 0) {
+            const hpBefore = b.hp
+            if (applyBladeDamage(b, th, b.x, b.y, a.owner, false, 'reflect', false, 'thorns')) hadKill = true
+            pushSkillEvent('thorns', 'thorns', b, hpBefore - b.hp, a)
+          }
+        }
       }
+      // Armour feedback: a short tag where a reinforced plate blocked part
+      // of the hit or a weak spot took extra (VFX only).
+      if (armorTagB !== 1 && dmgAtoB > 0) spawnArmorTag(cx, cy, armorTagB < 1)
+      if (armorTagA !== 1 && dmgBtoA > 0) spawnArmorTag(cx, cy, armorTagA < 1)
       // Boss traits (§12.2 item 3): cold touch / freeze / chill, both ways,
       // after the hits and reflections, before the contact skills.
       if (BOSSES100_BUILD && traitsActive && a.owner !== b.owner
@@ -5331,6 +5557,7 @@ export const useSpinnerGame = () => {
     // Skill layer (§8.2/§8.3): rockets, Second Wind rings, stun glyphs.
     if (SKILLS_BUILD && skillsActive && skillVfx !== null) {
       skillPort?.['renderSkillLayer'](ctx, skillVfx, rocketPool, allBlades.value, isStunnedForVfx, skillClock(), FX.low)
+      skillPort?.['renderSkillFlavour'](ctx, skillVfx)
     }
 
     // Spark VFX
@@ -5343,7 +5570,7 @@ export const useSpinnerGame = () => {
       renderSpritesheetAnim(ctx, explosion)
     }
 
-    // Shock-wall lightning bolts
+    // Static Charge lightning bolts
     for (const bolt of activeShockBolts) {
       const t = bolt.life / bolt.maxLife
       drawLightningBolt(ctx, bolt.x0, bolt.y0, bolt.x1, bolt.y1, (isFirefox || FX.low) ? {
@@ -5380,6 +5607,11 @@ export const useSpinnerGame = () => {
     if (!CLEAN_FEED) {
       renderDamageNumbers(ctx)
       renderPowerupFloats(ctx)
+      // Skill proc callouts (icon + skill name + what it did), css-px sized.
+      if (SKILLS_BUILD && skillCallouts !== null) {
+        skillPort?.['renderSkillCallouts'](ctx, skillCallouts, performance.now(), 1 / scale,
+          canvasWidth / 2 / scale, canvasHeight / 2 / scale, FX.low)
+      }
     }
 
     // Selection highlight — a control affordance ("this blade is armed"),
@@ -5700,24 +5932,12 @@ export const useSpinnerGame = () => {
       floorGrad: ['#0a1a0c', '#061208'],
       innerGlowRgba: 'rgba(40, 180, 60,',
       ringColor: '#1a2d1a', borderWidth: 4
-    },
-    thunder: {
-      neonColor: '#ffcc22', neonRgba: 'rgba(255, 204, 34,',
-      floorGrad: ['#1a1a08', '#12120a'],
-      innerGlowRgba: 'rgba(255, 220, 60,',
-      ringColor: '#2d2a1a', borderWidth: 4
-    },
-    shock: {
-      neonColor: '#ff66cc', neonRgba: 'rgba(255, 102, 204,',
-      floorGrad: ['#2a0a2a', '#150518'],
-      innerGlowRgba: 'rgba(200, 60, 180,',
-      ringColor: '#3a1a3a', borderWidth: 5
     }
   }
 
   // Static-layer renderer: everything in the arena that doesn't change
   // within a match (floor gradient, outer halo, neon border + shadowBlur,
-  // inner rings, theme frost/shock bands). Called into a cached buffer
+  // inner rings, theme frost bands). Called into a cached buffer
   // (see arenaStaticBuffer below), not directly from the per-frame path.
   // Caller must have already translated to the arena origin.
   const renderArenaStatic = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
@@ -5732,17 +5952,25 @@ export const useSpinnerGame = () => {
     // a darker rim band, mown rings and a few grass tufts / flowers. No
     // radial gradients or blur (perf rule): flat fills + alpha shapes only.
     const pal = FLOOR_PALETTES[arenaType.value]
-    ctx.fillStyle = pal.base
+    // A layout theme may retint the plain clearing (snow, autumn, marsh …);
+    // the lava / ice / boss … arena types keep their own identity.
+    const themeFloor = arenaType.value === 'default' ? terrain?.theme.floor : undefined
+    ctx.fillStyle = themeFloor?.[0] ?? pal.base
     traceArena()
     ctx.fill()
+    // Painted floor of this layout (arenaFloorArt — clipped to the outline;
+    // false = not painted / not loaded yet / would upscale): it replaces the
+    // procedural patches + decor below.
+    const paintedFloor = arenaType.value === 'default' && terrain !== null &&
+      drawPaintedFloor(ctx, terrain.id, arenaShape.value, ARENA_RADIUS)
     // Irregular lighter grass patches (deterministic blobs, clipped to the
     // clearing) instead of concentric rings — nothing on the floor should
     // read as round / target-like.
     ctx.save()
     traceArena()
     ctx.clip()
-    ctx.fillStyle = pal.light
-    for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = themeFloor?.[1] ?? pal.light
+    for (let i = 0; i < 7 && !paintedFloor; i++) {
       const a = i * 2.39996 + 0.7
       const r = ARENA_RADIUS * (0.15 + 0.6 * ((i * 0.6180339 + 0.31) % 1))
       const cx = Math.cos(a) * r
@@ -5761,7 +5989,7 @@ export const useSpinnerGame = () => {
       ctx.fill()
     }
     ctx.restore()
-    {
+    if (!paintedFloor) {
       // Deterministic decor (golden-angle scatter): tufts + tiny flowers,
       // only where they sit fully inside the clearing.
       for (let i = 0; i < 40; i++) {
@@ -5771,29 +5999,7 @@ export const useSpinnerGame = () => {
         const y = Math.sin(a) * r
         if (!shapeIsInside(arenaShape.value, x, y, ARENA_RADIUS, 12)) continue
         if (terrainBlocksDecor(x, y)) continue
-        if (i % 3 === 0) {
-          ctx.fillStyle = pal.flower
-          ctx.beginPath()
-          ctx.arc(x, y, 2.2, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)'
-          ctx.beginPath()
-          ctx.arc(x - 0.6, y - 0.6, 0.8, 0, Math.PI * 2)
-          ctx.fill()
-        } else {
-          ctx.strokeStyle = pal.tuft
-          ctx.lineWidth = 1.4
-          ctx.lineCap = 'round'
-          ctx.beginPath()
-          ctx.moveTo(x - 3, y + 2)
-          ctx.lineTo(x - 1.5, y - 3)
-          ctx.moveTo(x, y + 2)
-          ctx.lineTo(x, y - 4.5)
-          ctx.moveTo(x + 3, y + 2)
-          ctx.lineTo(x + 1.5, y - 3)
-          ctx.stroke()
-          ctx.lineCap = 'butt'
-        }
+        DECOR_DRAW[terrain?.theme.decor ?? 'tufts'](ctx, x, y, i, pal)
       }
     }
 
@@ -5819,22 +6025,20 @@ export const useSpinnerGame = () => {
   }
 
   /** Clearing palettes per arena type (identity kept: lava scorched, ice
-   *  snow, boss dusk-red, thunder golden, shock violet, forest deep moss). */
+   *  snow, boss dusk-red, forest deep moss). */
   const FLOOR_PALETTES: Record<ArenaType, { rim: string; base: string; light: string; ring: string; tuft: string; flower: string }> = {
     default: { rim: '#4f8f3e', base: '#7cc05c', light: '#8fcd6b', ring: '#6aad4f', tuft: '#4f9a3c', flower: '#fff27a' },
     forest: { rim: '#2f6b33', base: '#4e9a4e', light: '#5aa957', ring: '#428a44', tuft: '#2f7334', flower: '#ffd36b' },
     boss: { rim: '#4a2523', base: '#7a443c', light: '#875047', ring: '#6a3832', tuft: '#5a2c28', flower: '#ff8a6b' },
     lava: { rim: '#4d2a17', base: '#8a5634', light: '#97613c', ring: '#7a4a2b', tuft: '#5e3820', flower: '#ffb347' },
-    ice: { rim: '#8fb8d6', base: '#d6ebf7', light: '#e4f2fb', ring: '#bcd8ec', tuft: '#a9cbe3', flower: '#ffffff' },
-    thunder: { rim: '#8a7f2e', base: '#c2b75c', light: '#cdc36a', ring: '#ada24b', tuft: '#8f8533', flower: '#fff6a8' },
-    shock: { rim: '#4d2e66', base: '#8a68aa', light: '#9574b5', ring: '#7a5a99', tuft: '#5e4080', flower: '#ffb3ec' }
+    ice: { rim: '#8fb8d6', base: '#d6ebf7', light: '#e4f2fb', ring: '#bcd8ec', tuft: '#a9cbe3', flower: '#ffffff' }
   }
 
   /** Decor scatter keeps clear of terrain features and towers. */
   const terrainBlocksDecor = (x: number, y: number): boolean => {
     for (const t of towers) if (Math.hypot(t.x - x, t.y - y) < t.radius + 8) return true
     if (terrain === null) return false
-    for (const c of [...terrain.islands, ...terrain.boosters, ...terrain.holes]) {
+    for (const c of terrainCircles(terrain)) {
       if (Math.hypot(c.x - x, c.y - y) < c.radius + 6) return true
     }
     return false
@@ -5842,152 +6046,10 @@ export const useSpinnerGame = () => {
 
   const TERRAIN_OUTLINE = '#2c2116'
 
+  /** Terrain features: one draw function per kind in arenaTerrainDraw
+   *  (TERRAIN_FEATURE_DRAW) — the sprite seam for painted art. */
   const renderTerrainStatic = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TerrainLayout) => {
-    const circle = (x: number, y: number, r: number) => {
-      ctx.beginPath()
-      ctx.arc(x, y, r, 0, Math.PI * 2)
-    }
-    // Pot holes: mud puddles (brown) and the deep hole (dark pit + rim).
-    for (const h of t.holes) {
-      ctx.lineWidth = 2
-      ctx.strokeStyle = TERRAIN_OUTLINE
-      if (h.deep) {
-        ctx.fillStyle = '#6b4a2e'
-        circle(h.x, h.y, h.radius)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#2a1a10'
-        circle(h.x, h.y + 1.5, h.radius * 0.72)
-        ctx.fill()
-        ctx.fillStyle = '#120a05'
-        circle(h.x, h.y + 2.5, h.radius * 0.45)
-        ctx.fill()
-      } else {
-        ctx.fillStyle = '#7a5532'
-        circle(h.x, h.y, h.radius)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#5f3f22'
-        circle(h.x + h.radius * 0.12, h.y + h.radius * 0.1, h.radius * 0.68)
-        ctx.fill()
-        ctx.fillStyle = 'rgba(255, 240, 210, 0.35)'
-        circle(h.x - h.radius * 0.35, h.y - h.radius * 0.3, h.radius * 0.16)
-        ctx.fill()
-        circle(h.x + h.radius * 0.3, h.y + h.radius * 0.25, h.radius * 0.1)
-        ctx.fill()
-      }
-    }
-    // Speed boosters: a sunny pad with two chevron arrows.
-    for (const b of t.boosters) {
-      ctx.save()
-      ctx.translate(b.x, b.y)
-      ctx.rotate(b.angle)
-      ctx.lineWidth = 2
-      ctx.strokeStyle = TERRAIN_OUTLINE
-      ctx.fillStyle = '#ffd23f'
-      circle(0, 0, b.radius)
-      ctx.fill()
-      ctx.stroke()
-      ctx.fillStyle = '#ff9f1c'
-      circle(0, 0, b.radius * 0.78)
-      ctx.fill()
-      ctx.fillStyle = '#fffbe6'
-      ctx.lineWidth = 1.2
-      for (const off of [-0.32, 0.18]) {
-        const s = b.radius
-        ctx.beginPath()
-        ctx.moveTo(s * (off + 0.36), 0)
-        ctx.lineTo(s * (off - 0.06), -s * 0.42)
-        ctx.lineTo(s * (off - 0.24), -s * 0.42)
-        ctx.lineTo(s * (off + 0.12), 0)
-        ctx.lineTo(s * (off - 0.24), s * 0.42)
-        ctx.lineTo(s * (off - 0.06), s * 0.42)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-      }
-      ctx.restore()
-    }
-    // Islands: drop shadow + outlined body + kind-specific detail.
-    for (const isl of t.islands) {
-      const r = isl.radius
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
-      circle(isl.x + 3, isl.y + 4, r)
-      ctx.fill()
-      ctx.lineWidth = 2.5
-      ctx.strokeStyle = TERRAIN_OUTLINE
-      if (isl.kind === 'stump') {
-        ctx.fillStyle = '#8a5a35'
-        circle(isl.x, isl.y, r)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#e8c48a'
-        circle(isl.x, isl.y, r * 0.8)
-        ctx.fill()
-        ctx.strokeStyle = '#b98a55'
-        ctx.lineWidth = 1.5
-        for (const k of [0.6, 0.4, 0.2]) {
-          circle(isl.x, isl.y, r * k)
-          ctx.stroke()
-        }
-        // moss tuft + mushroom
-        ctx.fillStyle = '#5aa957'
-        ctx.strokeStyle = TERRAIN_OUTLINE
-        circle(isl.x - r * 0.75, isl.y - r * 0.5, r * 0.28)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#e4574a'
-        ctx.beginPath()
-        ctx.arc(isl.x + r * 0.78, isl.y + r * 0.5, r * 0.22, Math.PI, 0)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-      } else if (isl.kind === 'rock') {
-        ctx.fillStyle = '#8d8f96'
-        circle(isl.x, isl.y, r)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#a7a9b0'
-        circle(isl.x - r * 0.18, isl.y - r * 0.2, r * 0.66)
-        ctx.fill()
-        ctx.fillStyle = '#5aa957'
-        circle(isl.x + r * 0.35, isl.y + r * 0.45, r * 0.4)
-        ctx.fill()
-        // a little tree: trunk + round crown
-        ctx.lineWidth = 1.5
-        ctx.fillStyle = '#7a4f2c'
-        ctx.fillRect(isl.x - 2.5, isl.y - r * 0.15, 5, r * 0.45)
-        ctx.strokeRect(isl.x - 2.5, isl.y - r * 0.15, 5, r * 0.45)
-        ctx.fillStyle = '#4e9a4e'
-        circle(isl.x, isl.y - r * 0.32, r * 0.42)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
-        circle(isl.x - r * 0.12, isl.y - r * 0.45, r * 0.13)
-        ctx.fill()
-      } else {
-        // pond island: grassy ring around a little pond with a lily pad
-        ctx.fillStyle = '#5aa957'
-        circle(isl.x, isl.y, r)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#4fb4d8'
-        circle(isl.x, isl.y, r * 0.66)
-        ctx.fill()
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        ctx.fillStyle = '#86d0ea'
-        circle(isl.x - r * 0.2, isl.y - r * 0.2, r * 0.22)
-        ctx.fill()
-        ctx.fillStyle = '#3f8f3f'
-        ctx.beginPath()
-        ctx.moveTo(isl.x + r * 0.2, isl.y + r * 0.15)
-        ctx.arc(isl.x + r * 0.2, isl.y + r * 0.15, r * 0.2, 0.4, Math.PI * 2 - 0.2)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-      }
-    }
+    renderTerrainFeatures(ctx, t)
   }
 
   /** Team towers: a sturdy little tree in the team colour, HP ring around
@@ -6093,7 +6155,7 @@ export const useSpinnerGame = () => {
 
   // ── Arena static-layer cache ──────────────────────────────────────────
   // The static arena art (floor, halo, neon border with shadowBlur, inner
-  // rings, ice/shock frost bands) doesn't change within a match, yet its
+  // rings, ice frost bands) doesn't change within a match, yet its
   // per-frame cost on Firefox — dominated by shadowBlur on the neon border
   // — is one of the biggest items in the render budget. We pre-composite
   // it into a buffer sized in arena-local coordinates so the cache is
@@ -6110,7 +6172,7 @@ export const useSpinnerGame = () => {
   // pre-composited static buffer.
   let arenaStaticCacheKey: string | null = null
   const arenaStaticKey = (): string =>
-    `${arenaType.value}:${arenaShape.value}:${terrain?.id ?? '-'}:${pvpLocalIsGuest ? 'g' : 'h'}:${towers.length}`
+    `${arenaType.value}:${arenaShape.value}:${terrain?.id ?? '-'}:${pvpLocalIsGuest ? 'g' : 'h'}:${towers.length}:${terrainArtRevision()}:${floorArtRevision()}`
 
   const createArenaStaticBuffer = (): OffscreenCanvas | HTMLCanvasElement => {
     if (typeof OffscreenCanvas !== 'undefined') {
@@ -6187,37 +6249,31 @@ export const useSpinnerGame = () => {
       const rimAlpha = Math.min(1, 0.55 + hit * 0.45)
       const glowR = b.radius * (1.8 + hit * 0.8)
 
-      const isShock = arenaType.value === 'shock'
-
       // Outer glow
-      ctx.fillStyle = isShock
-        ? `rgba(220, 80, 200, ${((0.35 + hit * 0.4) * 0.4).toFixed(3)})`
-        : `rgba(120, 220, 255, ${((0.35 + hit * 0.4) * 0.4).toFixed(3)})`
+      ctx.fillStyle = `rgba(120, 220, 255, ${((0.35 + hit * 0.4) * 0.4).toFixed(3)})`
       ctx.beginPath()
       ctx.arc(b.x, b.y, glowR, 0, Math.PI * 2)
       ctx.fill()
 
       // Drop-shadow base
-      ctx.fillStyle = isShock ? '#1a0a1a' : '#0f1a30'
+      ctx.fillStyle = '#0f1a30'
       ctx.beginPath()
       ctx.arc(b.x, b.y + 1.2, b.radius, 0, Math.PI * 2)
       ctx.fill()
 
       // Main bumper body — gradient from bright center to darker edge
       // Flat two-tone body (no radial gradient — perf rule).
-      ctx.fillStyle = isShock ? '#5a1a4a' : '#1a4d7a'
+      ctx.fillStyle = '#1a4d7a'
       ctx.beginPath()
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2)
       ctx.fill()
-      ctx.fillStyle = hit > 0.01 ? '#ffffff' : (isShock ? '#cc44aa' : '#5bb8e8')
+      ctx.fillStyle = hit > 0.01 ? '#ffffff' : ('#5bb8e8')
       ctx.beginPath()
       ctx.arc(b.x - b.radius * 0.12, b.y - b.radius * 0.12, b.radius * 0.72, 0, Math.PI * 2)
       ctx.fill()
 
       // Rim
-      ctx.strokeStyle = isShock
-        ? `rgba(255, 140, 220, ${rimAlpha * idlePulse})`
-        : `rgba(180, 240, 255, ${rimAlpha * idlePulse})`
+      ctx.strokeStyle = `rgba(180, 240, 255, ${rimAlpha * idlePulse})`
       ctx.lineWidth = 1.5
       ctx.beginPath()
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2)
@@ -6335,7 +6391,7 @@ export const useSpinnerGame = () => {
       let ok = true
       for (const blade of allBlades.value) {
         if (blade.hp <= 0) continue
-        if (Math.hypot(blade.x - x, blade.y - y) < minSepBlade) {
+        if (Math.hypot(blade.x - x, blade.y - y) < minSepBlade + BLADE_RADIUS * ((blade.disc ?? 1) - 1)) {
           ok = false
           break
         }
@@ -6344,6 +6400,11 @@ export const useSpinnerGame = () => {
         // Terrain: never on an island or a team tower.
         for (const b of arenaBouncers) {
           if (b.island !== undefined && Math.hypot(b.x - x, b.y - y) < b.radius + fullRadius + 6) ok = false
+        }
+        if (terrain !== null) {
+          for (const c of terrainCircles(terrain)) {
+            if (Math.hypot(c.x - x, c.y - y) < c.radius + fullRadius + 6) ok = false
+          }
         }
         for (const t of towers) {
           if (Math.hypot(t.x - x, t.y - y) < t.radius + fullRadius + 6) ok = false
@@ -6540,21 +6601,21 @@ export const useSpinnerGame = () => {
   const drawPowerupBadge = (ctx: CanvasRenderingContext2D, extent: number) => {
     const text = powerupBadgeText()
     const fs = Math.max(7, extent * 0.27)
-    ctx.font = `900 ${fs}px Arial, sans-serif`
+    ctx.font = `900 ${fs}px Nunito, Arial, sans-serif`
     const w = ctx.measureText(text).width + fs * 0.7
     const h = fs * 1.25
     const cx = extent * 0.36
     const cy = -extent * 0.42
     ctx.beginPath()
     ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2)
-    ctx.fillStyle = '#fbbf24'
+    ctx.fillStyle = '#ffd21a'
     ctx.fill()
     ctx.lineWidth = Math.max(1, fs * 0.14)
-    ctx.strokeStyle = '#0f1a30'
+    ctx.strokeStyle = '#161a40'
     ctx.stroke()
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = '#0f1a30'
+    ctx.fillStyle = '#161a40'
     ctx.fillText(text, cx, cy + fs * 0.04)
   }
 
@@ -6943,7 +7004,7 @@ export const useSpinnerGame = () => {
     const at = arenaType.value
     const bright = isPlayer
       ? ((at === 'ice' || at === 'default') ? 1 : 0)
-      : ((at === 'boss' || at === 'lava' || at === 'shock') ? 1 : 0)
+      : ((at === 'boss' || at === 'lava') ? 1 : 0)
 
     // `blade.radius * 0.3 / auraRadius` is *almost* constant (0.149-0.157
     // across every blade size in the game) but not exactly, so it gets
@@ -6959,13 +7020,95 @@ export const useSpinnerGame = () => {
         [1, `rgba(${40 + bright * 20}, ${100 + bright * 20}, 220, 0)`]
       ]
       : [
-        // Red aura — brighter on red/warm-tinted floors (boss, lava, shock)
+        // Red aura — brighter on red/warm-tinted floors (boss, lava)
         [0, `rgba(255, ${80 + bright * 50}, ${80 + bright * 50}, 0.75)`],
         [0.5, `rgba(240, ${55 + bright * 40}, ${55 + bright * 40}, 0.45)`],
         [1, `rgba(220, ${40 + bright * 30}, ${40 + bright * 30}, 0)`]
       ]
     drawAuraSprite(ctx, auraSprite(key, innerRatio, stops),
       blade.x, blade.y, auraRadius, pulse)
+  }
+
+  /**
+   * Directional armour on the disc rim, around the gameplay heading: a
+   * reinforced zone (multiplier < 1) is a riveted steel plate arc, a weak
+   * zone (> 1) a stitched, torn cloth patch. Front and back cones are ±60°.
+   * Flat fills and strokes only (no blur, gradients or filters).
+   */
+  const ARMOR_HALF = Math.PI / 3
+  const drawArmorArcs = (ctx: CanvasRenderingContext2D, blade: SpinnerState, x: number, y: number, r: number): void => {
+    const armor = blade.armor!
+    const th = Math.atan2(headingY(blade), headingX(blade))
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(1, DISC_SQUASH_RENDER)
+    ctx.lineCap = 'round'
+    for (let k = 0; k < 2; k++) {
+      const mul = k === 0 ? armor.front : armor.back
+      if (mul === 1) continue
+      const mid = k === 0 ? th : th + Math.PI
+      const a0 = mid - ARMOR_HALF
+      const a1 = mid + ARMOR_HALF
+      if (mul < 1) {
+        // Plate: dark outline, steel band, light top edge, rivets.
+        const w = r * (0.16 + (1 - mul) * 0.25)
+        ctx.strokeStyle = '#2b333d'
+        ctx.lineWidth = w + r * 0.07
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#9fb0c2'
+        ctx.lineWidth = w
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#e6eef6'
+        ctx.lineWidth = Math.max(1, w * 0.22)
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98 + w * 0.28, a0 + 0.06, a1 - 0.06)
+        ctx.stroke()
+        ctx.fillStyle = '#4a5562'
+        for (let i = 0; i < 4; i++) {
+          const a = a0 + (a1 - a0) * (i + 0.5) / 4
+          ctx.beginPath()
+          ctx.arc(Math.cos(a) * r * 0.98, Math.sin(a) * r * 0.98, Math.max(0.8, w * 0.17), 0, Math.PI * 2)
+          ctx.fill()
+        }
+      } else {
+        // Weak spot: frayed cloth patch with a dashed seam and cross stitches.
+        const w = r * (0.14 + Math.min(0.6, mul - 1) * 0.2)
+        ctx.strokeStyle = '#5a2a14'
+        ctx.lineWidth = w + r * 0.06
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.97, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#f0a35e'
+        ctx.lineWidth = w
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.97, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#3d1c0c'
+        ctx.lineWidth = Math.max(1, r * 0.035)
+        ctx.setLineDash([r * 0.09, r * 0.07])
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.97, a0 + 0.05, a1 - 0.05)
+        ctx.stroke()
+        ctx.setLineDash([])
+        for (let i = 0; i < 3; i++) {
+          const a = a0 + (a1 - a0) * (i + 0.5) / 3
+          const cx = Math.cos(a) * r * 0.97
+          const cy = Math.sin(a) * r * 0.97
+          const s = w * 0.45
+          ctx.beginPath()
+          ctx.moveTo(cx - s, cy - s)
+          ctx.lineTo(cx + s, cy + s)
+          ctx.moveTo(cx + s, cy - s)
+          ctx.lineTo(cx - s, cy + s)
+          ctx.stroke()
+        }
+      }
+    }
+    ctx.restore()
   }
 
   const renderBlade = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
@@ -6995,25 +7138,73 @@ export const useSpinnerGame = () => {
     }
 
     // Smasher on its turning disc: flat shadow → disc (spin marks turn with
-    // `rotation`) → the character frame. The character turns with the disc
-    // at 0.35× its spin while moving and settles facing the camera when
-    // stopped; frames are picked from that slowed yaw (32 × 11.25°).
+    // `rotation`) → the character frame (32 × 11.25° yaw frames).
+    //
+    // Facing rules (render-only, never gameplay state):
+    //  · aiming: the selected smasher turns to the launch direction;
+    //  · launch: it turns to face where it is flying;
+    //  · impact (smasher hit, wall, island, bouncer, tower — any contact that
+    //    marks a hit or bends its path): it gets a spin that decays, and it
+    //    KEEPS whatever facing it ends on. It never drifts back to the camera.
     const look = getBladeLook(blade)
-    let dRot = rotation - look.lastRot
-    look.lastRot = rotation
-    if (!(Math.abs(dRot) < 1)) dRot = 0
-    const moving = blade.vx * blade.vx + blade.vy * blade.vy > 0.5
-    if (moving) {
-      look.yaw += dRot * 0.35
-    } else {
-      const home = Math.round(look.yaw / (Math.PI * 2)) * Math.PI * 2
-      look.yaw += (home - look.yaw) * 0.06
+    const v2 = blade.vx * blade.vx + blade.vy * blade.vy
+    const moving = v2 > 0.5
+    const wrapPi = (d: number): number => d - Math.round(d / (Math.PI * 2)) * Math.PI * 2
+    // Impact detection: a hit timestamp, a wall bounce, or a sharp bend of the
+    // velocity between two frames (islands, bouncers, towers, other blades).
+    let impact = 0
+    if (blade.lastHitTime !== look.lastHit) impact = 1
+    if (blade.wallBounceCount !== look.lastWalls) impact = Math.max(impact, 0.8)
+    if (moving && look.moving) {
+      const pv = look.lastVx * look.lastVx + look.lastVy * look.lastVy
+      if (pv > 0.5) {
+        const cos = (blade.vx * look.lastVx + blade.vy * look.lastVy) / Math.sqrt(v2 * pv)
+        if (cos < 0.85) impact = Math.max(impact, 0.7)
+      }
     }
+    if (impact > 0) {
+      const dir = (blade.vx * look.lastVy - blade.vy * look.lastVx) >= 0 ? 1 : -1
+      const speedNow = Math.sqrt(v2)
+      look.spin = Math.max(-0.9, Math.min(0.9, look.spin + dir * impact * (0.22 + 0.05 * speedNow)))
+      look.target = null
+      look.faceHeading = true
+    } else if (moving && !look.moving) {
+      // Launch: face the flight direction.
+      look.target = Math.atan2(-blade.vx, blade.vy)
+    }
+    // Aiming: face the launch direction (opposite of the pull).
+    if (!moving && isDragging.value && selectedBlade.value === blade) {
+      const px = dragCurrent.value.x - blade.x
+      const py = dragCurrent.value.y - blade.y
+      if (px * px + py * py > blade.radius * blade.radius) look.target = Math.atan2(px, -py)
+    }
+    if (look.spin !== 0) {
+      look.yaw += look.spin
+      look.spin *= 0.9
+      if (Math.abs(look.spin) < 0.004) look.spin = 0
+    } else if (look.faceHeading) {
+      // The impact spin settled: turn to the gameplay heading, so the face
+      // (and the armoured front) points where the armour really is.
+      look.faceHeading = false
+      if (look.target === null) look.target = Math.atan2(-headingX(blade), headingY(blade))
+    } else if (look.target !== null) {
+      const d = wrapPi(look.target - look.yaw)
+      look.yaw += d * 0.25
+      if (Math.abs(d) < 0.01) look.target = null
+    }
+    look.moving = moving
+    look.lastHit = blade.lastHitTime
+    look.lastWalls = blade.wallBounceCount
+    look.lastVx = blade.vx
+    look.lastVy = blade.vy
     if (Math.abs(look.yaw) > 1e4) look.yaw %= Math.PI * 2
     const frame = ((Math.round(look.yaw / YAW_STEP) % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
     const tf = ctx.getTransform()
     const deviceScale = Math.hypot(tf.a, tf.b) || 1
     drawSmasherDisc(ctx, x, y, radius, rotation, look.rim, deviceScale)
+    // Part of the disc, under the character: the plush is never covered (the
+    // far-rim plate hides behind its body like any other part of the disc).
+    if (blade.armor !== undefined) drawArmorArcs(ctx, blade, x, y, radius)
     drawSmasherFrame(ctx, look.smasherId, look.modelId, !!blade.config.isBoss, frame, x, y, radius, deviceScale)
 
     // Hit flash overlay (white -> red -> orange -> white)
@@ -7077,7 +7268,7 @@ export const useSpinnerGame = () => {
     const ringWidth = 2.5
 
     // Background ring
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.strokeStyle = 'rgba(22, 26, 64, 0.6)'
     ctx.lineWidth = ringWidth
     ctx.beginPath()
     ctx.arc(x, y, ringR, 0, Math.PI * 2)
@@ -7102,16 +7293,16 @@ export const useSpinnerGame = () => {
     let fontSize = _hpFontCache.get(cacheKey)
     if (fontSize === undefined) {
       fontSize = innerDiameter
-      ctx.font = `bold ${fontSize}px Arial`
+      ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
       let measured = ctx.measureText(hpText).width
       while (measured > innerDiameter * 0.85 && fontSize > 4) {
         fontSize -= 1
-        ctx.font = `bold ${fontSize}px Arial`
+        ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
         measured = ctx.measureText(hpText).width
       }
       _hpFontCache.set(cacheKey, fontSize)
     }
-    ctx.font = `bold ${fontSize}px Arial`
+    ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
 
     // Compute the optical-center offset once per (text, fontSize) and
     // cache it. With `textBaseline = 'alphabetic'`, drawing at
@@ -7133,10 +7324,10 @@ export const useSpinnerGame = () => {
     }
     const drawY = y + yOffset
 
-    ctx.fillStyle = isPlayer ? '#66aaff' : '#ff6666'
+    ctx.fillStyle = isPlayer ? '#38c4ff' : '#ff5c8f'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'alphabetic'
-    ctx.strokeStyle = '#000000'
+    ctx.strokeStyle = '#161a40'
     ctx.lineWidth = 2
     ctx.strokeText(hpText, x, drawY)
     ctx.fillText(hpText, x, drawY)

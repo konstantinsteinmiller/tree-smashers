@@ -54,17 +54,20 @@ const purchase = (pack: Pack) => {
     div(class="space-y-2 px-2 sm:px-4 py-2")
       div.text-center.ui-body(class="text-[0.85rem] sm:text-sm") {{ t('shop.subtitle') }}
       div.flex.flex-col.gap-2
-        button.iap-pack.ui-btn.ui-btn--premium.relative.w-full.justify-between(
-          v-for="pack in PACKS"
+        button.iap-pack.ui-btn.ui-btn--premium.ui-pop-in.relative.w-full.justify-between(
+          v-for="(pack, i) in PACKS"
           :key="pack.diamonds"
+          :style="{ '--i': i }"
           class="px-3 py-2"
           @click="purchase(pack)"
         )
           //- Tag ribbon
-          span.absolute.ui-chip.ui-chip--berry(
+          //- Angled berry "best value" tag on the corner.
+          span.absolute.ui-chip.ui-chip--berry.ui-chip--angled(
             v-if="pack.tagKey"
-            class="-top-2.5 right-3 text-[0.6rem] sm:text-[0.75rem]"
-          ) {{ t('shop.' + pack.tagKey) }}
+            class="-top-3 right-3 text-[0.6rem] sm:text-[0.75rem]"
+          )
+            span {{ t('shop.' + pack.tagKey) }}
           div.flex.items-center.gap-2
             IconDiamond(class="w-7 h-7 sm:w-8 sm:h-8")
             span.font-black(class="text-base sm:text-xl") {{ pack.diamonds }}
@@ -72,3 +75,9 @@ const purchase = (pack: Pack) => {
       //- Honest note while real IAP isn't wired in production builds.
       div.text-center.ui-body(class="text-[0.7rem] sm:text-[0.75rem] mt-1") {{ t('shop.note') }}
 </template>
+
+<style scoped lang="sass">
+// The pop-in stagger must not pin a transform over the button press.
+.iap-pack.ui-pop-in
+  animation-fill-mode: backwards
+</style>

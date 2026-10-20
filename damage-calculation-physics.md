@@ -20,7 +20,6 @@ dmg(A → B) =
   / ( B.weight · defMul )
   · DAMAGE_SCALE
   · speedAdv(B)
-  · comboMul(A)
 ```
 
 Factor by factor:
@@ -35,7 +34,6 @@ Factor by factor:
 | `defMul`       | `B.defenseMultiplier` on a normal hit, **`1` on a crit**     | Crits ignore defense entirely. Piercer attacker halves the defender's bonus: `defMul = 1 + (defMul − 1) · 0.5`.                            |
 | `DAMAGE_SCALE` | Global constant: `1` in release, `10` in debug               | Lets the dev build see 1-shot kills.                                                                                                       |
 | `speedAdv(B)`  | `0.75` if B is ≥ 2× A's speed, else `1`                      | Makes head-on ramming vs. a much-faster defender cheaper for the defender — you can't tank-slam something that's already blowing past you. |
-| `comboMul(A)`  | `1 + stacks · 0.1` (Thunder arena only)                      | Same attacker keeps hitting the same target within 3s → +10% per stack. First hit is stack 0, so no bonus until the second hit.            |
 
 HP bars in the game are small integers (base `20` + part bonuses + upgrades),
 so a single `dmg` value of `4–10` is already a meaningful chunk.
@@ -107,8 +105,7 @@ getting rear-ended into them.
 
 ## 5. Worked examples
 
-All examples assume the non-debug `DAMAGE_SCALE = 1`, Arena = not Thunder
-(so `comboMul = 1`), and no crit cooldowns / speed-caps in effect.
+All examples assume the non-debug `DAMAGE_SCALE = 1`, and no crit cooldowns / speed-caps in effect.
 
 ### Example 1 — Star/Balanced rams Round/Balanced at full speed
 
@@ -175,20 +172,7 @@ dmg(A → B) = (9 · 1.7 · 1 · 150) / (110 · 1.4) · 1 · 1 · 1
 Without the piercer passive that would be `2295 / (110 · 1.8) ≈ 11.6`,
 so piercer is worth about **+28% damage** into a heavy defensive top.
 
-### Example 4 — Thunder-arena combo
-
-Same matchup as Example 1 (A: Star/Balanced, B: Round/Balanced), but now
-in a Thunder arena. A chains three hits on B within 3 s, each separated
-by at least `COMBO_GRACE_MS = 100 ms`:
-
-- Hit 1 — no combo set yet, `aComboMul = 1` → ~16.8 dmg.
-- Hit 2 — stacks incremented to 1, `aComboMul = 1.1` → `~16.8 · 1.1 ≈ 18.5`.
-- Hit 3 — stacks incremented to 2, `aComboMul = 1.2` → `~16.8 · 1.2 ≈ 20.2`.
-
-The combo resets if A hits a different target or more than
-`COMBO_WINDOW_MS = 3000 ms` elapse between hits.
-
-### Example 5 — Speed-advantage reduction
+### Example 4 — Speed-advantage reduction
 
 A: Speedy/Star at 20 speed, B: Tanky/Piercer at 8 speed. A rams B head-on.
 
@@ -265,8 +249,6 @@ players and layers multiplicatively on top of everything in §1.
   per-target cooldown.
 - **Piercer top** halves the defender's defense *bonus*, not the full
   multiplier.
-- **Thunder arena**: same attacker → same target → +10% per stack, up to
-  3 s between hits.
 - **Speed gap ≥ 2×**: both sides' damage to each other scaled by 0.75.
 - **Spiky top**: flat +1 chip HP on every pair every 150 ms, independent
   of speed.

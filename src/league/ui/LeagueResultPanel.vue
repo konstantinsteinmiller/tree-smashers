@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isLowQuality } from '@/use/useQuality'
 import { LEAGUE_TIER_META, divisionNumeral } from '@/use/leagueTiers'
@@ -9,6 +9,8 @@ import LeagueTierIcon from '@/components/atoms/LeagueTierIcon.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import LeagueDeltaChip from '@/league/ui/LeagueDeltaChip.vue'
 import LeagueLpBar from '@/league/ui/LeagueLpBar.vue'
+import FCountUp from '@/components/atoms/FCountUp.vue'
+import { playUiSfx } from '@/use/uiSfx'
 import { rankMove } from '@/league/ui/leagueUi'
 
 /**
@@ -55,59 +57,81 @@ const status = computed<Status | null>(() => {
   if (o.capped) return { key: 'league.result.capped', tone: 'calm' }
   return null
 })
+
+// A rank gained (new tier or a division up) lands with the reward ting, timed
+// to the status tag's slam.
+let tingTimer = 0
+onMounted(() => {
+  const tone = status.value?.tone
+  if (props.outcome.stale || (tone !== 'gold' && tone !== 'up')) return
+  tingTimer = window.setTimeout(() => playUiSfx('reward'), isLowQuality.value ? 0 : 460)
+})
+onBeforeUnmount(() => clearTimeout(tingTimer))
 </script>
 
 <template lang="pug">
   section.lrp(
     v-if="!outcome.stale"
     data-league="result-panel"
-    :class="{ 'lrp--static': isLowQuality, 'lrp--promoted': status && status.tone === 'gold' }"
+    :class="{ 'lrp--static': isLowQuality, 'lrp--promoted': status && status.tone === 'gold', 'lrp--loss': outcome.result === 'loss' }"
     :style="{ '--lrp-accent': accent }"
     :aria-label="t('league.title')"
   )
+    //- Beat sheet: the rank SLAMS in, the delta chip slams a beat later and
+    //- counts, the bar charges, the status tag slams last, the coins count up
+    //- and land with a ting. A promotion or division-up also plays `reward`.
     div.lrp__head
       //- The rank name beside it carries the division, so the icon goes bare.
-      LeagueTierIcon(aria-hidden="true" :tier="after.tier" :size="44" :animated="false")
-      span.lrp__rank {{ rankName }}
-      LeagueDeltaChip.lrp__delta(:delta="outcome.delta" size="lg")
+      span.lrp__icon(:class="{ 'ui-slam': !isLowQuality }")
+        LeagueTierIcon(aria-hidden="true" :tier="after.tier" :size="44" :animated="false")
+      span.lrp__rank(:class="{ 'ui-slam': !isLowQuality }" style="--slam-delay: 60ms") {{ rankName }}
+      LeagueDeltaChip.lrp__delta(:delta="outcome.delta" size="lg" style="--ldc-delay: 180ms")
     LeagueLpBar(:lp="outcome.lpAfter" :from="outcome.lpBefore" :champion-position="championPosition" compact)
-    div.lrp__status(v-if="status" :class="`lrp__status--${status.tone}`" role="status")
-      | {{ t(status.key, { rank: rankName }) }}
+    div.lrp__statusRow(v-if="status")
+      div.lrp__status(
+        :class="[`lrp__status--${status.tone}`, { 'ui-slam': !isLowQuality }]"
+        style="--slam-delay: 420ms"
+        role="status"
+      )
+        span.lrp__statusText {{ t(status.key, { rank: rankName }) }}
     div.lrp__coins(v-if="outcome.coins > 0")
       IconCoin.lrp__coin(class="text-sun-500" aria-hidden="true")
-      span {{ t('league.result.coins', { n: n(outcome.coins) }) }}
+      //- Screen readers get the final line once; the counting copy is hidden.
+      span.sr-only {{ t('league.result.coins', { n: n(outcome.coins) }) }}
+      i18n-t.lrp__coinsText(keypath="league.result.coins" tag="span" scope="global" aria-hidden="true")
+        template(#n)
+          FCountUp(:value="outcome.coins" :delay="isLowQuality ? 0 : 520" ting)
 </template>
 
 <style scoped lang="sass">
-// Cream parchment card (works inside the result modal and on art).
+// Ice card with an ink outline and the TIER accent as its edge (inner ring +
+// base band) — the same collectible-card language as the opponent cards.
 .lrp
   --lrp-accent: var(--color-sun-400)
   position: relative
   display: flex
   flex-direction: column
-  gap: 0.45rem
+  gap: 0.5rem
   width: 100%
   max-width: 24rem
   margin: 0 auto
-  padding: 0.6rem 0.8rem 0.7rem
+  padding: 0.65rem 0.85rem 0.85rem
   border-radius: var(--radius-ui-lg)
-  border: 3px solid var(--color-wood-700)
-  background-color: var(--color-cream-100)
-  box-shadow: inset 0 3px 0 var(--color-cream-50), 0 4px 0 var(--color-wood-800)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-ice-50)
+  box-shadow: inset 0 0 0 3px var(--lrp-accent), inset 0 -7px 0 color-mix(in srgb, var(--lrp-accent) 70%, var(--color-ink)), 0 5px 0 var(--color-ink)
   color: var(--ui-text)
   text-align: left
 
-// Promotion: sun-gold card with a stitched edge and a short bounce (no glow).
+// Promotion: a sun card with flat stripes that lands with a double bump.
 .lrp--promoted
   background-color: var(--color-sun-200)
-  border-color: var(--color-ink)
-  outline: 2px dashed rgba(110, 69, 39, 0.35)
-  outline-offset: -7px
-  animation: lrp-pop 0.8s ease-in-out 2
+  background-image: repeating-linear-gradient(300deg, rgba(255, 255, 255, 0.45) 0 8px, transparent 8px 18px)
+  animation: lrp-bump 0.42s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 2
 
-@keyframes lrp-pop
-  50%
-    transform: scale(1.03)
+@keyframes lrp-bump
+  40%
+    transform: scale(1.04) rotate(-0.6deg)
 
 .lrp__head
   display: flex
@@ -115,11 +139,18 @@ const status = computed<Status | null>(() => {
   gap: 0.5rem
   min-width: 0
 
+.lrp__icon
+  display: inline-flex
+  flex-shrink: 0
+  filter: drop-shadow(0 3px 0 var(--color-ink))
+
 .lrp__rank
   flex: 1 1 auto
   min-width: 0
-  font-size: 1rem
+  font-size: 1.1rem
   font-weight: 900
+  text-transform: uppercase
+  letter-spacing: 0.02em
   color: var(--ui-text)
   white-space: nowrap
   overflow: hidden
@@ -128,41 +159,63 @@ const status = computed<Status | null>(() => {
 .lrp__delta
   flex-shrink: 0
 
+.lrp__statusRow
+  display: flex
+  justify-content: center
+
+// Status: an angled tag (skewed plate, upright text).
 .lrp__status
-  align-self: center
-  padding: 0.25rem 0.8rem
-  border-radius: 999px
-  border: 2px solid var(--color-ink)
-  box-shadow: 0 2px 0 var(--color-ink)
-  font-size: 0.85rem
+  position: relative
+  padding: 0.28rem 1rem 0.34rem
+  isolation: isolate
+  font-size: 0.88rem
   font-weight: 900
   text-align: center
-  color: var(--color-cream-50)
-  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
+  color: var(--color-ice-50)
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.4rem
+    background-color: var(--lrp-tag, var(--color-royal-500))
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(22, 26, 64, 0.35), 0 3px 0 var(--color-ink)
+    transform: skewX(-10deg)
+
+.lrp__statusText
+  text-shadow: var(--ui-stroke-sm)
 
 .lrp__status--gold
-  color: var(--color-ink)
-  text-shadow: none
-  background-color: var(--color-sun-400)
+  --lrp-tag: var(--color-sun-400)
+  .lrp__statusText
+    color: var(--color-ink)
+    text-shadow: none
 .lrp__status--up
-  background-color: var(--color-leaf-500)
+  --lrp-tag: var(--color-leaf-500)
 .lrp__status--down
-  background-color: var(--color-berry-500)
+  --lrp-tag: var(--color-berry-500)
 .lrp__status--calm
-  background-color: var(--color-wood-600)
+  --lrp-tag: var(--color-royal-500)
 
 .lrp__coins
   display: flex
   align-items: center
   justify-content: center
   gap: 0.35rem
-  font-size: 1.05rem
+  font-size: 1.2rem
   font-weight: 900
   color: var(--ui-text)
 
+.lrp__coinsText
+  font-variant-numeric: tabular-nums
+
 .lrp__coin
-  width: 1.35rem
-  height: 1.35rem
+  width: 1.5rem
+  height: 1.5rem
+  filter: drop-shadow(0 2px 0 var(--color-ink))
 
 .lrp--static.lrp--promoted
   animation: none

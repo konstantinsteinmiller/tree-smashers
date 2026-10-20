@@ -236,11 +236,11 @@ const BATTLES: Record<string, Battle> = {
     player: PLAYER, enemy: 'shattering_glacier', arena: 'boss', bouncers: 1,
     mine: L('opening_salvo', 'second_wind'), theirs: L('guard_shell', 'static_charge')
   },
-  // Ghost-build shape: 4 AI blades (grid jitter, AI picks), 3 bouncers, shock arena.
+  // Ghost-build shape: 4 AI blades (grid jitter, AI picks), 3 bouncers, forest arena.
   ghost: {
     player: [cfg('star', 'tanky', 12), cfg('round', 'speedy', 12)],
     enemy: [cfg('triangle', 'tanky', 11), cfg('piercer', 'balanced', 11), cfg('star', 'speedy', 11), cfg('round', 'tanky', 11)],
-    arena: 'shock', bouncers: 3,
+    arena: 'forest', bouncers: 3,
     mine: L('guard_shell', 'static_charge'), theirs: L('homing_rockets', 'phase_step')
   }
 }
@@ -278,7 +278,7 @@ describe('league determinism — a seeded battle is a function of its seed', () 
       const e = game.useSpinnerGame()
       if (seed === undefined) rng.seedMatchRng(0xabc) // unseeded: pin the random reseed below
       vi.spyOn(Math, 'random').mockImplementation(() => 0.5)
-      e.initGame(PLAYER, enemy, false, 'shock', bouncers, false, undefined, null, 'circle',
+      e.initGame(PLAYER, enemy, false, 'forest', bouncers, false, undefined, null, 'circle',
         seed !== undefined ? { seed } : {})
       const next = rng.matchRng()
       e.disposePhysics()

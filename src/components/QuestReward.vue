@@ -6,15 +6,16 @@
     @continue="handleClose"
   )
     template(#ribbon)
-      h2.text-2xl.font-black.uppercase.ui-outline(
+      h2.text-2xl.font-black.uppercase.ui-outline.ui-slam(
         class="md:text-4xl"
       ) {{ t('congratulations') }}
-      span.text-4xl.mb-2(class="md:text-6xl") 🏆
+      span.text-4xl.mb-2.ui-pop-in(class="md:text-6xl" style="--i: 6") 🏆
     div.flex.flex-col.items-center.justify-center.max-w-2xl.text-center.p-8(
       class="gap-6 mx-4"
     )
 
-      p.ui-outline.font-black.leading-relaxed(
+      p.ui-outline.font-black.leading-relaxed.ui-pop-in(
+        style="--i: 8"
         class="text-lg md:text-2xl"
       ) {{ message }}
 

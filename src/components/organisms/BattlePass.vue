@@ -375,36 +375,36 @@ const onStripPointerUp = (e: PointerEvent) => {
 
 <template lang="pug">
   //- Open-modal button (positioned by parent flex row in SpinnerArena)
-  div.battle-pass
-    button.group.cursor-pointer.z-10.transition-transform(
+  //- The bounce lives on the wrapper so it never fights the button's own
+  //- press transform (the .ui-btn recipe sinks it into its lip).
+  div.battle-pass(:class="{ 'hint-bounce': hasUnclaimedReward || (canShowPvP && pendingHonorClaims > 0) }")
+    button.bp-hud-btn.ui-btn.ui-btn--royal.ui-btn--icon.cursor-pointer.z-10(
       ref="bpBtnRef"
       type="button"
       :aria-label="t('battlePass')"
       :title="t('battlePass')"
-      class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-110"
-      :class="{ 'hint-bounce': hasUnclaimedReward || (canShowPvP && pendingHonorClaims > 0) }"
+      class="scale-80 sm:scale-110"
       @click="isModalOpen = true"
     )
-      div.relative
-        //- Wood plank HUD button (DESIGN.md: HUD buttons on the arena).
-        div.ui-wood.relative.font-black.flex.flex-col.items-center.px-3.py-2(
-          class="pt-3 sm:pt-2"
+      span.relative.block
+        //- Royal HUD button (DESIGN.md: HUD buttons on the arena).
+        span.relative.font-black.flex.flex-col.items-center(
+          class="pt-1 sm:pt-0"
         )
           //- Glyph instead of the English-only "BP" caption; the button's
           //- aria-label / title carry the translated name.
           IconBattlePass.text-sun-300(class="w-[18px] h-[18px] sm:w-5 sm:h-5 -my-0.5 drop-shadow-[1px_1px_0_var(--color-ink)]")
-          div.flex.items-center(class="gap-0.5")
+          span.flex.items-center(class="gap-0.5")
             span.font-black.ui-outline-sm.leading-none(
               class="text-[11px] sm:text-sm !text-sun-300"
             ) {{ unlockedStages }}
             span.font-black.ui-outline-sm.leading-none(
               class="text-[9px] sm:text-[10px]"
             ) /{{ BP_TOTAL_STAGES }}
-          //- Tiny unclaimed-count badge
-          div.absolute.flex.items-center.justify-center.rounded-full.font-black(
-            v-if="pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) > 0"
-            class="bg-berry-500 text-cream-50 text-[9px] w-4 h-4 -top-1 -right-1 border-2 border-ink"
-          ) {{ pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) }}
+      //- Unclaimed-count sticker (bobs, berry = "act on me")
+      span.ui-notify.bp-notify(
+        v-if="pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) > 0"
+      ) {{ pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) }}
 
   //- Battle Pass Modal
   FModal(
@@ -451,11 +451,11 @@ const onStripPointerUp = (e: PointerEvent) => {
             v-for="card in stageCards"
             :key="card.stage"
             :data-bp-stage="card.stage"
-            class="bp-tier ui-inset shrink-0 flex flex-col items-center p-1 sm:p-2 transition-all w-16 sm:w-20"
-            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
+            class="bp-tier shrink-0 flex flex-col items-center p-1 sm:p-2 w-16 sm:w-20"
+            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'ui-shine': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
             //- Stage number
-            div.text-ink-soft.font-black(class="text-[0.65rem] sm:text-[0.8rem]") S{{ card.stage }}
+            div.bp-tier-label.font-black(class="text-[0.65rem] sm:text-[0.8rem]") S{{ card.stage }}
 
             //- Reward icon. On a single-currency build the diamond tier
             //- pays coins, so it has to LOOK like coins — see useCurrency.
@@ -506,9 +506,9 @@ const onStripPointerUp = (e: PointerEvent) => {
 
             //- Status row
             div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-              span.text-leaf-700(v-if="card.claimed") ✓
+              span.bp-stamp(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
-                FIconButton(
+                FIconButton.bp-claim(
                   type="premium"
                   size="sm"
                   icon="right"
@@ -519,19 +519,20 @@ const onStripPointerUp = (e: PointerEvent) => {
               span.text-ink-soft(v-else) —
 
       //- ── Honor Track (only visible when PvP is enabled) ──────────────
-      div.ui-panel.ui-stitch-dark.p-3(
+      div.honor-panel.p-3(
         v-if="canShowPvP"
         class="mt-2 space-y-2"
       )
         //- Header row with title + info icon
         div.flex.items-center.justify-between
           div.flex.items-center.gap-2
-            span.text-plum-700.font-black(class="text-xs sm:text-sm") {{ t('honorTrack') }}
+            span.honor-title.font-black(class="text-xs sm:text-sm")
+              span {{ t('honorTrack') }}
             //- Info tooltip toggle
-            button.cursor-pointer.flex.items-center.justify-center.rounded-full.border-2.border-ink.bg-cream-200.text-ink.transition-colors(
+            button.honor-info-btn.cursor-pointer.flex.items-center.justify-center.rounded-full.border-2.border-ink.text-ink(
               type="button"
               :aria-label="t('honorTrack')"
-              class="w-6 h-6 hover:bg-cream-300 focus-visible:outline-3 focus-visible:outline-sky-400"
+              class="w-7 h-7"
               @click="showHonorInfo = !showHonorInfo"
             )
               span.font-bold(class="text-[0.7rem] sm:text-[0.75rem]") ?
@@ -560,8 +561,8 @@ const onStripPointerUp = (e: PointerEvent) => {
           div(
             v-for="card in honorStageCards"
             :key="card.stage"
-            class="bp-tier ui-inset flex flex-col items-center p-2 transition-all w-20 sm:w-24"
-            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
+            class="bp-tier is-honor flex flex-col items-center p-2 w-20 sm:w-24"
+            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'ui-shine': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
             //- Stage label
             div.text-plum-700.font-black(class="text-[0.65rem] sm:text-[0.8rem]") H{{ card.stage }}
@@ -590,9 +591,9 @@ const onStripPointerUp = (e: PointerEvent) => {
 
             //- Status
             div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-              span.text-leaf-700(v-if="card.claimed") ✓
+              span.bp-stamp(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
-                FIconButton(
+                FIconButton.bp-claim(
                   type="premium"
                   size="sm"
                   icon="right"
@@ -628,32 +629,166 @@ const onStripPointerUp = (e: PointerEvent) => {
   // which killed the drag after a few pixels on mobile.
   touch-action: pan-x pan-y
   user-select: none
+  // Room for the ready tier's lift + ring so it is never clipped.
+  padding-top: 0.6rem
+  padding-bottom: 0.6rem
 
   &::-webkit-scrollbar
     display: none
 
-// Flat cream disc behind skin thumbnails so the model reads on any tier tint.
+// HUD button: royal .ui-btn (sinks into its lip), a berry count sticker.
+.bp-hud-btn
+  padding: 0.3rem 0.65rem 0.4rem
+  min-width: 2.75rem
+  min-height: 2.75rem
+
+.bp-notify
+  position: absolute
+  top: -0.6rem
+  right: -0.6rem
+  z-index: 3
+  min-width: 1.15rem
+  height: 1.15rem
+  font-size: 0.65rem
+
+// Flat ice disc behind skin thumbnails so the model reads on any tier tint.
 .skin-thumb-halo
-  background: var(--color-cream-50)
+  background: var(--color-ice-50)
   border-radius: 9999px
-  box-shadow: 0 0 0 2px var(--color-cream-400)
+  box-shadow: 0 0 0 2px var(--color-ice-400)
   transform: scale(0.95)
 
-// Tier states: claimed = leaf, ready to claim = premium sun, in progress =
-// dashed sun edge, locked = plain recessed well.
+// ── Tiers: collectible mini cards ─────────────────────────────────────────
+//   locked    steel hatch, dimmed icon
+//   progress  sun edge + "nn %"
+//   ready     sun face + stripes, lifted + tilted, sun ring, shine sweep
+//   claimed   lime face with a slanted "✓" stamp
+//   honour    the same states on plum (the premium track)
 .bp-tier
+  --edge: var(--color-ice-400)
+  position: relative
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-50)
+  color: var(--ui-text)
+  box-shadow: inset 0 0 0 2px var(--edge), inset 0 -4px 0 var(--edge), 0 3px 0 var(--color-ink)
+  transition: transform 0.26s var(--ui-spring)
+  &::before
+    content: ''
+    position: absolute
+    top: 0
+    right: 0
+    width: 1.3rem
+    height: 1.3rem
+    background-image: repeating-linear-gradient(315deg, var(--edge) 0 3px, transparent 3px 6px)
+    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    border-top-right-radius: calc(var(--radius-ui) - 2px)
+    pointer-events: none
+  &.is-honor
+    --edge: var(--color-plum-400)
+    background-color: var(--color-plum-300)
   &.is-claimed
+    --edge: var(--color-leaf-600)
     background-color: var(--color-leaf-300)
-    border-color: var(--color-leaf-600)
-  &.is-ready
-    background-color: var(--color-sun-200)
-    border-color: var(--color-sun-600)
-    box-shadow: 0 3px 0 var(--color-sun-600)
   &.is-progress
-    border-color: var(--color-sun-500)
-    border-style: dashed
+    --edge: var(--color-sun-500)
+  &.is-ready
+    --edge: var(--color-sun-500)
+    z-index: 1
+    background-color: var(--color-sun-200)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--edge), inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
+    transform: translateY(-3px) rotate(-2deg)
   &.is-locked
-    opacity: 0.85
+    --edge: var(--color-steel-500)
+    background-color: var(--color-steel-300)
+    background-image: var(--ui-stripes-ink)
+
+.bp-tier-label
+  color: var(--ui-text-muted)
+
+.is-ready .bp-tier-label
+  color: var(--ui-text)
+
+// Claimed stamp: a lime angled chip.
+.bp-stamp
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  width: 1.35rem
+  height: 1.35rem
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem
+  background-color: var(--color-leaf-500)
+  box-shadow: 0 2px 0 var(--color-ink)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  font-weight: 900
+  font-size: 0.8rem
+  line-height: 1
+  transform: rotate(-12deg)
+
+// The claim arrow hops for attention (the button's own press stays intact:
+// the hop is on the individual `translate` property).
+.bp-claim
+  animation: bp-claim-hop 1.3s ease-in-out infinite
+
+@keyframes bp-claim-hop
+  0%, 60%, 100%
+    translate: 0 0
+  20%
+    translate: 0 -4px
+  35%
+    translate: 0 0
+  45%
+    translate: 0 -1px
+
+// ── Honour track: the premium plum panel ──────────────────────────────────
+.honor-panel
+  background-color: var(--color-plum-500)
+  background-image: var(--ui-stripes)
+  color: var(--color-ice-50)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui-lg)
+  box-shadow: inset 0 3px 0 var(--color-plum-300), inset 0 -5px 0 var(--color-plum-700), 0 4px 0 var(--color-ink)
+  .text-plum-700
+    color: var(--color-ice-50)
+    text-shadow: var(--ui-stroke-sm)
+  .bp-tier .text-plum-700, .bp-tier .text-plum-500
+    color: var(--color-plum-700)
+    text-shadow: none
+
+// Skewed ink title plate on the plum panel.
+.honor-title
+  position: relative
+  display: inline-flex
+  padding: 0.1em 0.7em 0.15em
+  isolation: isolate
+  text-transform: uppercase
+  letter-spacing: 0.03em
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    background-color: var(--color-royal-900)
+    border: 2px solid var(--color-ink)
+    border-radius: 0.3rem
+    transform: skewX(-12deg)
+  > span
+    color: var(--color-sun-300)
+    text-shadow: var(--ui-stroke-sm)
+
+.honor-info-btn
+  background-color: var(--color-ice-50)
+  box-shadow: 0 2px 0 var(--color-ink)
+  transition: translate 0.2s var(--ui-spring)
+  &:active
+    translate: 0 2px
+    box-shadow: none
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
 
 .bp-fill
   background-color: var(--color-sun-400)
@@ -661,5 +796,11 @@ const onStripPointerUp = (e: PointerEvent) => {
 
 .honor-fill
   background-color: var(--color-plum-400)
-  box-shadow: inset 0 3px 0 var(--color-plum-300), inset 0 -3px 0 var(--color-plum-500)
+  box-shadow: inset 0 3px 0 var(--color-plum-300), inset 0 -3px 0 var(--color-plum-700)
+
+@media (prefers-reduced-motion: reduce)
+  .bp-claim
+    animation: none
+  .bp-tier
+    transition: none
 </style>

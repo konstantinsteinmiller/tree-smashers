@@ -44,7 +44,10 @@
             class="mt-3 pb-1 sm:mt-5"
           )
             div.continue-hint.game-text
-              | {{ isMobile ? t('tapToContinue') : t('clickToContinue') }}
+              span {{ isMobile ? t('tapToContinue') : t('clickToContinue') }}
+              svg.continue-hint__go(viewBox="0 0 24 24" aria-hidden="true")
+                path(d="M5 5l7 7-7 7M12 5l7 7-7 7" fill="none" stroke="var(--color-ink)" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round")
+                path(d="M5 5l7 7-7 7M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round")
 </template>
 
 <script setup lang="ts">
@@ -209,32 +212,64 @@ onBeforeUnmount(() => {
   height: 100%
   min-height: 0
 
-// The continue hint: a dark capsule, deliberately neutral so it reads as
-// the way onward rather than as another thing that was won.
+// The continue hint: a royal plate with flat stripes and a double chevron,
+// deliberately neutral (royal, not sun/leaf) so it reads as the way onward
+// rather than as another thing that was won. It pops in, then nudges forward
+// every 1.4 s — the chevrons kick right, the plate gives a small squash — a
+// pulse you can feel without it fading in and out of legibility.
 .continue-hint
   display: inline-flex
   align-items: center
-  padding: 0.35em 1.15em
+  gap: 0.45em
+  padding: 0.35em 0.9em 0.35em 1.15em
   border-radius: 999px
-  background-color: var(--color-wood-700)
+  background-color: var(--color-royal-500)
+  background-image: var(--ui-stripes)
   border: 3px solid var(--color-ink)
-  box-shadow: inset 0 3px 0 var(--color-wood-500), 0 3px 0 var(--color-ink)
-  color: var(--color-cream-50)
+  box-shadow: inset 0 3px 0 var(--color-royal-300), inset 0 -4px 0 var(--color-royal-700), 0 5px 0 var(--color-ink)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
   font-weight: 900
   letter-spacing: 0.04em
   line-height: 1.1
   white-space: nowrap
   font-size: clamp(0.8rem, 3.2vmin, 1.4rem)
-  animation: continue-breathe 1.6s ease-in-out infinite
+  animation: continue-in 0.36s var(--ui-back-out) both, continue-nudge 1.4s ease-in-out 0.5s infinite
 
-@keyframes continue-breathe
-  0%, 100%
+.continue-hint__go
+  width: 1em
+  height: 1em
+  flex: 0 0 auto
+  color: var(--color-sun-300)
+  overflow: visible
+  animation: continue-go 1.4s ease-in-out 0.5s infinite
+
+@keyframes continue-in
+  0%
+    opacity: 0
+    transform: translateY(10px) scale(0.7)
+  100%
     opacity: 1
-  50%
-    opacity: 0.62
+    transform: none
+
+@keyframes continue-nudge
+  0%, 70%, 100%
+    transform: none
+  80%
+    transform: scale(1.06, 0.95)
+  90%
+    transform: scale(0.98, 1.03)
+
+@keyframes continue-go
+  0%, 66%, 100%
+    transform: translateX(0)
+  78%
+    transform: translateX(5px)
+  88%
+    transform: translateX(-1px)
 
 @media (prefers-reduced-motion: reduce)
-  .continue-hint
+  .continue-hint, .continue-hint__go
     animation: none
 
 // `flex: 1 1 auto` + `min-height: 0`, NOT `h-full`: the body takes what the
@@ -258,7 +293,7 @@ onBeforeUnmount(() => {
 // Backdrops: a warm dark wash (cozy dusk), deeper behind a celebration so
 // the sunburst reads. Flat fills only.
 .reward-bg
-  background-color: rgba(26, 18, 10, 0.78)
+  background-color: rgba(10, 14, 44, 0.78)
 
 .reward-bg--celebrate
   background-color: rgba(30, 46, 24, 0.94)
@@ -272,20 +307,36 @@ onBeforeUnmount(() => {
   max-width: 90vw
   padding: 0 1.5em
 
-  // On a celebration the ribbon drops in with a little bounce.
+  // Every result ribbon drops in with a swing; a celebration SLAMS instead:
+  // in from big and tilted, crushing a little past rest, then settling.
+  animation: ribbon-drop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both
+
   &.is-celebrate
-    animation: ribbon-drop 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) both
+    animation: ribbon-slam 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both
 
 @keyframes ribbon-drop
   0%
     opacity: 0
-    transform: translateY(-40%) scale(0.85)
+    transform: translateY(-50%) rotate(-5deg) scale(0.85)
+  100%
+    opacity: 1
+    transform: none
+
+@keyframes ribbon-slam
+  0%
+    opacity: 0
+    transform: scale(1.9) rotate(-7deg)
+  55%
+    opacity: 1
+    transform: scale(0.93) rotate(1.5deg)
+  78%
+    transform: scale(1.03) rotate(-0.5deg)
   100%
     opacity: 1
     transform: none
 
 @media (prefers-reduced-motion: reduce)
-  .ribbon-wrap.is-celebrate
+  .ribbon-wrap, .ribbon-wrap.is-celebrate
     animation: none
 
 .reward-banner

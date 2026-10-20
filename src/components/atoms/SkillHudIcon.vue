@@ -32,6 +32,8 @@ export interface SkillHudState {
 
 const props = withDefaults(defineProps<{
   id: SkillId
+  /** Smasher skill id: its own icon + name (generic effect chip when empty). */
+  skillKey?: string
   level: number
   state?: SkillHudState
   breathe?: boolean
@@ -42,7 +44,10 @@ const props = withDefaults(defineProps<{
 
 const { t } = useI18n()
 
-const label = computed(() => t('skills.hudAria', { name: t(`skills.names.${props.id}`), n: props.level }))
+const label = computed(() => t('skills.hudAria', {
+  name: props.skillKey ? t(`smasher_skill_${props.skillKey}`) : t(`skills.names.${props.id}`),
+  n: props.level
+}))
 
 // Ring geometry in a 24×24 box: r = 11 → circumference ≈ 69.1.
 const CIRC = 2 * Math.PI * 11
@@ -65,11 +70,14 @@ const pipList = computed(() => {
     :class="{ 'is-spent': state.spent, 'is-breathing': breathe }"
   )
     span.skill-hud__chip.relative.block
-      SkillIcon.skill-hud__icon(:id="id" :size="24" decorative)
+      //- Keyed on the proc: every proc re-mounts the wrapper, so the medallion
+      //- itself punches (scale + tilt) once per proc.
+      span.skill-hud__bounce(:key="state.flashKey ?? 0" :class="{ 'is-proc': state.flashKey }")
+        SkillIcon.skill-hud__icon(:id="id" :skill-key="skillKey" :size="24" decorative)
       //- Shield ring (Guard Shell)
       svg.skill-hud__overlay(v-if="state.ring != null" viewBox="0 0 24 24" aria-hidden="true")
         circle(
-          cx="12" cy="12" r="11" fill="none" stroke="#8fd6fb" stroke-width="2.2" stroke-linecap="round"
+          cx="12" cy="12" r="11" fill="none" stroke="#7fdcff" stroke-width="2.2" stroke-linecap="round"
           :stroke-dasharray="CIRC" :stroke-dashoffset="ringOffset"
           transform="rotate(-90 12 12)"
         )
@@ -81,12 +89,14 @@ const pipList = computed(() => {
         aria-hidden="true"
       )
         circle.skill-hud__cd(
-          cx="12" cy="12" r="6" fill="none" stroke="rgba(58,35,20,0.7)" stroke-width="12"
+          cx="12" cy="12" r="6" fill="none" stroke="rgba(22, 26, 64,0.7)" stroke-width="12"
           :style="{ animationDuration: `${state.cooldownMs}ms`, strokeDasharray: 37.7, strokeDashoffset: 0 }"
           transform="rotate(-90 12 12)"
         )
       //- Proc flash
       span.skill-hud__flash(v-if="state.flashKey" :key="`f${state.flashKey}`" aria-hidden="true")
+      //- Proc pop: the medallion itself bounces once (restarted per proc).
+      span.skill-hud__pop(v-if="state.flashKey" :key="`p${state.flashKey}`" aria-hidden="true")
     span.skill-hud__pips.flex(v-if="pipList.length" aria-hidden="true")
       span.skill-hud__pip(v-for="(on, i) in pipList" :key="i" :class="{ 'is-on': on }")
 </template>
@@ -103,6 +113,20 @@ const pipList = computed(() => {
 .skill-hud__chip
   width: var(--hud-size)
   height: var(--hud-size)
+
+.skill-hud__bounce
+  position: absolute
+  inset: 0
+  &.is-proc
+    animation: skill-hud-punch 0.36s cubic-bezier(0.2, 1.6, 0.4, 1)
+
+@keyframes skill-hud-punch
+  0%
+    transform: scale(1)
+  35%
+    transform: scale(1.35) rotate(-10deg)
+  100%
+    transform: scale(1) rotate(0)
 
 .skill-hud__icon, .skill-hud__overlay
   position: absolute
@@ -127,10 +151,29 @@ const pipList = computed(() => {
   position: absolute
   inset: -3px
   border-radius: 9999px
-  background: rgba(255, 250, 240, 0.7)
+  background: rgba(255, 255, 255, 0.7)
   opacity: 0
   pointer-events: none
   animation: skill-hud-flash 0.45s ease-out
+
+// Proc pop: a sun ring that bursts out of the chip (flat, no blur).
+.skill-hud__pop
+  position: absolute
+  inset: -2px
+  border-radius: 9999px
+  border: 3px solid var(--color-sun-400)
+  box-shadow: 0 0 0 1px var(--color-ink)
+  opacity: 0
+  pointer-events: none
+  animation: skill-hud-pop 0.55s ease-out
+
+@keyframes skill-hud-pop
+  0%
+    opacity: 1
+    transform: scale(0.8)
+  100%
+    opacity: 0
+    transform: scale(1.9)
 
 .skill-hud__pips
   gap: 1px
@@ -140,7 +183,7 @@ const pipList = computed(() => {
   width: 3px
   height: 3px
   border-radius: 9999px
-  background: rgba(58, 35, 20, 0.45)
+  background: rgba(22, 26, 64, 0.45)
 
   &.is-on
     background: var(--color-sun-400)
@@ -167,5 +210,9 @@ const pipList = computed(() => {
 
 @media (prefers-reduced-motion: reduce)
   .skill-hud.is-breathing .skill-hud__chip
+    animation: none
+  .skill-hud__pop
+    animation-duration: 0.01s
+  .skill-hud__bounce.is-proc
     animation: none
 </style>

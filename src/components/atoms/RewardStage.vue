@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<{
   tone?: string
   /** Low-quality tier: static rays, no sway. */
   still?: boolean
-}>(), { active: false, burst: false, tone: '#ffc933', still: false })
+}>(), { active: false, burst: false, tone: '#ffd21a', still: false })
 
 const WEDGES = 14
 const wedge = (i: number, inner: number, outer: number, halfDeg: number): string => {
@@ -47,7 +47,7 @@ const style = computed(() => ({ '--tone': props.tone }))
     svg.reward-stage__rays.is-back(viewBox="-100 -100 200 200")
       path(:d="backRays" :fill="tone" fill-opacity="0.22")
     svg.reward-stage__rays.is-front(viewBox="-100 -100 200 200")
-      path(:d="frontRays" fill="#fffaf0" fill-opacity="0.16")
+      path(:d="frontRays" fill="#ffffff" fill-opacity="0.16")
     div.reward-stage__pool
       span.reward-stage__disc.is-1
       span.reward-stage__disc.is-2

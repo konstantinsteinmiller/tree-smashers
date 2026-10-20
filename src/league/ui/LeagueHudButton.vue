@@ -58,8 +58,9 @@ const aria = computed(() =>
 <template lang="pug">
   button.lhb(
     type="button"
-    class="scale-80 sm:scale-100 hover:scale-[103%] active:scale-90 transition-transform"
+    class="scale-80 sm:scale-100"
     data-league="hud-button"
+    data-press
     :class="{ 'lhb--attention': hasReward && !isLowQuality, 'lhb--idle': !league.canFight.value && !hasReward }"
     :style="{ '--lhb-accent': accent }"
     :aria-label="aria"
@@ -71,11 +72,14 @@ const aria = computed(() =>
       span.lhb__tag(v-if="tag") {{ tag }}
     span.lhb__bubble(v-if="hasReward" aria-hidden="true" class="lhb__bubble--gift")
       svg(viewBox="0 0 24 24" width="100%" height="100%")
-        path(d="M4 10h16v3H4zm1 4h6v7H5zm8 0h6v7h-6zM11 10h2v11h-2zM12 9.5C10 6 6.5 5 6.5 7.5 6.5 9 9 9.5 12 9.5zm0 0c2-3.5 5.5-4.5 5.5-2 0 1.5-2.5 2-5.5 2z" fill="#fdf2d8" stroke="#3a2314" stroke-width="1.2" stroke-linejoin="round")
+        path(d="M4 10h16v3H4zm1 4h6v7H5zm8 0h6v7h-6zM11 10h2v11h-2zM12 9.5C10 6 6.5 5 6.5 7.5 6.5 9 9 9.5 12 9.5zm0 0c2-3.5 5.5-4.5 5.5-2 0 1.5-2.5 2-5.5 2z" fill="#eef5ff" stroke="#161a40" stroke-width="1.2" stroke-linejoin="round")
     span.lhb__bubble(v-else aria-hidden="true" :class="fights > 0 ? 'lhb__bubble--on' : 'lhb__bubble--off'") {{ fights }}
 </template>
 
 <style scoped lang="sass">
+// Press feel = the .ui-btn recipe: the body sinks into its ink drop on press
+// (70 ms, `.is-pressed` from the global press handler), springs back with an
+// overshoot, lifts 2px on hover. The tier accent is a thick top lip.
 .lhb
   --lhb-accent: var(--color-sun-400)
   position: relative
@@ -94,11 +98,11 @@ const aria = computed(() =>
 .lhb__shadow
   position: absolute
   inset: 0
-  transform: translateY(0.25rem)
+  transform: translateY(5px)
   border-radius: var(--radius-ui)
   background: var(--color-ink)
 
-// Wood plank (matches FIconButton type=wood), tier accent as a top stripe.
+// Royal token (matches FIconButton type=secondary), tier accent as a top lip.
 .lhb__body
   position: relative
   display: flex
@@ -106,66 +110,91 @@ const aria = computed(() =>
   align-items: center
   justify-content: center
   gap: 0.05rem
-  // FIconButton md: 1.75rem image + 2 × 0.5rem padding + 2 × 2px border.
+  // FIconButton md: 1.75rem image + 2 × 0.5rem padding + 2 × 3px border.
   box-sizing: border-box
-  width: calc(2.75rem + 4px)
-  height: calc(2.75rem + 4px)
+  width: calc(2.75rem + 6px)
+  height: calc(2.75rem + 6px)
   padding: 0
   border-radius: var(--radius-ui)
-  border: 2px solid var(--color-ink)
-  background-color: var(--color-wood-500)
-  box-shadow: inset 0 3px 0 var(--lhb-accent), inset 0 -3px 0 var(--color-wood-700)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-royal-500)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 4px 0 var(--lhb-accent), inset 0 -4px 0 var(--color-royal-700)
+  transition: transform 0.26s var(--ui-spring), background-color 0.12s ease
+
+@media (hover: hover)
+  .lhb:hover .lhb__body
+    transform: translateY(-2px)
+    background-color: var(--color-royal-400)
+
+.lhb:active .lhb__body, .lhb.is-pressed .lhb__body
+  transform: translateY(4px) scale(1.03, 0.94)
+  transition-duration: var(--ui-press-down)
+  transition-timing-function: ease-out
 
 .lhb__tag
-  font-size: 0.6rem
+  font-size: 0.62rem
   font-weight: 900
   line-height: 1
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   font-variant-numeric: tabular-nums
-  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 
 .lhb__bubble
   position: absolute
-  top: -0.45rem
-  right: -0.45rem
-  min-width: 1.3rem
-  height: 1.3rem
+  top: -0.5rem
+  right: -0.5rem
+  min-width: 1.35rem
+  height: 1.35rem
   padding: 0 0.3rem
   border-radius: 999px
   border: 2px solid var(--color-ink)
-  box-shadow: 0 2px 0 var(--color-ink)
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 2px 0 var(--color-ink)
   display: flex
   align-items: center
   justify-content: center
-  font-size: 0.72rem
+  font-size: 0.74rem
   font-weight: 900
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   line-height: 1
-  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 
 .lhb__bubble--on
   background-color: var(--color-leaf-500)
 .lhb__bubble--off
-  background-color: var(--color-wood-600)
+  background-color: var(--color-steel-500)
+// A season reward waiting: the berry gift bubble hops like a notify dot.
 .lhb__bubble--gift
-  width: 1.5rem
-  height: 1.5rem
+  width: 1.55rem
+  height: 1.55rem
   padding: 0.15rem
   background-color: var(--color-berry-500)
+  animation: ui-notify-bob 1.6s ease-in-out infinite
 
-.lhb--idle .lhb__body
-  filter: saturate(0.7)
+// No fights left: the token goes cold (steel accent, desaturated).
+.lhb--idle
+  --lhb-accent: var(--color-steel-400)
+  .lhb__body
+    filter: saturate(0.6)
 
+// Claim me: a hop with a squash on landing, then rest.
 .lhb--attention
-  animation: lhb-bounce 1.4s ease-in-out infinite
+  animation: lhb-hop 1.5s ease-in-out infinite
 
-@keyframes lhb-bounce
-  0%, 60%, 100%
-    transform: translateY(0)
-  30%
-    transform: translateY(-5px)
+@keyframes lhb-hop
+  0%, 55%, 100%
+    transform: translateY(0) scale(1)
+  18%
+    transform: translateY(-7px) scale(1.04, 0.98)
+  32%
+    transform: translateY(0) scale(1.06, 0.92)
+  42%
+    transform: translateY(-2px) scale(0.99, 1.02)
 
 @media (prefers-reduced-motion: reduce)
-  .lhb--attention
+  .lhb--attention, .lhb__bubble--gift
     animation: none
+  .lhb__body
+    transition-duration: 0.08s
+    transition-timing-function: ease-out
 </style>

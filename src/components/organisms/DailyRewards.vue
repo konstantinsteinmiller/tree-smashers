@@ -269,23 +269,24 @@ const collect = (dayIndex: number) => {
   //- an ad). Leaf body = the game's "free" colour (same as the FREE sticker
   //- on the 2x switch), a gift glyph where the ad button has its film reel,
   //- and never a movie icon. The translated title rides on aria-label.
-  div.daily-rewards
-    button.group.cursor-pointer.z-10.transition-transform(
+  //- The bounce lives on the wrapper so it never fights the button's own
+  //- press transform (the .ui-btn recipe sinks it into its lip).
+  div.daily-rewards(:class="{ 'hint-bounce': hasDailyRewardReady }")
+    button.daily-hud-btn.ui-btn.ui-btn--primary.ui-btn--icon.cursor-pointer.z-10(
       ref="dailyBtnRef"
       type="button"
       :aria-label="t('dailyRewards')"
       :title="t('dailyRewards')"
-      class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-110"
-      :class="{ 'hint-bounce': hasDailyRewardReady }"
+      class="scale-80 sm:scale-110"
       @click="isModalOpen = true"
     )
-      div.relative
-        //- Leaf HUD plate (free = leaf), ink outline + hard drop.
-        div.hud-plate-leaf.relative.font-black.flex.flex-col.items-center.px-2.py-1
-          IconGift.text-cream-50(class="w-5 h-5 drop-shadow-[1px_1px_0_var(--color-ink)]")
-          div.flex.items-center(class="gap-0.5")
-            span.font-black.ui-outline-sm.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
-            IconCoin(class="w-4 h-4 text-sun-300")
+      //- Leaf HUD button (free = leaf), gift glyph, "+N" coins.
+      span.relative.font-black.flex.flex-col.items-center
+        IconGift.text-cream-50(class="w-5 h-5 drop-shadow-[1px_1px_0_var(--color-ink)]")
+        span.flex.items-center(class="gap-0.5")
+          span.font-black.ui-outline-sm.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
+          IconCoin(class="w-4 h-4 text-sun-300")
+      span.ui-notify.daily-notify(v-if="hasDailyRewardReady" aria-hidden="true") !
 
   //- Daily Rewards Modal
   FModal(
@@ -317,13 +318,14 @@ const collect = (dayIndex: number) => {
         div(
           v-for="(reward, i) in DAILY_REWARDS"
           :key="i"
-          class="day-tile ui-inset basis-[calc(25%-0.375rem)] sm:basis-[calc(14.2857%-0.5rem)] flex flex-col items-center p-1 sm:p-2 transition-all"
-          :class="{ 'is-past': i < state.currentDay, 'is-today': i === state.currentDay, 'is-skin': isSkinDay(i) }"
+          class="day-tile ui-pop-in basis-[calc(25%-0.375rem)] sm:basis-[calc(14.2857%-0.5rem)] flex flex-col items-center p-1 sm:p-2"
+          :class="{ 'is-past': i < state.currentDay, 'is-today': i === state.currentDay, 'is-ready': i === state.currentDay && !collectedToday, 'ui-shine': i === state.currentDay && !collectedToday, 'is-skin': isSkinDay(i) }"
+          :style="{ '--i': i }"
         )
           //- Day label. The "D" prefix was hardcoded, so every locale showed
           //- "D1…D7". It goes through i18n now — each language picks its own
           //- abbreviation, kept short because the card is only ~80px wide.
-          div.text-ink-soft.font-black(class="text-[0.65rem] sm:text-[0.8rem]") {{ t('dayShort', { n: i + 1 }) }}
+          div.day-label.font-black(class="text-[0.65rem] sm:text-[0.8rem]") {{ t('dayShort', { n: i + 1 }) }}
 
           //- Reward icon — skin image on skin days, coin on all others
           template(v-if="isSkinDay(i) && dailySkinForDay(i)")
@@ -348,7 +350,7 @@ const collect = (dayIndex: number) => {
           ) {{ t('skins.' + dailySkinForDay(i)) }}
 
           //- Coin reward amount — shown on every day (additive on skin days)
-          div.text-sun-600.font-black.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}
+          div.day-amount.font-black.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}
 
           //- Status.
           //-
@@ -360,14 +362,16 @@ const collect = (dayIndex: number) => {
           //- CTA; this is now a purely decorative "you are here" marker, so
           //- its size no longer has to carry a hit box.
           div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-            span.text-leaf-700(v-if="i < state.currentDay") ✓
-            template(v-else-if="i === state.currentDay")
-              span.text-leaf-700.attention-bounce.inline-block.pointer-events-none(
-                v-if="!collectedToday"
+            template(v-if="i === state.currentDay && !collectedToday")
+              span.day-arrow.attention-bounce.inline-block.pointer-events-none(
                 class="text-base sm:text-lg leading-none"
               ) ▾
-              span.text-leaf-700(v-else) ✓
-            span.text-ink-soft(v-else) —
+            span.text-ink-soft(v-else-if="i > state.currentDay") —
+          //- Claimed: a slanted lime "✓" stamp slapped over the tile.
+          span.day-stamp(
+            v-if="i < state.currentDay || (i === state.currentDay && collectedToday)"
+            aria-hidden="true"
+          ) ✓
 
       //- Footer info
       div.text-center.ui-body(class="text-[0.75rem] sm:text-xs")
@@ -389,37 +393,125 @@ const collect = (dayIndex: number) => {
       FButton(
         v-if="!collectedToday"
         tone="premium"
+        variant="brawl"
         @click="collect(state.currentDay)"
       ) {{ t('collectCta') }}
 </template>
 
 <style scoped lang="sass">
-// Flat cream disc behind skin thumbnails so dark models (snake, scorpion,
+// Flat ice disc behind skin thumbnails so dark models (snake, scorpion,
 // shell, etc.) stay readable on any tile tint.
 .skin-thumb-halo
-  background: var(--color-cream-50)
+  background: var(--color-ice-50)
   border-radius: 9999px
-  box-shadow: 0 0 0 2px var(--color-cream-400)
+  box-shadow: 0 0 0 2px var(--color-plum-300)
   transform: scale(0.95)
 
-// HUD button: leaf plate (free reward), ink outline, hard 0-blur drop.
-.hud-plate-leaf
-  background-color: var(--color-leaf-500)
-  color: var(--color-cream-50)
-  border: 3px solid var(--color-ink)
-  border-radius: var(--radius-ui)
-  box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
+// HUD button: a leaf (free reward) .ui-btn — sinks into its lip on press;
+// a berry "!" sticker while a reward is waiting (the wrapper bounces).
+.daily-hud-btn
+  flex-direction: column
+  padding: 0.25rem 0.5rem 0.35rem
+  min-width: 2.75rem
+  min-height: 2.75rem
 
-// Day tiles: past = soft leaf, today = leaf highlight, skin day = plum edge.
+.daily-notify
+  position: absolute
+  top: -0.6rem
+  right: -0.6rem
+  z-index: 3
+  min-width: 1.15rem
+  height: 1.15rem
+  font-size: 0.7rem
+
+// ── Day tiles: little collectible cards ───────────────────────────────────
+//   future  ice card, muted
+//   ready   sun edge + stripes, lifted and tilted, bouncing arrow, shine
+//   claimed lime face with a slanted "✓" stamp
+//   skin    plum edge + plum corner stripes (the big days)
 .day-tile
+  --edge: var(--color-ice-400)
+  position: relative
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-50)
+  color: var(--ui-text)
+  box-shadow: inset 0 0 0 2px var(--edge), inset 0 -4px 0 var(--edge), 0 3px 0 var(--color-ink)
+  transition: transform 0.26s var(--ui-spring)
+  // The stagger must not pin `transform` (the ready tile is tilted).
+  animation-fill-mode: backwards
+  &::before
+    content: ''
+    position: absolute
+    top: 0
+    right: 0
+    width: 1.3rem
+    height: 1.3rem
+    background-image: repeating-linear-gradient(315deg, var(--edge) 0 3px, transparent 3px 6px)
+    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    border-top-right-radius: calc(var(--radius-ui) - 2px)
+    pointer-events: none
   &.is-skin
-    border-color: var(--color-plum-300)
-  &.is-past
+    --edge: var(--color-plum-500)
+    background-color: var(--color-plum-300)
+  &.is-past, &.is-today
+    --edge: var(--color-leaf-600)
     background-color: var(--color-leaf-300)
-    border-color: var(--color-leaf-600)
-    opacity: 0.85
-  &.is-today
-    background-color: var(--color-cream-50)
-    border: 3px solid var(--color-leaf-600)
-    box-shadow: 0 0 0 2px var(--color-leaf-400), 0 3px 0 var(--color-leaf-700)
+  &.is-ready
+    --edge: var(--color-sun-500)
+    z-index: 1
+    background-color: var(--color-sun-200)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--edge), inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
+    transform: translateY(-4px) rotate(-2deg)
+
+.day-label
+  color: var(--ui-text-muted)
+
+.is-ready .day-label, .is-ready .day-amount
+  color: var(--ui-text)
+
+.day-amount
+  color: var(--color-sun-600)
+
+.day-arrow
+  color: var(--color-ink)
+
+// The claimed stamp: a lime angled chip slapped on top, slightly rotated.
+.day-stamp
+  position: absolute
+  z-index: 3
+  top: 42%
+  left: 50%
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 1.7rem
+  height: 1.7rem
+  border: 2px solid var(--color-ink)
+  border-radius: 0.35rem
+  background-color: var(--color-leaf-500)
+  box-shadow: inset 0 2px 0 var(--color-leaf-300), 0 2px 0 var(--color-ink)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  font-size: 1rem
+  font-weight: 900
+  line-height: 1
+  transform: translate(-50%, -50%) rotate(-12deg)
+  animation: stamp-in 0.36s var(--ui-spring) both
+  pointer-events: none
+
+@keyframes stamp-in
+  0%
+    transform: translate(-50%, -50%) rotate(-30deg) scale(2.2)
+    opacity: 0
+  100%
+    transform: translate(-50%, -50%) rotate(-12deg) scale(1)
+    opacity: 1
+
+@media (prefers-reduced-motion: reduce)
+  .day-stamp
+    animation: none
+  .day-tile
+    transition: none
 </style>

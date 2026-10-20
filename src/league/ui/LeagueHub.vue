@@ -221,7 +221,7 @@ const claimSeason = () => {
   if (r.coins > 0) addCoins(r.coins)
   if (r.diamonds > 0) addDiamonds(r.diamonds)
   emit('season-claimed', r)
-  void revealRewards([{ kind: 'coins', amount: r.coins }, { kind: 'diamonds', amount: r.diamonds }], { tone: '#ffc933' })
+  void revealRewards([{ kind: 'coins', amount: r.coins }, { kind: 'diamonds', amount: r.diamonds }], { tone: '#ffd21a' })
 }
 
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
@@ -285,7 +285,7 @@ const onGranted = () => emit('fights-granted')
                 :size="76"
               )
             div.lh__rankcol
-              div.lh__rank {{ rankName }}
+              div.lh__rank.ui-outline-lg {{ rankName }}
               //- #N is already in the rank name and on the plaque — the bar keeps the LP.
               LeagueLpBar(:lp="standing.lp")
               div.lh__season
@@ -306,7 +306,7 @@ const onGranted = () => emit('fights-granted')
           section.lh__fights(:aria-label="t('league.fightsToday')")
             div.lh__fightsInfo
               span.lh__fightsLabel {{ t('league.fightsToday') }}
-              span.lh__fightsCount(:class="{ 'is-empty': fightsLeft === 0 }" :aria-label="t('league.fightsLeft', { n: fightsLeft }, fightsLeft)")
+              span.lh__fightsCount(:key="fightsLeft" :class="{ 'is-empty': fightsLeft === 0, 'ui-bump': !isLowQuality }" :aria-label="t('league.fightsLeft', { n: fightsLeft }, fightsLeft)")
                 span(aria-hidden="true") {{ fightsLeft }}
                 span.lh__fightsMax(aria-hidden="true") /{{ fightsLimit }}
             div.lh__fightsReset(v-if="fightsLeft === 0")
@@ -337,17 +337,24 @@ const onGranted = () => emit('fights-granted')
           )
 
           template(v-else)
-            h3.lh__heading {{ t('league.opponents') }}
+            h3.lh__heading
+              span.lh__headingText {{ t('league.opponents') }}
             div.lh__cards
               template(v-if="cards.length")
-                LeagueOpponentCard(
-                  v-for="card in cards"
+                //- The entrance lives on a slot wrapper: a finished `both`
+                //- animation on the card itself would pin its transform and
+                //- kill the hover lift / press sink.
+                div.lh__cardSlot.ui-pop-in(
+                  v-for="(card, ci) in cards"
                   :key="card.oppId"
-                  :card="card"
-                  :name="nameFor(card)"
-                  :disabled="cardsDisabled"
-                  @fight="onCardFight(card)"
+                  :style="{ '--i': ci + 1 }"
                 )
+                  LeagueOpponentCard(
+                    :card="card"
+                    :name="nameFor(card)"
+                    :disabled="cardsDisabled"
+                    @fight="onCardFight(card)"
+                  )
               template(v-else)
                 div.lh__skeleton(v-for="i in 3" :key="i" aria-hidden="true")
 
@@ -376,21 +383,37 @@ const onGranted = () => emit('fights-granted')
   gap: 0.6rem
   min-width: 0
 
-// ── Standing: wood plank with a tier-coloured top stripe ──
+// ── Standing: royal plate with flat stripes, the tier accent as a thick top
+// edge, and the badge breaking out of the plate's left edge ──
 .lh__standing
+  position: relative
   display: flex
   align-items: center
   gap: 0.7rem
-  padding: 0.55rem 0.7rem
+  padding: 0.6rem 0.75rem 0.7rem
   border-radius: var(--radius-ui-lg)
   border: 3px solid var(--color-ink)
-  background-color: var(--color-wood-600)
-  box-shadow: inset 0 4px 0 var(--lh-accent), inset 0 -4px 0 var(--color-wood-800), 0 3px 0 var(--color-ink)
-  color: var(--color-cream-50)
+  background-color: var(--color-royal-600)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 6px 0 var(--lh-accent), inset 0 9px 0 var(--color-ink), inset 0 -5px 0 var(--color-royal-800), 0 5px 0 var(--color-ink)
+  color: var(--color-ice-50)
 
 .lh__badge
   flex-shrink: 0
   filter: drop-shadow(0 3px 0 var(--color-ink))
+  animation: lh-badge 0.5s 0.1s cubic-bezier(0.2, 1.6, 0.4, 1) both
+
+// The badge lands on the plate (crash in + settle).
+@keyframes lh-badge
+  0%
+    transform: scale(1.7) rotate(-12deg)
+    opacity: 0
+  60%
+    transform: scale(0.94) rotate(2deg)
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
 
 .lh__rankcol
   display: flex
@@ -400,14 +423,15 @@ const onGranted = () => emit('fights-granted')
   min-width: 0
 
 .lh__rank
-  font-size: 1.35rem
+  font-size: 1.45rem
   font-weight: 900
-  line-height: 1.05
-  color: var(--color-cream-50)
+  line-height: 1.1
+  padding-bottom: 0.1rem
+  text-transform: uppercase
+  letter-spacing: 0.02em
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  text-shadow: -1.5px -1.5px 0 var(--color-ink), 1.5px -1.5px 0 var(--color-ink), -1.5px 1.5px 0 var(--color-ink), 1.5px 1.5px 0 var(--color-ink), 0 2px 0 var(--color-ink)
 
 .lh__season
   display: flex
@@ -415,46 +439,86 @@ const onGranted = () => emit('fights-granted')
   align-items: center
   gap: 0.2rem 0.4rem
   font-size: 0.75rem
-  font-weight: 800
-  color: var(--color-cream-200)
+  font-weight: 900
+  color: var(--color-ice-100)
+  text-shadow: var(--ui-stroke-sm)
 
 .lh__sep
-  width: 0.25rem
-  height: 0.25rem
+  width: 0.3rem
+  height: 0.3rem
   border-radius: 999px
-  background: var(--color-cream-300)
+  background: var(--color-sun-300)
+  box-shadow: 0 0 0 1.5px var(--color-ink)
 
-// ── Chips ──
+// ── Chips: angled tags (skewed plate, upright text), they slam in ──
 .lh__chips
   display: flex
   flex-wrap: wrap
-  gap: 0.4rem
+  gap: 0.5rem
+  padding-left: 0.2rem
 
 .lh__chip
+  --chip-bg: var(--color-royal-500)
+  --chip-band: var(--color-royal-700)
+  position: relative
   display: inline-flex
   align-items: center
-  gap: 0.25rem
-  padding: 0.2rem 0.55rem
-  border-radius: 999px
-  border: 2px solid var(--color-ink)
-  box-shadow: 0 2px 0 var(--color-ink)
-  font-size: 0.78rem
+  gap: 0.3rem
+  padding: 0.24rem 0.7rem 0.3rem
+  isolation: isolate
+  font-size: 0.8rem
   font-weight: 900
   line-height: 1.1
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  animation: lh-chip 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) both
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.35rem
+    background-color: var(--chip-bg)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 var(--chip-band), 0 3px 0 var(--color-ink)
+    transform: skewX(-12deg)
+
+  &:nth-child(2)
+    animation-delay: 80ms
+  &:nth-child(3)
+    animation-delay: 160ms
 
   svg
-    width: 0.9rem
-    height: 0.9rem
+    width: 0.95rem
+    height: 0.95rem
+    filter: drop-shadow(0 1.5px 0 var(--color-ink))
+
+@keyframes lh-chip
+  0%
+    transform: scale(1.8) rotate(-6deg)
+    opacity: 0
+  55%
+    transform: scale(0.92)
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
 
 .lh__chip--gate
+  --chip-bg: var(--color-sun-400)
+  --chip-band: var(--color-sun-600)
   color: var(--color-ink)
-  background-color: var(--color-sun-400)
+  text-shadow: none
+  svg
+    filter: none
 .lh__chip--shield
-  color: var(--color-cream-50)
-  background-color: var(--color-sky-600)
+  --chip-bg: var(--color-sky-500)
+  --chip-band: var(--color-sky-700)
 .lh__chip--streak
-  color: var(--color-cream-50)
-  background-color: var(--color-berry-600)
+  --chip-bg: var(--color-berry-500)
+  --chip-band: var(--color-berry-700)
 
 // ── Fights ──
 .lh__fights
@@ -465,9 +529,9 @@ const onGranted = () => emit('fights-granted')
   gap: 0.4rem 0.6rem
   padding: 0.45rem 0.7rem
   border-radius: var(--radius-ui)
-  border: 2px solid var(--color-cream-400)
-  background-color: var(--color-cream-200)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  border: 2px solid var(--color-ice-400)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
 
 .lh__fightsInfo
   display: flex
@@ -476,21 +540,27 @@ const onGranted = () => emit('fights-granted')
 
 .lh__fightsLabel
   font-size: 0.85rem
-  font-weight: 800
+  font-weight: 900
   color: var(--ui-text-muted)
 
+// The count is a stroked display number: lime while fights are left, berry
+// at zero. It bumps whenever it changes (keyed in the template).
 .lh__fightsCount
-  font-size: 1.25rem
+  display: inline-block
+  font-size: 1.6rem
   font-weight: 900
-  color: var(--color-leaf-700)
+  line-height: 1
+  color: var(--color-leaf-400)
+  text-shadow: var(--ui-stroke)
   font-variant-numeric: tabular-nums
 
   &.is-empty
-    color: var(--color-berry-600)
+    color: var(--color-berry-400)
 
 .lh__fightsMax
-  font-size: 0.85rem
+  font-size: 0.9rem
   color: var(--ui-text-muted)
+  text-shadow: none
 
 .lh__fightsReset
   font-size: 0.8rem
@@ -501,27 +571,50 @@ const onGranted = () => emit('fights-granted')
 .lh__opponents
   min-width: 0
 
+// Section heading: a skewed ink tag with white display text.
 .lh__heading
-  margin: 0 0 0.45rem
-  font-size: 0.9rem
+  position: relative
+  display: inline-flex
+  margin: 0 0 0.6rem 0.3rem
+  padding: 0.22rem 0.9rem 0.3rem
+  isolation: isolate
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.35rem
+    background-color: var(--color-royal-900)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 -3px 0 var(--color-ink), 0 3px 0 var(--color-ink)
+    transform: skewX(-12deg)
+
+.lh__headingText
+  font-size: 0.88rem
   font-weight: 900
-  letter-spacing: 0.03em
+  letter-spacing: 0.04em
   text-transform: uppercase
-  color: var(--ui-text)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
 
 .lh__cards
   display: grid
   grid-template-columns: repeat(3, minmax(0, 1fr))
-  gap: 0.5rem
-  padding-bottom: 0.3rem
+  gap: 0.55rem
+  padding-bottom: 0.45rem
 
-// Loading placeholder: a soft cream card that gently fades (no shimmer gradient).
+.lh__cardSlot
+  min-width: 0
+
+// Loading placeholder: a flat ice card that gently fades (no shimmer gradient).
 .lh__skeleton
   height: 10.2rem
   border-radius: var(--radius-ui-lg)
-  border: 3px solid var(--color-cream-400)
-  background-color: var(--color-cream-200)
-  outline: 2px dashed rgba(110, 69, 39, 0.25)
+  border: 3px solid var(--color-ice-400)
+  background-color: var(--color-ice-200)
+  outline: 2px dashed rgba(35, 56, 168, 0.25)
   outline-offset: -7px
   animation: lh-pulse 1.4s ease-in-out infinite
 
@@ -578,11 +671,11 @@ const onGranted = () => emit('fights-granted')
   color: var(--ui-text-muted)
 
 .lh--static
-  .lh__skeleton, .lh__quietIcon
+  .lh__skeleton, .lh__quietIcon, .lh__badge, .lh__chip
     animation: none
 
 @media (prefers-reduced-motion: reduce)
-  .lh__skeleton, .lh__quietIcon
+  .lh__skeleton, .lh__quietIcon, .lh__badge, .lh__chip
     animation: none
 
 // ── Short landscape (phones): standing on the left, opponents on the right.

@@ -11,7 +11,9 @@
  * The preview module is bundled with esbuild (via tsx's copy) and run in
  * headless system Chrome on a private, throw-away profile — no dev server.
  *
- *   node tools/smasher-sheets/export.mjs [--cell 384] [--boss] [--only vixie,ram]
+ *   node tools/smasher-sheets/export.mjs [--cell 384] [--boss] [--only vixie,ram] [--bare]
+ *   --bare → art-sheets/smashers-bare/: character only, no disc (the PAINTING
+ *            reference; the disc is drawn live under the painted character)
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -21,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const require = createRequire(join(ROOT, 'package.json'))
-const OUT = join(ROOT, 'art-sheets', 'smashers')
+const OUT = join(ROOT, 'art-sheets', process.argv.includes('--bare') ? 'smashers-bare' : 'smashers')
 
 const args = process.argv.slice(2)
 const arg = (name, def) => {
@@ -30,6 +32,7 @@ const arg = (name, def) => {
 }
 const cell = Number(arg('cell', '384'))
 const boss = args.includes('--boss')
+const bare = args.includes('--bare')
 const only = arg('only', '')?.split(',').filter(Boolean) ?? []
 
 const CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
@@ -73,7 +76,7 @@ try {
   mkdirSync(OUT, { recursive: true })
   for (const id of ids) {
     if (only.length && !only.includes(id)) continue
-    const url = await page.evaluate(([i, c, b]) => window.__smasherSheet(i, c, b), [id, cell, boss])
+    const url = await page.evaluate(([i, c, b, d]) => window.__smasherSheet(i, c, b, !d), [id, cell, boss, bare])
     const file = join(OUT, `${id}${boss ? '-boss' : ''}.png`)
     writeFileSync(file, Buffer.from(url.split(',')[1], 'base64'))
     console.log('wrote', file)

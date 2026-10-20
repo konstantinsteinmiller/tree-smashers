@@ -12,7 +12,7 @@ import { createRng } from '@/use/useDeterministicRng'
 /**
  * How much a skill is worth to a ghost in a ghost fight — the L10 median
  * power index from skills-feature.md §3.4. Ghost fights always run in the
- * 'default' arena (no lava / thunder / shock), so Hazard Ward, whose value
+ * 'default' arena (no lava / thunder), so Hazard Ward, whose value
  * is all hazards, is scored as worthless there.
  */
 export const GHOST_SKILL_VALUE: Readonly<Record<SkillId, number>> = Object.freeze({
@@ -25,7 +25,12 @@ export const GHOST_SKILL_VALUE: Readonly<Record<SkillId, number>> = Object.freez
   lucky_edge: 1.08,
   momentum: 1.04,
   static_charge: 1.02,
-  hazard_ward: 1.0
+  hazard_ward: 1.0,
+  // Smasher-only effects: never in a ghost pool (TEAM_SKILL_IDS); unscored.
+  bank_shot: 1.0,
+  anchor: 1.0,
+  tower_breaker: 1.0,
+  thorns: 1.0
 })
 
 /** Seeded tie-break spread: skills within this much PI of each other trade

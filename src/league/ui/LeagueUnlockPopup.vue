@@ -53,7 +53,8 @@ const sizeOf = (i: number): number => 24 + i * 6
           span {{ t('league.unlock.point3') }}
     template(#footer)
       div.lup__actions
-        FButton(size="md" @click="emit('enter')") {{ t('league.unlock.enter') }}
+        //- The screen's one hero CTA (lime, shine, heartbeat).
+        FButton(variant="brawl" size="sm" @click="emit('enter')") {{ t('league.unlock.enter') }}
         button.lup__later(type="button" @click="emit('update:modelValue', false)") {{ t('league.unlock.later') }}
 </template>
 
@@ -66,18 +67,20 @@ const sizeOf = (i: number): number => 24 + i * 6
   padding: 0.25rem 0.5rem 0.25rem
   color: var(--ui-text)
 
-// Recessed cream well the tier steps stand in.
+// The tier staircase on a striped royal stage (ink outline, hard drop); each
+// tier rises in turn with an overshoot, Champion last and biggest.
 .lup__stairs
   display: flex
   align-items: flex-end
   justify-content: center
   gap: 0.15rem
   max-width: 100%
-  padding: 0.4rem 0.25rem 0.2rem
+  padding: 0.55rem 0.4rem 0.35rem
   border-radius: var(--radius-ui)
-  border: 2px solid var(--color-cream-400)
-  background-color: var(--color-cream-200)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-royal-600)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -5px 0 var(--color-royal-800), 0 4px 0 var(--color-ink)
 
 .lup__step
   flex-shrink: 1
@@ -93,8 +96,8 @@ const sizeOf = (i: number): number => 24 + i * 6
 .lup__body
   max-width: 26rem
   margin: 0
-  font-size: 1rem
-  font-weight: 800
+  font-size: 1.05rem
+  font-weight: 900
   line-height: 1.3
   color: var(--ui-text)
 
@@ -115,13 +118,14 @@ const sizeOf = (i: number): number => 24 + i * 6
     align-items: center
     gap: 0.5rem
 
+// Bullet: a small lime diamond with an ink edge.
 .lup__dot
-  width: 0.6rem
-  height: 0.6rem
+  width: 0.65rem
+  height: 0.65rem
   flex-shrink: 0
-  border-radius: 999px
+  border: 2px solid var(--color-ink)
   background: var(--color-leaf-500)
-  box-shadow: 0 0 0 2px var(--color-ink)
+  transform: rotate(45deg)
 
 .lup__actions
   display: flex
@@ -134,8 +138,11 @@ const sizeOf = (i: number): number => 24 + i * 6
   padding: 0 1rem
   border: 0
   background: none
-  color: var(--ui-text-muted)
-  font-weight: 800
+  // On the royal footer: white with the small hard stroke (the muted ink
+  // it had was unreadable on royal).
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  font-weight: 900
   text-decoration: underline
   text-underline-offset: 3px
   cursor: pointer

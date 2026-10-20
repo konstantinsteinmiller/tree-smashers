@@ -3,7 +3,7 @@
 // non-boss stages keep their own (or none).
 
 import { describe, expect, it } from 'vitest'
-import { getStageById, buildCheatBossStage } from '@/use/useSpinnerCampaign'
+import { ARENA_TYPES, getStageById, buildCheatBossStage, sanitizeArenaType, STAGES } from '@/use/useSpinnerCampaign'
 
 describe('boss arena type is data-driven', () => {
   it('boss stages with no explicit arena default to the boss arena', () => {
@@ -13,9 +13,9 @@ describe('boss arena type is data-driven', () => {
   })
 
   it('non-boss stages keep their explicit arena', () => {
-    // Stage 6 is a non-boss 'shock' arena.
+    // Stage 6 is a non-boss 'forest' arena.
     expect(getStageById(6).isBoss).toBeFalsy()
-    expect(getStageById(6).arenaType).toBe('shock')
+    expect(getStageById(6).arenaType).toBe('forest')
     // Stage 12 is a non-boss 'lava' arena.
     expect(getStageById(12).arenaType).toBe('lava')
   })
@@ -33,5 +33,22 @@ describe('boss arena type is data-driven', () => {
 
   it('cheat boss showcase stages keep the boss arena visuals', () => {
     expect(buildCheatBossStage('ghost').arenaType).toBe('boss')
+  })
+})
+
+describe('retired arenas (thunder combo, shock walls)', () => {
+  it('no stage, and no selectable arena, names a retired arena', () => {
+    expect(ARENA_TYPES).not.toContain('thunder')
+    expect(ARENA_TYPES).not.toContain('shock')
+    for (const st of STAGES) expect(['thunder', 'shock']).not.toContain(st.arenaType)
+  })
+
+  it('old saves / ghosts / peers naming a retired arena load as a live one', () => {
+    expect(sanitizeArenaType('thunder')).toBe('forest')
+    expect(sanitizeArenaType('shock')).toBe('default')
+    expect(sanitizeArenaType('lava')).toBe('lava')
+    expect(sanitizeArenaType('nope')).toBe('default')
+    expect(sanitizeArenaType(undefined)).toBe('default')
+    expect(sanitizeArenaType(42, 'boss')).toBe('boss')
   })
 })

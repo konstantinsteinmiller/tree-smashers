@@ -127,15 +127,18 @@ const readHudTarget = (): void => {
 
 const resize = (): void => {
   const canvas = canvasRef.value
-  if (!canvas || !renderer) return
+  if (!canvas) return
   const vv = window.visualViewport
   cssW = Math.round(vv?.width ?? window.innerWidth)
   cssH = Math.round(vv?.height ?? window.innerHeight)
-  // The game draws 1:1 CSS pixels; the cutscene allows a little more for
-  // crisp text, and none at all on the low tier.
-  dpr = FX.low ? 1 : Math.min(1.5, window.devicePixelRatio || 1)
+  // Backing store at css × dpr, capped at 3 — never below the display's own
+  // pixel ratio (render-sharpness rule), on every quality tier. Sized even
+  // before the renderer exists, so the canvas is never a default 300×150
+  // stretched over the screen while the cutscene loads.
+  dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1))
   canvas.width = Math.max(1, Math.round(cssW * dpr))
   canvas.height = Math.max(1, Math.round(cssH * dpr))
+  if (!renderer) return
   renderer.resize(cssW, cssH, dpr, readSafe())
   readHudTarget()
 }
@@ -213,6 +216,8 @@ const installDevSeam = (): void => {
 onMounted(async () => {
   const canvas = canvasRef.value
   if (!canvas) return
+  // Size the backing store now, before the async renderer load below.
+  resize()
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     finish()
@@ -284,12 +289,14 @@ onUnmounted(() => {
     //- Invisible probe: its padding IS the safe-area inset, read by the renderer.
     div.safe-probe.absolute.pointer-events-none(ref="safeProbeRef")
     Transition(name="intro-skip")
-      button.intro-skip.absolute.flex.items-center.gap-2.rounded-full.font-black.uppercase.game-text.text-white(
+      //- An ice secondary 3D button (press sink + tick from the global press
+      //- handler): readable over any frame of the film, but never the hero.
+      button.intro-skip.ui-btn.ui-btn--secondary.absolute.flex.items-center.gap-2.font-black.uppercase(
         v-if="skipVisible"
         type="button"
         data-testid="intro-skip"
         :aria-label="t('intro.skipAria')"
-        class="px-4 py-2 text-sm sm:text-base tracking-wider bg-black/55 border-2 border-white/40 hover:bg-black/75 active:scale-95 cursor-pointer"
+        class="px-4 py-2 text-sm sm:text-base tracking-wider cursor-pointer"
         :style="{\
           right: 'calc(0.9rem + env(safe-area-inset-right, 0px))',\
           bottom: 'calc(0.9rem + env(safe-area-inset-bottom, 0px))'\
@@ -323,6 +330,7 @@ onUnmounted(() => {
 .intro-skip
   -webkit-tap-highlight-color: transparent
   touch-action: manipulation
+  border-radius: 999px
 
 .intro-skip-enter-active,
 .intro-skip-leave-active

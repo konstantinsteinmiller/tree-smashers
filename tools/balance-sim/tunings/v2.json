@@ -1,0 +1,2 @@
+{ "bottom": { "speedy": { "weight": 100, "healthBonus": 10 }, "balanced": { "weight": 110 }, "tanky": { "weight": 115, "healthBonus": 15 } },
+  "bottomUp": { "speedy": { "hp": 2, "speed": 0.07 }, "tanky": { "hp": 3, "speed": 0.03 } } }

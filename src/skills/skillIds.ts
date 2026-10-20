@@ -1,4 +1,4 @@
-// ─── The ten skill ids ──────────────────────────────────────────────────────
+// ─── The skill ids ──────────────────────────────────────────────────────
 //
 // A flag-boundary module (src/skills/ — never obfuscated, no imports), so the
 // merge policy can count skill levels without pulling a skill module into a
@@ -10,5 +10,7 @@
 // `unlockStage`, see `SKILL_AUTOFILL_ORDER`.)
 export const SKILL_IDS = [
   'phase_step', 'guard_shell', 'second_wind', 'lucky_edge', 'homing_rockets',
-  'opening_salvo', 'momentum', 'hazard_ward', 'static_charge', 'mirror_plate'
+  'opening_salvo', 'momentum', 'hazard_ward', 'static_charge', 'mirror_plate',
+  // Smasher-only effects (never in the team skill shop; SKILLS[id].smasherOnly).
+  'bank_shot', 'anchor', 'tower_breaker', 'thorns'
 ] as const

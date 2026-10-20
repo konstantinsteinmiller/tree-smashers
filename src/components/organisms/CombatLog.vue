@@ -65,10 +65,11 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
 </script>
 
 <template lang="pug">
-  //- Minimised toggle — a small wood plate with a "list" glyph (it sits on the arena).
+  //- Minimised toggle — a small royal chip with a "list" glyph (it sits on
+  //- the arena). Quiet on purpose; it sinks into its drop when pressed.
   button.combat-log-toggle.pointer-events-auto.flex.items-center(
     type="button"
-    class="gap-1 px-1.5 py-0.5 active:scale-95 transition-transform"
+    class="gap-1 px-1.5 py-0.5"
     :aria-label="t('aria')"
     :title="t('title')"
     @click="open = true"
@@ -105,14 +106,23 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
 
 <style scoped lang="sass">
 .combat-log-toggle
-  color: var(--color-cream-50)
-  background-color: var(--color-wood-600)
+  color: var(--color-ice-50)
+  background-color: var(--color-royal-600)
   border: 2px solid var(--color-ink)
   border-radius: var(--radius-ui-sm)
-  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
+  box-shadow: inset 0 2px 0 var(--color-royal-400), 0 3px 0 var(--color-ink)
+  transition: transform 0.24s var(--ui-spring), box-shadow 0.24s var(--ui-spring)
+  -webkit-tap-highlight-color: transparent
 
-  &:hover
-    background-color: var(--color-wood-500)
+  @media (hover: hover)
+    &:hover
+      background-color: var(--color-royal-500)
+      transform: translateY(-1px)
+
+  &:active
+    transform: translateY(2px)
+    box-shadow: inset 0 2px 0 var(--color-royal-400), 0 1px 0 var(--color-ink)
+    transition-duration: var(--ui-press-down)
 
   &:focus-visible
     outline: 3px solid var(--ui-focus)
@@ -121,8 +131,8 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
 .combat-log-line
   padding: 0.15rem 0.45rem
   border-radius: var(--radius-ui-sm)
-  border-left: 4px solid transparent
-  background-color: var(--color-cream-200)
+  border-left: 5px solid transparent
+  background-color: var(--color-ice-200)
 
   &.is-mine
     color: var(--color-sky-700)

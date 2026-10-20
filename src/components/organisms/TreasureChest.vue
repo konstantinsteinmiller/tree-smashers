@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSounds from '@/use/useSound.ts'
+import { playUiSfx } from '@/use/uiSfx'
 import { spawnCoinExplosion } from '@/use/useCoinExplosion'
 import IconCoin from '@/components/icons/IconCoin.vue'
 
@@ -81,6 +82,14 @@ const phase = computed<Phase>(() => {
 })
 
 const isReady = computed(() => phase.value !== 'cooldown')
+
+// The moment the chest ripens (or upgrades to the big payout) while the game
+// is open: one soft ting. Never on mount (a chest that was already ready when
+// the page loaded is not news), and the uiSfx gates keep it silent under an
+// ad, a platform pause or a muted slider.
+watch(phase, (now, was) => {
+  if (was && now !== 'cooldown' && now !== was) playUiSfx('reward')
+})
 
 /** Reward the player gets if they tap right now — the small amount during
  *  the 3-minute window, the big one once the chest reaches its 10-minute
@@ -176,17 +185,21 @@ const collectChest = () => {
 </script>
 
 <template lang="pug">
-  div.flex.flex-col.items-center.pointer-events-auto(
+  div.chest-root.flex.flex-col.items-center.pointer-events-auto(
     @click="collectChest"
-    :class="isReady ? 'cursor-pointer chest-pulse' : ''"
+    :data-sfx="isReady ? 'press' : 'off'"
+    :class="isReady ? ['cursor-pointer', 'is-ready', phase === 'big' ? 'is-big' : 'is-small'] : 'is-cooldown'"
     :class-list="phase"
     :style="scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'center' } : undefined"
   )
-    div.relative(ref="chestRef" class="w-10 h-10 sm:w-12 sm:h-12")
+    div.chest-icon.relative(ref="chestRef" class="w-10 h-10 sm:w-12 sm:h-12")
       img.object-contain.w-full.h-full(
         src="/images/icons/chest_128x128.webp"
-        :style="isReady ? { filter: 'brightness(1.25)' } : undefined"
+        alt=""
+        draggable="false"
       )
+      //- Ready: the berry "!" notify dot on the lid corner.
+      span.chest-notify.ui-notify(v-if="isReady" aria-hidden="true") !
       //- Circular cooldown overlay — only during the pre-small cooldown phase.
       //- During the small → big window we show the running
       //- 7-min countdown via the timer label below; the ring would
@@ -209,7 +222,7 @@ const collectChest = () => {
           circle(
             cx="20" cy="20" r="19"
             fill="none"
-            stroke="rgba(58,35,20,0.4)"
+            stroke="rgba(22, 26, 64,0.4)"
             stroke-width="40"
             :stroke-dasharray="119.38"
             :stroke-dashoffset="119.38 * (1 - cooldownRingPct)"
@@ -222,12 +235,12 @@ const collectChest = () => {
     //- the way.
     div.flex.flex-col.items-center.leading-tight(class="mt-0.5")
       template(v-if="phase === 'cooldown'")
-        span.game-text.text-cream-50.font-bold(class="text-[0.75rem] sm:text-xs") {{ timeDisplay }}
+        span.chest-timer.game-text.text-cream-50.font-black(class="text-[0.75rem] sm:text-xs") {{ timeDisplay }}
       template(v-else-if="phase === 'small'")
         //- Coin icon styled to match the DailyRewards button
         //- (`<IconCoin class="text-yellow-300">`) so reward labels read
         //- as the same visual currency across the HUD.
-        span.font-black.text-sun-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
+        span.chest-amount.font-black.text-sun-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
           span.game-text +{{ chestSmallCoins }}
           IconCoin(class="w-4 h-4")
         span.game-text.text-cream-50.font-bold(class="text-[0.6rem] sm:text-[0.75rem] opacity-80") {{ timeDisplay }}
@@ -240,20 +253,73 @@ const collectChest = () => {
         //- `+25` / `+100` here while `currentReward` (the value actually
         //- granted) lived in the script — so scaling the payout silently
         //- left the label lying about it.
-        span.font-black.text-sun-400.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
-          span.game-text +{{ chestBigCoins }}
+        span.chest-amount.is-big.font-black.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
+          span +{{ chestBigCoins }}
           IconCoin(class="w-4 h-4")
 </template>
 
 <style scoped lang="sass">
-.chest-pulse
-  animation: chest-pulse 2s ease-in-out infinite
+// Ready: the chest hops and rattles ("open me!"), then rests — the small
+// window every 2.4 s, the big payout twice as eager. Transform only.
+.chest-root.is-ready .chest-icon
+  transform-origin: 50% 90%
+  animation: chest-rattle 2.4s ease-in-out infinite
 
-@keyframes chest-pulse
-  0%, 100%
-    opacity: 1
-  50%
-    opacity: 0.8
+.chest-root.is-big .chest-icon
+  animation-duration: 1.4s
+
+@keyframes chest-rattle
+  0%, 50%, 100%
+    transform: translateY(0) rotate(0) scale(1)
+  10%
+    transform: translateY(-6px) rotate(-8deg) scale(1.08)
+  20%
+    transform: translateY(0) rotate(7deg) scale(1.02, 0.94)
+  30%
+    transform: translateY(-2px) rotate(-4deg)
+  40%
+    transform: translateY(0) rotate(2deg)
+
+// Pressing a ready chest squashes it.
+.chest-root.is-ready:active .chest-icon
+  animation: none
+  transform: translateY(2px) scale(1.08, 0.88)
+
+.chest-notify
+  position: absolute
+  top: -0.3rem
+  right: -0.45rem
+  min-width: 1.1rem
+  height: 1.1rem
+  font-size: 0.7rem
+
+// Cooldown timer on a navy chip (reads over any arena tile).
+.chest-timer
+  padding: 0.05rem 0.4rem 0.1rem
+  border: 2px solid var(--color-ink)
+  border-radius: 999px
+  background-color: var(--color-royal-900)
+  font-variant-numeric: tabular-nums
+  box-shadow: 0 2px 0 var(--color-ink)
+
+// Ready amounts on a sun chip; the big payout on an angled, striped one.
+.chest-amount
+  padding: 0.05rem 0.4rem 0.1rem
+  border: 2px solid var(--color-ink)
+  border-radius: 999px
+  background-color: var(--color-royal-900)
+  box-shadow: 0 2px 0 var(--color-ink)
+  font-variant-numeric: tabular-nums
+  &.is-big
+    color: var(--color-ink)
+    background-color: var(--color-sun-400)
+    background-image: var(--ui-stripes)
+    border-radius: 0.35rem
+    box-shadow: inset 0 -2px 0 var(--color-sun-600), 0 2px 0 var(--color-ink)
+
+@media (prefers-reduced-motion: reduce)
+  .chest-root.is-ready .chest-icon
+    animation: none
 
 // Clip the cooldown SVG overlay to the chest icon's alpha channel so
 // the darkening follows the chest silhouette instead of leaving a

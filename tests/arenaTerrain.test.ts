@@ -49,13 +49,13 @@ const overlaps = (a: { x: number; y: number; radius: number }, b: { x: number; y
 }
 
 describe('terrain layouts', () => {
-  it('cycle by campaign stage: 1→0, 2→1, 3→2, 4→0 …', () => {
-    expect([1, 2, 3, 4, 5, 6, 7].map(layoutForStage)).toEqual([0, 1, 2, 0, 1, 2, 0])
+  it('cycle by campaign stage: 1→0, 2→1 … 50→49, 51→0 …', () => {
+    expect([1, 2, 3, 50, 51, 52].map(layoutForStage)).toEqual([0, 1, 2, 49, 0, 1])
   })
 
   it('seed → layout is deterministic and covers every layout', () => {
     const seen = new Set<number>()
-    for (let s = 0; s < 64; s++) {
+    for (let s = 0; s < 2048; s++) {
       expect(layoutForSeed(s * 7919)).toBe(layoutForSeed(s * 7919))
       seen.add(layoutForSeed(s * 7919))
     }
@@ -66,7 +66,7 @@ describe('terrain layouts', () => {
     for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
       const h = buildTerrainLayout(id)
       const g = buildTerrainLayout(id, true)
-      expect(terrainCircles(g).map(c => [c.x, -c.y, c.radius])).toEqual(terrainCircles(h).map(c => [c.x, c.y, c.radius]))
+      expect(terrainCircles(g).map(c => [c.x, -c.y + 0, c.radius])).toEqual(terrainCircles(h).map(c => [c.x, c.y, c.radius]))
       expect(buildTerrainLayout(id)).toEqual(h) // fresh, identical copy
     }
   })
@@ -81,8 +81,11 @@ describe('terrain layouts', () => {
         for (const s of spawnDiscs()) expect(overlaps(f, s), `feature ${JSON.stringify(f)} vs spawn ${JSON.stringify(s)}`).toBe(false)
         for (const side of [1, -1] as const) expect(overlaps(f, { ...towerDisc(side), radius: towerDisc(side).radius + 8 })).toBe(false)
       }
-      for (let i = 0; i < feats.length; i++) {
-        for (let j = i + 1; j < feats.length; j++) expect(overlaps(feats[i]!, feats[j]!)).toBe(false)
+      // Pairwise (a log's own disc chain overlaps itself by design — the full
+      // log-aware check lives in arenaLayouts.test.ts).
+      const discs = terrainCircles({ ...t, logs: [] })
+      for (let i = 0; i < discs.length; i++) {
+        for (let j = i + 1; j < discs.length; j++) expect(overlaps(discs[i]!, discs[j]!)).toBe(false)
       }
     })
   }
@@ -166,6 +169,24 @@ describe('tower result rule', () => {
     expect(decideResult(2, 0, false, false)).toBe('win')
     expect(decideResult(0, 2, false, false)).toBe('lose')
     expect(decideResult(1, 1, false, false)).toBeNull()
+  })
+
+  // Regression (PvP double win): each client calls its own team 'player'.
+  // A simultaneous loss must resolve to the SAME team on both clients, so the
+  // host's view (player = host) and the guest's view (player = guest) are
+  // complementary — never both 'win'.
+  it('a simultaneous loss is complementary across the two PvP views', () => {
+    const cases: [number, number, boolean, boolean][] = [
+      [0, 0, false, false], [2, 2, true, true], [0, 1, false, true], [1, 0, true, false]
+    ]
+    for (const [a, b, ad, bd] of cases) {
+      for (const hostTeamWinsTie of [true, false]) {
+        const host = decideResult(a, b, ad, bd, hostTeamWinsTie ? 'player' : 'npc')
+        const guest = decideResult(b, a, bd, ad, hostTeamWinsTie ? 'npc' : 'player')
+        expect([host, guest].sort()).toEqual(['lose', 'win'])
+      }
+    }
+    expect(decideResult(0, 0, false, false)).toBe('win') // campaign: player wins ties
   })
 
   it('tower HP is 60% of the team max HP', () => {

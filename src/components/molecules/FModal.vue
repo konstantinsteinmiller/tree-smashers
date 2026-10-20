@@ -3,6 +3,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import FTabs, { type TabOption } from '@/components/atoms/FTabs.vue'
 import { useI18n } from 'vue-i18n'
 import { isMobileLandscape, isMobilePortrait } from '@/use/useUser'
+import { playUiSfx } from '@/use/uiSfx'
 
 interface Props {
   modelValue: boolean | any
@@ -53,6 +54,9 @@ const handleTabChange = (val: string | number) => {
 const contentRef = ref<HTMLElement | null>(null)
 const canScrollUp = ref(false)
 const canScrollDown = ref(false)
+/** The body overflows, so a scrollbar runs down its right edge: the card
+ *  drops its right-hand corner radii so the bar sits flush (see style). */
+const hasScrollbar = ref(false)
 
 // ─── Header room ────────────────────────────────────────────────────────────
 //
@@ -111,6 +115,7 @@ const syncScrollState = (): void => {
   // which would otherwise leave the bottom fade stuck on at full scroll.
   canScrollUp.value = el.scrollTop > 1
   canScrollDown.value = el.scrollTop + el.clientHeight < el.scrollHeight - 1
+  hasScrollbar.value = el.scrollHeight > el.clientHeight + 1
 }
 
 /** Everything that has to be recomputed when the modal's box changes. */
@@ -135,6 +140,17 @@ const teardownObservers = (): void => {
 // decoding, a tab swap, a locale switch reflowing longer CJK strings — and
 // the window listeners catch rotation, which changes both the header scale
 // (`isMobileLandscape`) and the available height.
+// Open / close whoosh. Not on the initial mount when already closed, and the
+// uiSfx gates keep it silent under an ad or a platform pause.
+watch(
+  () => !!props.modelValue,
+  (open, was) => {
+    if (open === was || (was === undefined && !open)) return
+    playUiSfx(open ? 'open' : 'close')
+  },
+  { immediate: true }
+)
+
 watch(
   () => props.modelValue,
   async (open) => {
@@ -171,7 +187,11 @@ watch(() => props.activeTab, async () => {
   remeasure()
 })
 
-onBeforeUnmount(teardownObservers)
+onBeforeUnmount(() => {
+  // A parent that closes by unmounting (v-if) never flips modelValue.
+  if (props.modelValue) playUiSfx('close')
+  teardownObservers()
+})
 </script>
 
 <template lang="pug">
@@ -256,14 +276,15 @@ onBeforeUnmount(teardownObservers)
             @click="close"
           )
             div(class="flex justify-center scale-85 sm:scale-100")
-              //- Fabric banner (flat CSS, see design.sass `.ui-banner`).
-              //- ART-DESK SEAM: a painted fabric ribbon can replace it.
-              div(class="ribbon-header ui-banner relative" @click.stop)
-                span(class="ui-outline text-2xl md:text-3xl whitespace-nowrap")
+              //- Skewed sun title plate (design.sass `.ui-tag`) that drops in
+              //- with a swing. ART-DESK SEAM: a painted plate can replace the
+              //- tag's ::before (keep the content box).
+              div(class="ribbon-header ui-tag ui-drop-in relative" @click.stop)
+                span(class="ui-outline-lg modal-title-text whitespace-nowrap")
                   | {{ title }}
 
           //- The Main Frame
-          div(class="modal-frame-wrap relative")
+          div(class="modal-frame-wrap relative modal-swing")
             //- Hard drop shadow under the wooden frame (0 blur).
             div(class="absolute inset-0 translate-y-2 rounded-[1.5rem] sm:rounded-[2.25rem] bg-[var(--color-ink)]")
 
@@ -299,8 +320,9 @@ onBeforeUnmount(teardownObservers)
                   type="button"
                   :aria-label="t('close')"
                   @click="close"
-                  class="hover:scale-[103%] -mt-3 -mr-2.5 absolute top-0 right-0 group cursor-pointer transition-transform \
-                         active:scale-40 sm:active:scale-90 scale-90 sm:scale-110 sm:top-2 sm:right-2 md:top-3 md:right-3"
+                  data-sfx="press"
+                  class="modal-close -mt-3 -mr-2.5 absolute top-0 right-0 group cursor-pointer \
+                         scale-90 sm:scale-110 sm:top-2 sm:right-2 md:top-3 md:right-3"
                   :class="{ 'scale-100 -mt-4': isMobilePortrait, '-mt-8 -mr-3': !isMobilePortrait }"
                 )
                   div(class="relative")
@@ -308,7 +330,7 @@ onBeforeUnmount(teardownObservers)
                     //- on a 390px phone, above the 44pt / 48dp minimums. It is
                     //- the one control every QA pass reaches for first.
                     div(class="ui-btn ui-btn--danger ui-btn--icon relative p-2.5")
-                      svg(xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true")
+                      svg.modal-close-x(xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true")
                         path(stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M6 18L18 6M6 6l12 12")
 
               //- Content Slot — the only scrolling region in the modal.
@@ -321,7 +343,7 @@ onBeforeUnmount(teardownObservers)
               div.mt-1.modal-content-slot.game-scroll(
                 ref="contentRef"
                 class="text-center"
-                :class="{ 'scroll-fade-top': canScrollUp, 'scroll-fade-bottom': canScrollDown }"
+                :class="{ 'scroll-fade-top': canScrollUp, 'scroll-fade-bottom': canScrollDown, 'has-scrollbar': hasScrollbar }"
               )
                 slot
 
@@ -353,22 +375,66 @@ onBeforeUnmount(teardownObservers)
 // content slot is the parchment card. Flat fills + hard inset bands only.
 .modal-frame
   background-color: var(--color-wood-600)
+  // Flat diagonal stripes on the royal frame: energy without noise (they
+  // only show in the frame band around the ice card).
+  background-image: var(--ui-stripes)
   border: 4px solid var(--color-ink)
   border-radius: 1.25rem
-  box-shadow: inset 0 4px 0 var(--color-wood-400), inset 0 -5px 0 var(--color-wood-800)
+  box-shadow: inset 0 4px 0 var(--color-royal-400), inset 0 2.2rem 0 var(--color-royal-500), inset 0 -6px 0 var(--color-royal-800)
   @media (min-width: 640px)
     border-radius: 2rem
+
+// The frame swings into place inside the overlay's pop (a degree of tilt,
+// settling with an overshoot) — the modal lands rather than appears.
+.modal-swing
+  animation: modal-swing 0.46s cubic-bezier(0.2, 1.5, 0.4, 1) both
+
+@keyframes modal-swing
+  0%
+    transform: rotate(-3deg) scale(0.94)
+  60%
+    transform: rotate(0.8deg) scale(1.01)
+  100%
+    transform: none
+
+// Title plate: bigger, uppercase, heavy stroke.
+.modal-title-text
+  display: block
+  font-size: 1.6rem
+  font-weight: 900
+  text-transform: uppercase
+  letter-spacing: 0.03em
+  line-height: 1.05
+  @media (min-width: 768px)
+    font-size: 2rem
+
+// Close X: the glyph turns a quarter on hover; the ui-btn inside sinks.
+.modal-close-x
+  transition: transform 0.3s var(--ui-spring)
+
+@media (hover: hover)
+  .modal-close:hover .modal-close-x
+    transform: rotate(90deg)
+
+@media (prefers-reduced-motion: reduce)
+  .modal-swing
+    animation: none
 
 .modal-content-slot
   color: var(--ui-text)
   background-color: var(--ui-surface)
-  border: 3px solid var(--color-wood-800)
+  border: 3px solid var(--color-ink)
   border-radius: 0.9rem
-  box-shadow: inset 0 3px 0 var(--color-cream-50)
+  box-shadow: inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-200)
   padding: 0.5rem 0.25rem
   @media (min-width: 640px)
     border-radius: 1.4rem
     padding: 0.75rem 0.5rem
+  // A scrollbar runs down the right edge: square right corners so the bar
+  // sits flush instead of being cut by the rounding.
+  &.has-scrollbar
+    border-top-right-radius: 0
+    border-bottom-right-radius: 0
 
 // The footer sits on the wood, so loose footer text reads cream.
 .modal-footer-slot
@@ -487,12 +553,12 @@ onBeforeUnmount(teardownObservers)
   &::before
     top: 0
     margin-bottom: -1.25rem
-    background: linear-gradient(to bottom, var(--ui-surface) 15%, rgba(253, 242, 216, 0))
+    background: linear-gradient(to bottom, var(--ui-surface) 15%, rgba(238, 245, 255, 0))
 
   &::after
     bottom: 0
     margin-top: -1.25rem
-    background: linear-gradient(to top, var(--ui-surface) 15%, rgba(253, 242, 216, 0))
+    background: linear-gradient(to top, var(--ui-surface) 15%, rgba(238, 245, 255, 0))
 
   &.scroll-fade-top::before
     opacity: 1

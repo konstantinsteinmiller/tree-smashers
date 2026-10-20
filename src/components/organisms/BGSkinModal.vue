@@ -64,17 +64,19 @@ const swatchStyle = (skin: BgSkinDef) =>
 
       //- Skin grid
       div.grid.gap-2(class="grid-cols-2 sm:grid-cols-3")
-        div.bg-skin-card.flex.flex-col.overflow-hidden(
-          v-for="skin in bgSkins"
+        div.bg-skin-card.ui-pop-in.flex.flex-col.overflow-hidden(
+          v-for="(skin, i) in bgSkins"
           :key="skin.id"
-          :class="{ 'is-equipped': selectedBgSkinId === skin.id }"
+          :class="{ 'is-equipped': selectedBgSkinId === skin.id, 'is-owned': isBgSkinOwned(skin.id) }"
+          :style="{ '--i': Math.min(i, 10) }"
         )
           //- Preview swatch
           div.relative(class="h-16 sm:h-20" :style="swatchStyle(skin)")
-            span.absolute.ui-chip.ui-chip--leaf(
+            span.absolute.ui-chip.ui-chip--leaf.ui-chip--angled(
               v-if="selectedBgSkinId === skin.id"
               class="top-1 right-1 text-[0.6rem]"
-            ) {{ t('bg.equipped') }}
+            )
+              span {{ t('bg.equipped') }}
           //- `flex-1 justify-center` centres the label + action block in the
           //- space the grid row gives this card. Grid rows stretch every card
           //- to the tallest one, so an owned skin (one short "Equipped" line)
@@ -137,19 +139,31 @@ const swatchStyle = (skin: BgSkinDef) =>
 </template>
 
 <style scoped lang="sass">
+// Backdrop cards: collectible cards — ink frame, a hard drop, the swatch as
+// the "art" window. Owned = leaf edge; equipped = sun face + stripes + ring,
+// lifted. Cards pop in staggered (fill: backwards, so it never pins a
+// transform).
 .bg-skin-card
-  border: 2px solid var(--color-wood-700)
+  --edge: var(--color-ice-400)
+  border: 3px solid var(--color-ink)
   border-radius: var(--radius-ui)
-  background-color: var(--color-cream-50)
+  background-color: var(--color-ice-50)
   color: var(--ui-text)
-  box-shadow: 0 3px 0 var(--color-wood-700)
+  box-shadow: inset 0 -5px 0 var(--edge), 0 4px 0 var(--color-ink)
+  animation-fill-mode: backwards
+  transition: transform 0.26s var(--ui-spring)
+  &.is-owned
+    --edge: var(--color-leaf-500)
   &.is-equipped
-    border-color: var(--color-ink)
+    --edge: var(--color-sun-500)
     background-color: var(--color-sun-200)
-    box-shadow: 0 3px 0 var(--color-ink)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
+    transform: translateY(-2px)
 
 .bg-skin-card__body
-  border-top: 2px solid var(--color-wood-700)
+  border-top: 3px solid var(--color-ink)
+  padding-bottom: 0.45rem
 
 .bg-skin-card__name
   font-weight: 900
@@ -163,8 +177,12 @@ const swatchStyle = (skin: BgSkinDef) =>
 // Diamonds are the plum accent.
 .diamond-chip
   background-color: var(--color-plum-500)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
 
 .ui-btn .game-text
   text-shadow: inherit
+
+@media (prefers-reduced-motion: reduce)
+  .bg-skin-card.is-equipped
+    transform: none
 </style>

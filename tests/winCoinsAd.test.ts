@@ -156,8 +156,9 @@ describe('where the button appears', () => {
     expect(src).toMatch(/lastWinWasBoss\.value = isBossWin/)
     // The label shows what was granted (+ the ad's extra), not rewardAmount,
     // which already reads the NEXT stage after advanceStage().
-    expect(src).toContain('+{{ grantedCoins + winAdExtra }}')
-    expect(src).toContain('+{{ PVP_COIN_REWARD + winAdExtra }}')
+    // Bound into the count-up (FCountUp, prefix "+"): it lands on exactly this.
+    expect(src).toContain(':value="grantedCoins + winAdExtra"')
+    expect(src).toContain(':value="PVP_COIN_REWARD + winAdExtra"')
     const snap = src.indexOf('grantedCoins.value = rewardAmount.value')
     const adv = src.indexOf('advanceStage()', snap)
     expect(snap).toBeGreaterThan(0)

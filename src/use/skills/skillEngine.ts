@@ -25,9 +25,19 @@ export {
   createSkillVfx,
   drawSkillGlyph,
   renderBladeSkillFx,
+  renderSkillFlavour,
   renderSkillLayer,
   resetSkillVfx,
   skillBladeAlpha,
   skillVfxEvent,
   tickSkillVfx
 } from '@/use/skills/skillVfx'
+
+export {
+  createSkillCallouts,
+  pushSkillCallout,
+  renderSkillCallouts,
+  resetSkillCallouts
+} from '@/use/skills/skillCallouts'
+
+export { smasherSkillKey } from '@/use/skills/smasherSkillArt'

@@ -1,5 +1,6 @@
 <template lang="pug">
-  //- The forest backdrop: a flat cartoon tile (public/images/bg/forest-tile.svg)
+  //- The forest backdrop: a painted seamless tile (public/images/bg/forest-tile_512x512.webp,
+  //- tools/bg-tile/make-tile.mjs) over the vector tile forest-tile.svg as fallback,
   //- on one oversized layer that pans very slowly by `transform` only.
   //- Same rules as #static-splash in index.html, so the hand-over moves nothing.
   //- `.splash-backdrop` is polled by IntroCutscene.vue — keep the class name.
@@ -156,15 +157,16 @@ watch(done, (isDone) => {
 
 .backdrop-pan
   position: absolute
-  inset: -240px 0 0 -240px
-  background-image: url('/images/bg/forest-tile.svg')
-  background-size: 240px 240px
+  inset: -256px 0 0 -256px
+  // painted seamless tile (512 px = 2× of 256 css px) over the vector tile as fallback
+  background-image: url('/images/bg/forest-tile_512x512.webp'), url('/images/bg/forest-tile.svg')
+  background-size: 256px 256px
   animation: forest-pan 90s linear infinite
   will-change: transform
 
 @keyframes forest-pan
   to
-    transform: translate3d(240px, 240px, 0)
+    transform: translate3d(256px, 256px, 0)
 
 .loader
   position: fixed
@@ -197,20 +199,20 @@ watch(done, (isDone) => {
   font-size: clamp(2.6rem, min(13vw, 17vh), 5.6rem)
   line-height: 0.95
   letter-spacing: 0.02em
-  color: #ffd45e
-  -webkit-text-stroke: 0.14em #1e3a21
+  color: #ffeb3b
+  -webkit-text-stroke: 0.14em #161a40
   paint-order: stroke fill
-  text-shadow: 0 0.09em 0 #1e3a21
+  text-shadow: 0 0.09em 0 #161a40
   transform: rotate(-3deg)
 
 .bar
   position: relative
   width: 72%
   height: clamp(14px, 3vmin, 20px)
-  border: 3px solid #1e3a21
+  border: 3px solid #161a40
   border-radius: 999px
-  background: #24472a
-  box-shadow: 0 4px 0 #1e3a21
+  background: #10164f
+  box-shadow: 0 4px 0 #161a40
   box-sizing: content-box
 .lit
   position: absolute

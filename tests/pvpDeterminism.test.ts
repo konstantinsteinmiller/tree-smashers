@@ -23,6 +23,8 @@ import { installSkillPort } from './helpers/skillsBuild'
 import type { SpinnerConfig, SpinnerState, TopPartId } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import type { SkillId, SkillLoadout } from '@/types/skills'
+import { SMASHER_LIST, smasherConfig } from '@/data/smasherCatalog'
+import { TEAM_SKILL_IDS } from '@/data/skillCatalog'
 
 type GameModule = typeof import('@/use/useSpinnerGame')
 type RngModule = typeof import('@/use/useDeterministicRng')
@@ -113,6 +115,8 @@ interface MatchSpec {
   /** Skill loadouts per lobby role (both clients build both sides). */
   hostSkills?: SkillLoadout
   guestSkills?: SkillLoadout
+  /** Tree Smashers terrain layout + towers (both clients build it; the guest y-flipped). */
+  terrain?: { layout: number; towers: boolean }
   /** Runs on each client right after its initGame (e.g. force proc streams). */
   afterInit?: (engine: Engine, role: 'host' | 'guest') => void
 }
@@ -175,7 +179,7 @@ const runMatch = async (spec: MatchSpec): Promise<MatchResult> => {
       enabled: true,
       myTurnFirst: spec.firstTurn === c.role,
       role: c.role
-    }, 'circle', { skillLoadout: mySkills, enemySkillLoadout: theirSkills })
+    }, 'circle', { skillLoadout: mySkills, enemySkillLoadout: theirSkills, ...(spec.terrain ? { terrain: spec.terrain } : {}) })
     spec.afterInit?.(c.engine, c.role)
   }
   start(host)
@@ -275,6 +279,12 @@ beforeEach(() => {
   rafQueue.clear()
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
   vi.spyOn(performance, 'now').mockImplementation(() => clock)
+  // WORKING audio: jsdom's HTMLMediaElement.play() returns undefined, so the
+  // engine's `audio.play().catch(...)` threw and aborted whatever game code
+  // called playSound — hiding (and causing) desyncs. A real browser resolves.
+  // Audio must never affect the simulation, so the test plays sound for real.
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve())
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
     const id = rafId++
     rafQueue.set(id, cb)
@@ -301,13 +311,21 @@ const TWO_V_TWO: [SpinnerConfig[], SpinnerConfig[]] = [
 ]
 
 describe('PvP determinism — host and guest simulate the same match', () => {
-  const arenas: ArenaType[] = ['default', 'shock', 'lava']
+  const arenas: ArenaType[] = ['default', 'forest', 'lava']
   for (const arena of arenas) {
     it(`1v1 on ${arena}`, async () => {
       await expectSeedsInSync({ arena, host: ONE_V_ONE[0], guest: ONE_V_ONE[1], firstTurn: 'host' }, SEEDS)
     })
     it(`2v2 on ${arena}`, async () => {
       await expectSeedsInSync({ arena, host: TWO_V_TWO[0], guest: TWO_V_TWO[1], firstTurn: 'guest' }, SEEDS)
+    })
+  }
+
+  // Terrain arenas: every feature kind (boosters, leaf arrows, mud, honey,
+  // deep holes, islands, mushroom caps, logs) + towers, host and guest in sync.
+  for (const layout of [0, 1, 2, 5, 4, 11, 9, 48, 31, 46, 49]) {
+    it(`2v2 on terrain layout ${layout} with towers`, async () => {
+      await expectSeedsInSync({ arena: 'default', host: TWO_V_TWO[0], guest: TWO_V_TWO[1], firstTurn: 'host', terrain: { layout, towers: true } }, SEEDS.slice(0, 2))
     })
   }
 
@@ -329,6 +347,23 @@ describe('PvP determinism — host and guest simulate the same match', () => {
       firstTurn: 'host',
       hostSimSpeed: 2
     }, SEEDS)
+  })
+
+  // Regression: these matches end in a SIMULTANEOUS loss (mutual wipe-out /
+  // both towers down). Each client calls its own team 'player', and the old
+  // "player wins ties" rule made BOTH clients report a win. Exactly one wins.
+  it('a simultaneous loss gives complementary results (never a double win)', async () => {
+    const specs: MatchSpec[] = [
+      ...SEEDS.map(seed => ({ arena: 'default' as ArenaType, host: TWO_V_TWO[0], guest: TWO_V_TWO[1], firstTurn: 'host' as const, hostSimSpeed: 2 as const, seed })),
+      ...SEEDS.slice(0, 2).map(seed => ({ arena: 'default' as ArenaType, host: TWO_V_TWO[0], guest: TWO_V_TWO[1], firstTurn: 'host' as const, terrain: { layout: 9, towers: true }, seed }))
+    ]
+    for (const spec of specs) {
+      const { host, guest } = await runMatch(spec)
+      const hr = host.engine.gameResult.value
+      const gr = guest.engine.gameResult.value
+      if (hr === null && gr === null) continue // unfinished = both "draw"
+      expect([hr, gr].sort(), `seed ${spec.seed}`).toEqual(['lose', 'win'])
+    }
   })
 
   it('assigns identical syncKeys on both clients (host 0..n-1, guest 100+i)', async () => {
@@ -397,7 +432,7 @@ describe('PvP determinism — skills on both sides', () => {
     ['Rockets + Salvo vs Phase + Mirror', ROCKETS_SALVO, PHASE_MIRROR,
       ['salvo', 'rocket_volley', 'phase', 'mirror']]
   ]
-  for (const arena of ['shock', 'lava'] as ArenaType[]) {
+  for (const arena of ['forest', 'lava'] as ArenaType[]) {
     for (const [name, hostSkills, guestSkills, kinds] of pairs) {
       it(`${name} on ${arena} (real per-blade streams)`, async () => {
         await expectSeedsInSync({
@@ -506,5 +541,34 @@ describe('PvP determinism — skills on both sides', () => {
     }
     expect(turns).toBeGreaterThanOrEqual(SEEDS.length * 4)
     expect(skips).toBeGreaterThan(0)
+  })
+})
+
+// ─── Smasher mechanics: disc sizes, gameplay heading + directional armour,
+// the smasher-only effects (bank_shot / anchor / tower_breaker / thorns) ──────
+describe('PvP determinism — smasher discs, armour and the smasher-only effects', () => {
+  const NEW = SMASHER_LIST.filter(s => s.skills.some(k => !TEAM_SKILL_IDS.includes(k.effect)))
+  const byDisc = [...SMASHER_LIST].sort((a, b) => (b.disc ?? 1) - (a.disc ?? 1))
+  const armoured = SMASHER_LIST.filter(s => s.armor)
+  const pick = (i: number) => (NEW.length ? NEW[i % NEW.length]! : armoured[i % armoured.length]!).id
+
+  it('2v2 armoured smashers (big + small discs) stay in sync, with towers', async () => {
+    await expectSeedsInSync({
+      arena: 'default',
+      host: [smasherConfig(byDisc[0]!.id, 30), smasherConfig(armoured[0]!.id, 30)],
+      guest: [smasherConfig(byDisc[byDisc.length - 1]!.id, 30), smasherConfig(armoured[armoured.length - 1]!.id, 30)],
+      firstTurn: 'host',
+      terrain: { layout: 2, towers: true }
+    }, SEEDS)
+  })
+
+  it('2v2 carriers of the smasher-only effects stay in sync (both sides, towers on)', async () => {
+    await expectSeedsInSync({
+      arena: 'default',
+      host: [smasherConfig(pick(0), 30), smasherConfig(pick(1), 30)],
+      guest: [smasherConfig(pick(2), 30), smasherConfig(pick(3), 30)],
+      firstTurn: 'guest',
+      terrain: { layout: 5, towers: true }
+    }, [...SEEDS, 99, 31337])
   })
 })

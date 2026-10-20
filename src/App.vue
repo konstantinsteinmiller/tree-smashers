@@ -18,6 +18,9 @@ import { currentReveal } from '@/use/useRewardReveal'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
 import { applyMute } from '@/use/usePlatformMute'
 import { setGamePaused } from '@/use/useGamePause'
+import { installUiPress } from '@/use/useUiPress'
+import { setUiSfxSuppressed } from '@/use/uiSfx'
+import { adsInFlight } from '@/use/useAds'
 import {
   isCrazyWeb,
   isWaveDash,
@@ -265,6 +268,16 @@ onUnmounted(() => {
   if (!isYouTube) document.removeEventListener('visibilitychange', handleVisibilityChange)
   clearInterval(dimensionsInterval.value)
 })
+
+// ─── UI press feel + UI sound ────────────────────────────────────────────
+// One delegated listener set gives every button the press sink and the
+// press/release ticks (see useUiPress.ts). UI ticks stay silent while ANY ad
+// is in flight: not every portal publishes a pause edge (isGamePaused), and
+// the ad-audio guarantee must hold for our own sounds too.
+watch(adsInFlight, (n) => setUiSfxSuppressed('ads', n > 0), { immediate: true })
+let uninstallUiPress: (() => void) | null = null
+onMounted(() => { uninstallUiPress = installUiPress() })
+onUnmounted(() => { uninstallUiPress?.() })
 
 onMounted(() => {
   document.addEventListener('contextmenu', onContextMenu)

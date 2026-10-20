@@ -1,0 +1,5 @@
+{ "bottom": { "speedy": { "weight": 100, "healthBonus": 8 }, "balanced": { "weight": 110, "healthBonus": 12 }, "tanky": { "weight": 115, "healthBonus": 13, "speedMultiplier": 0.65 } },
+  "bottomUp": { "speedy": { "hp": 1.75, "speed": 0.065 }, "tanky": { "hp": 2.75, "speed": 0.025 } },
+  "top": { "star": { "healthBonus": 6 }, "piercer": { "damageMultiplier": 1.45 }, "cushioned": { "damageMultiplier": 0.65 } },
+  "topUp": { "cushioned": { "damage": 0.04 } },
+  "profileWeightExp": 0.5 }

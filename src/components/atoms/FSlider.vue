@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { playUiSfx } from '@/use/uiSfx'
 
 interface Props {
   modelValue: number
@@ -17,10 +18,10 @@ const props = withDefaults(defineProps<Props>(), {
   min: 0,
   max: 100,
   step: 1,
-  // Leaf-green fill in a wood well — see DESIGN.md.
+  // Lime fill with flat stripes in a deep navy well — see DESIGN.md.
   colorFrom: 'var(--color-leaf-400)',
   colorTo: 'var(--color-leaf-500)',
-  trackColor: 'var(--color-wood-800)'
+  trackColor: 'var(--color-royal-900)'
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -29,25 +30,37 @@ const progress = computed(() => {
   return ((props.modelValue - props.min) / (props.max - props.min)) * 100
 })
 
+// A tiny click every 10 % of travel, pitched by position. On the SFX
+// slider this doubles as a live preview of the new volume (and at 0 the
+// sound gate keeps it silent). The uiSfx throttle stops a fast drag from
+// rattling.
+let lastNotch = -1
 const updateValue = (event: Event) => {
   const target = event.target as HTMLInputElement
-  emit('update:modelValue', Number(target.value))
+  const value = Number(target.value)
+  const frac = (value - props.min) / (props.max - props.min || 1)
+  const notch = Math.round(frac * 10)
+  emit('update:modelValue', value)
+  if (notch !== lastNotch) {
+    lastNotch = notch
+    playUiSfx('slide', { pitch: 0.8 + frac * 0.6 })
+  }
 }
 </script>
 
 <template lang="pug">
-  div(class="f-slider-container w-full py-4")
+  div(class="f-slider-container w-full py-4" data-sfx="self")
     div(v-if="label" class="slider-label ui-label mb-2") {{ label }}
 
-    div(class="relative flex items-center h-8")
-      //- Wood well
+    div(class="relative flex items-center h-10")
+      //- Navy well
       div(
-        class="absolute inset-0 h-6 my-auto rounded-full border-[3px] border-[var(--color-ink)] overflow-hidden"
+        class="slider-well absolute inset-x-0 h-6 my-auto rounded-full border-[3px] border-[var(--color-ink)] overflow-hidden"
         :style="{ backgroundColor: trackColor }"
       )
-        //- Leaf fill (flat, with a hard light lip)
+        //- Lime fill (flat, a hard light lip, flat diagonal stripes)
         div(
-          class="slider-fill h-full transition-all duration-75 relative rounded-full"
+          class="slider-fill h-full relative rounded-full"
           :style="{ width: `${progress}%`, backgroundColor: colorFrom }"
         )
 
@@ -59,30 +72,53 @@ const updateValue = (event: Event) => {
         :value="modelValue"
         :aria-label="label"
         @input="updateValue"
-        class="absolute inset-0 w-full h-8 opacity-0 cursor-pointer z-10 touch-manipulation"
+        class="absolute inset-0 w-full h-10 opacity-0 cursor-pointer z-10 touch-manipulation"
       )
 
-      //- Thumb: a round cream button with an ink outline (visual only)
+      //- Thumb: a round ice 3D button with an ink outline (visual only). It
+      //- sinks into its drop while held, like every other button.
       div(
         class="thumb-visual pointer-events-none absolute h-10 w-10 flex items-center justify-center"
         :style="{ left: `calc(${progress}% - 20px)` }"
       )
         span(class="thumb-body relative block w-full h-full rounded-full")
-          span(class="absolute inset-0 flex items-center justify-center")
-            span(class="w-1.5 h-4 rounded-full bg-[var(--color-wood-400)]")
+          span(class="absolute inset-0 flex items-center justify-center gap-[3px]")
+            span(class="thumb-grip")
+            span(class="thumb-grip")
 </template>
 
 <style scoped lang="sass">
 .slider-label
   color: var(--ui-text)
 
+.slider-well
+  box-shadow: inset 0 3px 0 var(--color-ink), 0 2px 0 var(--color-ink)
+
 .slider-fill
+  background-image: var(--ui-stripes)
   box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
 
 .thumb-body
-  background-color: var(--color-cream-100)
+  background-color: var(--color-ice-50)
   border: 3px solid var(--color-ink)
-  box-shadow: inset 0 -4px 0 var(--color-cream-400), 0 3px 0 var(--color-ink)
+  box-shadow: inset 0 -5px 0 var(--color-ice-300), 0 4px 0 var(--color-ink)
+  transition: transform 0.26s var(--ui-spring), box-shadow 0.26s var(--ui-spring)
+
+.thumb-grip
+  width: 4px
+  height: 0.9rem
+  border-radius: 999px
+  background-color: var(--color-royal-500)
+
+// Held: the knob sinks into its drop and squashes a hair.
+.f-slider-container:active .thumb-body
+  transform: translateY(3px) scale(1.05, 0.94)
+  box-shadow: inset 0 -3px 0 var(--color-ice-300), 0 1px 0 var(--color-ink)
+  transition-duration: var(--ui-press-down)
+
+@media (hover: hover)
+  .f-slider-container:hover .thumb-body
+    transform: translateY(-1px)
 
 input[type="range"]:focus-visible ~ .thumb-visual .thumb-body
   outline: 3px solid var(--ui-focus)

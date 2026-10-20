@@ -54,6 +54,14 @@ export function skillDescParams(id: SkillId, level: number, locale = 'en'): Reco
       return { chance: per(skillParams('static_charge', level).chance) }
     case 'mirror_plate':
       return { chance: per(skillParams('mirror_plate', level).chance) }
+    case 'bank_shot':
+      return { pct: per(skillParams('bank_shot', level).pct) }
+    case 'anchor':
+      return { pct: per(skillParams('anchor', level).resist) }
+    case 'tower_breaker':
+      return { pct: per(skillParams('tower_breaker', level).pct) }
+    case 'thorns':
+      return { pct: per(skillParams('thorns', level).share) }
   }
 }
 
@@ -73,6 +81,10 @@ export function skillKeyValues(id: SkillId, level: number, locale = 'en'): Skill
     case 'guard_shell':
     case 'opening_salvo':
     case 'momentum':
+    case 'bank_shot':
+    case 'anchor':
+    case 'tower_breaker':
+    case 'thorns':
       return [{ value: d.pct!, unit: '%' }]
     case 'lucky_edge':
       return [{ value: d.chance!, unit: '%' }, { value: d.mult!, unit: '×' }]

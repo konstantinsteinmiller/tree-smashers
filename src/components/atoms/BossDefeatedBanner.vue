@@ -164,7 +164,7 @@ $track: 0.04em
 .boss-defeated.is-paused, .boss-defeated.is-paused *
   animation-play-state: paused !important
 
-// Soft wood-brown dim over the arena — the "the world went quiet" frame.
+// Navy dim over the arena — the "the world went quiet" frame.
 .boss-defeated__vignette
   background: color-mix(in srgb, var(--color-wood-900) 40%, transparent)
   animation: bd-fade $total ease-out both
@@ -175,10 +175,17 @@ $track: 0.04em
   // One line: 2.1em tall; each extra line adds its 1.05em line box.
   height: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)))
   margin-top: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)) / -2)
+  // A tilted berry slash across the screen with hard diagonal stripes and a
+  // sun edge underneath — a finisher stamp, not a ribbon. The tilt is the
+  // individual 'rotate' property so the keyframes' scale stays separate.
+  left: -6%
+  right: -6%
+  rotate: -3deg
   background-color: var(--color-berry-500)
+  background-image: var(--ui-stripes)
   border-top: 4px solid var(--color-ink)
   border-bottom: 4px solid var(--color-ink)
-  box-shadow: inset 0 4px 0 var(--color-berry-300), inset 0 -6px 0 var(--color-berry-700), 0 5px 0 var(--color-ink)
+  box-shadow: inset 0 4px 0 var(--color-berry-300), inset 0 -6px 0 var(--color-berry-700), 0 6px 0 var(--color-sun-400), 0 10px 0 var(--color-ink)
   transform-origin: 50% 50%
   animation: bd-band $total cubic-bezier(0.2, 0.8, 0.2, 1) both
 
@@ -189,7 +196,7 @@ $track: 0.04em
     left: 0
     right: 0
     height: 0
-    border-top: 2px dashed rgba(255, 250, 240, 0.6)
+    border-top: 2px dashed rgba(255, 255, 255, 0.6)
 
   &::before
     top: 10%
@@ -207,6 +214,7 @@ $track: 0.04em
   line-height: 1
 
 .boss-defeated__title, .boss-defeated__ghost
+  rotate: -3deg
   font-size: var(--bd-size)
   line-height: 1.05
   letter-spacing: $track
@@ -285,9 +293,12 @@ $track: 0.04em
 @keyframes bd-title
   0%
     opacity: 0
-    transform: scale(1.3)
+    transform: scale(1.6)
     letter-spacing: 0
     padding-left: 0
+  12%
+    opacity: 1
+    transform: scale(0.94)
   19%
     opacity: 1
     transform: scale(1)

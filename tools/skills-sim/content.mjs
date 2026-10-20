@@ -38,7 +38,7 @@ export const CARDS = {
     rules: 'Does not set `lastCritAt` (never blocks the game\'s own crits). Never on chip, rockets, reflect, salvo. Combined with Momentum it is clamped by `SKILL_HIT_MUL_CAP = 2.2`. Rendered like a crit number (orange, 1.5× size) but **without** `shadowBlur`.',
     counter: 'Pure variance; worth nothing against a resting target you cannot reach.',
     softens: 'Low-damage tanks (Round Guard, Soft Shell, Quad Core) that rarely land decisive hits; also shortens long boss fights.',
-    edges: 'Ghost link: the boosted amount is mirrored to the twin (as with any hit). Thunder combo: multiplies as usual (the clamp covers only skill multipliers). Healers/partners: no interaction.'
+    edges: 'Ghost link: the boosted amount is mirrored to the twin (as with any hit). Healers/partners: no interaction.'
   },
   homing_rockets: {
     name: 'Homing Rockets', drop: '35 · The Ravenous Swarm', tag: 'OFF',
@@ -68,23 +68,23 @@ export const CARDS = {
     rules: 'Clamped together with Lucky Edge by `SKILL_HIT_MUL_CAP`. No effect on chip/rockets/reflect.',
     counter: 'Needs deliberate bank shots; a straight shot into the first enemy gets nothing; Teleporter skin (wall pass) never rebounds.',
     softens: 'Speedy bottoms, ice arena and bouncer stages, skilled players who aim off walls — the skill-expression pick of the ten. The simulated player never aims off walls on purpose, so its measured median (~1.04) is a floor; 1.225 (every hit at 3 stacks) is the ceiling.',
-    edges: 'Shock walls still count the rebound (speed drained, stack kept). Thunder arena: stacks multiply with the existing same-target combo. Worst case every hit at 3 stacks = ×1.225 at L10 (§3.8).'
+    edges: 'Worst case every hit at 3 stacks = ×1.225 at L10 (§3.8).'
   },
   hazard_ward: {
     name: 'Hazard Ward', drop: '50 · The Eternal Grove', tag: 'UTL',
     color: '#a3e635', glyph: 'hexagon ward with a flame notch',
     fantasy: 'The Grove\'s bark-weave: fire, lightning and thorns slide off.',
-    effect: 'Against the bearer: lava wall burn ×(1 − `lava`), thunder-boss aura ×(1 − `thunder`), Spiky chip ×(1 − `chip`); on a shock wall/bouncer the bearer keeps `10 % + 90 % × shockKeep` of its speed instead of 10 %.',
-    rules: 'Applied first in `applyHpLoss` for kinds `lava`, `thunder`, `chip`; shock handled in `bounceOffWalls`/`bounceOffBouncers`. The lava popup shows the reduced amount (cyan tint).',
-    counter: 'Does nothing on default/ice/forest arenas without Spiky or thunder enemies — a loadout choice per stage, not a permanent pick.',
-    softens: 'the 17 lava stages (12, 17, 27, 32, 36, 42, 47, 52, 57, 62, 67, 72, 77, 82, 86, 92, 97), the 10 shock stages and the 46 of 100 stages with a Spiky enemy; players who ricochet a lot.',
+    effect: 'Against the bearer: lava wall burn ×(1 − `lava`), thunder-boss aura ×(1 − `thunder`), Spiky chip ×(1 − `chip`); a Frost Lock cold touch leaves the bearer `10 % + 90 % × shockKeep` of its speed instead of 10 % (frost drains `shockKeep` less). There are no shock walls/bouncers any more.',
+    rules: 'Applied first in `applyHpLoss` for kinds `lava`, `thunder`, `chip`; `shockKeep` handled in the frost cold touch (`frostTouchKeep`, bossTraits.ts). The lava popup shows the reduced amount (cyan tint).',
+    counter: 'Does nothing on default/ice/forest arenas without Spiky, thunder-boss or Frost Lock enemies — a loadout choice per stage, not a permanent pick.',
+    softens: 'the 21 lava stages (12, 17, 27, 32, 36, 42, 47, 52, 54, 57, 62, 64, 67, 72, 77, 79, 82, 86, 92, 97, 99), Frost Lock bosses (stage 101+) and the stages with a Spiky enemy.',
     edges: 'Stage 95 (thunder boss + partners): the aura is the main hazard. Lava lethal touch: reduced burn may no longer be lethal (fine). Forest: no effect.'
   },
   static_charge: {
     name: 'Static Charge', drop: '55 · The Dread Scorpion', tag: 'CTL',
     color: '#facc15', glyph: 'lightning bolt',
     fantasy: 'The Scorpion\'s sting, bottled: whoever rams the spinner gets zapped stiff.',
-    effect: 'On an armed contact between the bearer and an enemy blade **that is taking its own turn** (`launchedBladeId === enemy.id`) and still moving after the bounce, roll `chance` (shared 250 ms shock cooldown `lastShockMs`): the enemy loses 90 % of its speed (as on a shock wall) and is **Stunned** — it cannot be picked in the enemy team\'s next turn. If every living enemy is stunned, that enemy turn is skipped. A blade stunned for turn T cannot be stunned for T + 1.',
+    effect: 'On an armed contact between the bearer and an enemy blade **that is taking its own turn** (`launchedBladeId === enemy.id`) and still moving after the bounce, roll `chance` (shared 250 ms shock cooldown `lastShockMs`): the enemy loses 90 % of its speed (like a Frost Lock cold touch) and is **Stunned** — it cannot be picked in the enemy team\'s next turn. If every living enemy is stunned, that enemy turn is skipped. A blade stunned for turn T cannot be stunned for T + 1.',
     rules: '`launchNpc` increments `npcTurnIndex` and filters `stunnedForTurn === npcTurnIndex`. Skipped turn = the normal `npc_launched → player_turn` bookkeeping (stat-switch back to defence). The stun is shown as a bolt glyph over the enemy until its turn passes.',
     counter: 'Only procs on enemies that ram the bearer; squads simply launch another member; never two stuns in a row on the same blade.',
     softens: 'A boss specialist: lone bosses (a stun is a skipped boss turn — stages 30/35/80 measure 1.11–1.16) and heavy rammers. Near-neutral against squads, where another member simply launches instead (median 1.02) — a loadout pick for boss stages, like Hazard Ward is for hazard arenas.',
@@ -114,7 +114,7 @@ export const TABLE_COLS = {
   homing_rockets: [['everyN', 'contacts per volley', (v) => `${v}`], ['frac', 'volley (× ref hit)', pc]],
   opening_salvo: [['pct', 'enemy max HP lost', pc]],
   static_charge: [['chance', 'stun chance', pc]],
-  hazard_ward: [['lava', 'lava/thunder −', pc], ['chip', 'Spiky chip −', pc], [(p) => 0.1 + 0.9 * p.shockKeep, 'speed kept on shock (base 10%)', pc]]
+  hazard_ward: [['lava', 'lava/thunder −', pc], ['chip', 'Spiky chip −', pc], [(p) => 0.1 + 0.9 * p.shockKeep, 'speed kept on frost touch (base 10%)', pc]]
 }
 
 export const LOCALES = ['en', 'de', 'es', 'fr', 'jp', 'kr', 'ru', 'zh']
@@ -149,7 +149,7 @@ export const I18N = {
       homing_rockets: 'Every {n} clashes with enemies: rockets hit up to 3 enemies for {pct}% of a solid hit, shared.',
       opening_salvo: 'When the battle starts, every enemy loses {pct}% of its max HP.',
       momentum: 'During your launch, each wall bounce or hit adds +{pct}% damage to your next hits (max 3).',
-      hazard_ward: 'Lava and thunder auras hurt {hazard}% less, spikes {chip}% less; shock walls leave you {shock}% speed instead of 10%.',
+      hazard_ward: 'Lava and thunder hurt {hazard}% less, spikes {chip}% less, and frost drains {shock}% less of your speed.',
       static_charge: '{chance}% chance to zap an enemy that rams you: it stops and skips its next turn.',
       mirror_plate: '{chance}% chance to block half of an enemy hit and send it back.'
     }
@@ -199,7 +199,7 @@ export const I18N = {
       homing_rockets: 'Alle {n} Zusammenstöße mit Gegnern: Raketen treffen bis zu 3 Gegner mit zusammen {pct}% eines kräftigen Treffers.',
       opening_salvo: 'Zu Kampfbeginn verliert jeder Gegner {pct}% seiner max. HP.',
       momentum: 'Während deines Starts gibt jeder Wandabpraller oder Treffer +{pct}% Schaden für die nächsten Treffer (max. 3×).',
-      hazard_ward: 'Lava und Donner-Auren schaden {hazard}% weniger, Stacheln {chip}% weniger; Schockwände lassen dir {shock}% Tempo statt 10%.',
+      hazard_ward: 'Lava und Donner schaden {hazard}% weniger, Stacheln {chip}% weniger, und Frost raubt dir {shock}% weniger Tempo.',
       static_charge: '{chance}% Chance, einen Gegner zu schocken, der dich rammt: Er stoppt und setzt seinen nächsten Zug aus.',
       mirror_plate: '{chance}% Chance, die Hälfte eines gegnerischen Treffers abzublocken und zurückzuschicken.'
     }
@@ -249,7 +249,7 @@ export const I18N = {
       homing_rockets: 'Cada {n} choques con enemigos: cohetes golpean hasta 3 enemigos con el {pct}% de un golpe fuerte, repartido.',
       opening_salvo: 'Al empezar el combate, cada enemigo pierde el {pct}% de su vida máxima.',
       momentum: 'Durante tu lanzamiento, cada rebote en la pared o golpe añade +{pct}% de daño a tus siguientes golpes (máx. 3).',
-      hazard_ward: 'La lava y las auras de trueno dañan un {hazard}% menos, los pinchos un {chip}% menos; las paredes eléctricas te dejan un {shock}% de velocidad en vez del 10%.',
+      hazard_ward: 'La lava y el trueno dañan un {hazard}% menos, los pinchos un {chip}% menos, y el hielo te quita un {shock}% menos de velocidad.',
       static_charge: '{chance}% de probabilidad de electrocutar a un enemigo que te embiste: se detiene y pierde su siguiente turno.',
       mirror_plate: '{chance}% de probabilidad de bloquear la mitad de un golpe enemigo y devolverla.'
     }
@@ -299,7 +299,7 @@ export const I18N = {
       homing_rockets: 'Tous les {n} chocs avec des ennemis : des roquettes frappent jusqu’à 3 ennemis pour {pct} % d’un coup franc, partagés.',
       opening_salvo: 'Au début du combat, chaque ennemi perd {pct} % de ses PV max.',
       momentum: 'Pendant ton lancer, chaque rebond sur un mur ou coup ajoute +{pct} % de dégâts à tes coups suivants (max. 3).',
-      hazard_ward: 'La lave et les auras de foudre font {hazard} % de dégâts en moins, les piquants {chip} % en moins ; les murs électriques te laissent {shock} % de vitesse au lieu de 10 %.',
+      hazard_ward: 'Lave et foudre font {hazard} % de dégâts en moins, les pics {chip} % en moins, et le givre te prend {shock} % de vitesse en moins.',
       static_charge: '{chance} % de chances d’électrocuter un ennemi qui te percute : il s’arrête et passe son prochain tour.',
       mirror_plate: '{chance} % de chances de bloquer la moitié d’un coup ennemi et de la renvoyer.'
     }
@@ -334,7 +334,7 @@ export const I18N = {
       homing_rockets: '敵と{n}回ぶつかるごとに、ロケットが最大3体の敵に強打の{pct}%分のダメージを分配。',
       opening_salvo: 'バトル開始時、すべての敵が最大HPの{pct}%を失う。',
       momentum: '自分の発射中、壁での跳ね返りや攻撃ごとに以降の攻撃ダメージ+{pct}%（最大3回）。',
-      hazard_ward: '溶岩と雷のオーラのダメージ-{hazard}%、トゲ-{chip}%。電撃壁でも速度が10%ではなく{shock}%残る。',
+      hazard_ward: '溶岩と雷のダメージ-{hazard}%、トゲ-{chip}%、冷気による減速-{shock}%。',
       static_charge: '体当たりしてきた敵を{chance}%の確率で感電させる：敵は止まり、次のターンを休む。',
       mirror_plate: '{chance}%の確率で敵の攻撃の半分を防ぎ、相手に跳ね返す。'
     }
@@ -369,7 +369,7 @@ export const I18N = {
       homing_rockets: '적과 {n}번 부딪힐 때마다 로켓이 최대 3명의 적에게 강타의 {pct}%만큼 피해를 나누어 줍니다.',
       opening_salvo: '전투가 시작되면 모든 적이 최대 HP의 {pct}%를 잃습니다.',
       momentum: '발사 중 벽에 튕기거나 적을 맞힐 때마다 다음 공격 피해 +{pct}% (최대 3회).',
-      hazard_ward: '용암과 번개 오라 피해 -{hazard}%, 가시 피해 -{chip}%. 전기 벽에 닿아도 속도가 10% 대신 {shock}% 남습니다.',
+      hazard_ward: '용암과 번개 피해 -{hazard}%, 가시 피해 -{chip}%, 냉기로 잃는 속도 -{shock}%.',
       static_charge: '나를 들이받은 적을 {chance}% 확률로 감전시킵니다: 적은 멈추고 다음 턴을 쉽니다.',
       mirror_plate: '{chance}% 확률로 적 공격의 절반을 막고 되돌려 줍니다.'
     }
@@ -404,7 +404,7 @@ export const I18N = {
       homing_rockets: 'Каждые {n} столкновений с врагами: ракеты бьют до 3 врагов на {pct}% сильного удара, поровну.',
       opening_salvo: 'В начале боя каждый враг теряет {pct}% макс. здоровья.',
       momentum: 'Во время твоего запуска каждый отскок от стены или удар даёт +{pct}% урона следующим ударам (макс. 3).',
-      hazard_ward: 'Лава и грозовые ауры наносят на {hazard}% меньше урона, шипы — на {chip}% меньше; электростены оставляют тебе {shock}% скорости вместо 10%.',
+      hazard_ward: 'Лава и гром ранят на {hazard}% слабее, шипы на {chip}% слабее, а мороз отнимает у тебя на {shock}% меньше скорости.',
       static_charge: '{chance}% шанс ударить током врага, который таранит тебя: он останавливается и пропускает следующий ход.',
       mirror_plate: '{chance}% шанс заблокировать половину удара врага и вернуть её обратно.'
     }
@@ -439,7 +439,7 @@ export const I18N = {
       homing_rockets: '每与敌人碰撞 {n} 次，火箭攻击最多 3 个敌人，共造成一次重击 {pct}% 的伤害（平分）。',
       opening_salvo: '战斗开始时，每个敌人损失最大生命值的 {pct}%。',
       momentum: '发射期间，每次撞墙反弹或命中都使之后的攻击伤害 +{pct}%（最多 3 层）。',
-      hazard_ward: '熔岩和雷电光环伤害降低 {hazard}%，尖刺伤害降低 {chip}%；撞到电击墙后保留 {shock}% 速度（原为 10%）。',
+      hazard_ward: '熔岩和雷电伤害降低 {hazard}%，尖刺降低 {chip}%，冰霜造成的减速降低 {shock}%。',
       static_charge: '{chance}% 几率电击撞向你的敌人：它会停下并跳过下一回合。',
       mirror_plate: '{chance}% 几率挡住敌人攻击的一半并反弹回去。'
     }
@@ -455,7 +455,7 @@ export const DESC_PARAMS = {
   homing_rockets: '`n` = everyN, `pct` = frac×100',
   opening_salvo: '`pct`',
   momentum: '`pct` = perStack×100 (1 decimal)',
-  hazard_ward: '`hazard` = lava×100, `chip` = chip×100, `shock` = round((0.1 + 0.9×shockKeep)×100)',
+  hazard_ward: '`hazard` = lava×100, `chip` = chip×100, `shock` = shockKeep×100 (frost drains that much less speed)',
   static_charge: '`chance`',
   mirror_plate: '`chance`'
 }
@@ -469,7 +469,7 @@ export const L10_LINE = {
   homing_rockets: 'every 5 enemy contacts: rockets for 17 % of a reference hit, split over ≤ 3 enemies',
   opening_salvo: 'battle start: every enemy loses 14 % of max HP (non-lethal)',
   momentum: 'in own launch: +7.5 % hit damage per wall/bouncer rebound or hit, max 3 stacks',
-  hazard_ward: 'lava/thunder aura −40 %, Spiky chip −15 %, keeps 19 % speed on shock (vs 10 %)',
+  hazard_ward: 'lava/thunder aura −40 %, Spiky chip −15 %, frost touch keeps 19 % speed (vs 10 %)',
   static_charge: '18 % chance: an enemy ramming you stops and skips its next turn',
   mirror_plate: '16 % chance: take half of an enemy hit, send half ÷ its defence back'
 }

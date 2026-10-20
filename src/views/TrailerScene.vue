@@ -381,7 +381,8 @@ onUnmounted(() => {
 <style scoped>
 .countdown-number {
   display: inline-block;
-  text-shadow: 0 0 24px rgba(255, 200, 0, 0.85), 0 0 6px rgba(255, 255, 255, 0.6), 0 4px 0 #000;
+  /* Hard XL navy stroke + drop (no blurred glow — design rule). */
+  text-shadow: var(--ui-stroke-xl);
   animation: countdown-pop 375ms ease-out forwards;
   will-change: transform, opacity;
 }

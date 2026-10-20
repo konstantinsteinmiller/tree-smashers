@@ -5,6 +5,8 @@ import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FButton from '@/components/atoms/FButton.vue'
 import CardRuneFrame from '@/components/atoms/CardRuneFrame.vue'
+import { smasherRarity, type SmasherRarity } from '@/data/smasherRarity'
+import { playUiSfx } from '@/use/uiSfx'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import StatIcon from '@/components/icons/StatIcon.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
@@ -100,6 +102,9 @@ const slotOf = (id: SmasherId): number => teamIds.value.indexOf(id)
 
 const unlocked = (id: SmasherId): boolean => isSmasherUnlocked(id, props.bestStage)
 
+/** Card edge tier — presentation only (see smasherRarity.ts). */
+const rarityOf = (id: SmasherId): SmasherRarity => smasherRarity(SMASHERS[id].unlockStage)
+
 /** Put the selected smasher into `slot`; a smasher already in the other slot
  *  swaps places, so the team never holds a duplicate. */
 const putInSlot = (slot: number) => {
@@ -137,7 +142,7 @@ const STAT_ROWS: { key: StatKey, icon: 'hp' | 'attack' | 'defense' | 'speed' | '
   { key: 'atk', icon: 'attack', label: 'statAtk', color: 'var(--color-berry-500)' },
   { key: 'def', icon: 'defense', label: 'statDef', color: 'var(--color-sky-500)' },
   { key: 'spd', icon: 'speed', label: 'statSpd', color: 'var(--color-sun-500)' },
-  { key: 'weight', icon: 'weight', label: 'statWeight', color: 'var(--color-wood-500)' }
+  { key: 'weight', icon: 'weight', label: 'statWeight', color: 'var(--color-royal-500)' }
 ]
 
 const statValue = (s: ReturnType<typeof statsAt>, key: StatKey): number => {
@@ -202,6 +207,7 @@ const buyLevel = () => {
   }
   lastSpent.value = cost
   levelUpPulse.value++
+  playUiSfx('reward')
   if (slotOf(id) >= 0) emitTeam()
 }
 
@@ -239,7 +245,7 @@ const selectedTop = computed<TopPartId>(() => SMASHERS[selectedId.value].archety
 /** Portrait of a smasher: its colourway in its team slot, else slot 0's. */
 const portraitOf = (id: SmasherId): string => {
   const slot = Math.max(0, slotOf(id))
-  return modelImgPath(getSelectedSkin(SMASHERS[id].archetype.top, slot))
+  return modelImgPath(getSelectedSkin(SMASHERS[id].archetype.top, slot), id)
 }
 
 const trophyCardText = (modelId: string): string => {
@@ -313,43 +319,49 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
               IconDiamond(class="absolute -bottom-1 -left-1 w-3.5 h-3.5 z-10 pointer-events-none")
 
         div.team-slots
-          button.team-slot(
+          button.team-slot.ui-pop-in(
             v-for="(id, i) in teamIds"
             :key="'slot-' + i"
             type="button"
-            :class="{ 'is-selected': selectedId === id }"
+            :class="[`rarity-${rarityOf(id)}`, { 'is-selected': selectedId === id }]"
+            :style="{ '--i': i }"
             :data-testid="'team-slot-' + i"
             @click="selectSmasher(id)"
           )
-            CardRuneFrame(:part-id="SMASHERS[id].archetype.top" :selected="selectedId === id")
+            CardRuneFrame(:part-id="SMASHERS[id].archetype.top" :rarity="rarityOf(id)" :selected="selectedId === id")
             span.slot-tag.game-text {{ t('slotLabel', { n: i + 1 }) }}
             img.slot-portrait(:src="portraitOf(id)" :alt="t('smasher_' + id)" draggable="false")
-            span.slot-name.game-text {{ t('smasher_' + id) }}
-            span.lv-badge.game-text {{ t('levelShort', { n: levelOf(id) }) }}
+            span.name-plate.slot-name.game-text
+              span {{ t('smasher_' + id) }}
+            span.lv-badge.game-text
+              span {{ t('levelShort', { n: levelOf(id) }) }}
 
         h3.label-section.roster-title {{ t('roster') }}
         div.roster-grid
-          button.roster-card(
-            v-for="s in SMASHER_LIST"
+          button.roster-card.ui-pop-in(
+            v-for="(s, i) in SMASHER_LIST"
             :key="s.id"
             type="button"
-            :class="{ 'is-selected': selectedId === s.id, 'is-locked': !unlocked(s.id) }"
+            :class="[`rarity-${rarityOf(s.id)}`, { 'is-selected': selectedId === s.id, 'is-locked': !unlocked(s.id) }]"
+            :style="{ '--i': Math.min(i + 2, 14) }"
             :aria-pressed="selectedId === s.id"
             :data-testid="'roster-' + s.id"
             @click="selectSmasher(s.id)"
           )
-            CardRuneFrame(:part-id="s.archetype.top" :selected="selectedId === s.id")
+            CardRuneFrame(:part-id="s.archetype.top" :rarity="rarityOf(s.id)" :locked="!unlocked(s.id)" :selected="selectedId === s.id")
             img.roster-portrait(:src="portraitOf(s.id)" :alt="t('smasher_' + s.id)" draggable="false")
-            span.roster-name.game-text {{ t('smasher_' + s.id) }}
+            span.name-plate.roster-name.game-text
+              span {{ t('smasher_' + s.id) }}
             span.roster-species {{ t('smasher_' + s.id + '_species') }}
-            span.lv-badge.game-text(v-if="unlocked(s.id)") {{ t('levelShort', { n: levelOf(s.id) }) }}
+            span.lv-badge.game-text(v-if="unlocked(s.id)")
+              span {{ t('levelShort', { n: levelOf(s.id) }) }}
             span.lock-note.game-text(v-else) 🔒 {{ t('lockedUntilStage', { n: s.unlockStage }) }}
             span.team-mark.game-text(v-if="slotOf(s.id) >= 0") {{ slotOf(s.id) + 1 }}
 
       //- ── Right: detail panel of the selected smasher ────────────────────
       div.detail-col(data-testid="smasher-detail")
         div.detail-head
-          div.detail-portrait-wrap
+          div.detail-portrait-wrap(:class="`rarity-${rarityOf(selectedId)}`" :key="'portrait-' + selectedId")
             img.detail-portrait(:src="portraitOf(selectedId)" :alt="t('smasher_' + selectedId)" draggable="false")
             //- Colourway picker: per archetype top + team slot.
             button.skin-plus-btn(
@@ -370,7 +382,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
         //- Stats with the next-level preview
         div.stat-bars
-          div.stat-row(v-for="r in statRows" :key="r.key")
+          div.stat-row.ui-pop-in(v-for="(r, i) in statRows" :key="r.key + '-' + selectedId" :style="{ '--i': i }")
             StatIcon.stat-row-icon(:stat="r.icon")
             span.stat-row-label {{ t(r.label) }}
             div.stat-bar
@@ -383,8 +395,11 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
         div.action-row
           template(v-if="unlocked(selectedId)")
             div.levelup-wrap(v-if="!selectedMaxed")
+              //- The screen's ONE hero CTA: sun, uppercase, shine + heartbeat
+              //- while affordable; steel + deny shake when short.
               FButton(
                 tone="premium"
+                variant="brawl"
                 size="sm"
                 :is-disabled="!canAfford"
                 :aria-label="t('levelUpAria', { name: t('smasher_' + selectedId), cost: selectedCost }, selectedCost ?? 0)"
@@ -416,13 +431,14 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
         //- The three unique skills
         h3.label-section(v-if="SKILLS_BUILD") {{ t('skillsLabel') }}
         div.skill-list(v-if="SKILLS_BUILD" data-testid="smasher-skills")
-          div.skill-row(
+          div.skill-row.ui-pop-in(
             v-for="row in skillRows"
             :key="row.skill.id"
+            :style="{ '--i': row.slot + 3 }"
             :class="{ 'is-locked': row.locked }"
             :data-testid="'skill-' + row.skill.id"
           )
-            component(v-if="SkillIconUi" :is="SkillIconUi" :id="row.skill.effect" :size="36" decorative)
+            component(v-if="SkillIconUi" :is="SkillIconUi" :id="row.skill.effect" :skill-key="row.skill.id" :size="36" decorative)
             div.skill-text
               div.skill-head
                 span.skill-name.game-text {{ row.name }}
@@ -459,7 +475,7 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
           ]"
         )
           img.skin-card-img(
-            :src="modelImgPath(modelId)"
+            :src="modelImgPath(modelId, selectedId)"
             class="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg"
             :alt="modelId"
           )
@@ -506,15 +522,19 @@ const handleSelectSkin = (topId: TopPartId, modelId: SpinnerModelId) => {
 
 
 <style scoped lang="sass">
-// Cozy restyle: everything sits on FModal's cream parchment, so text is ink.
-// Cards are cream patches with a stitched felt frame (CardRuneFrame), badges
-// are wood chips, stat bars are wood wells with the semantic stat colours.
-// Perf: flat fills, 0-blur shadows only.
+// Action pass: everything sits on FModal's ice card, so body text is ink.
+// Team slots + roster are COLLECTIBLE CARDS: a bold ink frame with a rarity
+// edge band + corner stripes (CardRuneFrame, presentation-only rarity from
+// smasherRarity.ts), a skewed ink name plate, an angled level chip. Cards lift
+// and tilt on hover, sink on press (the global press handler adds
+// .is-pressed), and the picked card turns sun with a pop. Locked cards are
+// steel with flat hatch stripes. Stat bars are navy wells with striped fills.
+// Perf: flat fills, 0-blur shadows only, transform/opacity motion only.
 
 $ink: var(--color-ink)
 $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 0 $ink, -1px 1px 0 $ink, 1px -1px 0 $ink, -1px -1px 0 $ink
 
-// Ink text on parchment by default; outlined cream only on coloured chips.
+// Ink text on the ice card by default; outlined white only on coloured chips.
 .game-text
   text-shadow: none
 
@@ -522,7 +542,8 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   font-size: 1rem
   font-weight: 900
   line-height: 1.1
-  letter-spacing: 0.02em
+  letter-spacing: 0.04em
+  text-transform: uppercase
   color: var(--ui-text)
 
 .coin-pill
@@ -544,39 +565,70 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 .team-header
   min-height: 2rem
 
-// ── Team slots / roster cards: cream felt patches ──────────────────────────
+// ── Team slots / roster cards: collectible cards ───────────────────────────
 .team-slots
   display: grid
   grid-template-columns: repeat(2, minmax(0, 1fr))
-  gap: 0.5rem
+  gap: 0.55rem
 
 .team-slot, .roster-card
+  --edge: var(--rarity-common)
   position: relative
   display: flex
   flex-direction: column
   align-items: center
   border: 2px solid transparent
   border-radius: var(--radius-ui)
-  background-color: var(--color-cream-200)
+  background-color: var(--color-ice-50)
+  // A faint stripe wash in the edge colour across the art area.
+  background-image: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.04) 0 7px, transparent 7px 16px)
   color: var(--ui-text)
-  box-shadow: 0 3px 0 var(--color-wood-700)
+  box-shadow: 0 4px 0 $ink
   cursor: pointer
-  transition: transform 0.12s
+  transform-origin: 50% 100%
+  transition: transform 0.26s var(--ui-spring), box-shadow 0.26s var(--ui-spring), background-color 0.12s ease
   -webkit-tap-highlight-color: transparent
-  &:hover
-    transform: translateY(-1px)
-  &:active
-    transform: translateY(2px)
-    box-shadow: 0 1px 0 var(--color-wood-700)
+  // The pop-in stagger must not pin `transform` after it ends (fill: both
+  // would beat :hover / :active), so it only back-fills the delay.
+  &.ui-pop-in
+    animation-fill-mode: backwards
+  @media (hover: hover)
+    &:hover
+      transform: translateY(-3px) rotate(-1.2deg)
+      box-shadow: 0 7px 0 $ink
+  &:active, &.is-pressed
+    transform: translateY(3px) scale(0.97)
+    box-shadow: 0 1px 0 $ink
+    transition-duration: var(--ui-press-down)
   &:focus-visible
     outline: 3px solid var(--ui-focus)
-    outline-offset: 2px
+    outline-offset: 3px
   &.is-selected
     background-color: var(--color-sun-200)
-    box-shadow: 0 3px 0 $ink
+    background-image: var(--ui-stripes)
+    box-shadow: 0 0 0 3px var(--color-sun-400), 0 6px 0 $ink
+    transform: translateY(-2px)
+    animation: card-pick 0.36s var(--ui-spring)
+
+@keyframes card-pick
+  0%
+    transform: translateY(2px) scale(0.9)
+  100%
+    transform: translateY(-2px) scale(1)
+
+.rarity-common
+  --edge: var(--rarity-common)
+.rarity-rare
+  --edge: var(--rarity-rare)
+.rarity-super
+  --edge: var(--rarity-super)
+.rarity-epic
+  --edge: var(--rarity-epic)
+.rarity-legendary
+  --edge: var(--rarity-legendary)
 
 .team-slot
-  padding: 0.4rem 0.35rem 0.45rem
+  padding: 0.4rem 0.4rem 0.6rem
 
 .slot-tag
   align-self: flex-start
@@ -584,51 +636,91 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   z-index: 16
   font-size: 0.7rem
   font-weight: 900
+  text-transform: uppercase
+  letter-spacing: 0.04em
   color: var(--ui-text-muted)
 
 .slot-portrait
   width: 4.2rem
   height: 4.2rem
   object-fit: contain
+  position: relative
+  z-index: 16
+  transition: transform 0.3s var(--ui-spring)
+
+.team-slot.is-selected .slot-portrait, .roster-card.is-selected .roster-portrait
+  transform: scale(1.08) translateY(-2px)
+
+// Skewed ink name plate across the card (the title strip of a trading card).
+.name-plate
+  position: relative
+  z-index: 16
+  display: inline-flex
+  justify-content: center
+  max-width: 100%
+  padding: 0.12em 0.7em 0.18em
+  isolation: isolate
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    background-color: var(--color-royal-800)
+    border: 2px solid $ink
+    border-radius: 0.3rem
+    box-shadow: inset 0 2px 0 var(--color-royal-600), 0 2px 0 $ink
+    transform: skewX(-12deg)
+  > span
+    min-width: 0
+    color: var(--color-ice-50)
+    text-shadow: $ink-outline
+    overflow-wrap: break-word
+    hyphens: auto
+    text-align: center
 
 .slot-name, .roster-name
   font-weight: 900
   font-size: 0.9rem
   line-height: 1.1
-  overflow-wrap: anywhere
-  text-align: center
-  color: var(--ui-text)
+  margin-top: 0.1rem
 
+// Angled level chip (parallelogram), royal with a stroked white number.
 .lv-badge
   position: relative
   z-index: 20
   display: inline-block
-  margin-top: 0.15rem
-  padding: 1px 6px 2px
+  margin-top: 0.3rem
+  padding: 1px 8px 2px
   font-size: 0.72rem
   font-weight: 900
   line-height: 1.1
-  color: var(--color-cream-50)
-  background-color: var(--color-wood-600)
+  color: var(--color-ice-50)
+  background-color: var(--color-royal-500)
   border: 2px solid $ink
-  border-radius: 999px
-  box-shadow: 0 2px 0 $ink
+  border-radius: 0.3rem
+  box-shadow: inset 0 2px 0 var(--color-royal-300), 0 2px 0 $ink
   text-shadow: $ink-outline
+  transform: skewX(-10deg)
+  > span
+    display: inline-block
+    transform: skewX(10deg)
 
 .lv-badge--big
   font-size: 0.95rem
-  padding: 2px 10px 3px
+  padding: 2px 12px 3px
+  background-color: var(--color-sun-400)
+  box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -3px 0 var(--color-sun-600), 0 3px 0 $ink
 
 .lv-pop
-  animation: lv-pop 0.45s ease-out
+  animation: lv-pop 0.45s var(--ui-spring)
 
 @keyframes lv-pop
   0%
-    transform: scale(1)
+    transform: skewX(-10deg) scale(1)
   40%
-    transform: scale(1.45)
+    transform: skewX(-10deg) scale(1.5) rotate(-4deg)
   100%
-    transform: scale(1)
+    transform: skewX(-10deg) scale(1)
 
 // ── Roster ─────────────────────────────────────────────────────────────────
 .roster-title
@@ -637,31 +729,52 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 .roster-grid
   display: grid
   grid-template-columns: repeat(4, minmax(0, 1fr))
-  gap: 0.45rem
+  gap: 0.5rem
 
 .roster-card
-  padding: 0.35rem 0.2rem 0.4rem
+  padding: 0.35rem 0.2rem 0.55rem
   &.is-locked
-    background-color: var(--color-cream-300)
+    background-color: var(--color-steel-300)
+    background-image: var(--ui-stripes-ink)
     .roster-portrait
       filter: grayscale(1) brightness(0.7)
+    .name-plate::before
+      background-color: var(--color-steel-600)
+      box-shadow: 0 2px 0 $ink
 
 .roster-portrait
   width: 3.1rem
   height: 3.1rem
   object-fit: contain
+  position: relative
+  z-index: 16
+  transition: transform 0.3s var(--ui-spring)
 
+// Roster plates span the card so long names (Woodpecker, Chomper) fit
+// without breaking mid-word on a 360 px phone.
 .roster-name
-  font-size: 0.78rem
+  align-self: stretch
+  margin-left: 0.15rem
+  margin-right: 0.15rem
+  font-size: clamp(0.58rem, 2.6vw, 0.7rem)
+  padding: 0.1em 0.1em 0.15em
 
 .roster-species
-  font-size: 0.66rem
+  max-width: 100%
+  font-size: clamp(0.55rem, 2.4vw, 0.64rem)
   font-weight: 800
   color: var(--ui-text-muted)
   line-height: 1.1
+  margin-top: 0.15rem
   text-align: center
+  overflow-wrap: break-word
+  hyphens: auto
+  position: relative
+  z-index: 16
 
 .lock-note
+  position: relative
+  z-index: 16
   margin-top: 0.15rem
   font-size: 0.62rem
   font-weight: 900
@@ -669,30 +782,39 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   color: var(--color-berry-700)
   text-align: center
 
+// Team-slot number on a roster card: a leaf sticker that hops in.
 .team-mark
   position: absolute
   z-index: 20
-  top: 0.2rem
-  right: 0.25rem
-  width: 1.2rem
-  height: 1.2rem
+  top: 0.15rem
+  left: 0.2rem
+  width: 1.3rem
+  height: 1.3rem
   border-radius: 999px
   background-color: var(--color-leaf-500)
   border: 2px solid $ink
-  color: var(--color-cream-50)
+  box-shadow: inset 0 2px 0 var(--color-leaf-300), 0 2px 0 $ink
+  color: var(--color-ice-50)
   text-shadow: $ink-outline
-  font-size: 0.7rem
+  font-size: 0.72rem
   font-weight: 900
   display: flex
   align-items: center
   justify-content: center
+  animation: team-mark-in 0.34s var(--ui-spring) both
 
-// ── Detail panel: a recessed parchment well ────────────────────────────────
+@keyframes team-mark-in
+  0%
+    transform: scale(0) rotate(-30deg)
+  100%
+    transform: none
+
+// ── Detail panel: a recessed ice well ──────────────────────────────────────
 .detail-col
   background-color: var(--ui-surface-2)
-  border: 2px solid var(--color-cream-400)
+  border: 2px solid var(--color-ice-400)
   border-radius: var(--radius-ui-lg)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.16)
   padding: 0.55rem
 
 .detail-head
@@ -700,36 +822,66 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   gap: 0.6rem
   align-items: center
 
+// Portrait in a rarity-edged frame with corner stripes; swings in on a new pick.
 .detail-portrait-wrap
+  --edge: var(--rarity-common)
   position: relative
   flex: 0 0 auto
   border-radius: var(--radius-ui)
-  background-color: var(--color-cream-50)
-  border: 2px solid var(--color-wood-700)
-  outline: 2px dashed rgba(110, 69, 39, 0.35)
-  outline-offset: -6px
+  background-color: var(--color-ice-50)
+  background-image: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.05) 0 7px, transparent 7px 16px)
+  border: 3px solid $ink
+  box-shadow: inset 0 0 0 3px var(--edge), inset 0 -6px 0 var(--edge), 0 4px 0 $ink
+  animation: portrait-in 0.4s var(--ui-spring)
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    right: 0
+    width: 1.9rem
+    height: 1.9rem
+    background-image: repeating-linear-gradient(315deg, var(--edge) 0 3px, transparent 3px 7px)
+    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    border-top-right-radius: calc(var(--radius-ui) - 3px)
+    pointer-events: none
+
+@keyframes portrait-in
+  0%
+    transform: scale(0.82) rotate(-5deg)
+  100%
+    transform: none
 
 .detail-portrait
   width: 5.5rem
   height: 5.5rem
   object-fit: contain
 
+// "+" colourway button: a little sun 3D button that sinks when pressed.
 .skin-plus-btn
   position: absolute
-  right: -0.4rem
-  bottom: -0.35rem
-  width: 1.9rem
-  height: 1.9rem
+  z-index: 2
+  right: -0.5rem
+  bottom: -0.45rem
+  width: 2rem
+  height: 2rem
   border-radius: 999px
   border: 2px solid $ink
   background-color: var(--color-sun-400)
-  box-shadow: inset 0 2px 0 var(--color-sun-200), 0 2px 0 $ink
-  color: var(--color-cream-50)
+  box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -3px 0 var(--color-sun-600), 0 3px 0 $ink
+  color: var(--color-ice-50)
   text-shadow: $ink-outline
   font-weight: 900
-  font-size: 1.25rem
+  font-size: 1.3rem
   line-height: 1
   cursor: pointer
+  transition: translate 0.26s var(--ui-spring), box-shadow 0.26s var(--ui-spring)
+  @media (hover: hover)
+    &:hover
+      translate: 0 -2px
+  &:active
+    translate: 0 2px
+    box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -1px 0 var(--color-sun-600), 0 1px 0 $ink
+    transition-duration: var(--ui-press-down)
   &:focus-visible
     outline: 3px solid var(--ui-focus)
     outline-offset: 2px
@@ -750,7 +902,7 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   line-height: 1.1
 
 .detail-species
-  color: var(--color-wood-600)
+  color: var(--color-royal-600)
   font-size: 0.8rem
   font-weight: 900
 
@@ -790,10 +942,11 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 
 .stat-bar
   position: relative
-  height: 0.7rem
+  height: 0.8rem
   border: 2px solid $ink
   border-radius: 999px
-  background-color: var(--color-wood-800)
+  background-color: var(--color-royal-900)
+  box-shadow: inset 0 2px 0 $ink
   overflow: hidden
 
 .stat-bar-fill, .stat-bar-next
@@ -801,11 +954,31 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   inset: 0 auto 0 0
   border-radius: 999px
 
+// Striped fill that grows in from 0 on every pick (rows are re-keyed).
 .stat-bar-fill
-  box-shadow: inset 0 2px 0 rgba(255, 250, 240, 0.35)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -2px 0 rgba(22, 26, 64, 0.25)
+  transform-origin: 0 50%
+  transition: width 0.45s var(--ui-back-out)
+  animation: bar-grow 0.5s var(--ui-back-out) both
+  animation-delay: calc(var(--i, 0) * 45ms + 80ms)
 
+// Next-level preview: a pale ghost of the fill that blinks gently.
 .stat-bar-next
   opacity: 0.4
+  animation: next-blink 1.4s ease-in-out infinite
+
+@keyframes bar-grow
+  0%
+    transform: scaleX(0)
+  100%
+    transform: scaleX(1)
+
+@keyframes next-blink
+  0%, 100%
+    opacity: 0.25
+  50%
+    opacity: 0.55
 
 .stat-row-value
   font-weight: 900
@@ -874,8 +1047,9 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   color: var(--ui-text)
 
 .lock-banner
-  background-color: var(--color-wood-600)
-  color: var(--color-cream-50)
+  background-color: var(--color-steel-500)
+  background-image: var(--ui-stripes)
+  color: var(--color-ice-50)
   text-shadow: $ink-outline
 
 .slot-buttons
@@ -889,7 +1063,7 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   padding: 0.3rem 0.4rem 0.4rem
   font-size: 0.82rem
 
-// ── Skills: cream chips with the skill icon ────────────────────────────────
+// ── Skills: ice cards with the skill medallion ─────────────────────────────
 .skill-list
   display: flex
   flex-direction: column
@@ -901,13 +1075,14 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   align-items: flex-start
   padding: 0.4rem 0.45rem
   border-radius: var(--radius-ui)
-  background-color: var(--color-cream-50)
-  border: 2px solid var(--color-wood-700)
-  box-shadow: 0 2px 0 var(--color-wood-700)
+  background-color: var(--color-ice-50)
+  border: 2px solid $ink
+  box-shadow: inset 4px 0 0 var(--color-plum-500), 0 3px 0 $ink
   &.is-locked
-    background-color: var(--color-cream-300)
-    border-color: var(--color-cream-400)
-    box-shadow: none
+    background-color: var(--color-steel-300)
+    background-image: var(--ui-stripes-ink)
+    border-color: var(--color-steel-500)
+    box-shadow: inset 4px 0 0 var(--color-steel-500)
     .skill-desc, .skill-name
       opacity: 0.7
     :deep(svg)
@@ -939,11 +1114,11 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 
 .skill-lv
   background-color: var(--color-plum-500)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   text-shadow: $ink-outline
 
 .skill-lock
-  background-color: var(--color-cream-200)
+  background-color: var(--color-ice-200)
   color: var(--ui-text)
 
 .skill-desc
@@ -1001,19 +1176,27 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
     display: none
 
 // ── Skin picker ────────────────────────────────────────────────────────────
+// Colourway cards: ice cards with an ink edge; locked = steel hatch, the
+// equipped one sun with stripes and a lift.
 .skin-card
-  border: 2px solid var(--color-cream-400)
+  border: 2px solid var(--color-steel-500)
   border-radius: var(--radius-ui)
-  background-color: var(--color-cream-200)
+  background-color: var(--color-steel-300)
+  background-image: var(--ui-stripes-ink)
   color: var(--ui-text)
+  box-shadow: 0 3px 0 var(--color-steel-600)
   &.is-owned
-    border-color: var(--color-wood-700)
-    background-color: var(--color-cream-50)
+    border-color: $ink
+    background-color: var(--color-ice-50)
+    background-image: none
+    box-shadow: 0 3px 0 $ink
     cursor: pointer
   &.is-equipped
     border-color: $ink
     background-color: var(--color-sun-200)
-    box-shadow: 0 3px 0 $ink
+    background-image: var(--ui-stripes)
+    box-shadow: 0 0 0 3px var(--color-sun-400), 0 4px 0 $ink
+    transform: translateY(-2px)
 
 .skin-card-name
   font-weight: 900
@@ -1028,7 +1211,7 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 .trophy-note
   gap: 0.25rem
   .game-text
-    color: var(--color-cream-50)
+    color: var(--color-ice-50)
     text-shadow: $ink-outline
 
 .skin-btn .game-text
@@ -1042,4 +1225,12 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   .skin-card-img
     width: 2.4rem
     height: 2.4rem
+
+// Reduced motion: no entrances, no idle blink; state colours stay.
+@media (prefers-reduced-motion: reduce)
+  .team-slot.is-selected, .roster-card.is-selected, .team-mark, .detail-portrait-wrap, .stat-bar-fill, .stat-bar-next, .lv-pop
+    animation: none
+  .team-slot, .roster-card, .slot-portrait, .roster-portrait, .skin-plus-btn
+    transition-duration: 0.08s
+    transition-timing-function: ease-out
 </style>

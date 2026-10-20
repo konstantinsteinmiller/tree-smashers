@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SKILLS } from '@/data/skillCatalog'
 import type { SkillId } from '@/types/skills'
+import { paintedSkillIconUrl, smasherSkillArt } from '@/use/skills/smasherSkillArt'
 
 /**
  * ─── Skill medallion ────────────────────────────────────────────────────────
@@ -16,12 +17,19 @@ import type { SkillId } from '@/types/skills'
  *   locked        → taupe silhouette with a "?" — the skill is not unlocked
  *                   yet, so its name and look stay a secret (§7.3)
  *
+ * `skillKey` (a smasher skill id) swaps the generic effect glyph for that
+ * skill's own drawn icon (smasherSkillArt.ts — the art-desk registry; a
+ * painted bitmap wins when one is registered). The disc keeps the effect's
+ * accent colour, so the effect family still reads at a glance.
+ *
  * The aria-label is the skill name; pass `decorative` when a visible name
  * sits next to the icon, so screen readers don't read it twice.
  */
 
 const props = withDefaults(defineProps<{
   id: SkillId
+  /** Smasher skill id: draw its own icon + use its name. */
+  skillKey?: string
   /** Rendered size in px (square). */
   size?: number
   plate?: boolean
@@ -37,8 +45,15 @@ const props = withDefaults(defineProps<{
 const { t } = useI18n()
 
 const def = computed(() => SKILLS[props.id])
-const color = computed(() => (props.locked ? '#b9ab95' : def.value.color))
-const label = computed(() => (props.locked ? '?' : t(`skills.names.${props.id}`)))
+const color = computed(() => (props.locked ? '#aab4cc' : def.value.color))
+const art = computed(() => smasherSkillArt(props.skillKey))
+const painted = computed(() => (props.skillKey && art.value ? paintedSkillIconUrl(props.skillKey) : null))
+const label = computed(() => {
+  if (props.locked) return '?'
+  return art.value ? t(`smasher_skill_${props.skillKey}`) : t(`skills.names.${props.id}`)
+})
+// Art layers sit in a 24×24 box: on the plate scaled into the disc.
+const artTransform = computed(() => (props.plate ? 'translate(9 9) scale(1.25)' : 'scale(2)'))
 
 </script>
 
@@ -54,10 +69,12 @@ const label = computed(() => (props.locked ? '?' : t(`skills.names.${props.id}`)
     :class="{ 'is-locked': locked }"
   )
     template(v-if="plate")
-      //- Cozy medallion: ink edge, wood rim with a stitched ring, flat
-      //- accent disc (no gradients) and a cream top lip.
+      //- Medallion: ink edge, royal rim with a dark lower band (depth) and a
+      //- stitched ring, flat accent disc (no gradients) and a white top lip.
       circle.sk-ink(cx="24" cy="24" r="23.2")
       circle.sk-rim(cx="24" cy="24" r="21.6")
+      //- 3D: a darker band along the rim's lower half (the medallion's depth).
+      path.sk-band(d="M4.2 27.5A20.2 20.2 0 0 0 43.8 27.5" fill="none" stroke-width="2.6" stroke-linecap="round")
       circle.sk-stitch(cx="24" cy="24" r="19.6" fill="none" stroke-width="1.1" stroke-dasharray="2.4 2")
       circle.sk-ink(cx="24" cy="24" r="17.6")
       circle(cx="24" cy="24" r="16.4" :style="{ fill: color }")
@@ -69,6 +86,19 @@ const label = computed(() => (props.locked ? '?' : t(`skills.names.${props.id}`)
       font-size="24" font-weight="900"
       stroke-width="3" paint-order="stroke"
     ) ?
+    //- The smasher skill's own drawing (or its painting).
+    image(
+      v-else-if="painted"
+      :href="painted"
+      :x="plate ? 9 : 0" :y="plate ? 9 : 0"
+      :width="plate ? 30 : 48" :height="plate ? 30 : 48"
+    )
+    g(v-else-if="art" :transform="artTransform" stroke-linejoin="round" stroke-linecap="round")
+      template(v-for="(L, i) in art.icon" :key="i")
+        path(v-if="L.fill === undefined" :d="L.d" fill="none" :stroke="L.stroke ?? 'var(--color-ink)'" :stroke-width="L.w ?? 1.4")
+        template(v-else)
+          path(v-if="!L.noInk" :d="L.d" fill="none" stroke="var(--color-ink)" stroke-width="2.2")
+          path(:d="L.d" :fill="L.fill")
     g(
       v-else
       :transform="plate ? 'translate(10.4 10.4) scale(1.133)' : 'scale(2)'"
@@ -96,15 +126,18 @@ circle.sk-ink
   stroke: none
 
 .sk-rim
-  fill: var(--color-wood-500)
+  fill: var(--color-royal-500)
+
+.sk-band
+  stroke: var(--color-royal-800)
 
 .sk-stitch
-  stroke: var(--color-cream-200)
+  stroke: var(--color-ice-200)
 
 .sk-lip
-  stroke: rgba(255, 250, 240, 0.45)
+  stroke: rgba(255, 255, 255, 0.55)
 
 .sk-q
-  fill: var(--color-cream-50)
+  fill: var(--color-ice-50)
   stroke: var(--color-ink)
 </style>

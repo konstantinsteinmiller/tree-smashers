@@ -46,14 +46,15 @@ const onClick = () => {
   div.flex.flex-row.items-center.gap-2.pointer-events-auto.skin-chest-row(
     v-if="skinChestHasRewards"
     @click="onClick"
-    :class="skinChestReady ? 'cursor-pointer skin-chest-pulse' : ''"
+    :class="skinChestReady ? 'cursor-pointer is-ready' : ''"
+    :data-sfx="skinChestReady ? 'press' : 'off'"
   )
-    div.relative(class="w-6 h-6 sm:w-8 sm:h-8")
+    div.skin-chest-icon.relative(class="w-6 h-6 sm:w-8 sm:h-8")
       img.object-contain.w-full.h-full.rounded-full(
         :src="iconSrc"
         alt="skin-chest-preview"
-        :style="skinChestReady ? { filter: 'brightness(1.25)' } : undefined"
       )
+      span.skin-chest-notify.ui-notify(v-if="skinChestReady" aria-hidden="true") !
       //- Circular cooldown overlay — opacity ~30% lower than the chest
       //- variant (stroke alpha 0.25 vs 0.35) so the muted skin preview
       //- stays readable under the darkening. Mask binds to the current
@@ -77,7 +78,7 @@ const onClick = () => {
           circle(
             cx="20" cy="20" r="19"
             fill="none"
-            stroke="rgba(58,35,20,0.3)"
+            stroke="rgba(22, 26, 64,0.3)"
             stroke-width="40"
             :stroke-dasharray="119.38"
             :stroke-dashoffset="119.38 * (1 - skinChestCooldownPct)"
@@ -90,14 +91,44 @@ const onClick = () => {
 </template>
 
 <style scoped lang="sass">
-.skin-chest-pulse
-  animation: skin-chest-pulse 2s ease-in-out infinite
+// Quiet while it cooks (no motion); ripe: the skin hops and spins a little
+// every 2.2 s with a berry "!" on its shoulder, and the label turns into
+// a sun chip. Transform only.
+.skin-chest-row.is-ready .skin-chest-icon
+  transform-origin: 50% 90%
+  animation: skin-chest-hop 2.2s ease-in-out infinite
 
-@keyframes skin-chest-pulse
-  0%, 100%
-    opacity: 1
-  50%
-    opacity: 0.55
+@keyframes skin-chest-hop
+  0%, 45%, 100%
+    transform: translateY(0) rotate(0) scale(1)
+  12%
+    transform: translateY(-6px) rotate(-12deg) scale(1.12)
+  24%
+    transform: translateY(0) rotate(6deg) scale(1.04, 0.92)
+  34%
+    transform: translateY(-1px) rotate(0)
+
+.skin-chest-row.is-ready:active .skin-chest-icon
+  animation: none
+  transform: translateY(2px) scale(1.08, 0.9)
+
+.skin-chest-notify
+  position: absolute
+  top: -0.35rem
+  right: -0.5rem
+  min-width: 1rem
+  height: 1rem
+  font-size: 0.65rem
+
+.skin-chest-row.is-ready .skin-chest-timer-label
+  color: var(--color-ink)
+  background-color: var(--color-sun-400)
+  text-shadow: none
+  box-shadow: inset 0 -2px 0 var(--color-sun-600), 0 2px 0 var(--color-ink)
+
+@media (prefers-reduced-motion: reduce)
+  .skin-chest-row.is-ready .skin-chest-icon
+    animation: none
 
 // Warm muted orange — matches the warm wood palette and reads
 // as "passive cooldown" rather than the urgent yellow/red used by the
@@ -105,7 +136,12 @@ const onClick = () => {
 // arena background.
 .skin-chest-timer-label
   color: var(--color-sun-300)
-  text-shadow: 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 1px 0 var(--color-ink), 0 -1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
+  padding: 0.05rem 0.4rem 0.1rem
+  border: 2px solid var(--color-ink)
+  border-radius: 999px
+  background-color: var(--color-royal-900)
+  box-shadow: 0 2px 0 var(--color-ink)
   // `tabular-nums` gives every digit the same advance width so a
   // ticking countdown ("12:34" → "12:33" → ...) doesn't reflow the
   // row by a couple of pixels each second. Combined with a fixed
@@ -118,8 +154,8 @@ const onClick = () => {
   // 8 chars * ~0.55em (tabular monospace digit + colon) ≈ 4.4em.
   // Slight rounding margin so a 1px sub-pixel difference never trips
   // the next reflow.
-  min-width: 4.6em
-  text-align: right
+  min-width: 5.6em
+  text-align: center
   display: inline-block
 
 // Mask sizing/positioning lives in CSS; the actual mask-image URL is

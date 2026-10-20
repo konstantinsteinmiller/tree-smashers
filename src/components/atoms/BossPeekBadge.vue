@@ -196,7 +196,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   // Wood ring with ink edges and a berry inner trim; 0-blur shadows only.
   border: calc(var(--frame-w) * 0.13) solid var(--color-wood-600)
   box-shadow: 0 0 0 3px var(--color-ink), 0 5px 0 3px var(--color-ink), inset 0 0 0 3px var(--color-ink), inset 0 0 0 6px var(--color-berry-500)
-  outline: 2px dashed rgba(255, 250, 240, 0.5)
+  outline: 2px dashed rgba(255, 255, 255, 0.5)
   outline-offset: calc(var(--frame-w) * -0.065 - 1px)
 
 
@@ -243,16 +243,26 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   z-index: 0
   // Tuck under the frame's right wing; pad the text clear of it.
   margin-left: calc(var(--frame-w) * -0.16)
-  padding: 0.4rem 0.9rem 0.45rem calc(var(--frame-w) * 0.19)
-  border-radius: 0 var(--radius-ui) var(--radius-ui) 0
-  // Cozy berry fabric plaque on a wood edge.
-  background-color: var(--color-berry-600)
-  border: 3px solid var(--color-ink)
-  border-left: none
-  box-shadow: inset 0 3px 0 var(--color-berry-400), inset 0 -4px 0 var(--color-berry-700), 0 4px 0 var(--color-ink)
+  padding: 0.4rem 1.3rem 0.45rem calc(var(--frame-w) * 0.19)
+  // A berry WARNING TAG: the plate is the ::before, skewed so its right end
+  // is cut on the diagonal, with flat diagonal stripes; the text stays
+  // upright on top. Its left end hides under the frame's wing.
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border-radius: 0 var(--radius-ui-sm) var(--radius-ui-sm) 0
+    background-color: var(--color-berry-600)
+    background-image: var(--ui-stripes)
+    border: 3px solid var(--color-ink)
+    border-left: none
+    box-shadow: inset 0 3px 0 var(--color-berry-400), inset 0 -4px 0 var(--color-berry-700), 0 4px 0 var(--color-ink)
+    transform: skewX(-12deg)
+    transform-origin: 0 100%
 
 .boss-peek__headline
-  color: var(--color-sun-200)
+  color: var(--color-sun-300)
   font-size: 0.68rem
   letter-spacing: 0.04em
   line-height: 1.1
@@ -265,7 +275,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 .boss-peek__name
   font-size: 1rem
   line-height: 1.2
-  text-shadow: 2px 2px 0 var(--color-ink), -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke)
 
 @media (min-width: 640px)
   .boss-peek__headline
@@ -279,7 +289,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 
 @media (orientation: landscape) and (max-height: 500px)
   .boss-peek__plate
-    padding: 0.25rem 0.7rem 0.3rem calc(var(--frame-w) * 0.19)
+    padding: 0.25rem 1.05rem 0.3rem calc(var(--frame-w) * 0.19)
 
   .boss-peek__headline
     font-size: 0.65rem

@@ -15,7 +15,8 @@ export type SkillId = (typeof SKILL_IDS)[number]
 
 export type SkillTag = 'DEF' | 'SUS' | 'OFF' | 'CTL' | 'UTL'
 
-export type SkillUnlockStage = 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 55
+/** 0 = smasher-only effect: never unlocked into the team skill shop. */
+export type SkillUnlockStage = 0 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 55
 
 // ─── Per-level parameters, one shape per skill ─────────────────────────────
 // Fractions, not percents (0.05 = 5 %). Field names match
@@ -64,6 +65,29 @@ export interface StaticChargeParams {
   chance: number
 }
 
+/** Bank Shot: the first enemy hit of a launch after a rebound (wall, island,
+ *  bumper, tower) deals +pct. */
+export interface BankShotParams {
+  pct: number
+}
+
+/** Anchor: when hit while NOT the launched blade, keeps only (1 − resist) of
+ *  the knockback speed. */
+export interface AnchorParams {
+  resist: number
+}
+
+/** Tower Breaker: +pct damage against team towers. */
+export interface TowerBreakerParams {
+  pct: number
+}
+
+/** Thorns: an enemy hit landing on the bearer's reinforced cone (front, or
+ *  the back when its armour is stronger behind) recoils share × the hit. */
+export interface ThornsParams {
+  share: number
+}
+
 export interface HazardWardParams {
   lava: number;
   thunder: number;
@@ -83,6 +107,10 @@ export interface SkillParamsById {
   opening_salvo: OpeningSalvoParams
   static_charge: StaticChargeParams
   hazard_ward: HazardWardParams
+  bank_shot: BankShotParams
+  anchor: AnchorParams
+  tower_breaker: TowerBreakerParams
+  thorns: ThornsParams
 }
 
 export type SkillLevelParams = SkillParamsById[SkillId]
@@ -100,6 +128,9 @@ export interface SkillDef<K extends SkillId = SkillId> {
   /** Reserved: skills that may not be equipped together with this one.
    *  Empty in v7 (skills-feature.md §3.8). */
   excludes?: readonly SkillId[]
+  /** A smasher-only effect: carried only by smasher skills, never offered
+   *  in the team skill shop / ghost pools (unlockStage 0). */
+  smasherOnly?: boolean
   /** Length SKILL_MAX_LEVEL; index 0 = L1. */
   levels: readonly SkillParamsById[K][]
 }
@@ -138,4 +169,8 @@ export interface BladeSkills {
   /** Momentum, reset per own launch. */
   stacks: number
   rocketCount: number
+  /** Bank Shot: the bearer rebounded during its own launch (reset per launch). */
+  banked?: boolean
+  /** Bank Shot: this launch's bonus hit is spent (reset per launch). */
+  bankUsed?: boolean
 }

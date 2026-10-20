@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { isSmasherId } from '@/data/smasherCatalog'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { playUiSfx } from '@/use/uiSfx'
 import { useI18n } from 'vue-i18n'
 import SkillIcon from '@/components/atoms/SkillIcon.vue'
 import { modelImgPath } from '@/use/useModels'
@@ -27,6 +29,11 @@ import type { SkillLoadout } from '@/types/skills'
  *  25 – 55 %   skill chips pop, own side first (staggered)
  *  35 – 50 %   turn announcement fades in
  *  84 – 100 %  whole card fades out (done exactly at durationMs)
+ *
+ * Look: a face-off — the panels are SKEWED plates leaning in toward the
+ * centre (own side sky, opponent berry, flat stripes, ink outline + hard
+ * drop) that slam in from their edges; the sun "VS" sits on a spiky starburst
+ * and crashes in with a deep thunk.
  *
  * Cost: transform / opacity keyframes only, a hard 0-blur text outline and
  * one flat ring — no filter, no backdrop-filter, no box-shadow blur on moving
@@ -76,7 +83,7 @@ const opponentLabel = computed(() =>
 )
 
 const imgFor = (c: SpinnerConfig): string =>
-  modelImgPath(c.modelId ?? SKINS_PER_TOP[c.topPartId]?.[0] ?? 'blades')
+  modelImgPath(c.modelId ?? SKINS_PER_TOP[c.topPartId]?.[0] ?? 'blades', isSmasherId(c.smasherId) ? c.smasherId : undefined)
 
 interface Side {
   key: 'me' | 'them'
@@ -103,6 +110,14 @@ const chipDelay = (sideKey: 'me' | 'them', i: number): string => {
   return `calc(var(--vs-dur) * ${(0.25 + n * 0.06).toFixed(2)})`
 }
 
+// The VS slam lands at ~28 % of the window: one deep "thunk" on that beat
+// (uiSfx gates it under ads / pause / mute).
+let slamTimer = 0
+onMounted(() => {
+  slamTimer = window.setTimeout(() => playUiSfx('pressHero'), props.durationMs * 0.27)
+})
+onBeforeUnmount(() => clearTimeout(slamTimer))
+
 const onAnimEnd = (e: AnimationEvent) => {
   if (e.target === e.currentTarget && e.animationName.includes('vs-out')) emit('done')
 }
@@ -125,7 +140,11 @@ const onAnimEnd = (e: AnimationEvent) => {
           aria-hidden="true"
         )
           div.vs-ring.absolute.rounded-full(v-if="!cheap")
-          span.vs-text.font-black {{ t('vs') }}
+          //- Spiky sun starburst behind the letters: an ink star a size up,
+          //- the sun star on top (clip-path polygons, flat fills).
+          span.vs-star.vs-star--ink.absolute
+          span.vs-star.vs-star--sun.absolute
+          span.vs-text.relative.font-black {{ t('vs') }}
 
         div.vs-panel.relative.flex.flex-col.items-center.min-w-0(
           :class="[side.key === 'me' ? 'is-me' : 'is-them', 'gap-1 sm:gap-2 px-2 py-2 sm:px-4 sm:py-3']"
@@ -177,31 +196,51 @@ const onAnimEnd = (e: AnimationEvent) => {
   @media (min-width: 640px) and (min-height: 480px)
     grid-template-columns: minmax(0, 17rem) auto minmax(0, 17rem)
 
+// ── Panels: skewed team plates leaning in toward the VS ──────────────────
+// The PLATE is the ::before (skewed), the content stays upright on top.
 .vs-panel
-  background-color: var(--color-wood-600)
-  border: 3px solid var(--color-ink)
-  border-radius: var(--radius-ui-lg)
-  box-shadow: inset 0 0 0 3px var(--vs-side), inset 0 -4px 0 var(--color-wood-800), 0 4px 0 var(--color-ink)
-  outline: 2px dashed rgba(255, 250, 240, 0.45)
-  outline-offset: -9px
+  isolation: isolate
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 3px solid var(--color-ink)
+    border-radius: var(--radius-ui)
+    background-color: var(--vs-fill)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 4px 0 var(--vs-lip), inset 0 -6px 0 var(--vs-band), 0 5px 0 var(--color-ink)
+    transform: skewX(var(--vs-skew))
 
   &.is-me
-    --vs-side: var(--color-sky-400)
+    --vs-fill: var(--color-sky-600)
+    --vs-lip: var(--color-sky-400)
+    --vs-band: var(--color-sky-700)
+    --vs-skew: -8deg
     animation: vs-in-left var(--vs-dur) cubic-bezier(0.2, 0.9, 0.3, 1.15) both
 
     .vs-name
       color: var(--color-sky-200)
 
   &.is-them
-    --vs-side: var(--color-berry-400)
+    --vs-fill: var(--color-berry-600)
+    --vs-lip: var(--color-berry-400)
+    --vs-band: var(--color-berry-700)
+    --vs-skew: 8deg
     animation: vs-in-right var(--vs-dur) cubic-bezier(0.2, 0.9, 0.3, 1.15) both
 
     .vs-name
       color: var(--color-berry-300)
 
+.vs-name
+  text-shadow: var(--ui-stroke)
+  letter-spacing: 0.03em
+
 .vs-spinner
   width: 3rem
   height: 3rem
+  filter: drop-shadow(0 3px 0 var(--color-ink))
   @media (min-width: 640px)
     width: 4rem
     height: 4rem
@@ -223,31 +262,52 @@ const onAnimEnd = (e: AnimationEvent) => {
 .vs-lv
   color: var(--color-sun-300)
 
+// ── VS emblem: sun letters on a spiky starburst ───────────────────────────
 .vs-emblem
-  width: 3rem
-  height: 3rem
+  width: 3.4rem
+  height: 3.4rem
   @media (min-width: 640px)
-    width: 4.5rem
-    height: 4.5rem
+    width: 4.8rem
+    height: 4.8rem
   animation: vs-slam var(--vs-dur) cubic-bezier(0.5, 0, 0.6, 1.4) both
 
-.vs-text
-  font-size: 1.9rem
-  line-height: 1
-  color: var(--color-sun-300)
-  text-shadow: 0 3px 0 var(--color-ink), 2px 0 0 var(--color-ink), -2px 0 0 var(--color-ink), 0 -2px 0 var(--color-ink), 2px 2px 0 var(--color-ink), -2px 2px 0 var(--color-ink), 2px -2px 0 var(--color-ink), -2px -2px 0 var(--color-ink), 0 5px 0 var(--color-berry-600)
-  @media (min-width: 640px)
-    font-size: 2.8rem
+$star: polygon(50% 0%, 61% 30%, 93% 18%, 72% 45%, 100% 62%, 67% 66%, 72% 100%, 50% 77%, 28% 100%, 33% 66%, 0% 62%, 28% 45%, 7% 18%, 39% 30%)
 
+.vs-star
+  clip-path: $star
+
+.vs-star--ink
+  inset: -26%
+  background-color: var(--color-ink)
+
+.vs-star--sun
+  inset: -16%
+  background-color: var(--color-sun-400)
+  background-image: repeating-linear-gradient(300deg, var(--color-sun-400) 0 6px, var(--color-sun-500) 6px 12px)
+
+.vs-text
+  font-size: 2rem
+  line-height: 1
+  font-style: normal
+  letter-spacing: -0.02em
+  color: var(--color-sun-300)
+  text-shadow: var(--ui-stroke-xl), 0 7px 0 var(--color-berry-600)
+  transform: rotate(-6deg)
+  @media (min-width: 640px)
+    font-size: 3rem
+
+// Flat shock ring (no blur): an ink-dashed sun ring that bursts outward.
 .vs-ring
-  inset: -30%
+  inset: -40%
   border-radius: 9999px
-  background: rgba(255, 201, 51, 0.35)
-  border: 3px dashed rgba(255, 250, 240, 0.6)
+  background: rgba(255, 210, 26, 0.3)
+  border: 4px dashed rgba(255, 255, 255, 0.7)
   clip-path: circle(36%)
   animation: vs-ring var(--vs-dur) ease-out both
 
 .vs-announce
+  text-shadow: var(--ui-stroke-lg)
+  letter-spacing: 0.03em
   animation: vs-fade-in var(--vs-dur) ease-out both
 
 // ── Keyframes: percentages ARE fractions of the window ────────────────────
@@ -257,29 +317,36 @@ const onAnimEnd = (e: AnimationEvent) => {
   100%
     opacity: 0
 
+// Panels crash in from their edge and overshoot a hair toward the centre.
 @keyframes vs-in-left
   0%
     opacity: 0
-    transform: translateX(-60%)
-  18%, 100%
+    transform: translateX(-70%)
+  14%
+    opacity: 1
+    transform: translateX(4%)
+  20%, 100%
     opacity: 1
     transform: translateX(0)
 
 @keyframes vs-in-right
   0%
     opacity: 0
-    transform: translateX(60%)
-  18%, 100%
+    transform: translateX(70%)
+  14%
+    opacity: 1
+    transform: translateX(-4%)
+  20%, 100%
     opacity: 1
     transform: translateX(0)
 
 @keyframes vs-slam
   0%, 15%
     opacity: 0
-    transform: scale(2.4) rotate(-12deg)
+    transform: scale(2.6) rotate(-18deg)
   28%
     opacity: 1
-    transform: scale(0.9) rotate(0deg)
+    transform: scale(0.86) rotate(4deg)
   34%, 100%
     opacity: 1
     transform: scale(1) rotate(0deg)
@@ -292,7 +359,7 @@ const onAnimEnd = (e: AnimationEvent) => {
     opacity: 1
   60%, 100%
     opacity: 0
-    transform: scale(1.8)
+    transform: scale(1.9)
 
 // Chips: the delay (0.25–0.43 × window) comes from the template; the pop
 // itself takes 10 % of the window.

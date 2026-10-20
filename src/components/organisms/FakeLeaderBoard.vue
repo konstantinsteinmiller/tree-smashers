@@ -95,10 +95,10 @@ const isFightLocked = (entry: LeaderboardEntry): boolean => {
 // ─── Visual helpers ─────────────────────────────────────────────────────────
 
 const rankBadgeClass = (rank: number): string => {
-  if (rank === 1) return 'bg-sun-400 text-ink border-2 border-ink'
-  if (rank === 2) return 'bg-cream-300 text-ink border-2 border-ink'
-  if (rank === 3) return 'bg-wood-400 text-ink border-2 border-ink'
-  return 'bg-cream-100 text-ink-soft border-2 border-cream-400'
+  if (rank === 1) return 'rank-plate is-podium bg-sun-400 text-ink border-2 border-ink'
+  if (rank === 2) return 'rank-plate is-podium bg-ice-300 text-ink border-2 border-ink'
+  if (rank === 3) return 'rank-plate is-podium bg-berry-300 text-ink border-2 border-ink'
+  return 'rank-plate bg-ice-50 text-ink-soft border-2 border-ice-400'
 }
 
 const indexToRank = (entry: LeaderboardEntry): number =>
@@ -107,15 +107,14 @@ const indexToRank = (entry: LeaderboardEntry): number =>
 
 <template lang="pug">
   //- ─── Trigger Button ────────────────────────────────────────────────────
-  button(
+  //- Royal 3D HUD button (sinks into its lip on press).
+  button.ui-btn.ui-btn--royal.ui-btn--icon(
+    type="button"
     @click="openModal"
-    class="group cursor-pointer hover:scale-[103%] transition-transform active:scale-90 scale-80 sm:scale-100 pointer-events-auto"
+    :aria-label="t('leaderboard')"
+    class="cursor-pointer scale-80 sm:scale-100 pointer-events-auto p-2"
   )
-    div.relative
-      //- Wood plank HUD button.
-      div.ui-wood.relative.font-bold.p-2
-        //- Trophy SVG
-        img.w-7.h-7(src="/images/icons/trophy_128x128.webp" alt="trophy")
+    img.w-7.h-7(src="/images/icons/trophy_128x128.webp" alt="")
 
   //- ─── Modal ──────────────────────────────────────────────────────────────
   //- The whole panel scrolls in FModal's body (the single scroll authority),
@@ -138,7 +137,7 @@ const indexToRank = (entry: LeaderboardEntry): number =>
       )
         div.flex.flex-col.items-start
           span.text-ink-soft.font-black(class="text-[0.75rem] sm:text-xs") {{ t('yourRank') }}
-          span.text-wood-700.font-black(class="text-xl sm:text-2xl leading-none") {{ `#${playerRank}` }}
+          span.text-royal-700.font-black(class="text-xl sm:text-2xl leading-none") {{ `#${playerRank}` }}
             span.font-bold(class="text-xs sm:text-sm text-ink-soft ml-1") /{{ totalEntries }}
         div.flex.flex-col.items-center
           button.ui-btn.ui-btn--secondary(
@@ -148,18 +147,17 @@ const indexToRank = (entry: LeaderboardEntry): number =>
           ) {{ t('jumpToMe') }}
         div.flex.flex-col.items-end
           span.text-ink-soft.font-black(class="text-[0.75rem] sm:text-xs") {{ t('maxStage') }}
-          span.text-wood-700.font-black(class="text-xl sm:text-2xl leading-none") {{ playerEntry.maxStage }}
+          span.text-royal-700.font-black(class="text-xl sm:text-2xl leading-none") {{ playerEntry.maxStage }}
 
       //- Entry list. No local scroll cap — FModal's body scrolls the panel.
       div.lb-scroll.flex.flex-col.gap-1.pr-1
-        div(
-          v-for="entry in pagedEntries"
+        div.lb-row.ui-pop-in(
+          v-for="(entry, i) in pagedEntries"
           :key="entry.id"
+          :style="{ '--i': Math.min(i, 12) }"
           :class="[\
-            'ui-inset flex items-center gap-2 sm:gap-3 px-2 py-1.5 sm:px-3 sm:py-2',\
-            entry.isPlayer\
-              ? '!bg-leaf-300 !border-leaf-600'\
-              : ''\
+            'flex items-center gap-2 sm:gap-3 px-2 py-1.5 sm:px-3 sm:py-2',\
+            { 'is-player': entry.isPlayer, 'is-top1': indexToRank(entry) === 1 }\
           ]"
         )
           //- Rank chip
@@ -170,42 +168,36 @@ const indexToRank = (entry: LeaderboardEntry): number =>
           //- Name + parts
           div.flex.flex-col.items-start.min-w-0.flex-1
             span.font-black.truncate.w-full.text-left(
-              :class="[entry.isPlayer ? 'text-leaf-800' : 'text-ink', 'text-xs sm:text-sm']"
+              :class="[entry.isPlayer ? 'text-sky-700' : 'text-ink', 'text-xs sm:text-sm']"
             ) {{ entry.name || t('you') }}
             div.flex.items-center.gap-1.flex-wrap
               span.rounded.border(
-                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-cream-400 bg-cream-50 text-ink-soft"
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-ice-400 bg-ice-50 text-ink-soft"
               ) {{ t('parts.' + entry.blade.topPartId) }} +{{ entry.blade.topLevel ?? 0 }}
               span.rounded.border(
-                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-cream-400 bg-cream-50 text-ink-soft"
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-ice-400 bg-ice-50 text-ink-soft"
               ) {{ t('parts.' + entry.blade.bottomPartId) }} +{{ entry.blade.bottomLevel ?? 0 }}
 
           //- Max stage
           div.flex.flex-col.items-center.shrink-0(class="w-10 sm:w-12")
             span(class="text-[0.6rem] sm:text-[0.7rem] text-ink-soft leading-none") {{ t('stage') }}
-            span.text-wood-700.font-black(class="text-sm sm:text-base leading-none") {{ entry.maxStage }}
+            span.text-royal-700.font-black(class="text-sm sm:text-base leading-none") {{ entry.maxStage }}
 
           //- Fight button (crossed swords) — never shown for the player
-          button(
+          button.lb-fight.ui-btn.ui-btn--primary.shrink-0(
             v-if="!entry.isPlayer"
+            type="button"
             @click="onFightClick(entry)"
             :disabled="isFightLocked(entry)"
-            :class="[\
-              'shrink-0 group transition-transform',\
-              isFightLocked(entry)\
-                ? 'opacity-40 cursor-not-allowed grayscale'\
-                : 'cursor-pointer hover:scale-[105%] active:scale-90'\
-            ]"
+            :aria-label="isFightLocked(entry) ? t('alreadyFoughtToday') : t('fightAsGhost')"
             :title="isFightLocked(entry) ? t('alreadyFoughtToday') : t('fightAsGhost')"
-          )
-            div.ui-btn.ui-btn--danger(
-              class="px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
-            ) ⚔️
+            class="px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
+          ) ⚔️
 
           //- "YOU" tag for the player row
-          span.text-leaf-800.font-black.shrink-0(
+          span.lb-you.font-black.shrink-0(
             v-else
-            class="text-[0.75rem] sm:text-xs px-2"
+            class="text-[0.75rem] sm:text-xs"
           ) {{ t('you') }}
 
     //- Pagination lives in the FOOTER slot, not in the scrolling body — with
@@ -238,4 +230,43 @@ const indexToRank = (entry: LeaderboardEntry): number =>
 .is-mobile-landscape
   :deep(.model-container)
     transform: scale(90%)
+
+// Rows: ice wells that pop in staggered; #1 sun with stripes; the player's
+// own row sky with an ink edge + lip (catalog: "own row must pop").
+.lb-row
+  border: 2px solid var(--color-ice-400)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-200)
+  animation-fill-mode: backwards
+  &:nth-child(even)
+    background-color: var(--color-ice-50)
+  &.is-top1
+    border-color: var(--color-ink)
+    background-color: var(--color-sun-200)
+    background-image: var(--ui-stripes)
+    box-shadow: 0 2px 0 var(--color-ink)
+  &.is-player
+    border: 3px solid var(--color-ink)
+    background-color: var(--color-sky-200)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 0 0 2px var(--color-sky-500), inset 0 -4px 0 var(--color-sky-500), 0 3px 0 var(--color-ink)
+
+// Rank plate: a square chip; the podium three get colour + a drop.
+:deep(.rank-plate)
+  border-radius: 0.3rem
+.rank-plate.is-podium
+  box-shadow: 0 2px 0 var(--color-ink)
+
+.lb-fight
+  min-height: 2.75rem
+  min-width: 2.75rem
+
+.lb-you
+  padding: 0.15em 0.55em 0.2em
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem
+  background-color: var(--color-sky-500)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: 0 2px 0 var(--color-ink)
 </style>

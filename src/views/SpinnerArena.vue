@@ -73,6 +73,7 @@ import { saveDataVersion } from '@/use/useSaveStatus'
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FIconButton from '@/components/atoms/FIconButton.vue'
+import FCountUp from '@/components/atoms/FCountUp.vue'
 import FModal from '@/components/molecules/FModal.vue'
 import FReward from '@/components/atoms/FReward.vue'
 import SmasherTeamModal from '@/components/organisms/SmasherTeamModal.vue'
@@ -2525,12 +2526,16 @@ onUnmounted(() => {
           class="text-center pointer-events-auto cursor-pointer"
           @click="beginBattle"
         )
-          div.tap-start-title.text-cream-50.font-black.uppercase.animate-pulse.game-text.whitespace-nowrap(
-            ref="tapStartTitleRef"
-            class="text-3xl sm:text-5xl mb-2"
-          ) {{ t('spinner.tapToStart') }}
-          div.text-cream-100.game-text(class="text-sm sm:text-lg opacity-80")
-            | {{ t('spinner.startHint') }}
+          //- The call to action of the whole menu: XL hard stroke, a double
+          //- "thump" every 2.2 s (transform only), and the hint on a navy
+          //- angled plate so it reads over any arena art.
+          div.tap-start-beat
+            div.tap-start-title.font-black.uppercase.ui-outline-xl.whitespace-nowrap(
+              ref="tapStartTitleRef"
+              class="text-3xl sm:text-5xl mb-2"
+            ) {{ t('spinner.tapToStart') }}
+          div.tap-start-hint.ui-tag.ui-tag--ink(class="text-sm sm:text-lg")
+            span.ui-outline-sm.font-black {{ t('spinner.startHint') }}
 
         //- Every-10th-game countdown — rendered inside the meteor shower ring
         div(
@@ -2547,9 +2552,14 @@ onUnmounted(() => {
           v-else-if="phase === 'deciding_turn' && turnAnnouncement && !pvpVsShow"
           class="text-center"
         )
-          div.text-cream-50.font-black.uppercase.animate-pulse.game-text(
-            class="text-2xl sm:text-4xl"
-          ) {{ turnAnnouncement }}
+          //- Turn banner: a skewed plate that slams in — leaf for the
+          //- player's turn, berry for the opponent's.
+          div.turn-banner.ui-tag.ui-slam(
+            :class="turnAnnouncement === t('spinner.yourTurn') ? 'ui-tag--leaf' : 'ui-tag--berry'"
+          )
+            span.ui-outline-lg.font-black.uppercase.whitespace-nowrap(
+              class="text-2xl sm:text-4xl"
+            ) {{ turnAnnouncement }}
 
         //- Opponent's turn label (PvP only — shown at top so player knows to wait)
         div(
@@ -2557,9 +2567,10 @@ onUnmounted(() => {
           class="absolute text-center top-4 left-0 right-0"
           :style="{ top: `calc(1rem + env(safe-area-inset-top, 0px))` }"
         )
-          span.font-black.uppercase.animate-pulse.game-text(
-            class="text-lg sm:text-2xl text-sun-300"
-          ) {{ t('pvp.opponentTurn') }}
+          span.opp-turn-tag.ui-tag.ui-tag--berry.ui-drop-in
+            span.font-black.uppercase.ui-outline.opp-turn-text(
+              class="text-lg sm:text-2xl"
+            ) {{ t('pvp.opponentTurn') }}
 
         //- Player turn hint
         //- Capped to the width between the safe areas and allowed to wrap
@@ -2582,7 +2593,7 @@ onUnmounted(() => {
             role="status"
             data-frozen-hint
           ) {{ t('bosses.frozenHint') }}
-          div.drag-hint-text.text-cream-100.game-text.leading-tight(v-else class="text-xs sm:text-sm opacity-80")
+          div.drag-hint-text.drag-hint-plate.text-cream-50.game-text.leading-tight(v-else class="text-xs sm:text-sm")
             | {{ t('spinner.dragHint') }}
 
         //- PvP VS card — both teams + skill loadouts, inside the engine's
@@ -2683,6 +2694,7 @@ onUnmounted(() => {
               :key="chip.id"
               :is="SkillHudChip"
               :id="chip.id"
+              :skill-key="chip.key"
               :level="chip.level"
               :state="chip.state"
               :breathe="sk.hudBreathe"
@@ -2867,15 +2879,24 @@ onUnmounted(() => {
       //- short landscape viewport those 96px were pushing the result text off
       //- the top of the scroll area. A small gap is all that's left.
       div.reward-column.flex.flex-col.items-center.gap-4(class="mb-2 sm:mb-3")
-        div.reward-result-text.font-black.uppercase.game-text(
+        //- The verdict SLAMS in (big → overshoot → settle) with the XL stroke;
+        //- a win also gets a slow victory wobble afterwards.
+        div.reward-result-text.font-black.uppercase.ui-slam(
           class="text-3xl sm:text-5xl"
-          :class="gameResult === 'win' ? 'text-sun-300' : 'text-berry-400'"
+          :class="gameResult === 'win' ? 'text-sun-300 is-win' : 'text-berry-400 is-lose'"
+          :style="{ '--slam-delay': '120ms' }"
         ) {{ resultText }}
         //- PvP rewards: coins + honor points
         template(v-if="pvpMode")
-          div.flex.items-center.gap-3(ref="rewardCoinRef")
-            IconCoin(class="w-8 h-8 text-sun-400")
-            span.text-sun-300.font-black.game-text(class="text-2xl sm:text-4xl") +{{ PVP_COIN_REWARD + winAdExtra }}
+          div.reward-coin-row.flex.items-center.gap-3(ref="rewardCoinRef")
+            IconCoin.reward-coin-icon(class="w-8 h-8 text-sun-400")
+            FCountUp.reward-coin-amount.text-sun-300.font-black(
+              class="text-2xl sm:text-4xl"
+              :value="PVP_COIN_REWARD + winAdExtra"
+              prefix="+"
+              :delay="380"
+              ting
+            )
           div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
             span.text-plum-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
             span.text-plum-300.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
@@ -2894,9 +2915,17 @@ onUnmounted(() => {
           //- boss portrait fits without scrolling — see the style block.
           div.reward-meta(:class="{ 'has-peek': bossPeek && gameResult === 'win' }")
             div.reward-meta__stack
-              div.flex.items-center.gap-3(ref="rewardCoinRef")
-                IconCoin(class="w-8 h-8 text-sun-400")
-                span.text-sun-300.font-black.game-text(class="text-2xl sm:text-4xl") +{{ grantedCoins + winAdExtra }}
+              //- The coins COUNT UP (ticks rising in pitch, a ting + bump on
+              //- landing); the 3x ad's extra counts on from there.
+              div.reward-coin-row.flex.items-center.gap-3(ref="rewardCoinRef")
+                IconCoin.reward-coin-icon(class="w-8 h-8 text-sun-400")
+                FCountUp.reward-coin-amount.text-sun-300.font-black(
+                  class="text-2xl sm:text-4xl"
+                  :value="grantedCoins + winAdExtra"
+                  prefix="+"
+                  :delay="380"
+                  ting
+                )
               //- "#1130 of 2345" — where this player stands globally. Shown on the
               //- win AND the lose screen: it is the one number on the overlay that
               //- is not about this battle, and after a loss it is the reason to
@@ -3070,7 +3099,7 @@ onUnmounted(() => {
       ribbon-tone="sun"
       :show-continue="true"
       celebrate
-      tone="#b67df2"
+      tone="#c47dff"
       @continue="onSkinChestRewardContinue"
     )
       template(#ribbon)
@@ -3126,10 +3155,12 @@ onUnmounted(() => {
     )
       div.flex.flex-col.items-center.gap-4.py-4
         div.text-ink.font-black.uppercase.text-center(class="text-xl sm:text-3xl") {{ t('pvp.enemySurrendered') }}
-        button.ui-btn.ui-btn--primary.font-black.uppercase.cursor-pointer(
-          class="px-8 py-3 text-lg sm:text-xl"
-          @click="showEnemySurrender = false"
-        ) {{ t('pvp.okay') }}
+        div.ui-breathe
+          button.ui-btn.ui-btn--primary.ui-btn--hero.ui-shine.font-black.uppercase.cursor-pointer(
+            class="px-8 py-3 text-lg sm:text-xl"
+            @click="showEnemySurrender = false"
+          )
+            span {{ t('pvp.okay') }}
 
     //- ── League (LG6) — gate handles, null on a league-off build ──────────
     //- (`:league` stays the LAST dynamic prop: the compiled dynamic-props
@@ -3200,8 +3231,9 @@ onUnmounted(() => {
 .roulette-reward-enter
   animation: roulette-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)
 
+// The prize bobs and breathes (transform only — no brightness filter).
 .roulette-reward-glow
-  animation: roulette-glow 2s ease-in-out infinite
+  animation: roulette-glow 1.8s ease-in-out infinite
 
 // Per-grant sizes. One grant keeps the original large celebration; two
 // (first spin + "Spin Again") sit side by side, so each is scaled down to fit
@@ -3221,13 +3253,25 @@ onUnmounted(() => {
 .roulette-grant-mult
   font-size: 3rem
   line-height: 1
+  text-shadow: var(--ui-stroke-xl)
   @media (min-width: 640px)
     font-size: 4.5rem
 
 .roulette-grant-amount
   font-size: 1.875rem
+  text-shadow: var(--ui-stroke-lg)
   @media (min-width: 640px)
     font-size: 3rem
+
+// "SPIN AGAIN" tag over the second grant: an angled sun chip.
+.roulette-grant-tag
+  padding: 0.15em 0.6em 0.22em
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem
+  background-color: var(--color-sun-400)
+  color: var(--color-ink)
+  text-shadow: none
+  box-shadow: inset 0 -2px 0 var(--color-sun-600), 0 2px 0 var(--color-ink)
 
 .is-double
   .roulette-grant-icon
@@ -3262,9 +3306,13 @@ onUnmounted(() => {
 
 @keyframes roulette-glow
   0%, 100%
-    filter: brightness(1)
+    transform: translateY(0) scale(1)
   50%
-    filter: brightness(1.18)
+    transform: translateY(-5px) scale(1.06)
+
+@media (prefers-reduced-motion: reduce)
+  .roulette-reward-glow, .roulette-reward-enter
+    animation: none
 
 .speedup-switch
   :deep(.button-wrap:last-of-type button)
@@ -3278,12 +3326,16 @@ onUnmounted(() => {
   transform-origin: right center
   animation: speed-free-pulse 1.4s ease-in-out infinite
 
+  // Hard-edged double strip (no soft ramp), same language as .ui-shine.
   &::after
     content: ''
     position: absolute
-    inset: 0
-    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%)
-    transform: translateX(-120%)
+    top: 0
+    bottom: 0
+    left: 0
+    width: 60%
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0 50%, transparent 50% 68%, rgba(255, 255, 255, 0.6) 68% 100%)
+    transform: translateX(-180%) skewX(-22deg)
     animation: speed-free-sheen 2.4s ease-in-out infinite
 
 @keyframes speed-free-pulse
@@ -3294,9 +3346,9 @@ onUnmounted(() => {
 
 @keyframes speed-free-sheen
   0%, 55%
-    transform: translateX(-120%)
+    transform: translateX(-180%) skewX(-22deg)
   100%
-    transform: translateX(120%)
+    transform: translateX(260%) skewX(-22deg)
 
 @media (prefers-reduced-motion: reduce)
   .speed-free-badge, .speed-free-badge::after
@@ -3319,43 +3371,124 @@ onUnmounted(() => {
   animation: countdown-pop 375ms ease-out forwards
   will-change: transform, opacity
 
+// Each number punches in tilted, lands straight, then blows past the camera.
 @keyframes countdown-pop
   0%
-    transform: scale(0.4)
+    transform: scale(0.4) rotate(-12deg)
     opacity: 0
   20%
-    transform: scale(1)
+    transform: scale(1.08) rotate(2deg)
     opacity: 1
+  30%
+    transform: scale(1) rotate(0)
   100%
     transform: scale(2.6)
     opacity: 0
 
-// ── Honor Reward Shine ───────────────────────────────────────────────────
+// ── Honor Reward: a solid plum plate with a hard double-strip shine ─────
 .honor-reward
   position: relative
   overflow: hidden
-  padding: 0.25rem 0.75rem
+  padding: 0.25rem 0.85rem
   border-radius: var(--radius-ui-sm)
-  border: 2px solid var(--color-plum-500)
-  background: color-mix(in srgb, var(--color-plum-700) 55%, transparent)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-plum-700)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 3px 0 var(--color-plum-500), 0 4px 0 var(--color-ink)
+  animation: ui-pop-in 0.34s var(--ui-back-out) 0.5s both
+
+  .text-plum-300
+    color: var(--color-plum-300)
+    text-shadow: var(--ui-stroke-sm)
 
   &::after
     content: ''
     position: absolute
-    top: 0
-    left: -100%
-    width: 60%
-    height: 100%
-    background: linear-gradient(105deg, transparent 30%, rgba(215, 176, 255, 0.35) 50%, transparent 70%)
-    animation: honor-shine 2.4s ease-in-out infinite
+    top: -10%
+    bottom: -10%
+    left: 0
+    width: 40%
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0 55%, transparent 55% 70%, rgba(255, 255, 255, 0.3) 70% 100%)
+    transform: translateX(-180%) skewX(-22deg)
+    animation: honor-shine 2.6s ease-in-out infinite
 
 @keyframes honor-shine
-  0%
-    left: -100%
-  60%
-    left: 160%
+  0%, 55%
+    transform: translateX(-180%) skewX(-22deg)
   100%
-    left: 160%
+    transform: translateX(320%) skewX(-22deg)
+
+@media (prefers-reduced-motion: reduce)
+  .honor-reward, .honor-reward::after
+    animation: none
+
+// ── Result: verdict + coin row ───────────────────────────────────────────
+.reward-result-text
+  text-shadow: var(--ui-stroke-xl)
+  letter-spacing: 0.02em
+  line-height: 1.05
+
+  // After the slam, a win keeps a slow victory wobble.
+  &.is-win
+    animation: ui-slam 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) 120ms both, result-wobble 2.4s ease-in-out 0.8s infinite
+
+@keyframes result-wobble
+  0%, 100%
+    transform: rotate(-2deg) scale(1)
+  50%
+    transform: rotate(2deg) scale(1.04)
+
+.reward-coin-row
+  .reward-coin-amount
+    text-shadow: var(--ui-stroke-lg)
+
+  .reward-coin-icon
+    animation: ui-pop-in 0.34s var(--ui-back-out) 0.3s both
+
+@media (prefers-reduced-motion: reduce)
+  .reward-result-text.is-win, .reward-coin-row .reward-coin-icon
+    animation: none
+
+// ── Turn banners ─────────────────────────────────────────────────────────
+.turn-banner
+  padding: 0.25em 1.2em 0.4em
+
+.opp-turn-tag
+  padding: 0.2em 1em 0.32em
+
+.opp-turn-text
+  color: var(--color-sun-300)
+
+// ── Tap to start ─────────────────────────────────────────────────────────
+// A double thump, then rest: reads as "go!" rather than a fading prompt.
+.tap-start-beat
+  animation: tap-start-beat 2.2s ease-in-out infinite
+
+@keyframes tap-start-beat
+  0%, 40%, 100%
+    transform: scale(1)
+  10%
+    transform: scale(1.08) rotate(-1.5deg)
+  20%
+    transform: scale(0.98)
+  30%
+    transform: scale(1.04) rotate(0.8deg)
+
+.tap-start-hint
+  padding: 0.25em 1em 0.35em
+
+@media (prefers-reduced-motion: reduce)
+  .tap-start-beat
+    animation: none
+
+// The drag hint on a navy plate: legible over any arena tile.
+.drag-hint-plate
+  display: inline-block
+  padding: 0.2rem 0.7rem 0.3rem
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm)
+  background-color: var(--color-royal-900)
+  box-shadow: inset 0 2px 0 var(--color-royal-700), 0 3px 0 var(--color-ink)
 
 // ── Tap to start ─────────────────────────────────────────────────────────
 // Capped to the room between the side HUD columns (logo / boss badge left,
@@ -3383,11 +3516,13 @@ onUnmounted(() => {
   margin-top: 0.15rem
 
 // ── Blade Stats HUD ──────────────────────────────────────────────────────
+// Solid navy counter plate (no see-through mix): a royal lip, a hard drop,
+// and the per-blade label on a royal strip across the top.
 .blade-stat-card
-  background: color-mix(in srgb, var(--color-wood-800) 88%, transparent)
+  background-color: var(--color-royal-900)
   border: 2px solid var(--color-ink)
   border-radius: var(--radius-ui-sm)
-  box-shadow: inset 0 2px 0 var(--color-wood-600), 0 2px 0 var(--color-ink)
+  box-shadow: inset 0 2px 0 var(--color-royal-700), 0 3px 0 var(--color-ink)
   padding: 0.2rem 0.4rem
   transition: opacity 0.3s ease
 
@@ -3446,14 +3581,19 @@ onUnmounted(() => {
 
 .blade-stat-label
   font-size: 0.6rem
-  font-weight: 800
+  font-weight: 900
   text-transform: uppercase
   letter-spacing: 0.04em
-  color: var(--color-cream-200)
+  color: var(--color-ice-50)
   text-align: center
   line-height: 1
-  margin-bottom: 0.15rem
-  text-shadow: 1px 1px 0 var(--color-ink)
+  margin: -0.2rem -0.4rem 0.2rem
+  padding: 0.12rem 0.3rem 0.15rem
+  background-color: var(--color-royal-600)
+  background-image: var(--ui-stripes)
+  border-bottom: 2px solid var(--color-ink)
+  border-radius: calc(var(--radius-ui-sm) - 2px) calc(var(--radius-ui-sm) - 2px) 0 0
+  text-shadow: var(--ui-stroke-sm)
 
 .blade-stat-grid
   display: grid
@@ -3465,9 +3605,10 @@ onUnmounted(() => {
   align-items: center
   gap: 0.15rem
   font-size: 0.65rem
-  font-weight: 800
+  font-weight: 900
   line-height: 1.3
-  text-shadow: 1px 1px 0 var(--color-ink)
+  font-variant-numeric: tabular-nums
+  text-shadow: var(--ui-stroke-sm)
 
 .blade-stat-icon
   width: 0.91rem
@@ -3479,6 +3620,7 @@ onUnmounted(() => {
     padding: 0.25rem 0.5rem
   .blade-stat-label
     font-size: 0.7rem
+    margin: -0.25rem -0.5rem 0.2rem
   .blade-stat-grid
     gap: 0 0.4rem
   .blade-stat-row

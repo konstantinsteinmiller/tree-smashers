@@ -53,7 +53,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   div(class="relative w-full font-black" ref="dropdownRef")
     div(v-if="label" class="ui-label mb-1 ml-1") {{ label }}
 
-    //- Trigger: a cream secondary button (DESIGN.md) with a wood chevron.
+    //- Trigger: an ice secondary button (DESIGN.md) with a royal chevron chip.
     button.ui-btn.ui-btn--secondary(
       type="button"
       @click="toggle"
@@ -62,11 +62,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
       class="w-full !justify-between min-w-[140px] px-4 py-3"
     )
       span(class="relative block text-sm md:text-lg truncate mr-2") {{ selectedLabel }}
-      span(
-        class="relative transition-transform duration-200 text-[var(--color-wood-700)]"
-        :class="{ 'rotate-180': isOpen }"
+      span.select-chevron(
+        class="relative flex items-center justify-center"
+        :class="{ 'is-open': isOpen }"
       )
-        svg(width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+        svg(width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
           path(d="m6 9 6 6 6-6")
 
     transition(name="pop")
@@ -79,9 +79,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
           class="ui-scroll overflow-y-auto p-2"
           :style="{ maxHeight: maxHeight }"
         )
-          div.select-option(
-            v-for="option in options"
+          div.select-option.ui-pop-in(
+            v-for="(option, i) in options"
             :key="option.value"
+            :style="{ '--i': Math.min(i, 8) }"
             role="option"
             :aria-selected="modelValue === option.value"
             @click="selectOption(option.value)"
@@ -93,21 +94,38 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </template>
 
 <style scoped lang="sass">
+.select-chevron
+  width: 1.9rem
+  height: 1.9rem
+  flex: 0 0 auto
+  color: var(--color-ice-50)
+  background-color: var(--color-royal-500)
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm)
+  box-shadow: inset 0 2px 0 var(--color-royal-300), inset 0 -3px 0 var(--color-royal-700)
+  transition: transform 0.3s var(--ui-spring)
+  &.is-open
+    transform: rotate(180deg)
+
 .select-menu
-  background-color: var(--color-cream-100)
+  background-color: var(--color-ice-100)
   color: var(--ui-text)
   border: 3px solid var(--color-ink)
   border-radius: var(--radius-ui-lg)
-  box-shadow: 0 5px 0 var(--color-ink)
+  box-shadow: inset 0 3px 0 var(--color-ice-50), 0 5px 0 var(--color-ink)
 
 .select-option
-  transition: background-color 0.08s ease
+  border: 2px solid transparent
+  transition: background-color 0.08s ease, transform 0.2s var(--ui-spring)
   &:hover
-    background-color: var(--color-cream-200)
+    background-color: var(--color-ice-200)
+    border-color: var(--color-ice-400)
   &.is-selected
     background-color: var(--color-leaf-500)
-    color: var(--color-cream-50)
-    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700)
+    border-color: var(--color-ink)
+    color: var(--color-ice-50)
+    text-shadow: var(--ui-stroke-sm)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 2px 0 var(--color-ink)
 
 /* Transition Animations */
 .pop-enter-active, .pop-leave-active

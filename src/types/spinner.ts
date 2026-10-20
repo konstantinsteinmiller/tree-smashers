@@ -132,14 +132,25 @@ export interface SpinnerState {
   rotation: number
   rotationSpeed: number
   hitFlash: number
-  /** Game-clock time (`gameTime()`) of the last shock-arena zap; gates
-   *  re-zap to ≥250ms apart. */
+  /** Skill-clock time of the last shock (Static Charge proc, Frost Lock cold
+   *  touch); gates re-shock to ≥250ms apart. */
   lastShockMs?: number
   wallBounceCount: number
   lastHitTime: number
   config: SpinnerConfig
   owner: 'player' | 'npc'
   isBoss: boolean
+  // ── Smasher mechanics (use/smasherMechanics.ts) ───────────────────────
+  /** Gameplay HEADING, a unit vector: the launch direction at launch, the
+   *  velocity direction while moving, kept when stopped. Absent = the
+   *  owner's default (player up, npc down). Deterministic (PvP-hashed when
+   *  any armour is in play). */
+  hx?: number
+  hy?: number
+  /** Disc radius multiplier of the smasher (absent = 1). */
+  disc?: number
+  /** Directional armour (damage-taken multipliers); absent = neutral. */
+  armor?: { front: number; back: number }
   // ── Boss ability state ────────────────────────────────────────────────
   /** Blades sharing a groupId treat each other as allies (no FF damage). */
   groupId?: number

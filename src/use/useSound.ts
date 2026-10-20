@@ -261,11 +261,13 @@ const useSounds = () => {
     ctx: AudioContext,
     buffer: AudioBuffer,
     ratio: number,
-    offsetSec: number
+    offsetSec: number,
+    rate = 1
   ): SoundHandle | null => {
     try {
       const source = ctx.createBufferSource()
       source.buffer = buffer
+      if (rate !== 1) source.playbackRate.value = rate
       const gain = ctx.createGain()
       gain.gain.value = clampVolume(ratio)
       source.connect(gain).connect(ctx.destination)
@@ -281,7 +283,7 @@ const useSounds = () => {
     }
   }
 
-  const playViaHtmlAudio = (src: string, ratio: number, offsetSec: number): HTMLAudioElement => {
+  const playViaHtmlAudio = (src: string, ratio: number, offsetSec: number, rate = 1): HTMLAudioElement => {
     const cached = resourceCache.audio.get(src)
     const audio = cached
       ? (cached.cloneNode(false) as HTMLAudioElement)
@@ -290,15 +292,28 @@ const useSounds = () => {
     // Firefox throws DOMException if volume is NaN or out of range (can
     // happen when userSoundVolume hasn't loaded from IndexedDB yet).
     audio.volume = clampVolume(ratio)
+    if (rate !== 1) {
+      try {
+        audio.preservesPitch = false
+        audio.playbackRate = rate
+      } catch { /* best-effort */
+      }
+    }
     if (offsetSec > 0) {
       try {
         audio.currentTime = offsetSec
       } catch { /* not seekable yet — plays from the start */
       }
     }
-    audio.play().catch(() => {
-      /* autoplay blocked or media failed — ignore */
-    })
+    // play() may throw or (older engines, jsdom) return no promise. Sound is
+    // called from inside the simulation, so it must NEVER throw: an exception
+    // here would abort the game code that played it (a death, a hit) and make
+    // audio change the match.
+    try {
+      const p = audio.play() as Promise<void> | undefined
+      if (p && typeof p.catch === 'function') p.catch(() => { /* autoplay blocked — ignore */ })
+    } catch { /* media failed — ignore */
+    }
     return audio
   }
 
@@ -306,7 +321,7 @@ const useSounds = () => {
    * `offsetSec` starts playback that far INTO the file (used by the skills
    * intro drum roll to shorten its build-up so the hit still lands on cue).
    */
-  const playSound = (effect: string, ratio = 0.025, offsetSec = 0): SoundHandle | null => {
+  const playSound = (effect: string, ratio = 0.025, offsetSec = 0, rate = 1): SoundHandle | null => {
     // Mobile mute: don't spawn a source at all. Setting volume to 0 on
     // HTMLAudioElement is a no-op on iOS (and Web Audio gain at 0 would
     // still wake the audio graph), so we just skip playback entirely.
@@ -318,7 +333,7 @@ const useSounds = () => {
     const buffer = resourceCache.audioBuffers.get(src)
     const ctx = getAudioContext()
     if (ctx && buffer) {
-      return playViaWebAudio(ctx, buffer, ratio, offsetSec)
+      return playViaWebAudio(ctx, buffer, ratio, offsetSec, rate)
     }
 
     // Slow path: Web Audio available but buffer not yet decoded. Kick off
@@ -329,7 +344,7 @@ const useSounds = () => {
     }
 
     // Fallback: HTMLAudio (also used when Web Audio is unavailable).
-    return playViaHtmlAudio(src, ratio, offsetSec)
+    return playViaHtmlAudio(src, ratio, offsetSec, rate)
   }
 
   return {

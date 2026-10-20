@@ -45,7 +45,7 @@
 
 // Use a unique class name the extension won't have a pre-made rule for
 html[native-dark-active] .game-ui-immune
-  --native-dark-bg-color: rgba(82, 50, 29, 0.5) !important
+  --native-dark-bg-color: rgba(27, 42, 122, 0.5) !important
   --native-dark-border-color: inherit !important
   --native-dark-box-shadow: inherit !important
 
@@ -59,7 +59,7 @@ html[native-dark-active] .game-ui-immune
 
   // Re-assert specific background transparencies
   &.bg-slate-800\/50, .bg-slate-800\/50
-    background-color: rgba(82, 50, 29, 0.5) !important
+    background-color: rgba(27, 42, 122, 0.5) !important
     background-blend-mode: normal !important
 
   // Re-assert shadows
@@ -75,7 +75,7 @@ html[native-dark-active] .game-ui-immune
   background-color: var(--color-berry-500) !important
 
 .text-shadow
-  text-shadow: 0 3px 0 var(--color-ink), -1.5px -1.5px 0 var(--color-ink), 1.5px -1.5px 0 var(--color-ink), -1.5px 1.5px 0 var(--color-ink), 1.5px 1.5px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke)
 
 .text-shadow-light
   text-shadow: 3px 3px 0 var(--color-ink-soft), -1px -1px 0 var(--color-ink-soft), 1px -1px 0 var(--color-ink-soft), -1px 1px 0 var(--color-ink-soft), 1px 1px 0 var(--color-ink-soft)
@@ -83,7 +83,7 @@ html[native-dark-active] .game-ui-immune
 
 // Legacy outlined-text helper — now the cozy ink outline (same as .ui-outline-sm).
 .game-text
-  text-shadow: 0 2px 0 var(--color-ink), -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink), 1.5px 0 0 var(--color-ink), -1.5px 0 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 
 .attention-bounce
   animation: attention-bounce 1.4s infinite ease-in-out

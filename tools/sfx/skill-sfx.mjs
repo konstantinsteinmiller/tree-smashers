@@ -19,6 +19,11 @@
 //   skill-rocket   Homing Rockets volley — a rising noise whoosh + launch
 //                  chirp, with a small pop at the end (~0.55 s)
 //   skill-zap      Static Charge shock / stun — crackling FM buzz (~0.4 s)
+//   skill-crit     Lucky Edge crit / smasher salvo — a wooden thwack with a
+//                  bright two-note sparkle on top (~0.35 s)
+//   skill-whoosh   Phase Step dodge — a soft airy swish falling in pitch (~0.3 s)
+//   skill-boost    Momentum stack — a short rising "bloop" blip (~0.2 s)
+//   (smasher skills replay these at their own playback rate, 0.7–1.25×)
 //   skill-drumroll Skills intro build-up — snare hits that accelerate on the
 //                  intro's `si-drum` beat grid (0/30/52/68/80/89/95 % of
 //                  1300 ms), a crescendo roll under them, and the HIT (kick +
@@ -226,6 +231,60 @@ const zap = () => {
   }
   mixIn(x, svf(crackle, () => 4200, 0.9, 'high'), 0, 0.9)
   return edgeFades(normalize(x, -2), 1, 30)
+}
+
+/** Crit: wooden thwack (low thump + mid knock) + two-note sparkle. */
+const crit = () => {
+  const x = buf(0.36)
+  const r = rng(77)
+  const knock = buf(0.06)
+  for (let i = 0; i < knock.length; i++) knock[i] = (r() * 2 - 1) * expEnv(i, 0.01)
+  mixIn(x, svf(knock, () => 1100, 1.6, 'band'), 0, 1.6)
+  let ph = 0
+  const thump = buf(0.12)
+  for (let i = 0; i < thump.length; i++) {
+    const f = 95 + 120 * expEnv(i, 0.015)
+    ph += TAU * f / SR
+    thump[i] = Math.sin(ph) * adEnv(i, 0.001, 0.04)
+  }
+  mixIn(x, thump, 0, 1.0)
+  for (const [t0, f, g] of [[0.035, 1760, 0.42], [0.09, 2637, 0.36]]) {
+    const ping = buf(0.24)
+    for (let i = 0; i < ping.length; i++) {
+      const t = i / SR
+      ping[i] = (Math.sin(TAU * f * t) + 0.3 * Math.sin(TAU * f * 2.01 * t)) * adEnv(i, 0.002, 0.07)
+    }
+    mixIn(x, ping, Math.round(t0 * SR), g)
+  }
+  return edgeFades(normalize(x, -2), 1, 40)
+}
+
+/** Whoosh: band-passed noise sweeping 3200 → 500 Hz, soft in, soft out. */
+const whoosh = () => {
+  const x = buf(0.3)
+  const n = x.length
+  const r = rng(91)
+  const noise = new Float64Array(n)
+  for (let i = 0; i < n; i++) noise[i] = r() * 2 - 1
+  const sw = svf(noise, (i) => 500 + 2700 * Math.pow(1 - i / n, 1.6), 3, 'band')
+  for (let i = 0; i < n; i++) {
+    const u = i / n
+    x[i] = sw[i] * Math.min(1, u / 0.25) * Math.pow(1 - u, 1.4) * 1.5
+  }
+  return edgeFades(normalize(x, -3), 2, 40)
+}
+
+/** Boost: a rising sine blip 440 → 990 Hz with a soft second harmonic. */
+const boost = () => {
+  const x = buf(0.2)
+  let ph = 0
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR
+    const f = 440 + 550 * Math.min(1, t / 0.11)
+    ph += TAU * f / SR
+    x[i] = (Math.sin(ph) + 0.25 * Math.sin(2 * ph)) * adEnv(i, 0.004, 0.06)
+  }
+  return edgeFades(normalize(x, -3), 1, 30)
 }
 
 /** One snare stroke: tuned body + band-passed noise, `gain` 0..1. */
@@ -445,6 +504,9 @@ const VOICES = {
   'skill-shield': shield,
   'skill-rocket': rocket,
   'skill-zap': zap,
+  'skill-crit': crit,
+  'skill-whoosh': whoosh,
+  'skill-boost': boost,
   'skill-drumroll': drumroll
 }
 

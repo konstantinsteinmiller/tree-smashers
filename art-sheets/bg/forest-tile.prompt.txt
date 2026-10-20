@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, seamlessly tileable background texture, 1:1, filling the whole canvas edge to edge. Not a scene, not a framed picture, no border, no vignette.
+
+WHAT IT IS NOT: the attached image is only a flat placeholder showing the layout and colours. Do not copy its flat vector look, and do not add anything that is not forest ground cover.
+
+WHAT IT IS: a top-down view of a cosy cartoon forest floor for a cute toy-box game loading screen: soft rounded bushes (dark leaf green clumps), a few little leaves, small grass tufts, a couple of tiny yellow and pink flowers, on a deep forest green ground (#2f5f35 as the base). Seen straight from above, no horizon, no sky, no perspective.
+
+COLOUR: keep it calm and mid-dark — the base green #2f5f35, bush greens #3a6e3f / #2a5530, leaf green #4c8a4a, tiny accents #f4d47c yellow and #f2a6b8 pink. Low contrast overall: this sits BEHIND a logo and a progress bar and must never compete with them. No bright highlights, no white.
+
+SEAMLESS: the texture will be repeated in a grid and panned slowly. Anything that touches the left edge continues on the right edge, top continues on bottom. Keep the elements small and evenly spread so no single object dominates and no visible grid repeat stands out. Keep the edges and the corners as plain ground with only small grass where possible.
+
+STYLE: soft hand-painted cartoon, gentle painterly shading inside each shape, clean rounded silhouettes, like a polished mobile game. No text, no letters, no logo, no characters, no animals, no UI.
+
+BEFORE YOU CALL IT FINISHED: one square texture, edge to edge, no border, calm dark-green, no text, tileable.
+
+OUTPUT: one square image, 1:1, the whole canvas is the texture.

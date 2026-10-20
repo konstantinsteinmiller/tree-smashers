@@ -102,7 +102,7 @@ const ariaText = computed(() =>
       //- Promotion gate: the division's last LP opens the gatekeeper fight.
       span.llb__gate(v-if="atGate" aria-hidden="true")
         svg(viewBox="0 0 24 24" width="100%" height="100%")
-          path(d="M5 21V4h2v1.2l10.6.1-2.6 3.9 2.6 3.9H7V21z" fill="#fdf2d8" stroke="#3a2314" stroke-width="1.6" stroke-linejoin="round")
+          path(d="M5 21V4h2v1.2l10.6.1-2.6 3.9 2.6 3.9H7V21z" fill="#eef5ff" stroke="#161a40" stroke-width="1.6" stroke-linejoin="round")
     div.llb__label(aria-hidden="true") {{ label }}
 </template>
 
@@ -115,36 +115,47 @@ const ariaText = computed(() =>
   width: 100%
   min-width: 0
 
+// Deep navy well with a hard inner lip.
 .llb__track
   position: relative
-  height: 0.95rem
+  height: 1rem
   border-radius: 999px
-  background: var(--color-wood-800)
+  background: var(--color-royal-900)
   border: 2px solid var(--color-ink)
-  box-shadow: inset 0 2px 0 rgba(58, 35, 20, 0.5)
+  box-shadow: inset 0 3px 0 var(--color-ink), 0 2px 0 var(--color-ink)
   overflow: visible
 
 .llb--compact .llb__track
-  height: 0.7rem
+  height: 0.8rem
 
+// Tier-coloured fill, flat diagonal stripes, a hard dark base band. While it
+// slides (result screen) the stripes march — the bar visibly "charges".
 .llb__fill
   position: absolute
   inset: 0 auto 0 0
   border-radius: 999px
   background-color: var(--llb-accent)
-  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--llb-accent) 70%, var(--color-ink))
+  background-image: var(--ui-stripes)
+  background-size: 22px 100%
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--llb-accent) 62%, var(--color-ink)), 1px 0 0 var(--color-ink)
   min-width: 0.6rem
   overflow: hidden
 
 .llb__fill--anim
-  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1)
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1)
+  animation: llb-march 0.5s linear 2
 
+@keyframes llb-march
+  to
+    background-position: 22px 0
+
+// Hard white gloss strip along the top (flat, no ramp).
 .llb__shine
   position: absolute
-  inset: 1px 0.3rem auto
-  height: 30%
+  inset: 2px 0.35rem auto
+  height: 26%
   border-radius: 999px
-  background: rgba(255, 250, 240, 0.45)
+  background: rgba(255, 255, 255, 0.5)
 
 // Champion: flat four-colour patchwork stripes that slowly slide.
 .llb--champion .llb__fill
@@ -156,28 +167,33 @@ const ariaText = computed(() =>
   to
     background-position: 4rem 0
 
+// The promotion gate flag: hops on a beat (a sharp hop, then rest).
 .llb__gate
   position: absolute
-  right: -0.45rem
+  right: -0.5rem
   top: 50%
-  width: 1.35rem
-  height: 1.35rem
+  width: 1.5rem
+  height: 1.5rem
   transform: translateY(-50%)
   filter: drop-shadow(0 2px 0 var(--color-ink))
-  animation: llb-gate 1.4s ease-in-out infinite
+  animation: llb-gate 1.5s ease-in-out infinite
 
 @keyframes llb-gate
-  50%
-    transform: translateY(-50%) scale(1.15)
+  0%, 60%, 100%
+    transform: translateY(-50%) rotate(0)
+  72%
+    transform: translateY(-80%) rotate(-10deg) scale(1.15)
+  84%
+    transform: translateY(-50%) rotate(4deg)
 
 .llb__label
-  font-size: 0.72rem
+  font-size: 0.74rem
   font-weight: 900
   line-height: 1
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   text-align: right
   font-variant-numeric: tabular-nums
-  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
   white-space: nowrap
 
 .llb--static .llb__fill,

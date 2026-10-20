@@ -1,0 +1,2 @@
+{ "top": { "cushioned": { "defenseMultiplier": 1.55, "healthBonus": 16 }, "round": { "defenseMultiplier": 1.35, "healthBonus": 13 }, "star": { "damageMultiplier": 1.95 }, "piercer": { "damageMultiplier": 1.55 }, "triangle": { "damageMultiplier": 1.15 } },
+  "bottom": { "tanky": { "healthBonus": 10 }, "speedy": { "healthBonus": 10 } } }

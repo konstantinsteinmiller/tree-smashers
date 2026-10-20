@@ -29,7 +29,6 @@ import {
   effectiveHp,
   hasSkill,
   hazardScale,
-  hazardShockKeep,
   incomingSkill,
   isPhased,
   isStunnedFor,
@@ -464,14 +463,6 @@ describe('applyHpLoss (Ward → Shield → HP → Second Wind)', () => {
     expect(out.hpLost).toBe(0)
     expect(hazardScale(blade('npc'), 'lava')).toBe(1)
     expect(hazardScale(bearer('player', ['guard_shell']), 'lava')).toBe(1)
-  })
-
-  it('Hazard Ward shock keep: 10 % + 90 % × shockKeep (else 10 %)', () => {
-    const hw = skillParams('hazard_ward', 10)
-    expect(hazardShockKeep(bearer('player', ['hazard_ward'], 10))).toBeCloseTo(0.1 + 0.9 * hw.shockKeep)
-    expect(hazardShockKeep(bearer('player', ['hazard_ward'], 10))).toBeCloseTo(0.19)
-    expect(hazardShockKeep(blade('player'))).toBe(0.1)
-    expect(hazardShockKeep(bearer('player', ['momentum']))).toBe(0.1)
   })
 
   it('Second Wind: once, at ≤ 35 %, heal capped at max HP', () => {

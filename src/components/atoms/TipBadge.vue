@@ -37,31 +37,46 @@ const { t } = useI18n()
 </template>
 
 <style scoped lang="sass">
+// Ice card with a sun accent bar down the left edge (a flat inset band),
+// a hard drop, and an entrance that lands late (after the reward) with a
+// small tilt. The star then spins in on its own beat.
 .tip-badge
-  background-color: var(--color-cream-100)
+  background-color: var(--color-ice-100)
   color: var(--ui-text)
   border: 3px solid var(--color-ink)
-  box-shadow: inset 0 3px 0 var(--color-cream-50), 0 4px 0 var(--color-ink)
-  outline: 2px dashed rgba(110, 69, 39, 0.35)
-  outline-offset: -7px
-  animation: tip-pop 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28)
+  box-shadow: inset 6px 0 0 var(--color-sun-400), inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-300), 0 4px 0 var(--color-ink)
+  animation: tip-pop 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) 0.6s both
 
 .tip-star
   background-color: var(--color-sun-400)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   border: 2px solid var(--color-ink)
-  box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -2px 0 var(--color-sun-600)
+  box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -3px 0 var(--color-sun-600), 0 2px 0 var(--color-ink)
+  animation: tip-star 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) 0.85s both
+
+  svg
+    filter: drop-shadow(0 1.5px 0 var(--color-ink))
 
 .tip-text
   color: var(--ui-text)
 
 @keyframes tip-pop
   0%
-    transform: scale(0.85) translateY(8px)
+    transform: scale(0.8) translateY(10px) rotate(-3deg)
     opacity: 0
   100%
-    transform: scale(1) translateY(0)
+    transform: none
     opacity: 1
+
+@keyframes tip-star
+  0%
+    transform: scale(0.3) rotate(-120deg)
+  100%
+    transform: none
+
+@media (prefers-reduced-motion: reduce)
+  .tip-badge, .tip-star
+    animation: none
 
 // Short landscape: the reward overlay has to fit the ribbon, the result text,
 // the reward row, this badge AND the tap-to-continue prompt into ~390px. The

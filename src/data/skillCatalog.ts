@@ -150,14 +150,24 @@ const ICONS: Record<SkillId, string> = {
     'M12 2.2L20.49 7.1L20.49 16.9L12 21.8L3.51 16.9L3.51 7.1Z' +
     'M12 6.6C10.4 9.2 8.4 10.9 8.4 14A3.6 3.6 0 0 0 15.6 14C15.6 10.9 13.6 9.2 12 6.6Z',
   static_charge:
-    'M15.2 2.4L13 9.8L18.8 9.8L9.6 21.6L11 13.6L5.2 13.6L14 2.4Z'
+    'M15.2 2.4L13 9.8L18.8 9.8L9.6 21.6L11 13.6L5.2 13.6L14 2.4Z',
+  // Smasher-only effects. Ricochet chevron + the ball it banks.
+  bank_shot:
+    'M2.6 7.2L5.4 5.6L11.2 14.6L16.2 4.2L19.1 5.6L11.4 20.6Z' +
+    'M17.6 13.4A2.6 2.6 0 1 1 22.8 13.4A2.6 2.6 0 1 1 17.6 13.4Z',
+  anchor:
+    'M11 2.4L13 2.4L13 5.2L16.2 5.2L16.2 7.2L13 7.2L13 18.6C15.4 18.2 17.3 16.7 18.1 14.5L16.4 13.8L20.4 11.6L21.5 16.1L20.1 15.5C18.9 18.9 15.7 21.2 12 21.2C8.3 21.2 5.1 18.9 3.9 15.5L2.5 16.1L3.6 11.6L7.6 13.8L5.9 14.5C6.7 16.7 8.6 18.2 11 18.6L11 7.2L7.8 7.2L7.8 5.2L11 5.2Z',
+  tower_breaker:
+    'M13.6 2.2L21.8 6.4L18.9 12.3L15.9 10.6L6.1 21.8L2.4 18.6L12.6 7.9L10.9 5.9Z',
+  thorns:
+    'M12 1.8L14 8.2L19.6 4.4L15.9 10L22.2 12L15.9 14L19.6 19.6L14 15.8L12 22.2L10 15.8L4.4 19.6L8.1 14L1.8 12L8.1 10L4.4 4.4L10 8.2Z'
 }
 
 type SkillDefs = { [K in SkillId]: SkillDef<K> }
 
 const def = <K extends SkillId>(d: SkillDef<K>): SkillDef<K> => Object.freeze(d)
 
-/** The ten skills. Tables: skills-feature.md §4 = tools/skills-sim/skills.mjs. */
+/** The skills (ten team skills + the smasher-only effects). Tables: skills-feature.md §4 = tools/skills-sim/skills.mjs. */
 export const SKILLS: Readonly<SkillDefs> = Object.freeze({
   mirror_plate: def({
     id: 'mirror_plate', tag: 'DEF', unlockStage: 10, icon: ICONS.mirror_plate, color: '#e2e8f0',
@@ -228,8 +238,40 @@ export const SKILLS: Readonly<SkillDefs> = Object.freeze({
     levels: zipLevels<SkillParamsById['static_charge']>({
       chance: [0.07, 0.08, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.17, 0.18]
     })
+  }),
+  // ── Smasher-only effects (disc / armour playstyles) ──────────────────────
+  // Not in the team shop (smasherOnly, unlockStage 0) and not in the
+  // tools/skills-sim parity set. None of them rolls RNG; every bonus is
+  // inside the SKILL_HIT_MUL_CAP clamp or capped on its own.
+  bank_shot: def({
+    id: 'bank_shot', tag: 'OFF', unlockStage: 0, smasherOnly: true, icon: ICONS.bank_shot, color: '#f472b6',
+    levels: zipLevels<SkillParamsById['bank_shot']>({
+      pct: [0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30]
+    })
+  }),
+  anchor: def({
+    id: 'anchor', tag: 'DEF', unlockStage: 0, smasherOnly: true, icon: ICONS.anchor, color: '#94a3b8',
+    levels: zipLevels<SkillParamsById['anchor']>({
+      resist: [0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.40]
+    })
+  }),
+  tower_breaker: def({
+    id: 'tower_breaker', tag: 'OFF', unlockStage: 0, smasherOnly: true, icon: ICONS.tower_breaker, color: '#d97706',
+    levels: zipLevels<SkillParamsById['tower_breaker']>({
+      pct: [0.20, 0.23, 0.26, 0.30, 0.33, 0.36, 0.40, 0.43, 0.46, 0.50]
+    })
+  }),
+  thorns: def({
+    id: 'thorns', tag: 'DEF', unlockStage: 0, smasherOnly: true, icon: ICONS.thorns, color: '#16a34a',
+    levels: zipLevels<SkillParamsById['thorns']>({
+      share: [0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.20]
+    })
   })
 })
+
+/** The team-shop skills (the ten of skills-feature.md); smasher-only
+ *  effects are carried by smasher skills alone. */
+export const TEAM_SKILL_IDS: readonly SkillId[] = Object.freeze(SKILL_IDS.filter(id => !SKILLS[id].smasherOnly))
 
 /** `1 << index in SKILL_IDS` — for the per-blade `has` bitmask. */
 export const SKILL_BIT: Readonly<Record<SkillId, number>> = Object.freeze(
@@ -239,7 +281,7 @@ export const SKILL_BIT: Readonly<Record<SkillId, number>> = Object.freeze(
 /** Unlock order (by boss stage, 10 → 55). Auto-fill puts the earliest learned,
  *  unequipped skill of this list into an empty unlocked slot (§6.2). */
 export const SKILL_AUTOFILL_ORDER: readonly SkillId[] = Object.freeze(
-  [...SKILL_IDS].sort((a, b) => SKILLS[a].unlockStage - SKILLS[b].unlockStage)
+  [...TEAM_SKILL_IDS].sort((a, b) => SKILLS[a].unlockStage - SKILLS[b].unlockStage)
 )
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

@@ -25,8 +25,10 @@ const { t } = useI18n()
   )
     template(v-for="(s, i) in loadout" :key="i")
       div.flex.items-center.gap-1
-        SkillIcon(:id="s.id" :size="28")
-        span.text-ink.font-black(class="text-xs") {{ t('lv') }}{{ s.level }}
+        SkillIcon(:id="s.id" :skill-key="s.key" :size="28")
+        //- Level as a small navy chip with white stroked digits (reads on the
+        //- ice card and on the lime ready card alike).
+        span.ui-chip.ui-chip--royal.font-black(class="text-[0.7rem]") {{ t('lv') }}{{ s.level }}
     span.text-ink-soft.font-bold(
       v-if="!loadout.length"
       aria-hidden="true"

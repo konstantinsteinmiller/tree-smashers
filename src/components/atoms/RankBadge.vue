@@ -97,21 +97,42 @@ const ariaLabel = computed(() =>
 </template>
 
 <style scoped lang="sass">
-// The same wood plate the rest of the HUD wears — ink outline, hard 0-blur
-// drop, glyph then number — so the placing reads as one of the game's own
-// numbers rather than a widget bolted on. A sun-gold trophy, because it is the
-// one number on the screen that is not about this run: it is about everyone
-// else.
+// The placing as an ANGLED royal tag (skewed plate, upright text), a sun-gold
+// trophy, a white stroked number — one of the game's own display numbers, not
+// a widget bolted on. It slams in a beat after the result title. Hard 0-blur
+// edges only.
 .rank-badge
+  position: relative
   display: inline-flex
   align-items: baseline
   gap: 0.3em
-  padding: clamp(0.15rem, 0.9vmin, 0.3rem) clamp(0.4rem, 2vmin, 0.7rem)
-  border: 2px solid var(--color-ink)
-  border-radius: 999px
-  background-color: var(--color-wood-600)
-  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
+  padding: clamp(0.2rem, 1vmin, 0.35rem) clamp(0.55rem, 2.4vmin, 0.9rem)
+  isolation: isolate
   color: var(--color-sun-300)
+  animation: rank-badge-slam 0.44s 0.35s cubic-bezier(0.2, 1.5, 0.4, 1) both
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.45rem
+    background-color: var(--color-royal-600)
+    background-image: var(--ui-stripes)
+    box-shadow: inset 0 2px 0 var(--color-royal-400), inset 0 -3px 0 var(--color-royal-800), 0 3px 0 var(--color-ink)
+    transform: skewX(-10deg)
+
+@keyframes rank-badge-slam
+  0%
+    transform: scale(1.8) rotate(-6deg)
+    opacity: 0
+  55%
+    transform: scale(0.92)
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
 
 .rank-badge__icon
   // `align-self` rather than `align-items: center` on the row: the numbers set
@@ -120,17 +141,24 @@ const ariaLabel = computed(() =>
   flex: 0 0 auto
   width: clamp(0.85rem, 4vmin, 1.2rem)
   height: clamp(0.85rem, 4vmin, 1.2rem)
+  filter: drop-shadow(0 1.5px 0 var(--color-ink))
 
 .rank-badge__rank
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   font-weight: 900
   font-size: clamp(0.85rem, 4.2vmin, 1.3rem)
   line-height: 1
+  font-variant-numeric: tabular-nums
   // Every number in this game sits on a hard ink outline.
-  text-shadow: 0 2px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
+  text-shadow: var(--ui-stroke-sm)
 
 .rank-badge__of
-  color: var(--color-cream-200)
+  color: var(--color-ice-200)
   font-weight: 800
   font-size: clamp(0.55rem, 2.4vmin, 0.75rem)
+  text-shadow: var(--ui-stroke-sm)
+
+@media (prefers-reduced-motion: reduce)
+  .rank-badge
+    animation: none
 </style>

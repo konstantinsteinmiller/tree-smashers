@@ -26,10 +26,11 @@ const { t, n } = useI18n()
     div.ltl__state(v-if="!top") {{ t('leaderboard.loading') }}
     div.ltl__state(v-else-if="top.entries.length === 0") {{ t('league.top.empty') }}
     ol.ltl__list(v-else :aria-label="t('league.top.title')")
-      li.ltl__row(
-        v-for="e in top.entries.slice(0, 50)"
+      li.ltl__row.ui-pop-in(
+        v-for="(e, i) in top.entries.slice(0, 50)"
         :key="`${e.rank}:${e.name}:${e.lp}`"
-        :class="{ 'ltl__row--podium': e.rank <= 3 }"
+        :class="[{ 'ltl__row--podium': e.rank <= 3 }, e.rank <= 3 ? `ltl__row--p${e.rank}` : '']"
+        :style="{ '--i': Math.min(i, 10) }"
       )
         span.ltl__rank(:class="`ltl__rank--${Math.min(e.rank, 4)}`") {{ e.rank }}
         LeagueRankBadge.ltl__badge(
@@ -56,64 +57,86 @@ const { t, n } = useI18n()
 .ltl__list
   display: flex
   flex-direction: column
-  gap: 0.3rem
+  gap: 0.35rem
   margin: 0
   padding: 0
   list-style: none
 
+// Recessed ice rows; the podium rows stand up as sun / ice / berry cards with
+// an ink outline and a hard drop. Rows pop in staggered (first ten).
 .ltl__row
   display: grid
-  grid-template-columns: 2rem auto 1fr auto
+  grid-template-columns: 2.1rem auto 1fr auto
   align-items: center
   gap: 0.5rem
-  min-height: 2.4rem
+  min-height: 2.5rem
   padding: 0.2rem 0.6rem
   border-radius: var(--radius-ui)
-  border: 2px solid var(--color-cream-400)
-  background-color: var(--color-cream-200)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  border: 2px solid var(--color-ice-400)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
   color: var(--ui-text)
 
 .ltl__row--podium
-  background-color: var(--color-sun-200)
-  border-color: var(--color-sun-500)
+  border: 3px solid var(--color-ink)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.5), inset 0 -4px 0 rgba(22, 26, 64, 0.18), 0 3px 0 var(--color-ink)
 
+.ltl__row--p1
+  background-color: var(--color-sun-300)
+.ltl__row--p2
+  background-color: var(--color-ice-300)
+.ltl__row--p3
+  background-color: var(--color-berry-300)
+
+// Rank: an angled number tag.
 .ltl__rank
+  position: relative
   display: inline-flex
   align-items: center
   justify-content: center
-  width: 1.8rem
-  height: 1.8rem
-  border-radius: 999px
-  border: 2px solid var(--color-ink)
+  width: 1.95rem
+  height: 1.7rem
+  isolation: isolate
   font-weight: 900
-  font-size: 0.85rem
-  color: var(--color-cream-50)
-  background-color: var(--color-wood-600)
+  font-size: 0.88rem
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
   font-variant-numeric: tabular-nums
 
-.ltl__rank--1
-  background-color: var(--color-sun-400)
-  color: var(--color-ink)
-.ltl__rank--2
-  background-color: var(--color-cream-300)
-  color: var(--color-ink)
-.ltl__rank--3
-  background-color: var(--color-wood-400)
-  color: var(--color-ink)
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border: 2px solid var(--color-ink)
+    border-radius: 0.35rem
+    background-color: var(--color-royal-600)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 2px 0 var(--color-ink)
+    transform: skewX(-10deg)
+
+.ltl__rank--1::before
+  background-color: var(--color-sun-500)
+.ltl__rank--2::before
+  background-color: var(--color-steel-500)
+.ltl__rank--3::before
+  background-color: var(--color-berry-500)
 
 .ltl__name
   min-width: 0
   overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
-  font-weight: 800
+  font-weight: 900
   color: var(--ui-text)
 
 .ltl__lp
   font-weight: 900
   font-size: 0.85rem
-  color: var(--color-wood-700)
+  color: var(--color-royal-700)
   white-space: nowrap
   font-variant-numeric: tabular-nums
+
+.ltl__row--podium .ltl__lp
+  color: var(--color-ink)
 </style>

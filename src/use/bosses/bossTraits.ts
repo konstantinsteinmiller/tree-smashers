@@ -266,7 +266,7 @@ export function frostTouchKeep(victim: TraitBlade): number {
 
 /**
  * Cold touch (Rule A): if the victim's shared shock gate (`lastShockMs`, sim
- * clock, 250 ms — same as shock walls and Static Charge) is open, cut its
+ * clock, 250 ms — shared with Static Charge) is open, cut its
  * velocity to `frostTouchKeep` and close the gate. Returns the keep applied,
  * 0 when gated. Does not check owner / phase (see `onTraitContact`).
  */

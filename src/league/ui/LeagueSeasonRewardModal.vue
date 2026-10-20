@@ -5,6 +5,7 @@ import { isLowQuality } from '@/use/useQuality'
 import { LEAGUE_TIER_META } from '@/use/leagueTiers'
 import FModal from '@/components/molecules/FModal.vue'
 import FButton from '@/components/atoms/FButton.vue'
+import FCountUp from '@/components/atoms/FCountUp.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import LeagueTierIcon from '@/components/atoms/LeagueTierIcon.vue'
@@ -31,7 +32,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [boolean]; claim: [] }>()
 
-const { t, n } = useI18n()
+const { t } = useI18n()
 
 const tierName = computed(() => (props.reward ? t(LEAGUE_TIER_META[props.reward.peakTier].nameKey) : ''))
 const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peakTier].accent : 'var(--color-sun-400)'))
@@ -48,20 +49,21 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
     div.lsr(v-if="reward" :class="{ 'lsr--static': isLowQuality }" :style="{ '--lsr-accent': accent }")
       div.lsr__hero
         div.lsr__rays(aria-hidden="true")
-        LeagueTierIcon.lsr__icon(:tier="reward.peakTier" :size="116")
-      div.lsr__peak {{ t('league.season.peak', { tier: tierName }) }}
+        LeagueTierIcon.lsr__icon(:class="{ 'ui-slam': !isLowQuality }" :tier="reward.peakTier" :size="116")
+      div.lsr__peak(:class="{ 'ui-drop-in': !isLowQuality }" style="--drop-delay: 220ms") {{ t('league.season.peak', { tier: tierName }) }}
       ul.lsr__rewards
         li.lsr__tile(:aria-label="t('league.season.coinsAria', { n: reward.coins }, reward.coins)")
           IconCoin.lsr__glyph(class="text-sun-500" aria-hidden="true")
-          span(aria-hidden="true") +{{ n(reward.coins) }}
+          FCountUp(aria-hidden="true" :value="reward.coins" prefix="+" :delay="isLowQuality ? 0 : 450" ting)
         li.lsr__tile(v-if="reward.diamonds > 0" :aria-label="t('league.season.diamondsAria', { n: reward.diamonds }, reward.diamonds)")
           IconDiamond.lsr__glyph(aria-hidden="true" alt="")
-          span(aria-hidden="true") +{{ n(reward.diamonds) }}
+          FCountUp(aria-hidden="true" :value="reward.diamonds" prefix="+" :delay="isLowQuality ? 0 : 650")
         li.lsr__tile.lsr__tile--frame(v-if="reward.championFrame")
           span.lsr__frame(aria-hidden="true")
           span {{ t('league.season.frame') }}
     template(#footer)
-      FButton(size="md" tone="premium" @click="emit('claim')") {{ t('league.season.claim') }}
+      //- The screen's one hero CTA: premium sun, uppercase, shine + heartbeat.
+      FButton(variant="brawl" size="sm" tone="premium" @click="emit('claim')") {{ t('league.season.claim') }}
 </template>
 
 <style scoped lang="sass">
@@ -99,8 +101,10 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   filter: drop-shadow(0 4px 0 var(--color-ink))
 
 .lsr__peak
-  font-size: 1.1rem
+  font-size: 1.2rem
   font-weight: 900
+  text-transform: uppercase
+  letter-spacing: 0.02em
   color: var(--ui-text)
 
 .lsr__rewards
@@ -112,19 +116,30 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   padding: 0
   list-style: none
 
+// Prize tiles: raised ice cards (ink outline, hard drop) that pop in one by
+// one; the amounts count up (FCountUp) and the coins land with a ting.
 .lsr__tile
   display: inline-flex
   align-items: center
-  gap: 0.35rem
-  min-height: 2.6rem
-  padding: 0.3rem 0.8rem
+  gap: 0.4rem
+  min-height: 2.8rem
+  padding: 0.3rem 0.9rem
   border-radius: var(--radius-ui)
-  border: 2px solid var(--color-cream-400)
-  background-color: var(--color-cream-200)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
-  font-size: 1.15rem
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-ice-50)
+  background-image: var(--ui-stripes-ink)
+  box-shadow: inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-300), 0 4px 0 var(--color-ink)
+  font-size: 1.3rem
   font-weight: 900
   color: var(--ui-text)
+  font-variant-numeric: tabular-nums
+  animation: ui-pop-in 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) both
+  animation-delay: 380ms
+
+  &:nth-child(2)
+    animation-delay: 560ms
+  &:nth-child(3)
+    animation-delay: 740ms
 
 .lsr__glyph
   width: 1.6rem
@@ -140,10 +155,10 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   border: 3px solid var(--color-berry-500)
   box-shadow: 0 0 0 2px var(--color-sun-400), 0 0 0 4px var(--color-ink)
 
-.lsr--static .lsr__rays
+.lsr--static .lsr__rays, .lsr--static .lsr__tile
   animation: none
 
 @media (prefers-reduced-motion: reduce)
-  .lsr__rays
+  .lsr__rays, .lsr__tile
     animation: none
 </style>

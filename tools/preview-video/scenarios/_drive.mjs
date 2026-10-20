@@ -88,15 +88,15 @@ export const saveFixture = (over = {}) => {
     // the difficulty — three enemies fill the frame, and the lava floor is
     // the best-looking of the seven arena types at video size. Stage 12 (lava
     // + 2 bouncers) and 22 (shock, four enemies) are the other candidates.
-    spinner_campaign_stage: '17',
-    spinner_player_max_stage: '17',
-    spinner_coins: '8400',
-    spinner_diamonds: '25',
-    spinner_first_win: '1',
+    smashers_campaign_stage: '17',
+    smashers_player_max_stage: '17',
+    smashers_coins: '8400',
+    smashers_diamonds: '25',
+    smashers_first_win: '1',
 
     // A 3-blade player team. The default save has 2; three reads as a squad
     // and gives a beat sheet a spare blade to lose in the fail clip.
-    spinner_player_team: JSON.stringify([
+    smashers_player_team: JSON.stringify([
       { topPartId: 'star', bottomPartId: 'speedy' },
       { topPartId: 'triangle', bottomPartId: 'balanced' },
       { topPartId: 'round', bottomPartId: 'tanky' }
@@ -104,7 +104,7 @@ export const saveFixture = (over = {}) => {
     // Upgrade levels are applied over the team by `playerTeamWithUpgrades`.
     // Levels in the 6-8 band put the player at parity with stage 17's
     // enemies — a real fight, which is the only kind worth filming.
-    spinner_upgrades: JSON.stringify({
+    smashers_upgrades: JSON.stringify({
       tops: { star: 7, triangle: 7, round: 6, quadratic: 5, cushioned: 5, piercer: 5 },
       bottoms: { speedy: 7, balanced: 7, tanky: 6 }
     }),
@@ -112,25 +112,25 @@ export const saveFixture = (over = {}) => {
     // ── Who moves first ──
     // 'lose' weights the opening coin flip 80/20 toward the player (see the
     // header). Harmless otherwise: nothing else reads it at boot.
-    spinner_last_result: 'lose',
+    smashers_last_result: 'lose',
 
     // ── Every overlay that can cover the arena ──
     // The countdown fires on every 3rd match START. At 0 the next two matches
     // are 1 and 2 — enough for a 30 s clip that plays a second match.
-    spinner_game_start_count: '0',
+    smashers_game_start_count: '0',
     // Treasure chests unlock on elapsed time since the stored timestamp; a
     // timestamp in the FUTURE reads as "just collected", so no chest is ever
     // ready during a take.
-    spinner_chest_ready_at: String(now + 12 * HOUR),
-    spinner_mini_chest_ready_at: String(now + 12 * HOUR),
-    spinner_skin_chest_ready_at: String(now + 12 * HOUR),
-    spinner_skin_chest_first_collected: '1',
+    smashers_chest_ready_at: String(now + 12 * HOUR),
+    smashers_mini_chest_ready_at: String(now + 12 * HOUR),
+    smashers_skin_chest_ready_at: String(now + 12 * HOUR),
+    smashers_skin_chest_first_collected: '1',
     // Skin picker + tip badges: mark them seen so neither opens on its own.
-    spinner_skin_picker_opened: '1',
-    spinner_tip_last_shown: String(now),
-    spinner_tip_losses_on_stage: '0',
-    spinner_tip_tank_loss_streak: '0',
-    spinner_boss_loss_streak: '0',
+    smashers_skin_picker_opened: '1',
+    smashers_tip_last_shown: String(now),
+    smashers_tip_losses_on_stage: '0',
+    smashers_tip_tank_loss_streak: '0',
+    smashers_boss_loss_streak: '0',
     // Interstitial cadence. `isInterstitialReady` is false with no ad
     // provider in a dev build, so this is belt and braces — but an ad break
     // parks the phase at 'ad_break' and would swallow the clip whole.
@@ -140,10 +140,10 @@ export const saveFixture = (over = {}) => {
     // ── Silence ──
     // Chrome is launched with --mute-audio too; this stops the game building
     // its audio graph at all.
-    spinner_user_sound_volume: '0',
-    spinner_user_music_volume: '0',
-    spinner_user_language: 'en',
-    spinner_user_difficulty: 'medium',
+    smashers_user_sound_volume: '0',
+    smashers_user_music_volume: '0',
+    smashers_user_language: 'en',
+    smashers_user_difficulty: 'medium',
 
     // ── Pin the render quality ──
     // useQuality.ts measures a WALL-CLOCK window and can latch FX.low. The
@@ -262,7 +262,7 @@ export const boot = async (ctx, { save = saveFixture(), seed = 1337, stage = nul
   // rejected — produces a perfectly plausible clip of the WRONG match, and
   // the only cheap moment to catch it is here.
   const s = await snapshot(ctx)
-  const wantStage = stage ?? Number(save.spinner_campaign_stage)
+  const wantStage = stage ?? Number(save.smashers_campaign_stage)
   if (s.stage !== wantStage) {
     throw new Error(`preview-video: expected stage ${wantStage}, the page is on ${s.stage}. The fixture did not land.`)
   }

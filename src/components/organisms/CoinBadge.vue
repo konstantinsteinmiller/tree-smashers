@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import { prependBaseUrl } from '@/utils/function'
@@ -47,6 +47,54 @@ const celebrateDiamonds = (amount: number) => {
   }
 }
 
+// ─── Count-up ──────────────────────────────────────────────────────────────
+// The balance COUNTS to its new value (ease-out, 0.35–0.9 s by the size of the
+// change) instead of jumping, then the badge bumps once. Gains count in sun
+// yellow, spends in white. Shows the real value at once on mount and under
+// reduced motion. Raw integers, as before (no locale grouping).
+const shown = ref(coins.value)
+const counting = ref<'up' | 'down' | null>(null)
+let raf = 0
+const stopCount = () => {
+  if (raf) cancelAnimationFrame(raf)
+  raf = 0
+}
+const reducedMotion = (): boolean => {
+  try {
+    return matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return true
+  }
+}
+watch(coins, (to) => {
+  stopCount()
+  const from = shown.value
+  if (from === to) return
+  if (reducedMotion() || typeof requestAnimationFrame !== 'function') {
+    shown.value = to
+    return
+  }
+  counting.value = to > from ? 'up' : 'down'
+  const dur = Math.min(900, 350 + Math.log10(Math.abs(to - from) + 1) * 180)
+  const t0 = performance.now()
+  const frame = (now: number) => {
+    const k = Math.min(1, (now - t0) / dur)
+    shown.value = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)))
+    if (k < 1) {
+      raf = requestAnimationFrame(frame)
+      return
+    }
+    raf = 0
+    shown.value = to
+    const wasUp = counting.value === 'up'
+    counting.value = null
+    const el = rootEl.value
+    if (wasUp && el && typeof el.animate === 'function') el.animate(BUMP_KEYFRAMES, BUMP_TIMING)
+  }
+  raf = requestAnimationFrame(frame)
+})
+onBeforeUnmount(stopCount)
+
 defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
 </script>
 
@@ -63,7 +111,7 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
         class="w-7 h-7 sm:w-8 sm:h-8"
       )
         IconCoin(class="w-7 h-7 sm:w-8 sm:h-8 drop-shadow-[0_1px_0_var(--color-ink)]")
-      span.game-text.coin-badge__value.justify-self-end {{ coins }}
+      span.game-text.coin-badge__value.justify-self-end(:class="{ 'is-gaining': counting === 'up' }") {{ shown }}
 
       ////- Diamond row
       //div.flex.items-center.justify-center.rounded-full(
@@ -100,12 +148,13 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
 </template>
 
 <style scoped lang="sass">
-// Wood plank counter (design.sass .ui-wood look), coin value in cream with
-// an ink outline. 0-blur shadows only.
+// Royal striped counter plate, coin value in white with an ink outline (sun
+// while a gain counts up). 0-blur shadows only.
 .coin-badge
-  background-color: var(--color-wood-600)
+  background-color: var(--color-royal-600)
+  background-image: var(--ui-stripes)
   border: var(--ui-border-w, 3px) solid var(--color-ink)
-  box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -4px 0 var(--color-wood-800), 0 3px 0 var(--color-ink)
+  box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -4px 0 var(--color-royal-800), 0 4px 0 var(--color-ink)
   overflow: hidden
 
   &__value
@@ -113,6 +162,12 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
     text-shadow: 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 1px 0 var(--color-ink), 0 -1px 0 var(--color-ink), 0 2px 0 var(--color-ink)
     letter-spacing: 0.02em
     position: relative
+    font-weight: 900
+    font-variant-numeric: tabular-nums
+    transition: color 0.15s ease
+
+    &.is-gaining
+      color: var(--color-sun-300)
 
   &__value--diamond
     color: var(--color-plum-300)

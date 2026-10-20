@@ -69,19 +69,19 @@ const FLAME_CORE = 'M12 10.6C12.8 11.8 13.7 12.6 13.7 13.9A1.7 1.7 0 0 1 10.3 13
     title(v-if="!decorative") {{ label }}
     //- Ember Nova: flame in a ring.
     g(v-if="trait === 'ember'")
-      circle(cx="12" cy="12" r="9.2" fill="none" stroke="#3a2314" stroke-width="4.2")
-      circle(cx="12" cy="12" r="9.2" fill="none" stroke="#f4ab12" stroke-width="2.2")
-      path(:d="FLAME" fill="#ffc933" stroke="#3a2314" stroke-width="1.6" stroke-linejoin="round")
-      path(:d="FLAME_CORE" fill="#fff0a8")
+      circle(cx="12" cy="12" r="9.2" fill="none" stroke="#161a40" stroke-width="4.2")
+      circle(cx="12" cy="12" r="9.2" fill="none" stroke="#ffae00" stroke-width="2.2")
+      path(:d="FLAME" fill="#ffd21a" stroke="#161a40" stroke-width="1.6" stroke-linejoin="round")
+      path(:d="FLAME_CORE" fill="#fff7a3")
     //- Frost Lock: an ice block with two shine strokes.
     g(v-else-if="trait === 'frost'")
-      rect(x="4" y="4" width="16" height="16" rx="3" fill="#8fd6fb" stroke="#3a2314" stroke-width="2")
-      path(d="M4.8 9.2L20 9.2M9.2 4.8L9.2 20" stroke="#1d7fb6" stroke-width="1.2" opacity="0.7")
-      path(d="M7 15.5L10 12.5M11.5 17L16 12.5" stroke="#fffaf0" stroke-width="1.6" stroke-linecap="round")
+      rect(x="4" y="4" width="16" height="16" rx="3" fill="#7fdcff" stroke="#161a40" stroke-width="2")
+      path(d="M4.8 9.2L20 9.2M9.2 4.8L9.2 20" stroke="#0b80d0" stroke-width="1.2" opacity="0.7")
+      path(d="M7 15.5L10 12.5M11.5 17L16 12.5" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round")
     //- Frostbite: snowflake.
     g(v-else)
-      path(:d="SNOWFLAKE" fill="none" stroke="#3a2314" stroke-width="4.4" stroke-linecap="round")
-      path(:d="SNOWFLAKE" fill="none" stroke="#c4ebff" stroke-width="2.2" stroke-linecap="round")
+      path(:d="SNOWFLAKE" fill="none" stroke="#161a40" stroke-width="4.4" stroke-linecap="round")
+      path(:d="SNOWFLAKE" fill="none" stroke="#c6f2ff" stroke-width="2.2" stroke-linecap="round")
 </template>
 
 <style scoped lang="sass">

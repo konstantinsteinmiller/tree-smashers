@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FReward from '@/components/atoms/FReward.vue'
+import FCountUp from '@/components/atoms/FCountUp.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import IconSpeed from '@/components/icons/IconSpeed.vue'
@@ -37,7 +38,7 @@ const SETTLE_MS = 750
 const req = computed(() => currentReveal.value)
 const open = computed(() => !!req.value)
 const items = computed<ShownRevealItem[]>(() => req.value?.items ?? [])
-const tone = computed(() => req.value?.tone ?? '#ffc933')
+const tone = computed(() => req.value?.tone ?? '#ffd21a')
 
 const opened = ref(false)
 const canContinue = ref(false)
@@ -123,6 +124,7 @@ const skinName = (id: string) => t(`skins.${id}`)
           :data-reveal-kind="it.kind"
         )
           div.reveal__plate(:class="`is-${it.kind}`")
+            span.reveal__star(aria-hidden="true")
             span.reveal__plate-ring
             template(v-if="it.kind === 'skin'")
               img.reveal__portrait(:src="modelImgPath(it.modelId)" alt="" draggable="false")
@@ -130,13 +132,19 @@ const skinName = (id: string) => t(`skins.${id}`)
             IconDiamond.reveal__icon(v-else-if="it.kind === 'diamonds'")
             IconSpeed.reveal__icon.text-cream-50(v-else)
           div.reveal__label.game-text(v-if="it.kind === 'skin'")
-            span.reveal__kicker {{ t('rewardReveal.newSmasher') }}
+            span.reveal__kicker.ui-tag.ui-tag--berry {{ t('rewardReveal.newSmasher') }}
             span.reveal__name {{ skinName(it.modelId) }}
           div.reveal__label.game-text(v-else-if="it.kind === 'speed'")
-            span.reveal__kicker {{ t('rewardReveal.speedBoost') }}
+            span.reveal__kicker.ui-tag.ui-tag--berry {{ t('rewardReveal.speedBoost') }}
             span.reveal__amount {{ t('rewardReveal.minutes', { n: it.minutes }) }}
           div.reveal__label.game-text(v-else)
-            span.reveal__amount(:class="it.kind === 'diamonds' ? 'is-diamonds' : 'is-coins'") +{{ n(it.amount) }}
+            //- Counts up from 0 once the prize has climbed out, ticking, and
+            //- lands with a bump + ting.
+            //- (The ticking digits are hidden from screen readers; the final
+            //- amount is in the sr-only span, so a live region is not spammed.)
+            span.reveal__amount(:class="it.kind === 'diamonds' ? 'is-diamonds' : 'is-coins'" aria-hidden="true")
+              FCountUp(:value="it.amount" prefix="+" :delay="420 + i * 110" ting)
+            span.sr-only +{{ n(it.amount) }}
             span.sr-only {{ it.kind === 'diamonds' ? t('rewardReveal.diamonds') : t('rewardReveal.coins') }}
 </template>
 
@@ -180,6 +188,19 @@ const skinName = (id: string) => t(`skins.${id}`)
 .reveal.is-open .reveal__gift
   animation: gift-jolt 480ms cubic-bezier(0.2, 1.5, 0.4, 1) both
 
+// Tap: the box squashes under the finger before it bursts (the press reads
+// even though the opening follows on the same tap).
+.reveal:not(.is-open) .reveal__gift:active .reveal__box,
+.reveal:not(.is-open) .reveal__gift.is-pressed .reveal__box
+  transform: scale(1.08, 0.86)
+  transform-origin: 50% 100%
+  transition: transform 70ms ease-out
+
+.reveal__gift:focus-visible
+  outline: 3px solid var(--ui-focus)
+  outline-offset: 6px
+  border-radius: var(--radius-ui)
+
 .reveal__box
   position: absolute
   left: 10%
@@ -188,7 +209,7 @@ const skinName = (id: string) => t(`skins.${id}`)
   height: 62%
   border-radius: 0.6rem
   background-color: var(--tone)
-  box-shadow: inset 0 -0.6rem 0 rgba(58, 35, 20, 0.2), inset 0 0.35rem 0 rgba(255, 250, 240, 0.3), 0 0.35rem 0 var(--color-ink)
+  box-shadow: inset 0 -0.6rem 0 rgba(22, 26, 64, 0.2), inset 0 0.35rem 0 rgba(255, 255, 255, 0.3), 0 0.35rem 0 var(--color-ink)
   border: 3px solid var(--color-ink)
 
 .reveal__lid
@@ -200,8 +221,12 @@ const skinName = (id: string) => t(`skins.${id}`)
   border-radius: 0.5rem
   background-color: var(--tone)
   border: 3px solid var(--color-ink)
-  box-shadow: inset 0 -0.35rem 0 rgba(58, 35, 20, 0.18), inset 0 0.3rem 0 rgba(255, 250, 240, 0.35)
+  box-shadow: inset 0 -0.35rem 0 rgba(22, 26, 64, 0.18), inset 0 0.3rem 0 rgba(255, 255, 255, 0.35)
   transform-origin: 20% 100%
+
+// Anticipation: the lid rattles on the box just before it pops.
+.reveal:not(.is-open) .reveal__lid
+  animation: lid-rattle 0.5s linear 0.42s both
 
 .reveal.is-open .reveal__lid
   animation: lid-fly 620ms cubic-bezier(0.15, 1.2, 0.35, 1) forwards
@@ -320,7 +345,7 @@ const skinName = (id: string) => t(`skins.${id}`)
   border-radius: 50%
   background-color: var(--color-cream-100)
   border: 4px solid var(--color-ink)
-  box-shadow: 0 0 0 0.45rem var(--tone), 0 0.55rem 0 0.45rem rgba(58, 35, 20, 0.45)
+  box-shadow: 0 0 0 0.45rem var(--tone), 0 0.55rem 0 0.45rem rgba(22, 26, 64, 0.45)
 
   .is-big &
     width: clamp(7rem, 34vmin, 11.5rem)
@@ -331,6 +356,18 @@ const skinName = (id: string) => t(`skins.${id}`)
     background-color: var(--color-sky-200)
   &.is-speed
     background-color: var(--color-leaf-600)
+
+// The prize stands on a turning flat star burst in the reward tone, with
+// hard diagonal stripes — the Brawl "you got it" sticker, no glow.
+.reveal__star
+  position: absolute
+  inset: -46%
+  z-index: -1
+  background-color: var(--tone)
+  background-image: var(--ui-stripes)
+  clip-path: polygon(50% 0, 60% 30%, 93% 21%, 72% 46%, 100% 64%, 66% 66%, 71% 100%, 50% 77%, 29% 100%, 34% 66%, 0 64%, 28% 46%, 7% 21%, 40% 30%)
+  opacity: 0.9
+  animation: star-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 0.3s both, star-turn 9s linear 0.8s infinite
 
 // A slow solid halo ring — the flat stand-in for a glow.
 .reveal__plate-ring
@@ -360,12 +397,16 @@ const skinName = (id: string) => t(`skins.${id}`)
   text-align: center
   line-height: 1.05
 
+// "NEW SMASHER!" / "SPEED BOOST": a skewed berry tag (design.sass .ui-tag).
 .reveal__kicker
-  color: var(--color-sun-300)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
   font-weight: 900
   text-transform: uppercase
   font-size: clamp(0.75rem, 2.8vmin, 1.05rem)
   letter-spacing: 0.04em
+  margin-bottom: 0.45rem
+  padding: 0.2em 0.9em 0.3em
 
 .reveal__name
   color: var(--color-cream-50)
@@ -381,6 +422,7 @@ const skinName = (id: string) => t(`skins.${id}`)
     color: var(--color-plum-300)
   font-weight: 900
   font-size: clamp(1.6rem, 7vmin, 3rem)
+  text-shadow: var(--ui-stroke-xl)
 
 .is-big .reveal__amount
   font-size: clamp(2rem, 9vmin, 3.6rem)
@@ -414,6 +456,30 @@ const skinName = (id: string) => t(`skins.${id}`)
     transform: scale(0.94, 1.08)
   100%
     transform: scale(1)
+
+@keyframes lid-rattle
+  0%, 100%
+    transform: none
+  15%
+    transform: translateY(-6%) rotate(-4deg)
+  30%
+    transform: translateY(0) rotate(3deg)
+  45%
+    transform: translateY(-9%) rotate(-5deg)
+  60%
+    transform: translateY(0) rotate(4deg)
+  80%
+    transform: translateY(-12%) rotate(-2deg)
+
+@keyframes star-pop
+  0%
+    transform: scale(0) rotate(-90deg)
+  100%
+    transform: scale(1) rotate(0)
+
+@keyframes star-turn
+  to
+    transform: rotate(360deg)
 
 @keyframes lid-fly
   0%
@@ -464,7 +530,7 @@ const skinName = (id: string) => t(`skins.${id}`)
     transform: scale(1.07)
 
 @media (prefers-reduced-motion: reduce)
-  .reveal__gift, .reveal.is-open .reveal__gift, .reveal__hint, .reveal__plate-ring
+  .reveal__gift, .reveal.is-open .reveal__gift, .reveal__hint, .reveal__plate-ring, .reveal__star, .reveal:not(.is-open) .reveal__lid
     animation: none
   .reveal.is-open .reveal__lid
     animation: none

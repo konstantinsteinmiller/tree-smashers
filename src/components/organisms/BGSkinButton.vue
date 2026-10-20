@@ -29,7 +29,7 @@ const swatchStyle = computed(() => {
   //- margin gives the same 44px hit area while the frame — and therefore the
   //- header row's height — stays exactly where it was.
   button.bg-skin-button.relative.flex.items-center.justify-center.cursor-pointer.transition-transform(
-    class="hover:scale-110 active:scale-95"
+    class="hover:scale-110"
     :title="t('bgButton.title')"
     :aria-label="t('bgButton.title')"
     @click="open = true"
@@ -68,8 +68,16 @@ const swatchStyle = computed(() => {
   padding: 2px
   border: 2px solid var(--color-ink)
   border-radius: var(--radius-ui-sm, 0.4rem)
-  background: var(--color-wood-600)
-  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
+  background: var(--color-royal-600)
+  box-shadow: inset 0 2px 0 var(--color-royal-400), 0 3px 0 var(--color-ink)
+  transition: transform 0.24s var(--ui-spring), box-shadow 0.24s var(--ui-spring)
+
+// Press: the frame sinks into its drop (the button's own scale stays the
+// hover/press size cue).
+.bg-skin-button:active .bg-skin-button__frame
+  transform: translateY(2px)
+  box-shadow: inset 0 2px 0 var(--color-royal-400), 0 1px 0 var(--color-ink)
+  transition-duration: var(--ui-press-down)
 
 .bg-skin-button__swatch
   position: absolute
@@ -80,6 +88,6 @@ const swatchStyle = computed(() => {
   position: relative
   width: 1.05rem
   height: 1.05rem
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
   filter: drop-shadow(0 1px 0 var(--color-ink))
 </style>

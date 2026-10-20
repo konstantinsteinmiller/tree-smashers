@@ -1,41 +1,76 @@
-// ─── Tree Smashers UI recipes (see DESIGN.md) ───────────────────────────────
+// ─── Tree Smashers UI recipes — "Toy-box arena", ACTION pass (DESIGN.md, ui-catalog.md)
 //
 // Colour tokens live in tailwind.css (@theme). This file turns them into the
-// few reusable shapes every screen is built from:
+// reusable shapes every screen is built from:
 //
-//   .ui-btn  (+ --primary / --secondary / --danger / --premium / --ad)
-//   .ui-panel        cream parchment card, dark text — modal content, cards
-//   .ui-wood         wooden frame / plank (dark surface, cream text)
-//   .ui-inset        recessed well inside a panel (rows, list items)
-//   .ui-banner       flat fabric banner with notched tails (titles, ribbons)
-//   .ui-chip         small rounded pill (badges, counters, tags)
-//   .ui-title / .ui-label / .ui-body   typography scale
-//   .ui-outline      cream/white text with a hard ink outline (on colour / art)
+//   .ui-btn  (+ --primary / --secondary / --royal / --danger / --premium / --plum / --ad)
+//   .ui-btn--hero      the ONE hero CTA per screen (uppercase, thick lip, stripes)
+//   .ui-shine          idle double-strip shine sweep (hero CTA, claimable rewards)
+//   .ui-breathe        idle heartbeat for the hero CTA (put it on a WRAPPER)
+//   .ui-card           bold game card: ink outline, rarity edge, corner stripes
+//   .ui-tag            skewed display plate (titles, stage label, "NEW!")
+//   .ui-panel          ice-white card, navy text: modal content
+//   .ui-wood/.ui-plate royal-blue plate (white text): HUD plates, badges
+//   .ui-inset          recessed ice well inside a panel (rows, list items)
+//   .ui-banner         bold ribbon with notched tails (result banner)
+//   .ui-chip           small pill (badges, counters, tags)
+//   .ui-notify         berry "!" / count dot that bobs
+//   .ui-title / .ui-label / .ui-body / .ui-num   typography scale
+//   .ui-outline        white text with a thick hard navy stroke + drop
+//   .ui-pop-in / .ui-slam / .ui-drop-in / .ui-deny   one-shot motion
 //
-// Perf: flat fills, hard 0-blur shadows only. No blur, no backdrop-filter, no
-// radial-gradient.
+// PRESS PHYSICS (every .ui-btn): ~70 ms down (translateY into the lip + a 5 %
+// squash), springy release with overshoot (the base-state transition runs on a
+// back-out curve, so leaving :active / .is-pressed bounces a pixel above rest
+// before settling). `.is-pressed` is added by the global press handler
+// (src/use/useUiPress.ts) on pointerdown and held for at least 90 ms, so even
+// a 30 ms tap on a phone visibly sinks.
+//
+// Perf / owner rules: flat fills, HARD 0-blur shadows only, transform/opacity
+// motion only. No blur, no backdrop-filter, no radial-gradient. Linear
+// gradients only with HARD stops (stripes, shine strips, gloss halves) or for
+// scroll-edge fades / the loader bar — never a soft colour ramp as a fill.
 
 :root
-  // Semantic aliases — change a role here, not at the call sites.
+  // Semantic aliases: change a role here, not at the call sites.
   --ui-outline: var(--color-ink)
   --ui-text: var(--color-ink)
   --ui-text-muted: var(--color-ink-soft)
-  --ui-surface: var(--color-cream-100)
-  --ui-surface-2: var(--color-cream-200)
-  --ui-surface-3: var(--color-cream-300)
-  --ui-frame: var(--color-wood-600)
-  --ui-frame-dark: var(--color-wood-800)
-  --ui-backdrop: rgba(26, 18, 10, 0.72)
-  --ui-focus: var(--color-sky-400)
+  --ui-surface: var(--color-ice-100)
+  --ui-surface-2: var(--color-ice-200)
+  --ui-surface-3: var(--color-ice-300)
+  --ui-frame: var(--color-royal-600)
+  --ui-frame-dark: var(--color-royal-800)
+  --ui-backdrop: rgba(10, 14, 44, 0.74)
+  --ui-focus: var(--color-sun-300)
   --ui-border-w: 3px
-  --ui-drop: 4px
+  --ui-drop: 5px
+  // Motion curves. Down = fast and firm, release = back-out spring.
+  --ui-press-down: 70ms
+  --ui-spring: cubic-bezier(0.22, 1.9, 0.45, 1)
+  --ui-back-out: cubic-bezier(0.34, 1.56, 0.64, 1)
+  // Diagonal accent stripes ("/" lean), hard stops — a flat texture, not a ramp.
+  --ui-stripes: repeating-linear-gradient(300deg, rgba(255, 255, 255, 0.16) 0 7px, transparent 7px 16px)
+  --ui-stripes-ink: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.08) 0 7px, transparent 7px 16px)
+  // Rarity edges (Brawl-style colour code). UI presentation only.
+  --rarity-common: var(--color-sky-300)
+  --rarity-rare: var(--color-leaf-500)
+  --rarity-super: var(--color-royal-500)
+  --rarity-epic: var(--color-plum-500)
+  --rarity-mythic: var(--color-berry-500)
+  --rarity-legendary: var(--color-sun-400)
+  // Display-type stroke recipes (8 hard directions + a 0-blur drop).
+  --ui-stroke-xl: 0 4px 0 var(--ui-outline), 0 6px 0 var(--ui-outline), 3px 0 0 var(--ui-outline), -3px 0 0 var(--ui-outline), 0 -3px 0 var(--ui-outline), 2.5px 2.5px 0 var(--ui-outline), -2.5px 2.5px 0 var(--ui-outline), 2.5px -2.5px 0 var(--ui-outline), -2.5px -2.5px 0 var(--ui-outline), 3px 4px 0 var(--ui-outline), -3px 4px 0 var(--ui-outline)
+  --ui-stroke-lg: 0 3px 0 var(--ui-outline), 0 4.5px 0 var(--ui-outline), 2.5px 0 0 var(--ui-outline), -2.5px 0 0 var(--ui-outline), 0 -2.5px 0 var(--ui-outline), 2px 2px 0 var(--ui-outline), -2px 2px 0 var(--ui-outline), 2px -2px 0 var(--ui-outline), -2px -2px 0 var(--ui-outline)
+  --ui-stroke: 0 2px 0 var(--ui-outline), 0 3px 0 var(--ui-outline), 2px 0 0 var(--ui-outline), -2px 0 0 var(--ui-outline), 0 -2px 0 var(--ui-outline), 1.5px 1.5px 0 var(--ui-outline), -1.5px 1.5px 0 var(--ui-outline), 1.5px -1.5px 0 var(--ui-outline), -1.5px -1.5px 0 var(--ui-outline)
+  --ui-stroke-sm: 0 1px 0 var(--ui-outline), 0 2px 0 var(--ui-outline), 1px 0 0 var(--ui-outline), -1px 0 0 var(--ui-outline), 0 -1px 0 var(--ui-outline), 1px 1px 0 var(--ui-outline), -1px 1px 0 var(--ui-outline), 1px -1px 0 var(--ui-outline), -1px -1px 0 var(--ui-outline)
 
 // ─── Typography ──────────────────────────────────────────────────────────────
 .ui-title
   font-weight: 900
-  font-size: clamp(1.25rem, 4.2vmin, 2rem)
+  font-size: clamp(1.3rem, 4.4vmin, 2.1rem)
   line-height: 1.05
-  letter-spacing: 0.01em
+  letter-spacing: 0.015em
 
 .ui-label
   font-weight: 900
@@ -48,38 +83,63 @@
   line-height: 1.3
   color: var(--ui-text-muted)
 
-// Light text over colour or art: hard ink outline (8 directions, 0 blur) plus
-// a 2px drop. Reads on any background, keeps ≥ 4.5:1 against the outline.
+// Numbers (coins, timers, HP, ranks): tabular so count-ups don't jitter.
+.ui-num
+  font-weight: 900
+  font-variant-numeric: tabular-nums
+  letter-spacing: 0.01em
+
+// White display text over colour or art: thick hard navy stroke + drop.
 .ui-outline
-  color: var(--color-cream-50)
-  text-shadow: 0 2px 0 var(--ui-outline), 2px 0 0 var(--ui-outline), -2px 0 0 var(--ui-outline), 0 -2px 0 var(--ui-outline), 1.5px 1.5px 0 var(--ui-outline), -1.5px 1.5px 0 var(--ui-outline), 1.5px -1.5px 0 var(--ui-outline), -1.5px -1.5px 0 var(--ui-outline), 0 3px 0 var(--ui-outline)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke)
+
+.ui-outline-lg
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-lg)
+
+.ui-outline-xl
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-xl)
 
 .ui-outline-sm
-  color: var(--color-cream-50)
-  text-shadow: 0 1px 0 var(--ui-outline), 1px 0 0 var(--ui-outline), -1px 0 0 var(--ui-outline), 0 -1px 0 var(--ui-outline), 1px 1px 0 var(--ui-outline), -1px 1px 0 var(--ui-outline), 1px -1px 0 var(--ui-outline), -1px -1px 0 var(--ui-outline), 0 2px 0 var(--ui-outline)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+
+// Sun-yellow headline (win, reward amounts, "NEW!").
+.ui-outline-sun
+  color: var(--color-sun-300)
+  text-shadow: var(--ui-stroke)
 
 // ─── Buttons ─────────────────────────────────────────────────────────────────
 //
-// One shape: rounded, thick ink outline, flat fill, a lighter top lip and a
-// darker bottom band (inset, 0 blur) and a HARD drop shadow that the button
-// sinks into when pressed. Five colours, each with one meaning:
-//   primary  leaf green  — the main / go / confirm action
-//   secondary wood/cream — neutral, back, settings, tabs
-//   danger   berry       — close, reset, surrender, destructive
-//   premium  sun gold    — spend coins / diamonds, purchases, claim
-//   ad       sky blue    — every rewarded-video CTA
+// Chunky toy buttons: thick navy outline, flat fill, a bright 3px top lip, a
+// white gloss band over the top ~1em (a 0-blur inset shadow, not a gradient),
+// a darker inner DEPTH band, and a THICK hard navy lip under it that the
+// button physically sinks into. Each colour has ONE meaning:
+//   primary   leaf lime   main / go / confirm (one hero per screen)
+//   secondary ice white   neutral, back, cancel, selects (navy text)
+//   royal     royal blue  HUD icon buttons, neutral-on-dark actions
+//   danger    berry pink  close, reset, surrender, destructive
+//   premium   sun yellow  spend / claim coins, purchases, prizes
+//   plum      purple      diamonds, battle pass, rare
+//   ad        sky cyan    every rewarded-video CTA, nothing else
 .ui-btn
   --btn-bg: var(--color-leaf-500)
+  --btn-hi: var(--color-leaf-400)
   --btn-lip: var(--color-leaf-300)
   --btn-band: var(--color-leaf-700)
-  --btn-fg: var(--color-cream-50)
+  --btn-gloss: rgba(255, 255, 255, 0.2)
+  --btn-fg: var(--color-ice-50)
+  --btn-depth: 6px
+  --btn-band-h: 5px
   position: relative
   display: inline-flex
   align-items: center
   justify-content: center
   gap: 0.4em
   min-height: 2.75rem
-  padding: 0.55em 1.2em 0.65em
+  padding: 0.55em 1.2em 0.7em
   border: var(--ui-border-w) solid var(--ui-outline)
   border-radius: var(--radius-ui)
   background-color: var(--btn-bg)
@@ -88,133 +148,360 @@
   line-height: 1.05
   cursor: pointer
   user-select: none
+  -webkit-user-select: none
   touch-action: manipulation
   -webkit-tap-highlight-color: transparent
-  box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 -4px 0 var(--btn-band), 0 var(--ui-drop) 0 var(--ui-outline)
-  transition: transform 0.07s ease, box-shadow 0.07s ease, filter 0.1s ease
-  text-shadow: 0 2px 0 var(--ui-outline), 1.5px 0 0 var(--ui-outline), -1.5px 0 0 var(--ui-outline), 0 -1.5px 0 var(--ui-outline), 1.5px 1.5px 0 var(--ui-outline), -1.5px 1.5px 0 var(--ui-outline), 1.5px -1.5px 0 var(--ui-outline), -1.5px -1.5px 0 var(--ui-outline)
+  transform-origin: 50% 100%
+  box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 1.05em 0 var(--btn-gloss), inset 0 calc(-1 * var(--btn-band-h)) 0 var(--btn-band), 0 var(--btn-depth) 0 var(--ui-outline)
+  // The RELEASE: a back-out spring, so the button pops a pixel above rest.
+  transition: transform 0.26s var(--ui-spring), box-shadow 0.26s var(--ui-spring), background-color 0.12s ease
+  text-shadow: var(--ui-stroke)
 
-  &:hover
-    filter: brightness(1.06)
+  @media (hover: hover)
+    &:hover:not(:disabled):not(.is-disabled)
+      --btn-bg: var(--btn-hi)
+      transform: translateY(-2px)
+      box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 1.05em 0 var(--btn-gloss), inset 0 calc(-1 * var(--btn-band-h)) 0 var(--btn-band), 0 calc(var(--btn-depth) + 2px) 0 var(--ui-outline)
 
-  &:active, &.is-pressed
-    transform: translateY(calc(var(--ui-drop) - 1px))
-    box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 -2px 0 var(--btn-band), 0 1px 0 var(--ui-outline)
+  // The PRESS: sinks into its lip and squashes 5 %, in 70 ms.
+  &:active:not(:disabled):not(.is-disabled), &.is-pressed:not(:disabled):not(.is-disabled)
+    transform: translateY(calc(var(--btn-depth) - 2px)) scale(1.025, 0.95)
+    box-shadow: inset 0 2px 0 var(--btn-lip), inset 0 1.05em 0 var(--btn-gloss), inset 0 -2px 0 var(--btn-band), 0 2px 0 var(--ui-outline)
+    transition-duration: var(--ui-press-down), var(--ui-press-down), 0.12s
+    transition-timing-function: ease-out
 
   &:focus-visible
     outline: 3px solid var(--ui-focus)
     outline-offset: 3px
 
+  // Disabled: flat steel, sunk into its lip, a faint hazard hatch. Reads as
+  // "not now" at a glance, before the label is read.
   &:disabled, &.is-disabled
-    --btn-bg: #b9ab95
-    --btn-lip: #d4c8b4
-    --btn-band: #978a75
+    --btn-bg: var(--color-steel-400)
+    --btn-hi: var(--color-steel-400)
+    --btn-lip: var(--color-steel-300)
+    --btn-band: var(--color-steel-500)
+    --btn-gloss: rgba(255, 255, 255, 0.08)
+    --btn-fg: var(--color-ice-100)
+    --btn-depth: 3px
     cursor: not-allowed
-    filter: none
-    transform: none
+    transform: translateY(3px)
+    text-shadow: var(--ui-stroke-sm)
+    background-image: var(--ui-stripes-ink)
 
 .ui-btn--primary
   --btn-bg: var(--color-leaf-500)
+  --btn-hi: var(--color-leaf-400)
   --btn-lip: var(--color-leaf-300)
   --btn-band: var(--color-leaf-700)
 
 .ui-btn--secondary
-  --btn-bg: var(--color-cream-200)
-  --btn-lip: var(--color-cream-50)
-  --btn-band: var(--color-cream-400)
+  --btn-bg: var(--color-ice-50)
+  --btn-hi: var(--color-ice-100)
+  --btn-lip: var(--color-ice-50)
+  --btn-band: var(--color-ice-300)
+  --btn-gloss: rgba(255, 255, 255, 0)
   --btn-fg: var(--color-ink)
   text-shadow: none
 
-.ui-btn--wood
-  --btn-bg: var(--color-wood-500)
-  --btn-lip: var(--color-wood-300)
-  --btn-band: var(--color-wood-700)
+  &:disabled, &.is-disabled
+    --btn-fg: var(--color-steel-600)
+    text-shadow: none
+
+.ui-btn--royal, .ui-btn--wood
+  --btn-bg: var(--color-royal-500)
+  --btn-hi: var(--color-royal-400)
+  --btn-lip: var(--color-royal-300)
+  --btn-band: var(--color-royal-700)
 
 .ui-btn--danger
   --btn-bg: var(--color-berry-500)
+  --btn-hi: var(--color-berry-400)
   --btn-lip: var(--color-berry-300)
   --btn-band: var(--color-berry-700)
 
 .ui-btn--premium
   --btn-bg: var(--color-sun-400)
+  --btn-hi: var(--color-sun-300)
   --btn-lip: var(--color-sun-200)
   --btn-band: var(--color-sun-600)
+  --btn-gloss: rgba(255, 255, 255, 0.28)
+
+  // Can't afford: stays sun yellow (still reads as "premium"), sunk with the
+  // hatch, and the price turns berry pink — "not enough coins" at a glance.
+  &:disabled, &.is-disabled
+    --btn-bg: var(--color-sun-400)
+    --btn-hi: var(--color-sun-400)
+    --btn-lip: var(--color-sun-200)
+    --btn-band: var(--color-sun-600)
+    --btn-fg: var(--color-berry-500)
+
+.ui-btn--plum
+  --btn-bg: var(--color-plum-500)
+  --btn-hi: var(--color-plum-400)
+  --btn-lip: var(--color-plum-300)
+  --btn-band: var(--color-plum-700)
 
 .ui-btn--ad
   --btn-bg: var(--color-sky-500)
+  --btn-hi: var(--color-sky-400)
   --btn-lip: var(--color-sky-300)
   --btn-band: var(--color-sky-700)
 
-// Square icon variant (HUD buttons, close X).
+// Square icon variant (HUD buttons, close X). Shorter lip so a 44 px square
+// still reads as a button, not a tower.
 .ui-btn--icon
+  --btn-depth: 5px
+  --btn-band-h: 4px
   min-height: 0
   padding: 0.45rem
   border-radius: var(--radius-ui)
 
+// The ONE hero CTA per screen: thicker outline, a deeper lip, uppercase with
+// the heavy stroke, and two flat diagonal accent stripes at the right end.
+.ui-btn--hero
+  --btn-depth: 8px
+  --btn-band-h: 7px
+  border-width: 4px
+  border-radius: var(--radius-ui-lg)
+  text-transform: uppercase
+  letter-spacing: 0.03em
+  text-shadow: var(--ui-stroke-lg)
+  background-image: linear-gradient(300deg, transparent 0 5%, rgba(255, 255, 255, 0.24) 5% 12%, transparent 12% 16%, rgba(255, 255, 255, 0.24) 16% 19%, transparent 19%)
+
+// Idle shine: a skewed white DOUBLE strip (thick + thin, hard edges) sweeps
+// across every ~2.8 s. Transform only. overflow:hidden does not clip the
+// element's own box-shadow, so the 3D lip and drop survive.
+.ui-shine
+  overflow: hidden
+  isolation: isolate
+
+  &::after
+    content: ''
+    position: absolute
+    top: -10%
+    bottom: -10%
+    left: 0
+    width: 34%
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.42) 0 56%, transparent 56% 70%, rgba(255, 255, 255, 0.42) 70% 100%)
+    transform: translateX(-180%) skewX(-22deg)
+    animation: ui-shine 2.8s cubic-bezier(0.55, 0, 0.35, 1) infinite
+    pointer-events: none
+    z-index: 1
+
+  > *
+    position: relative
+    z-index: 2
+
+@keyframes ui-shine
+  0%, 64%
+    transform: translateX(-180%) skewX(-22deg)
+  100%
+    transform: translateX(420%) skewX(-22deg)
+
+// Idle heartbeat for the hero CTA: two quick beats, then rest. Goes on a
+// WRAPPER around the button — the button's own transform belongs to the press.
+.ui-breathe
+  animation: ui-breathe 2.6s ease-in-out infinite
+  transform-origin: 50% 60%
+
+@keyframes ui-breathe
+  0%, 38%, 100%
+    transform: scale(1)
+  10%
+    transform: scale(1.055)
+  19%
+    transform: scale(0.99)
+  28%
+    transform: scale(1.03)
+
+// ─── Cards ───────────────────────────────────────────────────────────────────
+//
+// The collectible look: ice face, 3px ink outline, a RARITY edge (inner ring
+// + a thicker base band in the rarity colour), flat diagonal stripes in the
+// top-right corner, a hard 4px drop. Hover lifts and tilts a degree; press
+// sinks. Rarity: add .ui-rarity--common / rare / super / epic / mythic /
+// legendary (or set --card-edge yourself).
+.ui-card
+  --card-edge: var(--rarity-common)
+  --card-face: var(--color-ice-50)
+  --card-drop: 4px
+  position: relative
+  background-color: var(--card-face)
+  color: var(--ui-text)
+  border: var(--ui-border-w) solid var(--ui-outline)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 0 0 3px var(--card-edge), inset 0 -7px 0 var(--card-edge), 0 var(--card-drop) 0 var(--ui-outline)
+  transition: transform 0.24s var(--ui-spring), box-shadow 0.24s var(--ui-spring)
+  -webkit-tap-highlight-color: transparent
+
+  // Corner stripes: a triangle of flat diagonal bars in the rarity colour.
+  &::before
+    content: ''
+    position: absolute
+    top: 0
+    right: 0
+    width: 2.4rem
+    height: 2.4rem
+    background-image: repeating-linear-gradient(315deg, var(--card-edge) 0 4px, transparent 4px 9px)
+    clip-path: polygon(35% 0, 100% 0, 100% 65%)
+    border-top-right-radius: calc(var(--radius-ui) - 3px)
+    pointer-events: none
+    z-index: 1
+
+.ui-card--interactive
+  cursor: pointer
+
+  @media (hover: hover)
+    &:hover
+      transform: translateY(-3px) rotate(-1deg)
+      box-shadow: inset 0 0 0 3px var(--card-edge), inset 0 -7px 0 var(--card-edge), 0 calc(var(--card-drop) + 3px) 0 var(--ui-outline)
+
+  &:active, &.is-pressed
+    transform: translateY(3px) scale(0.98)
+    box-shadow: inset 0 0 0 3px var(--card-edge), inset 0 -5px 0 var(--card-edge), 0 1px 0 var(--ui-outline)
+    transition-duration: var(--ui-press-down)
+    transition-timing-function: ease-out
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 3px
+
+.ui-rarity--common
+  --card-edge: var(--rarity-common)
+.ui-rarity--rare
+  --card-edge: var(--rarity-rare)
+.ui-rarity--super
+  --card-edge: var(--rarity-super)
+.ui-rarity--epic
+  --card-edge: var(--rarity-epic)
+.ui-rarity--mythic
+  --card-edge: var(--rarity-mythic)
+.ui-rarity--legendary
+  --card-edge: var(--rarity-legendary)
+
+// ─── Tag: a skewed display plate (titles, stage label, "NEW!") ───────────────
+//
+// The PLATE is the ::before (skewed), the content stays upright on top. Tones
+// as for buttons via --tag-bg / --tag-lip / --tag-band.
+.ui-tag
+  --tag-bg: var(--color-sun-400)
+  --tag-lip: var(--color-sun-200)
+  --tag-band: var(--color-sun-600)
+  --tag-skew: -10deg
+  position: relative
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  padding: 0.3em 1.1em 0.42em
+  isolation: isolate
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    background-color: var(--tag-bg)
+    background-image: var(--ui-stripes)
+    border: var(--ui-border-w) solid var(--ui-outline)
+    border-radius: var(--radius-ui-sm)
+    box-shadow: inset 0 3px 0 var(--tag-lip), inset 0 -5px 0 var(--tag-band), 0 5px 0 var(--ui-outline)
+    transform: skewX(var(--tag-skew))
+
+.ui-tag--leaf
+  --tag-bg: var(--color-leaf-500)
+  --tag-lip: var(--color-leaf-300)
+  --tag-band: var(--color-leaf-700)
+.ui-tag--berry
+  --tag-bg: var(--color-berry-500)
+  --tag-lip: var(--color-berry-300)
+  --tag-band: var(--color-berry-700)
+.ui-tag--royal
+  --tag-bg: var(--color-royal-500)
+  --tag-lip: var(--color-royal-300)
+  --tag-band: var(--color-royal-700)
+.ui-tag--sky
+  --tag-bg: var(--color-sky-500)
+  --tag-lip: var(--color-sky-300)
+  --tag-band: var(--color-sky-700)
+.ui-tag--plum
+  --tag-bg: var(--color-plum-500)
+  --tag-lip: var(--color-plum-300)
+  --tag-band: var(--color-plum-700)
+.ui-tag--ink
+  --tag-bg: var(--color-royal-900)
+  --tag-lip: var(--color-royal-700)
+  --tag-band: var(--color-ink)
+
 // ─── Surfaces ────────────────────────────────────────────────────────────────
 
-// Cream parchment card: the readable surface. Dark ink text on it.
+// Ice-white card: the readable surface. Navy text on it.
 .ui-panel
   background-color: var(--ui-surface)
   color: var(--ui-text)
-  border: var(--ui-border-w) solid var(--color-wood-700)
+  border: var(--ui-border-w) solid var(--ui-outline)
   border-radius: var(--radius-ui-lg)
-  box-shadow: inset 0 3px 0 var(--color-cream-50), 0 3px 0 var(--color-wood-800)
+  box-shadow: inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-300), 0 4px 0 var(--ui-outline)
 
 // Recessed well inside a panel: list rows, stat boxes, reward tiles.
 .ui-inset
   background-color: var(--ui-surface-2)
   color: var(--ui-text)
-  border: 2px solid var(--color-cream-400)
+  border: 2px solid var(--color-ice-400)
   border-radius: var(--radius-ui)
-  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
 
-// Wooden plank: frames, HUD plates, dark badges. Cream text on it.
-.ui-wood
-  background-color: var(--color-wood-600)
-  color: var(--color-cream-50)
+// Royal plate: HUD plates, dark badges, headers. White text on it.
+.ui-wood, .ui-plate
+  background-color: var(--color-royal-600)
+  color: var(--color-ice-50)
   border: var(--ui-border-w) solid var(--ui-outline)
   border-radius: var(--radius-ui)
-  box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -4px 0 var(--color-wood-800), 0 var(--ui-drop) 0 var(--ui-outline)
+  box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -4px 0 var(--color-royal-800), 0 var(--ui-drop) 0 var(--ui-outline)
 
-// Stitched edge — a dashed "sewn" line inset from the border (plush motif).
+// Deep-navy counter plate for numbers on bright art (coin / diamond badges).
+.ui-plate--dark
+  background-color: var(--color-royal-900)
+  box-shadow: inset 0 3px 0 var(--color-royal-700), 0 4px 0 var(--ui-outline)
+
+// Flat diagonal stripe texture on any coloured surface (frames, plates).
+.ui-striped
+  background-image: var(--ui-stripes)
+
+// Stitched edge: the plush motif, now a white dashed seam.
 .ui-stitch
-  outline: 2px dashed rgba(255, 250, 240, 0.55)
+  outline: 2px dashed rgba(255, 255, 255, 0.5)
   outline-offset: -7px
 
 .ui-stitch-dark
-  outline: 2px dashed rgba(110, 69, 39, 0.35)
+  outline: 2px dashed rgba(35, 56, 168, 0.3)
   outline-offset: -7px
 
-// ─── Banner (fabric ribbon with notched tails) ──────────────────────────────
+// ─── Banner (bold ribbon with notched tails) ────────────────────────────────
 //
-// Pure CSS: a flat-filled centre band + two darker tails cut with clip-path.
-// ART-DESK SEAM: `.ui-banner` is the slot a painted fabric ribbon can replace
-// (keep the content box; swap the background for a border-image).
+// ART-DESK SEAM: `.ui-banner` is the slot a painted ribbon can replace.
 .ui-banner
-  --banner-bg: var(--color-leaf-500)
-  --banner-lip: var(--color-leaf-300)
-  --banner-band: var(--color-leaf-700)
-  --banner-tail: var(--color-leaf-700)
+  --banner-bg: var(--color-royal-500)
+  --banner-lip: var(--color-royal-300)
+  --banner-band: var(--color-royal-700)
   position: relative
   display: inline-flex
   align-items: center
   justify-content: center
-  padding: 0.35em 1.4em 0.45em
+  padding: 0.35em 1.4em 0.5em
   min-width: 8rem
   border: var(--ui-border-w) solid var(--ui-outline)
   border-radius: var(--radius-ui-sm)
   background-color: var(--banner-bg)
-  box-shadow: inset 0 3px 0 var(--banner-lip), inset 0 -4px 0 var(--banner-band), 0 4px 0 var(--ui-outline)
+  background-image: var(--ui-stripes)
+  box-shadow: inset 0 3px 0 var(--banner-lip), inset 0 0.95em 0 rgba(255, 255, 255, 0.14), inset 0 -5px 0 var(--banner-band), 0 5px 0 var(--ui-outline)
   z-index: 0
 
-  // Tails: an ink "outline" shape with a coloured shape inside, both clipped
-  // into a swallow-tail. They sit behind and a little below the band.
   &::before, &::after
     content: ''
     position: absolute
     top: 0.45em
-    bottom: -0.45em
+    bottom: -0.5em
     width: 1.6em
     background-color: var(--banner-band)
     z-index: -1
@@ -228,8 +515,12 @@
     clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%)
 
 .ui-banner__tail
-  // optional inner fill for tails (placed by components that want two-tone tails)
   position: absolute
+
+.ui-banner--leaf
+  --banner-bg: var(--color-leaf-500)
+  --banner-lip: var(--color-leaf-300)
+  --banner-band: var(--color-leaf-700)
 
 .ui-banner--berry
   --banner-bg: var(--color-berry-500)
@@ -241,78 +532,224 @@
   --banner-lip: var(--color-sun-200)
   --banner-band: var(--color-sun-600)
 
-.ui-banner--wood
-  --banner-bg: var(--color-wood-500)
-  --banner-lip: var(--color-wood-300)
-  --banner-band: var(--color-wood-700)
+.ui-banner--wood, .ui-banner--royal
+  --banner-bg: var(--color-royal-500)
+  --banner-lip: var(--color-royal-300)
+  --banner-band: var(--color-royal-700)
 
 .ui-banner--sky
   --banner-bg: var(--color-sky-500)
   --banner-lip: var(--color-sky-300)
   --banner-band: var(--color-sky-700)
 
+.ui-banner--plum
+  --banner-bg: var(--color-plum-500)
+  --banner-lip: var(--color-plum-300)
+  --banner-band: var(--color-plum-700)
+
 // ─── Chips / badges ──────────────────────────────────────────────────────────
 .ui-chip
   display: inline-flex
   align-items: center
   gap: 0.25em
-  padding: 0.15em 0.6em 0.2em
+  padding: 0.15em 0.6em 0.22em
   border: 2px solid var(--ui-outline)
   border-radius: 999px
-  background-color: var(--color-cream-100)
+  background-color: var(--color-ice-50)
   color: var(--ui-text)
   font-weight: 900
   line-height: 1
-  box-shadow: 0 2px 0 var(--ui-outline)
+  box-shadow: inset 0 -2px 0 var(--color-ice-300), 0 2px 0 var(--ui-outline)
 
 .ui-chip--leaf
   background-color: var(--color-leaf-500)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: inset 0 -2px 0 var(--color-leaf-700), 0 2px 0 var(--ui-outline)
 
 .ui-chip--berry
   background-color: var(--color-berry-500)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: inset 0 -2px 0 var(--color-berry-700), 0 2px 0 var(--ui-outline)
 
 .ui-chip--sun
   background-color: var(--color-sun-400)
   color: var(--color-ink)
+  box-shadow: inset 0 -2px 0 var(--color-sun-600), 0 2px 0 var(--ui-outline)
 
 .ui-chip--sky
   background-color: var(--color-sky-500)
-  color: var(--color-cream-50)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: inset 0 -2px 0 var(--color-sky-700), 0 2px 0 var(--ui-outline)
 
-.ui-chip--wood
-  background-color: var(--color-wood-600)
-  color: var(--color-cream-50)
+.ui-chip--plum
+  background-color: var(--color-plum-500)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: inset 0 -2px 0 var(--color-plum-700), 0 2px 0 var(--ui-outline)
 
-// ─── Progress bar (wood well, leaf fill) ─────────────────────────────────────
-.ui-bar
-  position: relative
-  height: 0.9rem
+.ui-chip--wood, .ui-chip--royal
+  background-color: var(--color-royal-600)
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: inset 0 -2px 0 var(--color-royal-800), 0 2px 0 var(--ui-outline)
+
+// Angled chip: same tones, a parallelogram instead of a pill ("FREE", "AD",
+// "NEW!", "+n"). Edgy tags on the corners of buttons and cards.
+.ui-chip--angled
+  border-radius: 0.3rem
+  transform: skewX(-10deg)
+
+  > *
+    display: inline-block
+    transform: skewX(10deg)
+
+// Notify dot ("!" or a count): berry, navy ring, a sharp hop every 1.6 s.
+.ui-notify
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  min-width: 1.35rem
+  height: 1.35rem
+  padding: 0 0.3rem
   border: 2px solid var(--ui-outline)
   border-radius: 999px
-  background-color: var(--color-wood-800)
+  background-color: var(--color-berry-500)
+  color: var(--color-ice-50)
+  font-weight: 900
+  font-size: 0.8rem
+  line-height: 1
+  box-shadow: inset 0 2px 0 var(--color-berry-300), 0 2px 0 var(--ui-outline)
+  animation: ui-notify-bob 1.6s ease-in-out infinite
+
+@keyframes ui-notify-bob
+  0%, 66%, 100%
+    transform: translateY(0) scale(1) rotate(0)
+  74%
+    transform: translateY(-4px) scale(1.18) rotate(-8deg)
+  82%
+    transform: translateY(0) scale(0.94) rotate(4deg)
+  90%
+    transform: translateY(-1px) scale(1.04) rotate(0)
+
+// ─── Progress bar (navy well, lime fill, gloss lip, moving stripes) ─────────
+.ui-bar
+  position: relative
+  height: 0.95rem
+  border: 2px solid var(--ui-outline)
+  border-radius: 999px
+  background-color: var(--color-royal-900)
+  box-shadow: 0 2px 0 var(--ui-outline)
   overflow: hidden
 
 .ui-bar__fill
   height: 100%
   background-color: var(--color-leaf-400)
+  background-image: var(--ui-stripes)
   box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
   border-radius: 999px
+  transition: width 0.45s var(--ui-back-out)
 
-// ─── Scrollbar inside cream panels ───────────────────────────────────────────
+// ─── One-shot motion ─────────────────────────────────────────────────────────
+// Pop-in for cards / rows (staggered by --i).
+.ui-pop-in
+  animation: ui-pop-in 0.34s var(--ui-back-out) backwards
+  animation-delay: calc(var(--i, 0) * 45ms)
+
+@keyframes ui-pop-in
+  0%
+    transform: translateY(10px) scale(0.6)
+    opacity: 0
+  100%
+    transform: none
+    opacity: 1
+
+// Slam: a title or a number crashes in from big and settles (overshoot).
+.ui-slam
+  animation: ui-slam 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) backwards
+  animation-delay: var(--slam-delay, 0ms)
+
+@keyframes ui-slam
+  0%
+    transform: scale(2.1) rotate(-6deg)
+    opacity: 0
+  55%
+    transform: scale(0.9) rotate(1deg)
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
+
+// Drop-in: a ribbon / plate falls into place with a little swing.
+.ui-drop-in
+  animation: ui-drop-in 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) backwards
+  animation-delay: var(--drop-delay, 0ms)
+
+@keyframes ui-drop-in
+  0%
+    transform: translateY(-70%) rotate(-7deg) scale(0.9)
+    opacity: 0
+  60%
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
+
+// Bump: a value just changed (count-up landed, coin badge gained).
+.ui-bump
+  animation: ui-bump 0.34s var(--ui-back-out)
+
+@keyframes ui-bump
+  0%
+    transform: scale(1)
+  35%
+    transform: scale(1.22)
+  100%
+    transform: scale(1)
+
+// Deny: a refused tap shakes sideways. Uses the individual `translate`
+// property so it composes with a button's own press transform.
+.ui-deny
+  animation: ui-deny 0.32s linear
+
+@keyframes ui-deny
+  0%, 100%
+    translate: 0 0
+  18%
+    translate: -6px 0
+  38%
+    translate: 5px 0
+  58%
+    translate: -3px 0
+  78%
+    translate: 2px 0
+
+// ─── Scrollbar inside ice panels ─────────────────────────────────────────────
 .ui-scroll
   scrollbar-width: thin
-  scrollbar-color: var(--color-wood-500) var(--color-cream-200)
+  scrollbar-color: var(--color-royal-500) var(--color-ice-200)
 
   &::-webkit-scrollbar
     width: 0.55rem
 
   &::-webkit-scrollbar-track
-    background: var(--color-cream-200)
+    background: var(--color-ice-200)
     border-radius: 999px
 
   &::-webkit-scrollbar-thumb
-    background: var(--color-wood-500)
-    border: 2px solid var(--color-cream-200)
+    background: var(--color-royal-500)
+    border: 2px solid var(--color-ice-200)
     border-radius: 999px
+
+// ─── Reduced motion: idle loops and entrances stop; state changes stay ──────
+// Press feedback stays (it is a state change, and it is short), but loses the
+// overshoot.
+@media (prefers-reduced-motion: reduce)
+  .ui-shine::after, .ui-notify, .ui-pop-in, .ui-slam, .ui-drop-in, .ui-bump, .ui-deny, .ui-breathe, .attention-bounce, .attention-5, .hint-bounce, .hint-bounce-2, .instant-bounce, .animate-pulse
+    animation: none !important
+
+  .ui-btn, .ui-card
+    transition-timing-function: ease-out !important
+    transition-duration: 0.08s !important

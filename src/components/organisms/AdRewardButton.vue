@@ -117,11 +117,13 @@ const grantReward = () => {
   button.adReward.group.cursor-pointer.z-10.transition-transform(
     ref="rootEl"
     v-if="isVisible"
-    class="hover:scale-[103%] active:scale-90 scale-80 sm:scale-110"
+    class="scale-80 sm:scale-110"
     @click="triggerAdReward"
   )
+    //- The sky ui-btn recipe (sinks on press via the global handler) with
+    //- the shine sweep: a free reward is waiting.
     div.relative
-      div.ad-plate.relative.font-bold.flex.flex-col.items-center.px-1.py-1
+      div.ad-plate.ui-btn.ui-btn--ad.ui-btn--icon.ui-shine.relative.font-bold.flex.flex-col.items-center(class="!px-1.5 !py-1")
         div.flex.items-center.gap-1
           template(v-if="reward === 'diamond'")
             span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ diamondPayout.amount }}
@@ -146,10 +148,8 @@ const grantReward = () => {
 <style scoped lang="sass">
 // Sky plate: every rewarded-video CTA is sky (DESIGN.md), ink outline,
 // hard 0-blur drop.
+// (.ui-btn--ad supplies fill, lip, band and drop; this only tightens it.)
 .ad-plate
-  background-color: var(--color-sky-500)
-  color: var(--color-cream-50)
-  border: 3px solid var(--color-ink)
-  border-radius: var(--radius-ui)
-  box-shadow: inset 0 3px 0 var(--color-sky-300), inset 0 -3px 0 var(--color-sky-700), 0 4px 0 var(--color-ink)
+  gap: 0.1rem
+  text-shadow: var(--ui-stroke-sm)
 </style>

@@ -34,6 +34,9 @@
 import type { SkillId } from '@/types/skills'
 import { SKILLS } from '@/data/skillCatalog'
 import { playSkillSfx } from '@/use/skills/skillSfx'
+import {
+  FLAVOUR_SHAPES, INK, flavourPath, paintedFlavourImage, smasherSkillArt, type FlavourShapeId
+} from '@/use/skills/smasherSkillArt'
 
 /** Kinds of skill events the engine emits (HUD ring buffer + VFX feed). */
 export type SkillEventKind =
@@ -50,6 +53,10 @@ export type SkillEventKind =
   | 'static' // Static Charge shocked the enemy (value 0 / 1 = also stunned)
   | 'stun_skip' // a team turn was skipped: every living blade stunned
   | 'ward' // Hazard Ward reduced a hazard hit (value = amount removed)
+  | 'bank' // Bank Shot cashed its rebound bonus (value 0, mult = the bonus)
+  | 'anchor' // Anchor held its ground on a hit (value = knockback removed, 0…1)
+  | 'tower' // Tower Breaker added damage to a team tower (value = bonus)
+  | 'thorns' // Thorns recoiled a front hit onto the attacker (value = HP taken)
 
 /** One event. Preallocated ring entries — read, never keep a reference. */
 export interface SkillEvent {
@@ -66,6 +73,8 @@ export interface SkillEvent {
   x: number
   y: number
   value: number
+  /** Smasher skill id of the bearer ('' = part-only blade / unknown). */
+  key: string
 }
 
 /** The blade fields the VFX layer reads. `SpinnerState` satisfies it. */
@@ -163,11 +172,40 @@ export interface VfxBurst {
   life: number
 }
 
+/** One thematic flavour particle (quill, honey drop, acorn …). */
+export interface VfxFlake {
+  active: boolean
+  shape: FlavourShapeId
+  color: string
+  detail: string
+  key: string
+  bladeId: number
+  x: number
+  y: number
+  vx: number
+  vy: number
+  g: number
+  rot: number
+  spin: number
+  align: boolean
+  size: number
+  t: number
+  life: number
+}
+
+export const FLAKE_POOL_SIZE = 40
+export const FLAKE_LIFE_MS = 620
+/** One flavour burst per (blade, skill) per this many ms. */
+export const FLAVOUR_THROTTLE_MS = 260
+
 /** Fixed VFX pools — created once per engine, reused forever. */
 export interface SkillVfx {
   readonly rings: readonly VfxRing[]
   readonly shards: readonly VfxShard[]
   readonly bursts: readonly VfxBurst[]
+  readonly flakes: readonly VfxFlake[]
+  /** Flavour bursts started (QA / tests). */
+  flavourBursts: number
 }
 
 export function createSkillVfx(): SkillVfx {
@@ -186,7 +224,14 @@ export function createSkillVfx(): SkillVfx {
   for (let i = 0; i < BURST_POOL_SIZE; i++) {
     bursts.push({ active: false, enemy: false, salvo: false, x: 0, y: 0, spin: 0, t: 0, life: 1 })
   }
-  return { rings, shards, bursts }
+  const flakes: VfxFlake[] = []
+  for (let i = 0; i < FLAKE_POOL_SIZE; i++) {
+    flakes.push({
+      active: false, shape: 'chip', color: INK, detail: INK, key: '', bladeId: -1, x: 0, y: 0, vx: 0, vy: 0,
+      g: 0, rot: 0, spin: 0, align: false, size: 1, t: 0, life: 1
+    })
+  }
+  return { rings, shards, bursts, flakes, flavourBursts: 0 }
 }
 
 /** Drop every live skill effect (initGame, surrender, game over). */
@@ -194,6 +239,7 @@ export function resetSkillVfx(fx: SkillVfx): void {
   for (let i = 0; i < fx.rings.length; i++) fx.rings[i]!.active = false
   for (let i = 0; i < fx.shards.length; i++) fx.shards[i]!.active = false
   for (let i = 0; i < fx.bursts.length; i++) fx.bursts[i]!.active = false
+  for (let i = 0; i < fx.flakes.length; i++) fx.flakes[i]!.active = false
 }
 
 /** Advance pooled effects by `dt` ms (called once per physics tick). */
@@ -216,6 +262,125 @@ export function tickSkillVfx(fx: SkillVfx, dt: number): void {
     b.t += dt
     if (b.t >= b.life) b.active = false
   }
+  for (let i = 0; i < fx.flakes.length; i++) {
+    const p = fx.flakes[i]!
+    if (!p.active) continue
+    p.t += dt
+    if (p.t >= p.life) {
+      p.active = false
+      continue
+    }
+    p.vy += p.g * dt
+    p.vx *= 0.985
+    p.x += p.vx * dt
+    p.y += p.vy * dt
+    p.rot += p.spin * dt
+  }
+}
+
+/** Kinds that throw a flavour burst (procs + rocket hits at the target). */
+const FLAVOUR_KINDS: ReadonlySet<SkillEventKind> = new Set<SkillEventKind>([
+  'shield_absorb', 'shield_break', 'ward', 'heal', 'mirror', 'phase', 'lucky', 'momentum',
+  'rocket_volley', 'rocket_hit', 'salvo', 'static', 'bank', 'tower', 'thorns'
+])
+
+/**
+ * The thematic particle burst of the event's smasher skill (VFX only,
+ * Math.random is fine: never gameplay). Throttled per (blade, skill).
+ * Returns the number of particles started.
+ */
+export function spawnSkillFlavour(fx: SkillVfx, ev: Readonly<SkillEvent>): number {
+  if (!FLAVOUR_KINDS.has(ev.kind)) return 0
+  const art = smasherSkillArt(ev.key)
+  if (art === null) return 0
+  // Throttle: a burst of this (blade, skill) younger than the window → skip.
+  for (let i = 0; i < fx.flakes.length; i++) {
+    const p = fx.flakes[i]!
+    if (p.active && p.bladeId === ev.bladeId && p.key === ev.key && p.t < FLAVOUR_THROTTLE_MS) return 0
+  }
+  const f = art.flavour
+  const count = ev.kind === 'rocket_hit' || ev.kind === 'momentum' ? Math.ceil(f.count / 2) : f.count
+  const dir = f.dir !== undefined ? (f.dir * Math.PI) / 180 : 0
+  const spread = f.spread !== undefined ? (f.spread * Math.PI) / 180 : Math.PI * 2
+  let n = 0
+  for (let i = 0; i < fx.flakes.length && n < count; i++) {
+    const p = fx.flakes[i]!
+    if (p.active) continue
+    const a = f.dir !== undefined
+      ? dir + (Math.random() - 0.5) * spread // vfx-rng
+      : (n / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.6 // vfx-rng
+    const sp = f.speed * (0.7 + Math.random() * 0.6) // vfx-rng
+    p.active = true
+    p.shape = f.shape
+    p.color = f.colors[(Math.random() * f.colors.length) | 0]! // vfx-rng
+    p.detail = f.detail ?? INK
+    p.key = ev.key
+    p.bladeId = ev.bladeId
+    p.x = ev.x + Math.cos(a) * 8
+    p.y = ev.y + Math.sin(a) * 8
+    p.vx = Math.cos(a) * sp
+    p.vy = Math.sin(a) * sp
+    p.g = f.gravity
+    p.align = f.align === true
+    p.rot = p.align ? a : Math.random() * Math.PI * 2 // vfx-rng
+    p.spin = p.align ? 0 : (Math.random() - 0.5) * 0.012 // vfx-rng
+    p.size = f.size * (0.85 + Math.random() * 0.3) // vfx-rng
+    p.t = 0
+    p.life = FLAKE_LIFE_MS * (0.8 + Math.random() * 0.4) // vfx-rng
+    n++
+  }
+  if (n > 0) fx.flavourBursts++
+  return n
+}
+
+/**
+ * Flavour particles, drawn after renderSkillLayer: flat fill + ink edge per
+ * particle (no blur, no gradient). FX.low never spawns any, so this is a
+ * cheap no-op there.
+ */
+export function renderSkillFlavour(ctx: CanvasRenderingContext2D, fx: SkillVfx): void {
+  let any = false
+  for (let i = 0; i < fx.flakes.length; i++) {
+    if (fx.flakes[i]!.active) {
+      any = true
+      break
+    }
+  }
+  if (!any) return
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = INK
+  for (let i = 0; i < fx.flakes.length; i++) {
+    const p = fx.flakes[i]!
+    if (!p.active) continue
+    const body = flavourPath(p.shape)
+    if (body === null) continue
+    const u = p.t / p.life
+    ctx.save()
+    ctx.globalAlpha = u > 0.65 ? Math.max(0, (1 - u) / 0.35) : 1
+    ctx.translate(p.x, p.y)
+    ctx.rotate(p.align ? Math.atan2(p.vy, p.vx) : p.rot)
+    ctx.scale(p.size, p.size)
+    const img = paintedFlavourImage(p.shape)
+    if (img !== null) {
+      ctx.drawImage(img, -1, -1, 2, 2)
+      ctx.restore()
+      continue
+    }
+    ctx.lineWidth = 2.2 / p.size
+    ctx.stroke(body)
+    ctx.fillStyle = p.color
+    ctx.fill(body)
+    if (FLAVOUR_SHAPES[p.shape].d2 !== undefined) {
+      const d2 = flavourPath(p.shape, true)
+      if (d2 !== null) {
+        ctx.fillStyle = p.detail
+        ctx.fill(d2)
+      }
+    }
+    ctx.restore()
+  }
+  ctx.restore()
 }
 
 /** Free slot, else the one closest to its end (never allocates). */
@@ -307,6 +472,24 @@ const spawnBurst = (fx: SkillVfx, ev: Readonly<SkillEvent>, salvo: boolean): voi
 
 /** A skill event just happened: spawn pooled effects and play the SFX. */
 export function skillVfxEvent(fx: SkillVfx, ev: Readonly<SkillEvent>, low: boolean): void {
+  if (!low) spawnSkillFlavour(fx, ev)
+  // A smasher skill speaks with its own voice (sound + pitch from the art
+  // registry); a part-only blade keeps the generic effect sounds below.
+  const art = smasherSkillArt(ev.key)
+  if (art !== null) {
+    playSmasherSkillSfx(ev, art.sfx.name, art.sfx.rate)
+    if (ev.kind === 'shield_break' && !low) spawnShards(fx, ev)
+    else if (ev.kind === 'phase' && !low) spawnRing(fx, RING_PHASE, ev)
+    else if (ev.kind === 'mirror' && !low) spawnRing(fx, RING_MIRROR, ev)
+    else if (ev.kind === 'momentum' && !low && ev.value > 0) spawnRing(fx, RING_MOMENTUM, ev)
+    else if (ev.kind === 'heal' && !low) spawnRing(fx, RING_HEAL, ev)
+    else if (ev.kind === 'rocket_hit' && !low) spawnBurst(fx, ev, false)
+    else if (ev.kind === 'salvo' && !low) spawnBurst(fx, ev, true)
+    else if (ev.kind === 'bank' && !low) spawnRing(fx, RING_MOMENTUM, ev)
+    else if (ev.kind === 'thorns' && !low) spawnRing(fx, RING_MIRROR, ev)
+    else if (ev.kind === 'tower' && !low) spawnBurst(fx, ev, false)
+    return
+  }
   switch (ev.kind) {
     case 'shield_absorb':
       playSkillSfx('skill-shield', 0.014)
@@ -343,9 +526,53 @@ export function skillVfxEvent(fx: SkillVfx, ev: Readonly<SkillEvent>, low: boole
     case 'stun_skip':
       playSkillSfx('skill-zap', 0.018)
       break
+    case 'bank':
+      if (!low) spawnRing(fx, RING_MOMENTUM, ev)
+      playSkillSfx('skill-crit', 0.02)
+      break
+    case 'anchor':
+      playSkillSfx('skill-shield', 0.01, performance.now(), 0.8)
+      break
+    case 'tower':
+      if (!low) spawnBurst(fx, ev, false)
+      playSkillSfx('skill-boost', 0.018)
+      break
+    case 'thorns':
+      if (!low) spawnRing(fx, RING_MIRROR, ev)
+      playSkillSfx('skill-shield', 0.016, performance.now(), 1.2)
+      break
     default:
       break
   }
+}
+
+/** Volume per event kind for a smasher skill's own sound (quiet for the
+ *  frequent ones). rocket_hit is silent (the clash sound covers it). */
+export const SKILL_KIND_VOLUME: Readonly<Partial<Record<SkillEventKind, number>>> = {
+  shield_absorb: 0.012,
+  shield_break: 0.022,
+  ward: 0.012,
+  heal: 0.025,
+  mirror: 0.018,
+  phase: 0.016,
+  lucky: 0.02,
+  momentum: 0.009,
+  rocket_volley: 0.02,
+  salvo: 0.02,
+  static: 0.018,
+  stun_skip: 0.018,
+  bank: 0.02,
+  anchor: 0.01,
+  tower: 0.018,
+  thorns: 0.016
+}
+
+function playSmasherSkillSfx(ev: Readonly<SkillEvent>, name: Parameters<typeof playSkillSfx>[0], rate: number): void {
+  const vol = SKILL_KIND_VOLUME[ev.kind]
+  if (vol === undefined) return
+  if (ev.kind === 'rocket_volley' && !(ev.value > 0)) return
+  // Shield break rings a touch lower than the absorb ting.
+  playSkillSfx(name, vol, performance.now(), ev.kind === 'shield_break' ? rate * 0.85 : rate)
 }
 
 // ─── Colours (module constants — never built per frame) ────────────────────
