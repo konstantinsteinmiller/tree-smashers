@@ -2,7 +2,7 @@
 //
 // The player's league standing, daily fights, unlock and season bookkeeping —
 // one singleton, persisted as `LeagueStateV1` JSON under LEAGUE_STATE_KEY
-// (`spinner_league`: part of the cloud payload, kept across a progress reset
+// (`smashers_league`: part of the cloud payload, kept across a progress reset
 // through useResetProgress' KEEP_KEYS, re-read on every `saveDataVersion`).
 //
 // Reached ONLY through `loadLeague()` in leagueGate.ts, so on a league-off

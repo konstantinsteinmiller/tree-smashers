@@ -75,18 +75,19 @@ const watchAd = async () => {
 </template>
 
 <style scoped lang="sass">
+// Rewarded-video CTA: ad tone (sky), same look as .ui-btn--ad.
 .league-topup
   position: relative
   display: inline-flex
   align-items: center
   gap: 0.3rem
-  min-height: 2.5rem
+  min-height: 2.75rem
   padding: 0.2rem 0.75rem
-  border-radius: 0.7rem
-  border: 2px solid #0f1a30
-  background: linear-gradient(to bottom, #ffcd00, #f7a000)
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 3px 0 #1a2b4b
-  color: #fff
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-ink)
+  background-color: var(--color-sky-500)
+  box-shadow: inset 0 2px 0 var(--color-sky-300), inset 0 -3px 0 var(--color-sky-700), 0 3px 0 var(--color-ink)
+  color: var(--color-cream-50)
   font-size: 0.9rem
   font-weight: 900
   white-space: nowrap
@@ -100,6 +101,6 @@ const watchAd = async () => {
   &:active:not(:disabled)
     transform: translateY(2px) scale(0.97)
   &:focus-visible
-    outline: 3px solid #fff
+    outline: 3px solid var(--ui-focus)
     outline-offset: 2px
 </style>

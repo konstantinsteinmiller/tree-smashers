@@ -159,7 +159,8 @@ export const durationCopy = (ms: number): DurationCopy => {
 // ─── Opponent difficulty (LM2: a LABEL, never a percentage) ─────────────────
 
 export const DIFFICULTY_STYLE: Readonly<Record<OpponentDifficulty, { from: string; to: string; ink: string }>> = Object.freeze({
-  easier: { from: '#5fe08a', to: '#1f9c55', ink: '#08361c' },
-  even: { from: '#ffd84d', to: '#f0a400', ink: '#3d2600' },
-  harder: { from: '#ff7a6b', to: '#d9303c', ink: '#3d0710' }
+  // Flat cozy tones (design tokens): from = fill, to = darker bottom band, ink = text.
+  easier: { from: 'var(--color-leaf-400)', to: 'var(--color-leaf-600)', ink: 'var(--color-ink)' },
+  even: { from: 'var(--color-sun-400)', to: 'var(--color-sun-600)', ink: 'var(--color-ink)' },
+  harder: { from: 'var(--color-berry-400)', to: 'var(--color-berry-600)', ink: 'var(--color-ink)' }
 })

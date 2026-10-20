@@ -13,41 +13,36 @@ import './helpers/skillsBuild'
 import '@/use/useUser'
 import { mountArena } from './helpers/arenaHarness'
 
-vi.mock('/images/bg/parchment-ribbon_553x188.webp', () => ({ default: '/images/bg/parchment-ribbon_553x188.webp' }))
 vi.mock('/images/icons/movie_128x96.webp', () => ({ default: '/images/icons/movie_128x96.webp' }))
 vi.mock('/images/logo/logo_256x256.webp', () => ({ default: '/images/logo/logo_256x256.webp' }))
 vi.mock('/images/icons/chest_128x128.webp', () => ({ default: '/images/icons/chest_128x128.webp' }))
 vi.mock('/images/icons/trophy_128x128.webp', () => ({ default: '/images/icons/trophy_128x128.webp' }))
 
-// Same returning player as the off-suite: stage 40, the intro already seen
-// (so no surface opens by itself), nothing learned yet.
+// Same returning player as the off-suite (stage 40).
 const SEED: Record<string, string> = vi.hoisted(() => {
   const seed: Record<string, string> = {
-    spinner_campaign_stage: '40',
-    spinner_player_max_stage: '40',
-    spinner_coins: '5000',
-    spinner_first_win: '1',
-    spinner_intro_seen: '1',
-    spinner_config_opened: '1',
-    spinner_skill_ui: JSON.stringify({ v: 1, seen: [], intro: true, slot2Seen: true, filled: 2, viewed: [] })
+    smashers_campaign_stage: '40',
+    smashers_player_max_stage: '40',
+    smashers_coins: '5000',
+    smashers_first_win: '1',
+    smashers_intro_seen: '1',
+    smashers_config_opened: '1'
   }
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
   return seed
 })
 
 describe('SpinnerArena, flag on', () => {
-  it('loads the skill glue and shows the NEW dot and the Team modal SKILLS row', async () => {
+  it('loads the skill glue and the Team modal shows the selected smasher\'s three skills', async () => {
     const gate = await import('@/skills/skillsGate')
     expect(gate.SKILLS_BUILD).toBe(true)
     const arena = await mountArena(SEED)
     try {
       expect(document.querySelector('.stage-badge')?.textContent).toContain('40')
-      // Unlocked-but-unviewed skills → the Team button's NEW dot.
-      expect(await arena.waitFor('[data-testid="team-new-dot"]')).toBe(true)
       await arena.openTeam()
-      expect(document.querySelector('.stats-bar')).not.toBeNull()
-      expect(await arena.waitFor('[data-testid="config-skills"]')).toBe(true)
-      expect(document.querySelector('[data-action="skill-list"]')).not.toBeNull()
+      expect(await arena.waitFor('[data-testid="smasher-detail"]')).toBe(true)
+      expect(await arena.waitFor('[data-testid="smasher-skills"]')).toBe(true)
+      expect(document.querySelectorAll('[data-testid="smasher-skills"] .skill-row').length).toBe(3)
     } finally {
       arena.unmount()
     }

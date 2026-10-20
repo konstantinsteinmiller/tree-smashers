@@ -34,7 +34,7 @@ const emit = defineEmits<{ 'update:modelValue': [boolean]; claim: [] }>()
 const { t, n } = useI18n()
 
 const tierName = computed(() => (props.reward ? t(LEAGUE_TIER_META[props.reward.peakTier].nameKey) : ''))
-const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peakTier].accent : '#ffc93c'))
+const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peakTier].accent : 'var(--color-sun-400)'))
 </script>
 
 <template lang="pug">
@@ -52,7 +52,7 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
       div.lsr__peak {{ t('league.season.peak', { tier: tierName }) }}
       ul.lsr__rewards
         li.lsr__tile(:aria-label="t('league.season.coinsAria', { n: reward.coins }, reward.coins)")
-          IconCoin.lsr__glyph(class="text-yellow-300" aria-hidden="true")
+          IconCoin.lsr__glyph(class="text-sun-500" aria-hidden="true")
           span(aria-hidden="true") +{{ n(reward.coins) }}
         li.lsr__tile(v-if="reward.diamonds > 0" :aria-label="t('league.season.diamondsAria', { n: reward.diamonds }, reward.diamonds)")
           IconDiamond.lsr__glyph(aria-hidden="true" alt="")
@@ -61,17 +61,18 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
           span.lsr__frame(aria-hidden="true")
           span {{ t('league.season.frame') }}
     template(#footer)
-      FButton(size="md" @click="emit('claim')") {{ t('league.season.claim') }}
+      FButton(size="md" tone="premium" @click="emit('claim')") {{ t('league.season.claim') }}
 </template>
 
 <style scoped lang="sass">
 .lsr
-  --lsr-accent: #ffc93c
+  --lsr-accent: var(--color-sun-400)
   display: flex
   flex-direction: column
   align-items: center
   gap: 0.6rem
   padding: 0.25rem 0.5rem 0.5rem
+  color: var(--ui-text)
 
 .lsr__hero
   position: relative
@@ -81,12 +82,12 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   align-items: center
   justify-content: center
 
+// Flat sunburst petals in the tier colour.
 .lsr__rays
   position: absolute
   inset: -1.25rem
-  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--lsr-accent) 40%, transparent) 0deg 9deg, transparent 9deg 24deg)
-  mask-image: radial-gradient(circle, #000 20%, transparent 68%)
-  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 68%)
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--lsr-accent) 45%, transparent) 0deg 9deg, transparent 9deg 24deg)
+  clip-path: circle(40%)
   animation: lsr-spin 16s linear infinite
 
 @keyframes lsr-spin
@@ -95,13 +96,12 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
 
 .lsr__icon
   position: relative
-  filter: drop-shadow(0 4px 0 #0f1a30)
+  filter: drop-shadow(0 4px 0 var(--color-ink))
 
 .lsr__peak
-  font-size: 1.05rem
+  font-size: 1.1rem
   font-weight: 900
-  color: var(--lsr-accent)
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000
+  color: var(--ui-text)
 
 .lsr__rewards
   display: flex
@@ -118,14 +118,13 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   gap: 0.35rem
   min-height: 2.6rem
   padding: 0.3rem 0.8rem
-  border-radius: 0.8rem
-  border: 2px solid #0f1a30
-  background: #0f1d36
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08), 0 3px 0 #0f1a30
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-cream-400)
+  background-color: var(--color-cream-200)
+  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
   font-size: 1.15rem
   font-weight: 900
-  color: #fff
-  text-shadow: 0 2px 0 #000
+  color: var(--ui-text)
 
 .lsr__glyph
   width: 1.6rem
@@ -138,8 +137,8 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   width: 1.6rem
   height: 1.6rem
   border-radius: 0.4rem
-  border: 3px solid #ff4f7b
-  box-shadow: 0 0 0 2px #ffc93c
+  border: 3px solid var(--color-berry-500)
+  box-shadow: 0 0 0 2px var(--color-sun-400), 0 0 0 4px var(--color-ink)
 
 .lsr--static .lsr__rays
   animation: none

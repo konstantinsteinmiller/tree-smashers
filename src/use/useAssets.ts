@@ -1,11 +1,7 @@
 import { ref } from 'vue'
-import { modelImgPath, SPINNER_MODEL_IDS, getSelectedSkin } from '@/use/useModels.ts'
-import useSpinnerConfig from '@/use/useSpinnerConfig.ts'
 import useSpinnerCampaign, { type ArenaType } from '@/use/useSpinnerCampaign.ts'
 import { prependBaseUrl } from '@/utils/function.ts'
-import type { TopPartId } from '@/types/spinner'
 import { FLAME_BURN_SRC } from '@/use/borderFx'
-import { isIntroLikely, INTRO_SKIN_IDS } from '@/use/introGate'
 import { armSkillSfx } from '@/skills/skillsGate'
 
 // Shared state so it can be accessed by both the loader and the progress component
@@ -129,7 +125,7 @@ export const loadAudioBuffer = async (src: string): Promise<AudioBuffer | null> 
 // Three layers of preload with distinct urgency:
 //
 //  1. STATIC_IMAGES + critical skins — splash-blocking. These paint the
-//     very first UI frame (logo, HUD icons, parchment ribbon, tiled bg)
+//     very first UI frame (logo, HUD icons, tiled bg)
 //     and the skins visible in the opening stage. Kept small and cheap
 //     so the FLogoProgress overlay can exit as fast as possible.
 //
@@ -154,7 +150,6 @@ const STATIC_IMAGES = [
   'images/icons/movie_128x96.webp',
   'images/icons/chest_128x128.webp',
   'images/icons/trophy_128x128.webp',
-  'images/bg/parchment-ribbon_553x188.webp',
   'images/bg/bg-tile_400x400.webp'
 ]
 
@@ -167,7 +162,7 @@ const VFX_ASSETS = [
 
 // VFX only one arena type ever draws. The deferred tier adds the set for the
 // CURRENT stage's arena; useSpinnerGame.initGame warms it again for an arena
-// reached any other way (next stage, daily challenge, PvP, cheats).
+// reached any other way (next stage, PvP, cheats).
 const ARENA_VFX_ASSETS: Partial<Record<ArenaType, string[]>> = {
   lava: [FLAME_BURN_SRC]
 }
@@ -219,45 +214,6 @@ const MUSIC_ASSETS = [
 ]
 
 /**
- * Skin IDs the player will see IMMEDIATELY on first paint:
- *   • both player-team slots (resolved via getSelectedSkin — falls back to the
- *     default catalog skin when no selection has been persisted yet, which
- *     covers the very first load).
- *   • every enemy in the current campaign stage (stored on each StageBladeConfig).
- *
- * Everything else (the other ~40 skins in the config modal catalog, future
- * stages the player hasn't unlocked yet) is deferred to `preloadRemainingSkins`
- * which runs in the background once the arena is interactive.
- */
-const getCriticalSkinIds = (): Set<string> => {
-  const ids = new Set<string>()
-  try {
-    const { playerTeam } = useSpinnerConfig()
-    playerTeam.value.forEach((cfg, slotIndex) => {
-      // modelId override wins; otherwise resolve the player's chosen skin for
-      // this top part. getSelectedSkin always returns a valid id (default on
-      // first load).
-      const id = cfg.modelId ?? getSelectedSkin(cfg.topPartId as TopPartId, slotIndex)
-      if (id) ids.add(id)
-    })
-  } catch (e) {
-    console.warn('[assets] player team resolve failed, using no player skins', e)
-  }
-  try {
-    const { currentStage } = useSpinnerCampaign()
-    const stage = currentStage.value
-    if (stage?.enemyTeam) {
-      for (const enemy of stage.enemyTeam) {
-        if (enemy.modelId) ids.add(enemy.modelId)
-      }
-    }
-  } catch (e) {
-    console.warn('[assets] stage resolve failed, using no stage skins', e)
-  }
-  return ids
-}
-
-/**
  * First-launch intro cutscene: its three skins (boss + the two Lv. 30 blues).
  * Requested the moment the splash-critical tier resolves — first in line, ahead
  * of the SFX/VFX tier — and never awaited by the splash. Measured on the
@@ -269,19 +225,8 @@ const getCriticalSkinIds = (): Set<string> => {
  * in the deferred VFX tier, needed ~4 s in.)
  */
 const preloadIntroSkins = (): void => {
-  try {
-    if (!isIntroLikely((k) => localStorage.getItem(k))) return
-  } catch {
-    return // storage blocked — the intro gate will say 'skip' too
-  }
-  for (const id of INTRO_SKIN_IDS) {
-    const src = modelImgPath(id)
-    if (resourceCache.images.has(src)) continue
-    const img = new Image()
-    img.decoding = 'async'
-    img.src = src
-    resourceCache.images.set(src, img)
-  }
+  // Smasher portraits are drawn on demand by the rig (src/smashers) — there
+  // are no skin image files to fetch any more. Kept as the tier hook.
 }
 
 type AssetEntry = { src: string; type: 'image' | 'audio' }
@@ -360,16 +305,12 @@ export default () => {
   const preloadAssets = async () => {
     if (areAllAssetsLoaded.value) return
 
-    const criticalSkinIds = getCriticalSkinIds()
-    const criticalSkinPaths = [...criticalSkinIds].map(id => modelImgPath(id))
-
-    // Splash-critical tier only: UI chrome + the skins rendered on first
-    // paint. SFX and VFX spritesheets are kicked off as a background
+    // Splash-critical tier only: UI chrome (smasher art is drawn by the rig,
+    // no files). SFX and VFX spritesheets are kicked off as a background
     // chain below so the loader can hit 100% as soon as the player can
     // actually see something.
     const criticalAssets: AssetEntry[] = [
       ...STATIC_IMAGES.map(src => ({ src: prependBaseUrl(src), type: 'image' as const })),
-      ...criticalSkinPaths.map(src => ({ src, type: 'image' as const }))
     ]
 
     let loadedCount = 0
@@ -442,20 +383,7 @@ export default () => {
    * resolves once every missing skin has decoded so callers can chain on
    * it if they want, but the intended use is fire-and-forget.
    */
-  const preloadSkinsByIds = (ids: string[]): Promise<void> => {
-    const entries: AssetEntry[] = []
-    const seen = new Set<string>()
-    for (const id of ids) {
-      const src = modelImgPath(id)
-      if (seen.has(src) || resourceCache.images.has(src)) continue
-      seen.add(src)
-      entries.push({ src, type: 'image' as const })
-    }
-    if (entries.length === 0) return Promise.resolve()
-    return runInChunks(entries, 4).catch((e) => {
-      console.error('Targeted skin preload failed:', e)
-    }) as Promise<void>
-  }
+  const preloadSkinsByIds = (_ids: string[]): Promise<void> => Promise.resolve()
 
   /**
    * Fire-and-forget background loader for every skin NOT in the critical set.
@@ -465,23 +393,7 @@ export default () => {
    * gallery.
    */
   const preloadRemainingSkins = (): Promise<void> => {
-    if (remainingSkinsPromise) return remainingSkinsPromise
-
-    const remaining: AssetEntry[] = SPINNER_MODEL_IDS
-      .map(id => modelImgPath(id))
-      .filter(src => !resourceCache.images.has(src))
-      .map(src => ({ src, type: 'image' as const }))
-
-    if (remaining.length === 0) {
-      remainingSkinsPromise = Promise.resolve()
-      return remainingSkinsPromise
-    }
-
-    // Smaller chunks than the critical preloader so we don't starve the main
-    // thread / network while the player is already interacting with the arena.
-    remainingSkinsPromise = runInChunks(remaining, 4).catch((e) => {
-      console.error('Background skin preload failed:', e)
-    }) as Promise<void>
+    remainingSkinsPromise ??= Promise.resolve()
     return remainingSkinsPromise
   }
 

@@ -154,7 +154,7 @@ onUnmounted(() => {
 //   84%  → 100%  out  (500ms)
 $total: 3.1s
 // Final tracking. `em`, so the measured width scales with the font size.
-$track: 0.14em
+$track: 0.04em
 
 .boss-defeated
   --bd-base: 64px
@@ -164,35 +164,38 @@ $track: 0.14em
 .boss-defeated.is-paused, .boss-defeated.is-paused *
   animation-play-state: paused !important
 
-// Soft darkening towards the edges — the "the world went quiet" frame.
+// Soft wood-brown dim over the arena — the "the world went quiet" frame.
 .boss-defeated__vignette
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.7) 100%)
+  background: color-mix(in srgb, var(--color-wood-900) 40%, transparent)
   animation: bd-fade $total ease-out both
 
-// The dark band behind the title, opening from a line to its full height.
+// The berry fabric ribbon behind the title, opening from a line to its full height.
 .boss-defeated__band
   top: 50%
   // One line: 2.1em tall; each extra line adds its 1.05em line box.
   height: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)))
   margin-top: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)) / -2)
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(8, 0, 0, 0.82) 22%, rgba(8, 0, 0, 0.82) 78%, rgba(0, 0, 0, 0) 100%)
+  background-color: var(--color-berry-500)
+  border-top: 4px solid var(--color-ink)
+  border-bottom: 4px solid var(--color-ink)
+  box-shadow: inset 0 4px 0 var(--color-berry-300), inset 0 -6px 0 var(--color-berry-700), 0 5px 0 var(--color-ink)
   transform-origin: 50% 50%
   animation: bd-band $total cubic-bezier(0.2, 0.8, 0.2, 1) both
 
-  // Hairlines at the band's edges.
+  // Stitched seams along the ribbon (plush motif).
   &::before, &::after
     content: ''
     position: absolute
-    left: 12%
-    right: 12%
-    height: 1px
-    background: linear-gradient(to right, rgba(200, 30, 20, 0), rgba(220, 50, 35, 0.8), rgba(200, 30, 20, 0))
+    left: 0
+    right: 0
+    height: 0
+    border-top: 2px dashed rgba(255, 250, 240, 0.6)
 
   &::before
-    top: 16%
+    top: 10%
 
   &::after
-    bottom: 16%
+    bottom: 10%
 
 // Invisible twin at the BASE size with the FINAL tracking — the measurement.
 .boss-defeated__measure
@@ -212,17 +215,17 @@ $track: 0.14em
   padding-left: $track
 
 .boss-defeated__title
-  color: #e5362a
-  text-shadow: 0 0 0.22em rgba(255, 40, 20, 0.55), 0 0.05em 0 #3a0000, 0 0 0.04em #000
+  color: var(--color-sun-300)
+  text-shadow: 0.04em 0em 0 var(--color-ink), -0.04em 0em 0 var(--color-ink), 0em 0.04em 0 var(--color-ink), 0em -0.04em 0 var(--color-ink), 0.04em 0.04em 0 var(--color-ink), -0.04em 0.04em 0 var(--color-ink), 0.04em -0.04em 0 var(--color-ink), -0.04em -0.04em 0 var(--color-ink), 0 0.09em 0 var(--color-ink)
   animation: bd-title $total cubic-bezier(0.16, 1, 0.3, 1) both
 
-// Elden-Ring afterimage: a faint copy that keeps growing and dissolves.
+// Afterimage: a faint copy that keeps growing and dissolves.
 .boss-defeated__ghost
-  color: #ff5a3c
+  color: var(--color-sun-200)
   opacity: 0
   animation: bd-ghost $total ease-out both
 
-// ── Cheap path (FX.low): no glow, no afterimage, no vignette, fixed tracking ──
+// ── Cheap path (FX.low): no afterimage, no vignette, fixed tracking ──
 .boss-defeated.is-low
   .boss-defeated__vignette
     display: none
@@ -231,7 +234,7 @@ $track: 0.14em
     display: none
 
   .boss-defeated__title
-    text-shadow: 0 0.05em 0 #3a0000
+    text-shadow: 0.04em 0em 0 var(--color-ink), -0.04em 0em 0 var(--color-ink), 0em 0.04em 0 var(--color-ink), 0em -0.04em 0 var(--color-ink), 0.04em 0.04em 0 var(--color-ink), -0.04em 0.04em 0 var(--color-ink), 0.04em -0.04em 0 var(--color-ink), -0.04em -0.04em 0 var(--color-ink)
     animation-name: bd-title-low
 
 // Scripts whose glyphs tracking would break (Arabic joins, Indic / Thai
@@ -283,8 +286,8 @@ $track: 0.14em
   0%
     opacity: 0
     transform: scale(1.3)
-    letter-spacing: 0.02em
-    padding-left: 0.02em
+    letter-spacing: 0
+    padding-left: 0
   19%
     opacity: 1
     transform: scale(1)

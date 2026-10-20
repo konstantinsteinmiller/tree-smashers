@@ -1,27 +1,26 @@
-# Chaos Arena
+# Tree Smashers
 
-**Pull. Launch. CHAOS.**
+**Pull. Launch. SMASH.**
 
-Fling your spinner into the arena with one simple swipe and watch the mayhem unfold! Smash into enemies, bounce off
-walls, and knock out every opponent to claim victory.
+Cute? Yes. Cuddly? Absolutely not. Pick your team of grumpy stuffed-animal smashers, put them on their spinning discs and
+fling them across the forest with one simple swipe. Bash into enemy smashers, bounce off the walls and knock down the
+enemy Team Tower to win the battle!
 
 ## How to Play
 
-Drag back, aim, and let go — that's it. One finger is all you need. Every launch sends your spinner flying across the
-arena in explosive turn-based battles powered by real physics.
+Drag back, aim, and let go — that's it. One finger is all you need. Every launch sends your smasher flying across a
+forest clearing in turn-based battles powered by real physics. Protect your own little Team Tower, and topple theirs.
 
 ## What Makes It Awesome
 
-- **100+ campaign stages** with boss fights that get wilder the further you go — ghosts that split in two, healers that
-  won't stay down, thunder bosses that zap everything nearby, and way more
-- **7 unique arenas** including lava, ice, forest, and thunder — each one changes how the battle plays out
-- **45+ skins** with special effects like rainbow trails, sandstorms, and forest dragons breathing color across the
-  arena
-- **Mix and match parts** — pick your top blade, bottom base, and skin to build the perfect spinner, then level them up
-  to hit harder, move faster, or tank more hits
+- **12 angry plush smashers** — hedgehog, rabbit, bear cub, beaver, ram, fox, turtle, woodpecker, sloth, squirrel, owl
+  and boar, each with its own fighting style
+- **Level them up with coins** — every smasher has 3 unique skills: the second unlocks at level 10, the third at level 20
+- **Team Towers** — destroy the enemy's tree to win, and keep yours standing
+- **Forest arenas** with islands, speed boosters and pot holes that change every launch
+- **100+ campaign stages** with boss fights that get wilder the further you go
 - **PvP multiplayer** — share a link and battle your friends in real time
 - **Powerups** drop mid-fight to boost your attack, defense, or speed right when you need it
 - **Battle Pass, daily rewards, treasure chests, and a prize roulette** keep the loot coming
-- **Meteor showers and 3-2-1-GO countdowns** kick off matches with style
 
-Easy to pick up, impossible to put down. Jump in, start flinging, and let the chaos begin.
+Easy to pick up, impossible to put down. Grab your smashers and head into the woods.

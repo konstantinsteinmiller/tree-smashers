@@ -56,15 +56,15 @@ export const stageScene = async (ctx, o) => {
   })
   if (hp) await g.stageHp(ctx, hp)
   for (const p of place) {
-    const ok = await ctx.evaluate((a) => window.__chaos.place(a.side, a.index, a.x, a.y), p)
+    const ok = await ctx.evaluate((a) => window.__smashers.place(a.side, a.index, a.x, a.y), p)
     if (!ok) throw new Error(`reel: could not place ${p.side} ${p.index} — no such living blade`)
   }
   if (aim) {
     const ok = await ctx.evaluate(
       (a) =>
         a.target === undefined || a.target === null
-          ? window.__chaos.aim(a.blade ?? 0, a.angle ?? -Math.PI / 2, a.power ?? 1)
-          : window.__chaos.aimAtBlade(a.blade ?? 0, 'npc', a.target, a.power ?? 1),
+          ? window.__smashers.aim(a.blade ?? 0, a.angle ?? -Math.PI / 2, a.power ?? 1)
+          : window.__smashers.aimAtBlade(a.blade ?? 0, 'npc', a.target, a.power ?? 1),
       aim
     )
     if (!ok) throw new Error('reel: could not pre-aim the opening shot')
@@ -79,7 +79,7 @@ export const stageScene = async (ctx, o) => {
 /** Count what the border-VFX pool is drawing right now (DEV handle). */
 const fxProbe = () => {
   const fx = window.__borderFx
-  const c = window.__chaos.snapshot()
+  const c = window.__smashers.snapshot()
   return {
     burns: fx ? fx.burns.filter((b) => b.active).length : -1,
     heals: fx ? fx.heals.filter((h) => h.active).length : -1,
@@ -122,7 +122,7 @@ export const playScene = async (ctx, o = {}) => {
 
   if (fire) {
     if (!(await t.wait(holdMs))) return
-    await ctx.evaluate(() => window.__chaos.fire())
+    await ctx.evaluate(() => window.__smashers.fire())
     ctx.beat('fire')
   }
 

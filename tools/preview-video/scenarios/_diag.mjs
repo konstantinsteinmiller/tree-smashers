@@ -15,20 +15,20 @@ export default {
   async setup(ctx) {
     await g.boot(ctx, { save: g.saveFixture(), seed: 1337, stage: 17 })
     await g.stageHp(ctx, { npc: [0.07, 1, 1] })
-    await ctx.evaluate(() => window.__chaos.aimAtBlade(0, 'npc', 0, 1))
+    await ctx.evaluate(() => window.__smashers.aimAtBlade(0, 'npc', 0, 1))
   },
 
   async record(ctx) {
     const t = g.budget(ctx)
     await g.unfreeze(ctx)
     await t.wait(800)
-    await ctx.evaluate(() => window.__chaos.fire())
+    await ctx.evaluate(() => window.__smashers.fire())
     let elapsed = 800
     let last = ''
     while (elapsed < ctx.durationMs - 250) {
       if (!(await t.wait(250))) break
       elapsed += 250
-      const s = await ctx.evaluate(() => window.__chaos.snapshot())
+      const s = await ctx.evaluate(() => window.__smashers.snapshot())
       const tag = `${s.phase} P${s.alive.player} N${s.alive.npc} ${s.result ?? ''}`
       if (tag !== last) {
         ctx.log.info(`  t=${(elapsed / 1000).toFixed(2)}s  ${tag}`)

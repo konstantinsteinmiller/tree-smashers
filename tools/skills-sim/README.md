@@ -1,6 +1,6 @@
 # skills-sim — balance simulator for the skill system
 
-Headless replica of the Chaos Arena battle loop (`src/use/useSpinnerGame.ts`) plus the ten
+Headless replica of the Tree Smashers battle loop (`src/use/useSpinnerGame.ts`) plus the ten
 proposed skills. It produces every balance number in **`skills-feature.md` §3** (power
 metric, singles, all 45 pairs, paired confirmation, per-spinner alternative, robustness)
 and the economy projections in **§6.3**. Plain Node ≥ 20 ESM, no dependencies.

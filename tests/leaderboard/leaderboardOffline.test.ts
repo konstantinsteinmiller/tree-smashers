@@ -21,7 +21,7 @@ import type { BoardSnapshot } from '@/use/leaderboardSnapshot'
  */
 
 const ENDPOINT = 'https://board.example.test'
-const CACHE_KEY = 'chaosarena_board_cache'
+const CACHE_KEY = 'treesmashers_board_cache'
 
 const reply = (body: unknown, ok = true): Response =>
   ({ ok, status: ok ? 200 : 500, json: async () => body }) as unknown as Response
@@ -387,7 +387,7 @@ describe('a board never publishes fewer players than rows', () => {
 
 describe('the cache is a per-device cache, not player data', () => {
   it('stays out of the cloud save', async () => {
-    // `SaveMergePolicy.PAYLOAD_PREFIXES` is exactly ['spinner_', 'ca_'], and
+    // `SaveMergePolicy.PAYLOAD_PREFIXES` is exactly ['smashers_', 'ca_'], and
     // everything matching one is uploaded. The board cache is ~6 kB of PUBLIC
     // data identical for every player; syncing it would pay for the same
     // hundred rows once per player on every save — against Poki's 1 MB ceiling
@@ -402,8 +402,8 @@ describe('the cache is a per-device cache, not player data', () => {
     // The standalone identity mirrors sit outside the payload for the OPPOSITE
     // reason: a cloud hydrate carrying an older blob must not be able to erase
     // the id, because a lost id is a duplicate row nothing can repair.
-    expect(isPayloadKey('chaosarena_uid')).toBe(false)
-    expect(isPayloadKey('chaosarena_name')).toBe(false)
+    expect(isPayloadKey('treesmashers_uid')).toBe(false)
+    expect(isPayloadKey('treesmashers_name')).toBe(false)
 
     // The id itself DOES sync — that is what keeps one player to one row
     // across their devices.

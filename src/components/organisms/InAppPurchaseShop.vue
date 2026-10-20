@@ -52,23 +52,23 @@ const purchase = (pack: Pack) => {
     :title="t('shop.title')"
   )
     div(class="space-y-2 px-2 sm:px-4 py-2")
-      div.text-center.text-slate-300(class="text-[0.85rem] sm:text-sm") {{ t('shop.subtitle') }}
+      div.text-center.ui-body(class="text-[0.85rem] sm:text-sm") {{ t('shop.subtitle') }}
       div.flex.flex-col.gap-2
-        button.iap-pack.relative.flex.items-center.justify-between.rounded-xl.border-2.cursor-pointer.transition-all(
+        button.iap-pack.ui-btn.ui-btn--premium.relative.w-full.justify-between(
           v-for="pack in PACKS"
           :key="pack.diamonds"
-          class="px-3 py-2 border-cyan-500/60 bg-cyan-900/30 hover:scale-[1.02] active:scale-95"
+          class="px-3 py-2"
           @click="purchase(pack)"
         )
           //- Tag ribbon
-          span.absolute.rounded-full.font-black.uppercase.game-text(
+          span.absolute.ui-chip.ui-chip--berry(
             v-if="pack.tagKey"
-            class="-top-2 right-3 bg-amber-400 text-white text-[0.6rem] sm:text-[0.75rem] px-2 py-0.5"
+            class="-top-2.5 right-3 text-[0.6rem] sm:text-[0.75rem]"
           ) {{ t('shop.' + pack.tagKey) }}
           div.flex.items-center.gap-2
             IconDiamond(class="w-7 h-7 sm:w-8 sm:h-8")
-            span.text-white.font-black.game-text(class="text-base sm:text-xl") {{ pack.diamonds }}
-          span.text-cyan-200.font-black.game-text(class="text-sm sm:text-lg") {{ pack.price }}
+            span.font-black(class="text-base sm:text-xl") {{ pack.diamonds }}
+          span.font-black(class="text-sm sm:text-lg") {{ pack.price }}
       //- Honest note while real IAP isn't wired in production builds.
-      div.text-center.text-slate-500(class="text-[0.7rem] sm:text-[0.75rem] mt-1") {{ t('shop.note') }}
+      div.text-center.ui-body(class="text-[0.7rem] sm:text-[0.75rem] mt-1") {{ t('shop.note') }}
 </template>

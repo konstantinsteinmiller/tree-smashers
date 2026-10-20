@@ -14,7 +14,7 @@
 // flips the modal-visible flag. Mounted unconditionally in App.vue;
 // visibility is purely reactive on the flag.
 //
-// Wording is kid-safe because chaos-arena targets ages 6+. No mention
+// Wording is kid-safe because tree-smashers targets ages 6+. No mention
 // of "ad blocker brand X", no urging to disable site-wide — just a
 // gentle "we couldn't show your ad, please allow ads here to earn the
 // reward". Adult-audience games can swap copy via a simple text edit.
@@ -51,26 +51,27 @@ const host = computed(() => {
         @click="dismissAdsBlockedModal"
       )
         //- Backdrop
-        div.absolute.inset-0(class="bg-black/70 backdrop-blur-sm")
+        div.absolute.inset-0(class="bg-[var(--ui-backdrop)]")
 
         //- Card
-        div.relative.w-full.max-w-md.rounded-2xl.text-white.shadow-2xl.text-center(
-          class="bg-gradient-to-b from-slate-700 to-slate-900 border-2 border-slate-500 p-6"
+        div.ui-panel.ui-stitch-dark.relative.w-full.max-w-md.text-center(
+          class="p-6 !border-4 !border-ink shadow-[0_6px_0_var(--color-ink)]"
           @click.stop
         )
           div.mb-2.text-5xl 🛡️
-          h2.text-2xl.font-bold.mb-2 {{ t('adsBlocked.title') }}
-          p.text-base.mb-4(class="text-slate-200") {{ t('adsBlocked.body') }}
+          h2.ui-title.text-ink.mb-2 {{ t('adsBlocked.title') }}
+          p.text-base.font-extrabold.mb-4(class="text-ink") {{ t('adsBlocked.body') }}
           //- The hostname is interpolated INSIDE the i18n message rather than
           //- concatenated around it — word order around "allow ads on <host>"
           //- differs per language (in ja/ko/zh the host comes first).
-          p.text-sm.mb-5(class="text-slate-300")
+          p.text-sm.font-extrabold.mb-5(class="text-ink-soft")
             i18n-t(keypath="sfc.AdsBlockedModal.adsBlocked.allowHost" tag="span" scope="global")
               template(#host)
-                span.font-mono.font-bold(class="text-amber-300") {{ host }}
+                span.font-mono.font-black(class="text-sky-700") {{ host }}
 
-          button.w-full.rounded-lg.font-bold.text-lg.text-white.shadow-lg(
-            class="bg-amber-500 hover:bg-amber-400 active:translate-y-px py-3"
+          button.ui-btn.ui-btn--primary.w-full.text-lg(
+            type="button"
+            class="py-3"
             @click="dismissAdsBlockedModal"
           ) {{ t('adsBlocked.gotIt') }}
 </template>

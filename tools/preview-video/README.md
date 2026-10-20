@@ -1,4 +1,4 @@
-# Gameplay video pipeline — Chaos Arena
+# Gameplay video pipeline — Tree Smashers
 
 Portal preview clips and trailers, **generated from the real game** rather than
 screen-recorded. Scripted, deterministic, and cheap to re-run after an art or
@@ -59,7 +59,7 @@ lossless) under `preview-videos/showreel/scenes/`; `showreel.mjs` cuts them
 with ffmpeg `xfade` (timeline math in `lib/reel.mjs`, tested by
 `tests/previewReel.test.ts`) and writes a contact sheet per reel and
 orientation. Each scene is staged, not hoped for: HP authored, blades PLACED
-(`__chaos.place`), the shot pre-aimed — and it logs a `scene peaks` line
+(`__smashers.place`), the shot pre-aimed — and it logs a `scene peaks` line
 (burns / heals / kills / spawned) with a warning if its moment was missed.
 
 ## The game-side seams
@@ -70,7 +70,7 @@ Both are `import.meta.env.DEV` only and absent from every portal build
 
 | seam               | where                                                                                                                  | what                                                                                                                       |
 |--------------------|------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `window.__chaos`   | `src/utils/previewSeam.ts`, installed by `SpinnerArena.vue` via a dynamic import inside an `import.meta.env.DEV` guard | snapshot / setStage / seed / begin / freeze / unfreeze / setHp / place / freezeOnPhase / aim / fire                        |
+| `window.__smashers`   | `src/utils/previewSeam.ts`, installed by `SpinnerArena.vue` via a dynamic import inside an `import.meta.env.DEV` guard | snapshot / setStage / seed / begin / freeze / unfreeze / setHp / place / freezeOnPhase / aim / fire                        |
 | `?clean=1`         | `src/utils/cleanFeed.ts` → `CLEAN_FEED`                                                                                | renderer skips HP rings, selection glow, damage numbers, powerup floats, hint pulse, tutorial arrows, the ⚔ATK/🛡DEF label |
 | `?clean=1&rings=1` | same file → `CLEAN_HP_RINGS`                                                                                           | keeps the HP rings in an otherwise clean feed, for a portal whose spec is looser than "no counters"                        |
 
@@ -79,7 +79,7 @@ Both are `import.meta.env.DEV` only and absent from every portal build
 **The port is 2087, not the skill's 2063.** On this machine 2063 and 2071 are
 both already answering with *other games'* dev servers. The `title` check in
 `preview.config.mjs` is what catches that — it refuses to record if the page
-served is not Chaos Arena. Do not remove it.
+served is not Tree Smashers. Do not remove it.
 
 **dpr is 1 everywhere, and must stay 1.** `SpinnerArena` sets
 `canvas.width = window.innerWidth` verbatim — there is no devicePixelRatio
@@ -89,7 +89,7 @@ and let Chrome upscale the screenshot: a soft 1080p.
 **Two separate RNGs, and both need seeding.** `preview.config.mjs`'s
 `seedRandom` pins the page's `Math.random` (particles, spawn jitter).
 `useDeterministicRng`'s mulberry32 is separate, and `initGame` re-seeds it
-*randomly* on every non-PvP match — so `__chaos.seed()` must be called AFTER
+*randomly* on every non-PvP match — so `__smashers.seed()` must be called AFTER
 the match is built. `boot()` does this in the right order.
 
 **The match intro is 2.1 s** (1600 ms of meteor shower + a 500 ms turn

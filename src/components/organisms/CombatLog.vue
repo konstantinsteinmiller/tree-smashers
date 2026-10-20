@@ -65,16 +65,17 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
 </script>
 
 <template lang="pug">
-  //- Minimised toggle — quiet dark pill with a "list" glyph.
-  button.combat-log-toggle.pointer-events-auto.flex.items-center.rounded-md.border(
-    class="gap-1 px-1.5 py-0.5 bg-black/55 border-white/15 backdrop-blur-sm active:scale-95 transition-transform"
+  //- Minimised toggle — a small wood plate with a "list" glyph (it sits on the arena).
+  button.combat-log-toggle.pointer-events-auto.flex.items-center(
+    type="button"
+    class="gap-1 px-1.5 py-0.5 active:scale-95 transition-transform"
     :aria-label="t('aria')"
     :title="t('title')"
     @click="open = true"
   )
     svg(viewBox="0 0 24 24" class="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true")
       path(fill="currentColor" d="M4 5h16v2H4zM4 9h16v2H4zM4 13h10v2H4zM4 17h10v2H4z")
-    span.combat-log-toggle-text.game-text.uppercase(class="text-[0.7rem] sm:text-[0.75rem] tracking-wide") {{ t('short') }}
+    span.combat-log-toggle-text.ui-outline-sm(class="text-[0.7rem] sm:text-[0.75rem] tracking-wide") {{ t('short') }}
 
   //- Expanded feed
   FModal(
@@ -84,37 +85,50 @@ const maxEntries = MAX_COMBAT_LOG_ENTRIES
     @update:model-value="open = false"
   )
     div(class="px-1 sm:px-3 py-1")
-      div.text-center.text-slate-400.game-text(class="text-[0.75rem] sm:text-xs mb-2") {{ t('hint', { n: maxEntries }) }}
+      div.text-center.ui-body(class="text-[0.75rem] sm:text-xs mb-2") {{ t('hint', { n: maxEntries }) }}
       //- No local scroll cap — FModal's content slot scrolls (see the
       //- `.modal-content-slot` rule there). A `max-h-[60vh]` here produced a
       //- second, nested scroller whose bar stopped well short of the frame.
       div.combat-log-list.flex.flex-col(class="gap-1 pr-1")
-        div.text-center.text-slate-400.game-text(
+        div.text-center.ui-body(
           v-if="rendered.length === 0"
           class="text-xs py-6"
         ) {{ t('empty') }}
-        div.combat-log-line.game-text.text-left(
+        //- Mine = sky (defense/info), theirs = berry (attack).
+        div.combat-log-line.text-left(
           v-for="r in rendered"
           :key="r.id"
-          :class="[\
-            r.mine ? 'text-cyan-200' : 'text-red-200',\
-            r.crit ? 'font-black' : 'font-medium'\
-          ]"
+          :class="[            r.mine ? 'is-mine' : 'is-theirs',            r.crit ? 'font-black' : 'font-bold'          ]"
           class="text-[0.85rem] sm:text-sm leading-snug"
         ) {{ r.text }}
 </template>
 
 <style scoped lang="sass">
 .combat-log-toggle
-  color: rgba(255, 255, 255, 0.75)
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5)
+  color: var(--color-cream-50)
+  background-color: var(--color-wood-600)
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm)
+  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
 
   &:hover
-    color: rgba(255, 255, 255, 0.95)
+    background-color: var(--color-wood-500)
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
 
 .combat-log-line
-  padding: 0.15rem 0.35rem
-  border-radius: 4px
-  background: rgba(255, 255, 255, 0.04)
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8)
+  padding: 0.15rem 0.45rem
+  border-radius: var(--radius-ui-sm)
+  border-left: 4px solid transparent
+  background-color: var(--color-cream-200)
+
+  &.is-mine
+    color: var(--color-sky-700)
+    border-left-color: var(--color-sky-500)
+
+  &.is-theirs
+    color: var(--color-berry-700)
+    border-left-color: var(--color-berry-500)
 </style>

@@ -27,8 +27,9 @@ export const isY8 = import.meta.env.VITE_APP_Y8 === 'true'
 export const isGamePix = import.meta.env.VITE_APP_GAMEPIX === 'true'
 export const isPlaygama = import.meta.env.VITE_APP_PLAYGAMA === 'true'
 export const isPoki = import.meta.env.VITE_APP_POKI === 'true'
+export const isGameMonetize = import.meta.env.VITE_APP_GAME_MONETIZE === 'true'
 // ─── Distribution channel, NOT a platform ──────────────────────────────────
-// chaos-arena reaches YouTube Playables THROUGH Playgama: the build is a
+// tree-smashers reaches YouTube Playables THROUGH Playgama: the build is a
 // normal Playgama build (`VITE_APP_PLAYGAMA=true`, Bridge, PlaygamaStrategy,
 // Playgama ads) that additionally satisfies YouTube's certification rules.
 // So this flag never selects a save strategy or an ad provider — it only
@@ -46,7 +47,6 @@ export const isDemo = import.meta.env.VITE_APP_DEMO === 'true'
 // Gated with `!== 'false'` so a feature stays visible unless explicitly
 // disabled in .env — lets us hide a new feature instantly for a production
 // hotfix without touching code. See .env for the flags.
-export const isDailyChallengeEnabled = import.meta.env.VITE_APP_FEATURE_DAILY_CHALLENGE !== 'false'
 export const isBgSkinsEnabled = import.meta.env.VITE_APP_FEATURE_BG_SKINS !== 'false'
 
 // Skills (skills-feature.md §10.7/§10.10) are the one OPT-IN flag and live in
@@ -60,9 +60,9 @@ export const version: string = APP_VERSION
 // Replaces the old `useUserDb` IndexedDB layer. CG QA flagged the
 // `user_db` / `user_os` store as "data saved locally" — and it was
 // holding a pile of CardQuest relics (userHand, userCollection,
-// userCampaign, userQuestCards, etc.) that chaos-arena never reads.
+// userCampaign, userQuestCards, etc.) that tree-smashers never reads.
 //
-// chaos-arena only persists FOUR user settings:
+// tree-smashers only persists FOUR user settings:
 //   • difficulty / sound volume / music volume / locale
 //
 // They live in localStorage under the keys below. On a CrazyGames build
@@ -71,10 +71,10 @@ export const version: string = APP_VERSION
 // Hydrate at boot is a synchronous read; the strategy populates
 // localStorage from sdk.data BEFORE the App graph imports.
 
-const SOUND_KEY = 'spinner_user_sound_volume'
-const MUSIC_KEY = 'spinner_user_music_volume'
-const LANGUAGE_KEY = 'spinner_user_language'
-const DIFFICULTY_KEY = 'spinner_user_difficulty'
+const SOUND_KEY = 'smashers_user_sound_volume'
+const MUSIC_KEY = 'smashers_user_music_volume'
+const LANGUAGE_KEY = 'smashers_user_language'
+const DIFFICULTY_KEY = 'smashers_user_difficulty'
 
 const readNumber = (key: string, fallback: number): number => {
   const raw = localStorage.getItem(key)
@@ -145,11 +145,11 @@ isSplashScreenVisible.value = false
 //     / quest-* relics nothing here references.
 //   • `card*` keys (case-insensitive) — the CardQuest-era prefix that
 //     produced `cardQuestUserLanguage`, `cardQuestSoundVolume`, etc.
-//   • `chaosArena*` keys — the interim prefix from the
+//   • `treeSmashers*` keys — the interim prefix from the
 //     2026-05-04 build. We no longer mirror the locale hint to
-//     sessionStorage at all (the value lives in `spinner_user_language`,
+//     sessionStorage at all (the value lives in `smashers_user_language`,
 //     which flows through `sdk.data` on CG), so any existing
-//     `chaosArena*` entry is also dead data.
+//     `treeSmashers*` entry is also dead data.
 // Fire-and-forget — errors are swallowed because there is nothing to
 // recover. Runs at module load (useUser.ts is imported at the top of
 // main.ts) so the data is gone before the rest of the app boots.
@@ -161,11 +161,11 @@ try {
   }
 } catch { /* harmless */
 }
-// `chaosArena*` is matched CASE-SENSITIVELY: the live device-local keys
-// (`chaosarena_uid`, `chaosarena_quality_*`, `chaosarena_board_cache`, the
+// `treeSmashers*` is matched CASE-SENSITIVELY: the live device-local keys
+// (`treesmashers_uid`, `treesmashers_quality_*`, `treesmashers_board_cache`, the
 // free-2x gift mirrors) are lowercase + underscore and must survive a reload —
 // an `/i` match here silently wiped them on every boot.
-const isLegacyKey = (k: string): boolean => /^card/i.test(k) || k.startsWith('chaosArena')
+const isLegacyKey = (k: string): boolean => /^card/i.test(k) || k.startsWith('treeSmashers')
 const sweepLegacyKeys = (storage: Storage) => {
   try {
     const toRemove: string[] = []

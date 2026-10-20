@@ -84,7 +84,7 @@ const qs = new URLSearchParams({ seed: '7' })
 if (QUERY) for (const [k, v] of new URLSearchParams(QUERY)) qs.set(k, v)
 await page.goto(`http://127.0.0.1:${port}/index.html?${qs}`, { waitUntil: 'domcontentloaded' })
 const title = await page.title()
-if (!/chaos/i.test(title)) throw new Error(`wrong app served: "${title}"`)
+if (!/tree smashers/i.test(title)) throw new Error(`wrong app served: "${title}"`)
 await page.waitForSelector('canvas')
 await page.waitForTimeout(WARMUP_MS)
 

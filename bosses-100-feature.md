@@ -1,4 +1,4 @@
-# Bosses for stages 101–200 — design spec (Chaos Arena)
+# Bosses for stages 101–200 — design spec (Tree Smashers)
 
 > Status: **design, not implemented** — implementation starts after the skill system ships
 > (skills WP4/WP7/WP9/WP10, see §12). Written to be built from without guessing. Every number
@@ -63,7 +63,7 @@
 
 **Non-goals (v1)**
 
-- New mechanics on regular (non-boss) enemies, in the daily challenge or in PvP (backlog §13.2).
+- New mechanics on regular (non-boss) enemies or in PvP (backlog §13.2).
 - Skills on bosses (the skills spec keeps enemies skill-less, `skills-feature.md` §9).
 - A new currency or a new reward type — the new bosses pay the normal boss reward + roulette;
   the only extra is a cosmetic **trophy skin** per new boss (§3.5).
@@ -223,7 +223,6 @@ encounter whose roster wears that skin** grants the skin — a *trophy*:
 | Campaign 101+            | ON (the ten encounters)                                                                          |
 | Cheat stages / Boss Lab  | ON                                                                                               |
 | League gatekeepers (LG7) | ON — encounters are deterministic; `buildBossEncounterStage(id, levels)` builds any of them (§9) |
-| Daily challenge          | OFF in v1 (its `SOLO_ABILITIES` pool is unchanged); backlog §13.2                                |
 | PvP, leaderboard ghosts  | OFF (traits exist only on NPC bosses)                                                            |
 | Video pipeline scenes    | follow the stage; a new-boss beat can use the Boss Lab builder                                   |
 
@@ -991,7 +990,6 @@ and only has to land before BW6's trophy card is tested.
 | idea                                                                                                                                              | why deferred                                                                          |
 |---------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
 | more mechanics (e.g. *gravity well* pulling resting spinners, *mirror boss* that copies your last launch, *bomb carrier* that detonates on death) | three mechanics already fill ten encounters; each new one costs VFX budget + a lesson |
-| traits in the daily challenge (`SOLO_ABILITIES` += ember/frost/chill as mutators)                                                                 | the daily must stay beatable at 66 % ability rate; needs its own sim pass             |
 | traits on regular enemies in cycles ≥ 2 ("elite" enemies)                                                                                         | same as skills backlog "elite enemies"; needs a counter-tell                          |
 | a skill that answers frost directly ("Thaw": chance to shrug off a freeze / a chill stack)                                                        | the skills cap proof covers 10 skills; an 11th needs the pair sweep again             |
 | trophy frame / title for beating all ten                                                                                                          | cosmetic long tail after v1 telemetry                                                 |

@@ -5,10 +5,10 @@
 // Families Ad Format Requirements forbid full-screen advertising that is not
 // closeable after 5 seconds, and a publisher has no control over the close
 // affordance of a mediated interstitial creative. The 2026-09 Play rejection
-// of com.chaos.arena (version codes 1000012 / 1000020) cited exactly that.
-// This plugin therefore ships ONE format — AdMob rewarded *interstitial* ad
-// units, which Google guarantees serve skippable creatives only — and there
-// is no code path in the APK that can load or display anything else.
+// of com.tree.smashers (version codes 1000012 / 1000020) cited exactly that.
+// This plugin therefore shows opt-in rewarded ads only, and there is no code
+// path in the APK that can load or display anything else. (That alone does
+// not make them closeable after 5 seconds — see ADS_STATE.md.)
 const COMMANDS: &[&str] = &["init", "show_rewarded"];
 
 fn main() {

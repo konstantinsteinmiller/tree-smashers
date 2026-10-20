@@ -44,6 +44,35 @@ export const SKILL_TOTAL_COST = SKILL_COST.reduce((a, b) => a + b, 0)
 /** Team-wide slots; both player spinners carry every equipped skill. */
 export const SKILL_TEAM_SLOTS = 2
 
+/** Skills one blade can carry at once: a smasher brings up to three of its
+ *  own (src/data/smasherCatalog.ts). The runtime and the receive-side
+ *  sanitiser cap a loadout at this many entries. */
+export const SKILL_BLADE_SLOTS = 3
+
+/** Integer-valued level fields; a mod on them is rounded (and kept ≥ 1). */
+const INT_FIELDS = new Set(['everyN', 'maxStacks', 'maxTargets', 'cooldownMs'])
+
+/** Bounds of one skill mod multiplier (receive-side clamp, PvP / league). */
+export const SKILL_MOD_MIN = 0.5
+export const SKILL_MOD_MAX = 2
+
+/** `params` with smasher-skill mods applied field by field. Chances and
+ *  fractions are capped at 0.95 so no mod makes a proc certain. */
+export function applySkillMods<P extends object>(params: P, mods: Partial<Record<string, number>> | undefined): P {
+  if (!mods) return params
+  const out: Record<string, number> = { ...(params as Record<string, number>) }
+  for (const [k, m] of Object.entries(mods)) {
+    if (typeof m !== 'number' || !Number.isFinite(m) || !(k in out)) continue
+    const mul = Math.min(SKILL_MOD_MAX, Math.max(SKILL_MOD_MIN, m))
+    let v = (out[k] as number) * mul
+    if (INT_FIELDS.has(k)) v = Math.max(1, Math.round(v))
+    else if (k === 'mult') v = 1 + ((out[k] as number) - 1) * mul
+    else if (k !== 'threshold' && v > 0.95) v = 0.95
+    out[k] = v
+  }
+  return out as P
+}
+
 /** The SKILLS section is teased from currentStageId >= 8. */
 export const SKILL_TEASER_STAGE = 8
 

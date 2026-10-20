@@ -22,4 +22,5 @@ export const HAS_REWARDED_ADS: boolean =
   || import.meta.env.VITE_APP_GAME_DISTRIBUTION === 'true'
   || import.meta.env.VITE_APP_PLAYGAMA === 'true'
   || import.meta.env.VITE_APP_POKI === 'true'
+  || import.meta.env.VITE_APP_GAME_MONETIZE === 'true'
   || (import.meta.env.VITE_APP_NATIVE === 'true' && import.meta.env.VITE_APP_SHOW_MEDIATOR_ADS === 'true')

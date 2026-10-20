@@ -28,8 +28,8 @@ import type { SkillLoadout } from '@/types/skills'
  *  35 – 50 %   turn announcement fades in
  *  84 – 100 %  whole card fades out (done exactly at durationMs)
  *
- * Cost: transform / opacity keyframes only, a CSS text-shadow and one radial
- * gradient — no filter, no backdrop-filter, no box-shadow blur on moving
+ * Cost: transform / opacity keyframes only, a hard 0-blur text outline and
+ * one flat ring — no filter, no backdrop-filter, no box-shadow blur on moving
  * nodes. Low render quality (`FX.low`, or the `low` prop) drops the shock
  * ring, the glow and the slides (fades only); prefers-reduced-motion does the
  * same. Non-interactive (pointer-events: none) so it can never eat the
@@ -125,13 +125,13 @@ const onAnimEnd = (e: AnimationEvent) => {
           aria-hidden="true"
         )
           div.vs-ring.absolute.rounded-full(v-if="!cheap")
-          span.vs-text.font-black.game-text.italic {{ t('vs') }}
+          span.vs-text.font-black {{ t('vs') }}
 
-        div.vs-panel.relative.flex.flex-col.items-center.rounded-xl.border-2.min-w-0(
+        div.vs-panel.relative.flex.flex-col.items-center.min-w-0(
           :class="[side.key === 'me' ? 'is-me' : 'is-them', 'gap-1 sm:gap-2 px-2 py-2 sm:px-4 sm:py-3']"
           :data-side="side.key"
         )
-          div.vs-name.font-black.uppercase.game-text.truncate.max-w-full(
+          div.vs-name.font-black.uppercase.ui-outline-sm.truncate.max-w-full(
             class="text-sm sm:text-lg"
           ) {{ side.label }}
 
@@ -156,9 +156,9 @@ const onAnimEnd = (e: AnimationEvent) => {
               :data-skill="s.id"
             )
               SkillIcon.vs-chip-icon(:id="s.id" :size="30")
-              span.vs-lv.font-black.game-text.leading-none(class="text-[0.65rem] sm:text-xs") {{ t('lv') }}{{ s.level }}
+              span.vs-lv.font-black.ui-outline-sm.leading-none(class="text-[0.65rem] sm:text-xs") {{ t('lv') }}{{ s.level }}
 
-    div.vs-announce.mt-3.font-black.uppercase.tracking-wider.game-text.text-white.text-center(
+    div.vs-announce.mt-3.font-black.uppercase.ui-outline.text-center(
       v-if="announcement"
       class="text-xl sm:text-3xl px-4"
     ) {{ announcement }}
@@ -178,21 +178,26 @@ const onAnimEnd = (e: AnimationEvent) => {
     grid-template-columns: minmax(0, 17rem) auto minmax(0, 17rem)
 
 .vs-panel
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.78))
+  background-color: var(--color-wood-600)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui-lg)
+  box-shadow: inset 0 0 0 3px var(--vs-side), inset 0 -4px 0 var(--color-wood-800), 0 4px 0 var(--color-ink)
+  outline: 2px dashed rgba(255, 250, 240, 0.45)
+  outline-offset: -9px
 
   &.is-me
-    border-color: #50aaff
+    --vs-side: var(--color-sky-400)
     animation: vs-in-left var(--vs-dur) cubic-bezier(0.2, 0.9, 0.3, 1.15) both
 
     .vs-name
-      color: #9fd0ff
+      color: var(--color-sky-200)
 
   &.is-them
-    border-color: #ff5a6e
+    --vs-side: var(--color-berry-400)
     animation: vs-in-right var(--vs-dur) cubic-bezier(0.2, 0.9, 0.3, 1.15) both
 
     .vs-name
-      color: #ffadb8
+      color: var(--color-berry-300)
 
 .vs-spinner
   width: 3rem
@@ -216,7 +221,7 @@ const onAnimEnd = (e: AnimationEvent) => {
       height: 38px
 
 .vs-lv
-  color: #fde68a
+  color: var(--color-sun-300)
 
 .vs-emblem
   width: 3rem
@@ -229,14 +234,17 @@ const onAnimEnd = (e: AnimationEvent) => {
 .vs-text
   font-size: 1.9rem
   line-height: 1
-  color: #ffe066
-  text-shadow: 0 0 10px rgba(255, 170, 40, 0.85), 2px 2px 0 #7a2500, -1px -1px 0 #000
+  color: var(--color-sun-300)
+  text-shadow: 0 3px 0 var(--color-ink), 2px 0 0 var(--color-ink), -2px 0 0 var(--color-ink), 0 -2px 0 var(--color-ink), 2px 2px 0 var(--color-ink), -2px 2px 0 var(--color-ink), 2px -2px 0 var(--color-ink), -2px -2px 0 var(--color-ink), 0 5px 0 var(--color-berry-600)
   @media (min-width: 640px)
     font-size: 2.8rem
 
 .vs-ring
   inset: -30%
-  background: radial-gradient(circle, rgba(255, 224, 102, 0.55) 0%, rgba(255, 150, 40, 0.25) 45%, transparent 70%)
+  border-radius: 9999px
+  background: rgba(255, 201, 51, 0.35)
+  border: 3px dashed rgba(255, 250, 240, 0.6)
+  clip-path: circle(36%)
   animation: vs-ring var(--vs-dur) ease-out both
 
 .vs-announce
@@ -317,8 +325,6 @@ const onAnimEnd = (e: AnimationEvent) => {
     animation: vs-fade var(--vs-dur) linear both
   .vs-chip
     animation-delay: 0s !important
-  .vs-text
-    text-shadow: 2px 2px 0 #7a2500, -1px -1px 0 #000
 
 .pvp-vs.is-cheap
   +vs-static

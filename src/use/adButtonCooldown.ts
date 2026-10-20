@@ -12,7 +12,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 export const AD_BUTTON_COOLDOWN_MS = 30_000
-export const AD_BUTTON_COOLDOWN_KEY = 'spinner_ad_button_ready_at'
+export const AD_BUTTON_COOLDOWN_KEY = 'smashers_ad_button_ready_at'
 
 const readReadyAt = (): number => {
   try {

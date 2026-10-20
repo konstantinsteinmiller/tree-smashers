@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { revealRewards } from '@/use/useRewardReveal'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
@@ -220,6 +221,7 @@ const claimSeason = () => {
   if (r.coins > 0) addCoins(r.coins)
   if (r.diamonds > 0) addDiamonds(r.diamonds)
   emit('season-claimed', r)
+  void revealRewards([{ kind: 'coins', amount: r.coins }, { kind: 'diamonds', amount: r.diamonds }], { tone: '#ffc933' })
 }
 
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
@@ -358,10 +360,10 @@ const onGranted = () => emit('fights-granted')
 
 <style scoped lang="sass">
 .lh
-  --lh-accent: #ffc93c
+  --lh-accent: var(--color-sun-400)
   padding: 0.1rem 0.15rem 0.5rem
   text-align: left
-  color: #fff
+  color: var(--ui-text)
 
 .lh__grid
   display: flex
@@ -374,20 +376,21 @@ const onGranted = () => emit('fights-granted')
   gap: 0.6rem
   min-width: 0
 
-// ── Standing ──
+// ── Standing: wood plank with a tier-coloured top stripe ──
 .lh__standing
   display: flex
   align-items: center
   gap: 0.7rem
   padding: 0.55rem 0.7rem
-  border-radius: 1rem
-  border: 3px solid #0f1a30
-  background: radial-gradient(100% 120% at 0% 50%, color-mix(in srgb, var(--lh-accent) 35%, #22375f), #172846 70%)
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1)
+  border-radius: var(--radius-ui-lg)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-wood-600)
+  box-shadow: inset 0 4px 0 var(--lh-accent), inset 0 -4px 0 var(--color-wood-800), 0 3px 0 var(--color-ink)
+  color: var(--color-cream-50)
 
 .lh__badge
   flex-shrink: 0
-  filter: drop-shadow(0 3px 0 #0f1a30)
+  filter: drop-shadow(0 3px 0 var(--color-ink))
 
 .lh__rankcol
   display: flex
@@ -400,26 +403,26 @@ const onGranted = () => emit('fights-granted')
   font-size: 1.35rem
   font-weight: 900
   line-height: 1.05
-  color: var(--lh-accent)
+  color: var(--color-cream-50)
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000
+  text-shadow: -1.5px -1.5px 0 var(--color-ink), 1.5px -1.5px 0 var(--color-ink), -1.5px 1.5px 0 var(--color-ink), 1.5px 1.5px 0 var(--color-ink), 0 2px 0 var(--color-ink)
 
 .lh__season
   display: flex
   flex-wrap: wrap
   align-items: center
   gap: 0.2rem 0.4rem
-  font-size: 0.72rem
+  font-size: 0.75rem
   font-weight: 800
-  color: #b8c6dc
+  color: var(--color-cream-200)
 
 .lh__sep
   width: 0.25rem
   height: 0.25rem
   border-radius: 999px
-  background: #6d82a3
+  background: var(--color-cream-300)
 
 // ── Chips ──
 .lh__chips
@@ -433,8 +436,9 @@ const onGranted = () => emit('fights-granted')
   gap: 0.25rem
   padding: 0.2rem 0.55rem
   border-radius: 999px
-  border: 2px solid #0f1a30
-  font-size: 0.75rem
+  border: 2px solid var(--color-ink)
+  box-shadow: 0 2px 0 var(--color-ink)
+  font-size: 0.78rem
   font-weight: 900
   line-height: 1.1
 
@@ -443,14 +447,14 @@ const onGranted = () => emit('fights-granted')
     height: 0.9rem
 
 .lh__chip--gate
-  color: #3d2600
-  background: linear-gradient(to bottom, #ffe27a, #f0a400)
+  color: var(--color-ink)
+  background-color: var(--color-sun-400)
 .lh__chip--shield
-  color: #cfe8ff
-  background: #1f4c80
+  color: var(--color-cream-50)
+  background-color: var(--color-sky-600)
 .lh__chip--streak
-  color: #ffd9a8
-  background: #7a3413
+  color: var(--color-cream-50)
+  background-color: var(--color-berry-600)
 
 // ── Fights ──
 .lh__fights
@@ -460,9 +464,10 @@ const onGranted = () => emit('fights-granted')
   justify-content: space-between
   gap: 0.4rem 0.6rem
   padding: 0.45rem 0.7rem
-  border-radius: 0.9rem
-  border: 2px solid #0f1a30
-  background: #13223d
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-cream-400)
+  background-color: var(--color-cream-200)
+  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
 
 .lh__fightsInfo
   display: flex
@@ -470,28 +475,27 @@ const onGranted = () => emit('fights-granted')
   gap: 0.5rem
 
 .lh__fightsLabel
-  font-size: 0.8rem
+  font-size: 0.85rem
   font-weight: 800
-  color: #b8c6dc
+  color: var(--ui-text-muted)
 
 .lh__fightsCount
   font-size: 1.25rem
   font-weight: 900
-  color: #5fe08a
+  color: var(--color-leaf-700)
   font-variant-numeric: tabular-nums
-  text-shadow: 0 2px 0 #000
 
   &.is-empty
-    color: #ff8a7a
+    color: var(--color-berry-600)
 
 .lh__fightsMax
   font-size: 0.85rem
-  color: #8193ad
+  color: var(--ui-text-muted)
 
 .lh__fightsReset
-  font-size: 0.78rem
+  font-size: 0.8rem
   font-weight: 800
-  color: #d7deea
+  color: var(--ui-text-muted)
 
 // ── Opponents ──
 .lh__opponents
@@ -499,11 +503,11 @@ const onGranted = () => emit('fights-granted')
 
 .lh__heading
   margin: 0 0 0.45rem
-  font-size: 0.85rem
+  font-size: 0.9rem
   font-weight: 900
-  letter-spacing: 0.06em
+  letter-spacing: 0.03em
   text-transform: uppercase
-  color: #d7deea
+  color: var(--ui-text)
 
 .lh__cards
   display: grid
@@ -511,27 +515,29 @@ const onGranted = () => emit('fights-granted')
   gap: 0.5rem
   padding-bottom: 0.3rem
 
+// Loading placeholder: a soft cream card that gently fades (no shimmer gradient).
 .lh__skeleton
   height: 10.2rem
-  border-radius: 1rem
-  border: 3px solid #0f1a30
-  background: linear-gradient(100deg, #172846 30%, #22375f 50%, #172846 70%)
-  background-size: 250% 100%
-  animation: lh-shimmer 1.4s linear infinite
+  border-radius: var(--radius-ui-lg)
+  border: 3px solid var(--color-cream-400)
+  background-color: var(--color-cream-200)
+  outline: 2px dashed rgba(110, 69, 39, 0.25)
+  outline-offset: -7px
+  animation: lh-pulse 1.4s ease-in-out infinite
 
-@keyframes lh-shimmer
-  to
-    background-position: -150% 0
+@keyframes lh-pulse
+  50%
+    opacity: 0.55
 
 .lh__notice
   margin-bottom: 0.5rem
   padding: 0.35rem 0.7rem
-  border-radius: 0.6rem
-  background: rgba(255, 90, 90, 0.16)
-  border: 2px solid rgba(255, 120, 120, 0.55)
-  color: #ffd9d9
+  border-radius: var(--radius-ui)
+  background-color: var(--color-berry-300)
+  border: 2px solid var(--color-berry-600)
+  color: var(--color-ink)
   font-weight: 800
-  font-size: 0.8rem
+  font-size: 0.85rem
   text-align: center
 
 .lh__quiet
@@ -540,14 +546,15 @@ const onGranted = () => emit('fights-granted')
   align-items: center
   gap: 0.35rem
   padding: 1.4rem 0.8rem
-  border-radius: 1rem
-  border: 2px dashed #3a5584
+  border-radius: var(--radius-ui-lg)
+  border: 2px dashed var(--color-wood-500)
+  background-color: var(--color-cream-200)
   text-align: center
 
 .lh__quietIcon
   width: 2.6rem
   height: 2.6rem
-  color: #8fb4e8
+  color: var(--color-wood-600)
   animation: lh-turn 2.4s ease-in-out infinite
 
   svg
@@ -563,11 +570,12 @@ const onGranted = () => emit('fights-granted')
 .lh__quietTitle
   font-size: 1rem
   font-weight: 900
+  color: var(--ui-text)
 
 .lh__quietBody
   font-size: 0.85rem
-  font-weight: 700
-  color: #b8c6dc
+  font-weight: 800
+  color: var(--ui-text-muted)
 
 .lh--static
   .lh__skeleton, .lh__quietIcon

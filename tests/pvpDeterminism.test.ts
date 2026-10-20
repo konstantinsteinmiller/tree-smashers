@@ -175,7 +175,7 @@ const runMatch = async (spec: MatchSpec): Promise<MatchResult> => {
       enabled: true,
       myTurnFirst: spec.firstTurn === c.role,
       role: c.role
-    }, 'circle', false, { skillLoadout: mySkills, enemySkillLoadout: theirSkills })
+    }, 'circle', { skillLoadout: mySkills, enemySkillLoadout: theirSkills })
     spec.afterInit?.(c.engine, c.role)
   }
   start(host)
@@ -350,10 +350,10 @@ describe('PvP determinism — host and guest simulate the same match', () => {
     })
     expect(e.getMatchSeed()).toBe(0xabc)
     expect(rng.currentMatchSeed()).toBe(0xabc)
-    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', false, { seed: 555 })
+    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', { seed: 555 })
     expect(e.getMatchSeed()).toBe(555)
     const first = rng.matchRng()
-    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', false, { seed: 555 })
+    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', { seed: 555 })
     expect(rng.matchRng()).toBe(first)
     e.disposePhysics()
   })
@@ -455,13 +455,13 @@ describe('PvP determinism — skills on both sides', () => {
     const host = gh.useSpinnerGame()
     rh.seedMatchRng(0x77)
     host.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined,
-      { enabled: true, myTurnFirst: true, role: 'host' }, 'circle', false,
+      { enabled: true, myTurnFirst: true, role: 'host' }, 'circle',
       { skillLoadout: L('opening_salvo', 'guard_shell'), enemySkillLoadout: L('opening_salvo', 'mirror_plate', 4) })
     const { game: gg, rng: rg } = await loadClient()
     const guest = gg.useSpinnerGame()
     rg.seedMatchRng(0x77)
     guest.initGame(TWO_V_TWO[1], TWO_V_TWO[0], false, 'default', 0, false, undefined,
-      { enabled: true, myTurnFirst: false, role: 'guest' }, 'circle', false,
+      { enabled: true, myTurnFirst: false, role: 'guest' }, 'circle',
       { skillLoadout: L('opening_salvo', 'mirror_plate', 4), enemySkillLoadout: L('opening_salvo', 'guard_shell') })
     expect(host.phase.value).toBe('deciding_turn')
     const hp = (e: Engine) => Object.fromEntries(e.allBlades.value.map(b => [b.syncKey, b.hp.toFixed(6)]))

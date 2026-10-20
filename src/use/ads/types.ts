@@ -72,6 +72,14 @@ export interface AdProvider {
    * `adStarted`, the Playgama Bridge's PAUSE_STATE_CHANGED) leave this unset.
    */
   readonly managesMidgameAudio?: boolean
+  /**
+   * Reactive, optional: the provider's consent platform says the player must
+   * be able to reopen their privacy choice (Google UMP in GDPR regions). The
+   * Options menu shows a "Privacy settings" entry while this is true.
+   */
+  readonly privacyOptionsRequired?: Ref<boolean>
+  /** Reopens the consent form. Only providers with a consent platform. */
+  showPrivacyOptions?: () => Promise<void>
   init: () => Promise<void>
   showRewardedAd: () => Promise<boolean>
   /**

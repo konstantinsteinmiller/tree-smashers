@@ -17,7 +17,8 @@ const allOff: PlatformFlags = {
   isY8: false,
   isGamePix: false,
   isPlaygama: false,
-  isPoki: false
+  isPoki: false,
+  isGameMonetize: false
 }
 
 // EVERY platform flag has to be listed, not just the ones this file sets.
@@ -31,6 +32,7 @@ const ALL_ENVS = [
   'VITE_APP_GAME_DISTRIBUTION',
   'VITE_APP_PLAYGAMA',
   'VITE_APP_POKI',
+  'VITE_APP_GAME_MONETIZE',
   'VITE_APP_YOUTUBE',
   'VITE_APP_GLITCH',
   'VITE_APP_GAMEPIX',
@@ -97,7 +99,18 @@ describe('resolveAdProvider', () => {
     expect(provider.name).toBe('playgama')
   })
 
-  it('returns AdMob when VITE_APP_NATIVE env is set AND showMediatorAds AND isNative are both true', async () => {
+  it('returns GameMonetize when VITE_APP_GAME_MONETIZE env is set', async () => {
+    vi.stubEnv('VITE_APP_GAME_MONETIZE', 'true')
+    const resolveAdProvider = await loadResolver()
+    const provider = resolveAdProvider({
+      flags: { ...allOff, isGameMonetize: true },
+      showMediatorAds: false,
+      isNative: false
+    })
+    expect(provider.name).toBe('gamemonetize')
+  })
+
+  it('returns LevelPlay when VITE_APP_NATIVE env is set AND showMediatorAds AND isNative are both true', async () => {
     vi.stubEnv('VITE_APP_NATIVE', 'true')
     const resolveAdProvider = await loadResolver()
     const provider = resolveAdProvider({
@@ -105,7 +118,7 @@ describe('resolveAdProvider', () => {
       showMediatorAds: true,
       isNative: true
     })
-    expect(provider.name).toBe('admob')
+    expect(provider.name).toBe('levelplay')
   })
 
   it('returns Noop when showMediatorAds is true but isNative is false (web build)', async () => {
@@ -153,7 +166,7 @@ describe('resolveAdProvider', () => {
       expect(provider.name).toBe('crazygames')
     })
 
-    it('isGameDistribution wins over AdMob when both env flags are set', async () => {
+    it('isGameDistribution wins over LevelPlay when both env flags are set', async () => {
       vi.stubEnv('VITE_APP_GAME_DISTRIBUTION', 'true')
       vi.stubEnv('VITE_APP_NATIVE', 'true')
       const resolveAdProvider = await loadResolver()

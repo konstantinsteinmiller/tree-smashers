@@ -333,7 +333,7 @@ let boardSource: BoardSource = null
 let fetched = false
 
 /**
- * Deliberately NOT a `spinner_`-prefixed key and not a field inside `spinner_*`.
+ * Deliberately NOT a `smashers_`-prefixed key and not a field inside `smashers_*`.
  *
  * Both of those round-trip to the platform's cloud save (see `isPayloadKey`),
  * and this is a ~6 kB cache of PUBLIC data that is identical for every player.
@@ -341,7 +341,7 @@ let fetched = false
  * save, against Poki's 1 MB ceiling — to protect a device that has its own copy
  * anyway. It is a per-device cache, so it lives per-device.
  */
-const BOARD_CACHE_KEY = 'chaosarena_board_cache'
+const BOARD_CACHE_KEY = 'treesmashers_board_cache'
 
 const readBoardCache = (): Board | null => {
   try {

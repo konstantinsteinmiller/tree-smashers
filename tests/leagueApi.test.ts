@@ -69,7 +69,7 @@ const load = async (env: Record<string, string> = {}, stage = 13): Promise<Loade
   vi.stubEnv('VITE_LEADERBOARD_SECRET', '')
   for (const f of AD_BUILD_FLAGS) vi.stubEnv(f, 'false')
   for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
-  localStorage.setItem('spinner_campaign_stage', String(stage))
+  localStorage.setItem('smashers_campaign_stage', String(stage))
   vi.stubGlobal('fetch', fetchMock)
   // useUser FIRST (useMatch ↔ useModels ↔ useUser import cycle).
   await import('@/use/useUser')
@@ -387,7 +387,7 @@ describe('POST /league/result + the unsent retry', () => {
     vi.advanceTimersByTime(MIN_BATTLE_MS + 1000)
     handler = () => { throw new TypeError('offline') }
     await api.finishOnlineFight(session, 'win', 20_000).server
-    expect(JSON.parse(localStorage.getItem('spinner_league')!).unsent.token).toBe('v1.tok')
+    expect(JSON.parse(localStorage.getItem('smashers_league')!).unsent.token).toBe('v1.tok')
 
     const again = await load()
     expect(again.league.state.value.unsent?.token).toBe('v1.tok')

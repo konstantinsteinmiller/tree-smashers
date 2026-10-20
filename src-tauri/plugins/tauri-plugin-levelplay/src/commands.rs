@@ -23,6 +23,13 @@ pub(crate) async fn show_interstitial<R: Runtime>(app: AppHandle<R>) -> Result<S
 }
 
 #[command]
+pub(crate) async fn show_privacy_options<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<PrivacyOptionsResponse> {
+    app.levelplay().show_privacy_options()
+}
+
+#[command]
 pub(crate) async fn launch_test_suite<R: Runtime>(
     app: AppHandle<R>,
 ) -> Result<LaunchTestSuiteResponse> {

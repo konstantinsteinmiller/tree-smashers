@@ -1,9 +1,9 @@
 # Art Desk — ready (verified 2026-09-27 with two real Gemini jobs)
 
-Gemini painting for chaos-arena runs through **its own Chrome profile**,
-`C:\Users\konst\.art-desk\profiles\chaos-arena` (signed in as Konstantin). It
+Gemini painting for tree-smashers runs through **its own Chrome profile**,
+`C:\Users\konst\.art-desk\profiles\tree-smashers` (signed in as Konstantin). It
 never touches the shared `~/.art-desk/gemini-chrome` profile or any other project's profile.
-Run everything from the repo root, `C:\Users\konst\chaos-arena`.
+Run everything from the repo root, `C:\Users\konst\tree-smashers`.
 
 ## 1. Paint: `paint.mjs` (blocking, one job at a time machine-wide for this profile)
 
@@ -65,7 +65,7 @@ node tools/art-desk/slice.mjs --in <painting> --out-dir <dir> [--grid 4x3] [--si
 - **`--grid CxR`** (default `1x1`) cuts equal cells. In `trim` mode each cut line snaps to the nearest clean
   background gap within 12% of a cell.
 - **`--names`** gives one name per cell, row by row, with no extension; `-` skips a cell. **The project convention is
-  `<id>_256x256`**, e.g. `public/images/models/phoenix_256x256.webp`. The default is `<in-stem>-<n>`.
+  `<id>_256x256`**, e.g. `public/images/boss-badges/cinder-tyrant_256x256.webp`. The default is `<in-stem>-<n>`.
 - **`--fit trim`** (default) crops each cell to its own content and centres it at `--size` with a `--pad`
   margin. Use it for icons, skins and single objects. **`--fit cell`** scales the whole cell uniformly with no
   re-centring. Use it for **animation frames**, so registration holds.
@@ -78,7 +78,7 @@ node tools/art-desk/slice.mjs --in <painting> --out-dir <dir> [--grid 4x3] [--si
 - **Output:** stdout lists the files written; the report (ground colour, % keyed, per-cell content box,
   scale, warnings) goes to stderr. Exit 0 = ok, 1 = a cell came out empty or it failed, 2 = bad args.
 - **WebP at q 0.82** gives **6–11 kB per 256x256 sprite** (coin 10.7 kB, gems 6–8 kB), in line with the shipped
-  models at 4–18 kB.
+  sprites at 4–18 kB.
 - **It starts one headless Chrome** on a temp profile, about 3 s per run. For batches of
   several slices, run them **sequentially** or through
   `node "$HOME/.claude/skills/worker-budget/budget.mjs" run -- …` (the user's CPU rule).
@@ -119,7 +119,7 @@ strip.
   the ground). **For lava/heal FX, read "Glows" and "NOTHING IS EVER SEE-THROUGH"**: soft light
   over magenta can't be keyed cleanly. Keep glows inside the shape, or slice with `--halo`.
 - **§8 finish references:** style refs teach finish, never subject. Say "never a subject: do not copy
-  its shape/emblem". Use refs of the SAME element or single sprites; shipped `public/images/models/*.webp` work well.
+  its shape/emblem". Use refs of the SAME element or single sprites; shipped `public/images/boss-badges/*.webp` work well.
   §8 "Effects: the placeholder is NOTATION" is required reading for VFX sheets.
 - **§11:** end with a "BEFORE YOU CALL IT FINISHED" count-and-check list.
 - **The failure catalogue** at the end of PROMPT-ANATOMY maps each bad return to the clause that fixes it.

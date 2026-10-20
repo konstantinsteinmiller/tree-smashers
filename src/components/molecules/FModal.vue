@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import FTabs, { type TabOption } from '@/components/atoms/FTabs.vue'
+import { useI18n } from 'vue-i18n'
 import { isMobileLandscape, isMobilePortrait } from '@/use/useUser'
 
 interface Props {
@@ -27,6 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits(['update:modelValue', 'update:activeTab'])
+const { t } = useI18n()
 
 // Root is a <Teleport>, so class/style passed by parents can't auto-inherit
 // and Vue warns about extraneous attrs. Opt out of auto-inherit and forward
@@ -197,7 +199,7 @@ onBeforeUnmount(teardownObservers)
         class="modal-overlay fixed inset-0 z-50 flex items-center justify-center"
       )
         //- Backdrop
-        div(class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="close")
+        div(class="modal-backdrop absolute inset-0" @click="close")
 
         //- Modal Container
         //- `--modal-header-room` reserves the vertical strip the header
@@ -254,21 +256,25 @@ onBeforeUnmount(teardownObservers)
             @click="close"
           )
             div(class="flex justify-center scale-85 sm:scale-100")
-              div(class="ribbon-header relative" @click.stop)
-                div(class="absolute inset-0 translate-y-1 rounded-lg bg-[#1a2b4b]")
-                div(class="relative flex items-center justify-center bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-4 border-[#0f1a30] px-10 py-2 rounded-xl")
-                  span(class="brawl-text text-2xl md:text-3xl text-white uppercase tracking-wider whitespace-nowrap")
-                    | {{ title }}
+              //- Fabric banner (flat CSS, see design.sass `.ui-banner`).
+              //- ART-DESK SEAM: a painted fabric ribbon can replace it.
+              div(class="ribbon-header ui-banner relative" @click.stop)
+                span(class="ui-outline text-2xl md:text-3xl whitespace-nowrap")
+                  | {{ title }}
 
           //- The Main Frame
           div(class="modal-frame-wrap relative")
-            div(class="absolute inset-0 translate-y-2 rounded-[1.5rem] sm:rounded-[2.5rem] bg-[#0c1626]")
+            //- Hard drop shadow under the wooden frame (0 blur).
+            div(class="absolute inset-0 translate-y-2 rounded-[1.5rem] sm:rounded-[2.25rem] bg-[var(--color-ink)]")
 
             //- Top padding is NOT a Tailwind `pt-*` here — it is set in
             //- <style> as `--modal-close-band`, because it has to stay in
             //- lockstep with the height of the absolutely-positioned X. See
             //- the `.modal-frame` rule for why.
-            div(class="modal-frame relative bg-[#1a2b4b] border-[5px] border-[#0f1a30] rounded-[1.25rem] sm:rounded-[2rem] pb-0 px-2 sm:px-4 md:px-8 md:pb-2")
+            //- Wooden frame (planks + stitched edge) around a cream
+            //- parchment card: the content is ALWAYS dark ink on cream, the
+            //- strongest-contrast surface in the game.
+            div(class="modal-frame relative pb-2 px-2 sm:px-3 md:px-4")
 
               //- Close Button (X) — wrapper is purely a layout spacer for
               //- the absolutely-positioned X button; it must NOT also close
@@ -290,18 +296,19 @@ onBeforeUnmount(teardownObservers)
               div.close-button.z-20(v-if="isClosable")
                 button(
                   v-if="isClosable"
+                  type="button"
+                  :aria-label="t('close')"
                   @click="close"
                   class="hover:scale-[103%] -mt-3 -mr-2.5 absolute top-0 right-0 group cursor-pointer transition-transform \
                          active:scale-40 sm:active:scale-90 scale-90 sm:scale-110 sm:top-2 sm:right-2 md:top-3 md:right-3"
                   :class="{ 'scale-100 -mt-4': isMobilePortrait, '-mt-8 -mr-3': !isMobilePortrait }"
                 )
                   div(class="relative")
-                    div(class="absolute inset-0 translate-y-1 rounded-lg bg-[#6b1212]")
                     //- p-2.5 + h-5 icon keeps the close hit box at ~47 CSS px
                     //- on a 390px phone, above the 44pt / 48dp minimums. It is
                     //- the one control every QA pass reaches for first.
-                    div(class="relative custom-red-bg border-2 border-[#0f1a30] rounded-lg p-2.5 text-white font-bold")
-                      svg(xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor")
+                    div(class="ui-btn ui-btn--danger ui-btn--icon relative p-2.5")
+                      svg(xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true")
                         path(stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M6 18L18 6M6 6l12 12")
 
               //- Content Slot — the only scrolling region in the modal.
@@ -313,7 +320,7 @@ onBeforeUnmount(teardownObservers)
               //- content above / below the fold.
               div.mt-1.modal-content-slot.game-scroll(
                 ref="contentRef"
-                class="text-white text-center"
+                class="text-center"
                 :class="{ 'scroll-fade-top': canScrollUp, 'scroll-fade-bottom': canScrollDown }"
               )
                 slot
@@ -338,8 +345,34 @@ onBeforeUnmount(teardownObservers)
     transform: scale(1)
     opacity: 1
 
-.brawl-text
-  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+.modal-backdrop
+  background-color: var(--ui-backdrop)
+
+// ─── Wooden frame + cream parchment card ────────────────────────────────────
+// The frame is a flat wood plank with a stitched (dashed) inner edge; the
+// content slot is the parchment card. Flat fills + hard inset bands only.
+.modal-frame
+  background-color: var(--color-wood-600)
+  border: 4px solid var(--color-ink)
+  border-radius: 1.25rem
+  box-shadow: inset 0 4px 0 var(--color-wood-400), inset 0 -5px 0 var(--color-wood-800)
+  @media (min-width: 640px)
+    border-radius: 2rem
+
+.modal-content-slot
+  color: var(--ui-text)
+  background-color: var(--ui-surface)
+  border: 3px solid var(--color-wood-800)
+  border-radius: 0.9rem
+  box-shadow: inset 0 3px 0 var(--color-cream-50)
+  padding: 0.5rem 0.25rem
+  @media (min-width: 640px)
+    border-radius: 1.4rem
+    padding: 0.75rem 0.5rem
+
+// The footer sits on the wood, so loose footer text reads cream.
+.modal-footer-slot
+  color: var(--color-cream-50)
 
 // ─── Height cap + scrollable body ───────────────────────────────────────────
 //
@@ -454,12 +487,12 @@ onBeforeUnmount(teardownObservers)
   &::before
     top: 0
     margin-bottom: -1.25rem
-    background: linear-gradient(to bottom, #1a2b4b 15%, rgba(26, 43, 75, 0))
+    background: linear-gradient(to bottom, var(--ui-surface) 15%, rgba(253, 242, 216, 0))
 
   &::after
     bottom: 0
     margin-top: -1.25rem
-    background: linear-gradient(to top, #1a2b4b 15%, rgba(26, 43, 75, 0))
+    background: linear-gradient(to top, var(--ui-surface) 15%, rgba(253, 242, 216, 0))
 
   &.scroll-fade-top::before
     opacity: 1
@@ -472,22 +505,22 @@ onBeforeUnmount(teardownObservers)
 // as the same control. Firefox gets the standard two-value `scrollbar-color`.
 .game-scroll
   scrollbar-width: thin
-  scrollbar-color: #50aaff #0a1425
+  scrollbar-color: var(--color-wood-500) var(--color-cream-200)
 
   &::-webkit-scrollbar
     width: 0.5rem
 
   &::-webkit-scrollbar-track
-    background: #0a1425
+    background: var(--color-cream-200)
     border-radius: 999px
 
   &::-webkit-scrollbar-thumb
-    background: #50aaff
-    border: 2px solid #0f1a30
+    background: var(--color-wood-500)
+    border: 2px solid var(--color-cream-200)
     border-radius: 999px
 
     &:hover
-      background: #2266ff
+      background: var(--color-wood-600)
 
 // ─── Landscape mobile: tighter chrome ────────────────────────────────────────
 @media (orientation: landscape) and (max-height: 500px)
@@ -518,11 +551,14 @@ onBeforeUnmount(teardownObservers)
   // overhangs a little further above the frame at this breakpoint.
   .modal-frame
     --modal-close-band: 2.1rem
-    padding-bottom: 0
+    padding-bottom: 0.25rem
     padding-left: 0.375rem
     padding-right: 0.375rem
     border-width: 3px
     border-radius: 1rem
+  .modal-content-slot
+    padding: 0.25rem 0.125rem
+    border-radius: 0.75rem
   // The wrapper divs around <slot/> have default Tailwind margins; in
   // landscape every pixel matters so we collapse them.
   .modal-content-slot

@@ -34,7 +34,7 @@ declare global {
     __playgamaPlatformId?: string | null
     __storageShim?: { localStorage: string | null; sessionStorage: string | null }
     __saveManager?: { strategyName?: string }
-    __chaosDebug?: () => Record<string, unknown>
+    __smashersDebug?: () => Record<string, unknown>
   }
 }
 
@@ -55,7 +55,7 @@ const readEnvFlags = (): Record<string, string> => {
 /**
  * A full picture of the runtime, safe to call at any time.
  *
- * Exposed as `window.__chaosDebug()` so QA (ours or a portal's) can paste one
+ * Exposed as `window.__smashersDebug()` so QA (ours or a portal's) can paste one
  * expression into the console and hand back everything at once.
  */
 export const snapshotBootState = (router?: Router): Record<string, unknown> => {
@@ -133,7 +133,7 @@ export const installBootDiagnostics = (router?: Router): void => {
   installed = true
 
   try {
-    window.__chaosDebug = () => snapshotBootState(router)
+    window.__smashersDebug = () => snapshotBootState(router)
   } catch { /* ignore */
   }
 

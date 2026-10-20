@@ -18,18 +18,30 @@
 // or `didFailToDisplayAd`, so a concurrent second show can't
 // cross-resolve an earlier caller's Promise.
 //
-// Apple Kids Category compliance:
-//   • We never call ATTrackingManager.requestTrackingAuthorization —
-//     apps in the Kids Category are forbidden from showing the ATT
-//     prompt and from collecting IDFA. The `is_deviceid_optout=true`
-//     metadata flag tells LevelPlay to use a per-install random UUID
-//     instead of IDFA, mirroring the Android behaviour we verified
-//     in production logcat.
+// Audience: the app is 18+ and not child-directed since 2026-10-03
+// (ADS_STATE.md). The JS provider sends `isChildDirected=false`,
+// `deviceIdOptOut=false` and the AdMob tags off; a child-directed build
+// still works through the same metadata. We never call
+// ATTrackingManager.requestTrackingAuthorization, so the networks get
+// no IDFA (the CI strips NSUserTrackingUsageDescription as well).
+//
+// Consent (EEA / UK / CH): before LevelPlay starts, Google UMP asks for
+// consent with the message configured in AdMob → Privacy & messaging,
+// exactly like the Android plugin. UMP reaches this target only
+// transitively (GoogleMobileAds' SPM package depends on it), and the CLI
+// SPM build may not expose it — see Package.swift. Every UMP call is
+// therefore behind `canImport`: without the module the plugin compiles,
+// skips consent and leaves a build warning in the CI log.
 
 import SwiftRs
 import Tauri
 import UIKit
 import WebKit
+#if canImport(UserMessagingPlatform)
+import UserMessagingPlatform
+#else
+#warning("UserMessagingPlatform is not importable: this iOS build shows no consent form")
+#endif
 // The IronSource xcframework's Swift module name is `IronSource`
 // (per Unity's official LevelPlay-Swift integration guide), even
 // though our SPM binary target is named `IronSourceSDK`. Linking
@@ -53,6 +65,7 @@ class InitArgs: Decodable {
     var admobTfua: Bool = true
     var deviceIdOptOut: Bool = true
     var metaMixedAudience: Bool = false
+    var consentDebugEea: Bool = false
     var enableTestSuite: Bool = false
 }
 
@@ -118,7 +131,7 @@ class LevelPlayPlugin: Plugin,
             return
         }
 
-        // ── COPPA / Families Policy metadata — MUST come before init ──
+        // ── Audience metadata — MUST come before init ──
         LevelPlay.setMetaDataWithKey("is_child_directed", value: boolText(args.isChildDirected))
         LevelPlay.setMetaDataWithKey("AdMob_TFCD", value: boolText(args.admobTfcd))
         LevelPlay.setMetaDataWithKey("AdMob_TFUA", value: boolText(args.admobTfua))
@@ -128,6 +141,64 @@ class LevelPlayPlugin: Plugin,
             LevelPlay.setMetaDataWithKey("is_test_suite", value: "enable")
         }
 
+        // Consent first, then LevelPlay — LevelPlay reads the stored TCF
+        // string for every network when it starts.
+        DispatchQueue.main.async { [weak self] in
+            self?.gatherConsent(args) { [weak self] in
+                self?.startLevelPlay(args, invoke)
+            }
+        }
+    }
+
+    // ── Consent (Google UMP) ─────────────────────────────────────────
+    // A failed consent update or form must never cost the session its
+    // ads: LevelPlay starts either way, and the networks then serve what
+    // the stored consent signal (or its absence) allows.
+    private func gatherConsent(_ args: InitArgs, done: @escaping () -> Void) {
+        #if canImport(UserMessagingPlatform)
+        if args.isChildDirected {
+            done()
+            return
+        }
+        let parameters = RequestParameters()
+        parameters.isTaggedForUnderAgeOfConsent = false
+        if args.consentDebugEea {
+            // Debug builds only: pretend the device is in the EEA. Honoured
+            // on registered test devices only.
+            let debugSettings = DebugSettings()
+            debugSettings.geography = .EEA
+            parameters.debugSettings = debugSettings
+        }
+        ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) { error in
+            guard error == nil else {
+                done()
+                return
+            }
+            DispatchQueue.main.async { [weak self] in
+                guard let vc = self?.topViewController else {
+                    done()
+                    return
+                }
+                ConsentForm.loadAndPresentIfRequired(from: vc) { _ in
+                    done()
+                }
+            }
+        }
+        #else
+        done()
+        #endif
+    }
+
+    private func privacyOptionsRequired() -> Bool {
+        #if canImport(UserMessagingPlatform)
+        return ConsentInformation.shared.privacyOptionsRequirementStatus == .required
+        #else
+        return false
+        #endif
+    }
+
+    // ── LevelPlay ────────────────────────────────────────────────────
+    private func startLevelPlay(_ args: InitArgs, _ invoke: Invoke) {
         let initRequest = LPMInitRequestBuilder(appKey: args.appKey).build()
 
         LevelPlay.initWith(initRequest) { [weak self] _, error in
@@ -159,8 +230,34 @@ class LevelPlayPlugin: Plugin,
                 itl.loadAd()
             }
 
-            invoke.resolve(["initialized": true])
+            invoke.resolve([
+                "initialized": true,
+                "privacyOptionsRequired": self.privacyOptionsRequired(),
+            ])
         }
+    }
+
+    // Re-opens the consent form so a player can change their choice — the
+    // "privacy options entry point" Google requires wherever UMP said a
+    // form was needed (`privacyOptionsRequired` in the init response).
+    @objc public func showPrivacyOptions(_ invoke: Invoke) throws {
+        #if canImport(UserMessagingPlatform)
+        DispatchQueue.main.async { [weak self] in
+            guard let vc = self?.topViewController else {
+                invoke.resolve(["shown": false, "error": "no-view-controller"])
+                return
+            }
+            ConsentForm.presentPrivacyOptionsForm(from: vc) { error in
+                if let error = error {
+                    invoke.resolve(["shown": false, "error": error.localizedDescription])
+                } else {
+                    invoke.resolve(["shown": true])
+                }
+            }
+        }
+        #else
+        invoke.resolve(["shown": false, "error": "consent-sdk-unavailable"])
+        #endif
     }
 
     @objc public func showRewarded(_ invoke: Invoke) throws {

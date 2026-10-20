@@ -5,7 +5,7 @@ import type { LocalStorageAccessor, SaveStrategy } from '@/utils/save/types'
 import { resetAllProgress } from '@/use/useResetProgress'
 import { refreshSaveBackedState, saveDataVersion } from '@/use/useSaveStatus'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
-import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY, SKILLS_KEY, SKILL_LOADOUT_KEY, SKILL_UI_KEY } from '@/keys'
+import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY, ROSTER_KEY } from '@/keys'
 
 // ─── Full-progress reset ───────────────────────────────────────────────────
 //
@@ -25,13 +25,13 @@ import { STAGE_KEY, UPGRADES_KEY, COINS_KEY, SKINS_KEY, SKILLS_KEY, SKILL_LOADOU
 //     save-backed refs in place instead, so the wipe has to be observable
 //     on the campaign composable without any navigation.
 
-// Skills are progress: wiped by the reset (not in KEEP_KEYS), so the skills
-// intro can show again once the player re-clears stage 10.
+// Smasher levels are progress: the roster is wiped by the reset (not in
+// KEEP_KEYS), and so is any legacy skill key a pre-roster save still carries.
 const PROGRESS_KEYS = [
-  STAGE_KEY, COINS_KEY, UPGRADES_KEY, 'spinner_battle_pass', 'spinner_daily_rewards',
-  SKILLS_KEY, SKILL_LOADOUT_KEY, SKILL_UI_KEY
+  STAGE_KEY, COINS_KEY, UPGRADES_KEY, 'smashers_battle_pass', 'smashers_daily_rewards',
+  ROSTER_KEY, 'smashers_skills', 'smashers_skill_loadout'
 ]
-const KEPT_KEYS = [SKINS_KEY, 'spinner_user_language', 'spinner_bg_skin_selected']
+const KEPT_KEYS = [SKINS_KEY, 'smashers_user_language', 'smashers_bg_skin_selected']
 
 const makeSpyStrategy = (): SaveStrategy & {
   onLocalRemove: ReturnType<typeof vi.fn>
@@ -110,12 +110,12 @@ describe('resetAllProgress', () => {
   it('leaves the rewarded-ad cooldown armed so a reset cannot farm it', async () => {
     const { strategy } = await bootWithSave(false)
     const readyAt = String(Date.now() + 30_000)
-    window.localStorage.setItem('spinner_ad_button_ready_at', readyAt)
+    window.localStorage.setItem('smashers_ad_button_ready_at', readyAt)
 
     await resetAllProgress()
 
-    expect(removedKeys(strategy)).not.toContain('spinner_ad_button_ready_at')
-    expect(window.localStorage.getItem('spinner_ad_button_ready_at')).toBe(readyAt)
+    expect(removedKeys(strategy)).not.toContain('smashers_ad_button_ready_at')
+    expect(window.localStorage.getItem('smashers_ad_button_ready_at')).toBe(readyAt)
   })
 
   // Takes effect immediately: no reload, so the campaign composable's
@@ -148,11 +148,11 @@ describe('resetAllProgress', () => {
 
   it('survives a boot with no SaveManager installed', async () => {
     window.localStorage.setItem(STAGE_KEY, '9')
-    window.localStorage.setItem('spinner_user_language', 'de')
+    window.localStorage.setItem('smashers_user_language', 'de')
 
     await expect(resetAllProgress()).resolves.toBeUndefined()
 
     expect(window.localStorage.getItem(STAGE_KEY)).toBeNull()
-    expect(window.localStorage.getItem('spinner_user_language')).toBe('de')
+    expect(window.localStorage.getItem('smashers_user_language')).toBe('de')
   })
 })

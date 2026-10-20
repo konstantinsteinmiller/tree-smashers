@@ -51,7 +51,7 @@ const { t, n } = useI18n()
   padding: 1.5rem 0.5rem
   text-align: center
   font-weight: 800
-  color: #b8c6dc
+  color: var(--ui-text-muted)
 
 .ltl__list
   display: flex
@@ -68,12 +68,15 @@ const { t, n } = useI18n()
   gap: 0.5rem
   min-height: 2.4rem
   padding: 0.2rem 0.6rem
-  border-radius: 0.7rem
-  border: 2px solid #0f1a30
-  background: #22375f
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-cream-400)
+  background-color: var(--color-cream-200)
+  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+  color: var(--ui-text)
 
 .ltl__row--podium
-  background: linear-gradient(90deg, #2f4a7d, #22375f)
+  background-color: var(--color-sun-200)
+  border-color: var(--color-sun-500)
 
 .ltl__rank
   display: inline-flex
@@ -82,21 +85,22 @@ const { t, n } = useI18n()
   width: 1.8rem
   height: 1.8rem
   border-radius: 999px
+  border: 2px solid var(--color-ink)
   font-weight: 900
   font-size: 0.85rem
-  color: #fff
-  background: #0f1a30
+  color: var(--color-cream-50)
+  background-color: var(--color-wood-600)
   font-variant-numeric: tabular-nums
 
 .ltl__rank--1
-  background: linear-gradient(to bottom, #ffe27a, #e5a100)
-  color: #3d2600
+  background-color: var(--color-sun-400)
+  color: var(--color-ink)
 .ltl__rank--2
-  background: linear-gradient(to bottom, #eef3f9, #9fb0c4)
-  color: #1b2230
+  background-color: var(--color-cream-300)
+  color: var(--color-ink)
 .ltl__rank--3
-  background: linear-gradient(to bottom, #f3b27a, #b86a2c)
-  color: #2e1603
+  background-color: var(--color-wood-400)
+  color: var(--color-ink)
 
 .ltl__name
   min-width: 0
@@ -104,13 +108,12 @@ const { t, n } = useI18n()
   text-overflow: ellipsis
   white-space: nowrap
   font-weight: 800
-  color: #fff
+  color: var(--ui-text)
 
 .ltl__lp
   font-weight: 900
   font-size: 0.85rem
-  color: #ffd84d
+  color: var(--color-wood-700)
   white-space: nowrap
   font-variant-numeric: tabular-nums
-  text-shadow: 0 1px 0 #000
 </style>

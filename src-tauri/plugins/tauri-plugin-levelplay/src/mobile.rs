@@ -53,6 +53,13 @@ impl<R: Runtime> Levelplay<R> {
             .map_err(Into::into)
     }
 
+    /// Re-opens Google UMP's consent form (the privacy options entry point).
+    pub fn show_privacy_options(&self) -> crate::Result<PrivacyOptionsResponse> {
+        self.0
+            .run_mobile_plugin("showPrivacyOptions", ())
+            .map_err(Into::into)
+    }
+
     /// Opens LevelPlay's built-in Test Suite overlay over the running app.
     /// Native side requires the app to have been initialized with
     /// `is_test_suite=enable` metadata (the JS provider sets this when

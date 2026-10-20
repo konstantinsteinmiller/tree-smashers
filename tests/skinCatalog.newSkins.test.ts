@@ -7,9 +7,9 @@
 //      getSelectedSkin), and saves persist offers/ownership by model id —
 //      reordering or inserting in the middle would change the default and
 //      whatever an index-based consumer picks.
-//   2. NO BROKEN SKIN SHIPS. Every catalog id has its image in
-//      public/images/models, so a skin can never be listed (shop, rewards,
-//      NPC pick, leaderboard avatar) before it is painted.
+//   2. NO BROKEN SKIN SHIPS. Every catalog id resolves to a smasher
+//      colourway (src/smashers/smasherSkins.ts) — skins have no image files
+//      any more, the rig draws them.
 //   3. Every catalog id has a display name in EVERY locale file.
 //   4. The expansion skins are REGULAR (not SPECIAL_SKINS), so they
 //      join the free reward pools — except the earn-only boss trophies
@@ -26,8 +26,7 @@
 // import-cycle note in tests/useBattlePassSkinClaim.test.ts.
 
 import { describe, it, expect } from 'vitest'
-import { existsSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { smasherForSkin, smasherPalette } from '@/smashers/smasherSkins'
 import {
   SKINS_PER_TOP,
   SPINNER_MODEL_IDS,
@@ -73,7 +72,6 @@ const LOCALES: Record<string, any> = Object.fromEntries(
   Object.entries(import.meta.glob('../src/i18n/locales/*.ts', { eager: true, import: 'default' }))
     .map(([file, mod]) => [file.replace(/^.*\/|\.ts$/g, ''), mod])
 )
-const MODELS_DIR = resolve(__dirname, '..', 'public', 'images', 'models')
 
 const allCatalogIds = (): SpinnerModelId[] => [...new Set(Object.values(SKINS_PER_TOP).flat())]
 const newIds = (): SpinnerModelId[] =>
@@ -112,11 +110,11 @@ describe('skin catalog — append-only', () => {
 })
 
 describe('skin catalog — nothing ships unpainted or unnamed', () => {
-  it('every catalog skin has its image file', () => {
+  it('every catalog skin resolves to a smasher colourway', () => {
     for (const id of new Set<string>([...SPINNER_MODEL_IDS, ...allCatalogIds()])) {
-      const file = resolve(MODELS_DIR, `${id}_256x256.webp`)
-      expect(existsSync(file), `missing image ${file}`).toBe(true)
-      expect(statSync(file).size, `${id} image is suspiciously small`).toBeGreaterThan(2000)
+      const smasher = smasherForSkin(id)
+      const pal = smasherPalette(smasher, id)
+      expect(pal.fur, `${id} has no palette`).toMatch(/^#[0-9a-f]{6}$/i)
     }
   })
 

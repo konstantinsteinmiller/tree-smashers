@@ -150,7 +150,7 @@ describe('rule 3 — the league is reached only through the gate', () => {
   it('no shared code names the league storage keys directly', () => {
     const offenders = FILES
       .filter(f => !isLeague(f.file) && !isDevOnly(f.file))
-      .filter(f => /['"`](spinner_league|chaosarena_league_pool)['"`]/.test(stripComments(f.text)))
+      .filter(f => /['"`](smashers_league|treesmashers_league_pool)['"`]/.test(stripComments(f.text)))
       .map(f => f.file)
     expect(offenders).toEqual([])
   })
@@ -327,7 +327,7 @@ describe('LG6 — SpinnerArena reaches the league only through gate handles and 
 
   it('names no league marker string (keys, routes, data-league, the measure pair)', () => {
     const c = code()
-    expect(c).not.toMatch(/['"`](spinner_league|chaosarena_league_pool)/)
+    expect(c).not.toMatch(/['"`](smashers_league|treesmashers_league_pool)/)
     // Route strings (the '@/league/…' import specifiers aside).
     expect(c.replace(/['"]@\/league\/[^'"]+['"]/g, '')).not.toMatch(/\/league\//)
     expect(c).not.toMatch(/data-league/)

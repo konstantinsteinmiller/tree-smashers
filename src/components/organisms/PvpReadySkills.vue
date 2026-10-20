@@ -23,11 +23,11 @@ const { t } = useI18n()
     role="group"
     :aria-label="mine ? t('skills.title') : t('skills.opponentSkills')"
   )
-    template(v-for="s in loadout" :key="s.id")
+    template(v-for="(s, i) in loadout" :key="i")
       div.flex.items-center.gap-1
         SkillIcon(:id="s.id" :size="28")
-        span.text-white.game-text.font-black(class="text-xs") {{ t('lv') }}{{ s.level }}
-    span.text-slate-500.font-bold(
+        span.text-ink.font-black(class="text-xs") {{ t('lv') }}{{ s.level }}
+    span.text-ink-soft.font-bold(
       v-if="!loadout.length"
       aria-hidden="true"
     ) –

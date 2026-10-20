@@ -11,8 +11,8 @@ import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
  * whether to switch that device to the cheaper one.
  *
  * ─── Storage ──────────────────────────────────────────────────────────────
- * The preference is deliberately NOT stored under a `spinner_` or `ca_` prefix.
- * `SaveMergePolicy.PAYLOAD_PREFIXES` is exactly `['spinner_', 'ca_']`, so both
+ * The preference is deliberately NOT stored under a `smashers_` or `ca_` prefix.
+ * `SaveMergePolicy.PAYLOAD_PREFIXES` is exactly `['smashers_', 'ca_']`, so both
  * are cloud-save payload — and a quality verdict is a property of THIS DEVICE.
  * Syncing the phone's "low" onto the same player's desktop would permanently
  * downgrade a machine that never had a problem.
@@ -21,11 +21,11 @@ import { ref, computed, watch, type Ref, type ComputedRef } from 'vue'
 export type QualityTier = 'high' | 'low'
 export type QualityPreference = 'auto' | QualityTier
 
-// NOT `ca_` / `spinner_`-prefixed: SaveMergePolicy's PAYLOAD_PREFIXES treats
+// NOT `ca_` / `smashers_`-prefixed: SaveMergePolicy's PAYLOAD_PREFIXES treats
 // BOTH of those as cloud-save payload, so either one would have synced this
 // device's verdict onto every other device the player owns.
-const QUALITY_PREF_KEY = 'chaosarena_quality_pref'
-const QUALITY_VERDICT_KEY = 'chaosarena_quality_verdict'
+const QUALITY_PREF_KEY = 'treesmashers_quality_pref'
+const QUALITY_VERDICT_KEY = 'treesmashers_quality_verdict'
 
 // ─── Tuning ─────────────────────────────────────────────────────────────────
 

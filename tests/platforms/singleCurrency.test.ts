@@ -1,7 +1,7 @@
 // ─── Single-currency (Poki) economy ─────────────────────────────────────────
 //
 // Poki's monetization policy allows exactly ONE currency and forbids in-app
-// purchases, so the Poki build collapses chaos-arena's coins+diamonds economy
+// purchases, so the Poki build collapses tree-smashers's coins+diamonds economy
 // into coins at a fixed rate. This spec pins the two halves that can break
 // silently:
 //
@@ -9,7 +9,7 @@
 //      through dual-priced background skins, and a drifting constant would
 //      quietly make diamond rewards worth less than what the shop offers;
 //   2. the SEAM — `addDiamonds` is the single point every grant flows through
-//      (daily challenge, battle-pass tier, roulette jackpot, rewarded ad, dev
+//      (battle-pass tier, roulette jackpot, rewarded ad, dev
 //      cheat), and a future placement that reaches for `diamonds.value`
 //      directly would bypass the collapse without any test noticing.
 
@@ -105,7 +105,7 @@ describe('addDiamonds is the single seam every grant flows through', () => {
     const diamondsBefore = diamonds.value
 
     addDiamonds(5)   // the roulette jackpot
-    addDiamonds(1)   // a daily-challenge / battle-pass tier
+    addDiamonds(1)   // a battle-pass tier
 
     expect(coins.value).toBe(coinsBefore + DIAMOND_COIN_VALUE * 6)
     expect(diamonds.value).toBe(diamondsBefore)

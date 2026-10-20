@@ -5,8 +5,6 @@
  *   node art/bosses/slice-return.mjs art-sheets/painted/<stem>.png
  *
  * Finds the drawable by the painting's name (manifest.mjs `stem`), then:
- *   skin  → tools/art-desk/slice.mjs (600x600 keyed PNG, the README route)
- *           → art/skins/fit-skins.mjs → public/images/models/<id>_256x256.webp
  *   badge → tools/art-desk/slice.mjs --size 256x256 → public/images/boss-badges/<file>_256x256.webp
  * and writes the slicer receipt (art-sheets/painted/.sliced.json: the
  * reference revision it was cut against + the painting's own hash), which is
@@ -59,14 +57,9 @@ const run = (args) => {
 }
 const tmp = mkdtempSync(join(tmpdir(), 'boss-slice-'))
 const target = join(ROOT, 'public', d.target)
-if (d.kind === 'skin') {
-  run(['tools/art-desk/slice.mjs', '--in', painting, '--out-dir', tmp, '--names', d.id, '--size', '600x600', '--png', '--pad', '0'])
-  run(['art/skins/fit-skins.mjs', '--out-dir', dirname(target), join(tmp, `${d.id}.png`)])
-} else {
-  const name = basename(d.target).replace(/\.webp$/, '')
-  run(['tools/art-desk/slice.mjs', '--in', painting, '--out-dir', tmp, '--names', name, '--size', '256x256', '--pad', '0.02'])
-  copyFileSync(join(tmp, `${name}.webp`), target)
-}
+const name = basename(d.target).replace(/\.webp$/, '')
+run(['tools/art-desk/slice.mjs', '--in', painting, '--out-dir', tmp, '--names', name, '--size', '256x256', '--pad', '0.02'])
+copyFileSync(join(tmp, `${name}.webp`), target)
 receipt.files[basename(painting)] = {
   rev: refRev,
   painting: paintingRev,

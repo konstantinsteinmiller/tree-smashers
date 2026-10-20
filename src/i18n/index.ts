@@ -153,12 +153,12 @@ export const setI18nLocale = async (
 }
 
 /** The one key that holds an EXPLICIT in-game language choice. */
-export const LANGUAGE_KEY = 'spinner_user_language'
+export const LANGUAGE_KEY = 'smashers_user_language'
 
 /**
  * Has the player ever picked a language in OptionsModal?
  *
- * `spinner_user_language` is written by exactly one code path —
+ * `smashers_user_language` is written by exactly one code path —
  * `setSettingValue('language', …)` behind the OptionsModal dropdown. A
  * portal-reported language is deliberately NEVER persisted there (see the
  * portal-locale block in `main.ts`), so a non-null value here means "the
@@ -197,7 +197,7 @@ export const clearExplicitLanguageChoice = (): void => {
  * Last portal-reported language we observed, so we can tell "the portal is
  * still reporting the same thing" from "the portal actively switched".
  *
- * NOT a `spinner_`/`ca_` key on purpose: those are payload keys that mirror to
+ * NOT a `smashers_`/`ca_` key on purpose: those are payload keys that mirror to
  * the cloud, and syncing this marker would make a second device with a
  * different portal language look like a language switch. It is pure
  * device-local bookkeeping.
@@ -235,7 +235,7 @@ export const notePortalLanguageChange = (code: string): boolean => {
  * the i18n instance so the first dynamic import targets only the right
  * locale file. Resolution order:
  *
- *   1. localStorage `spinner_user_language` — the player's explicit in-game
+ *   1. localStorage `smashers_user_language` — the player's explicit in-game
  *      choice, cloud-hydrated by `SaveManager.init()` before `main.ts`
  *      calls us. It outranks the portal: a player who deliberately picked
  *      Spanish must stay in Spanish on a Chinese-language portal.

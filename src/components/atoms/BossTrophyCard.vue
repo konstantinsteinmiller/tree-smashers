@@ -22,15 +22,15 @@ const { t } = useI18n()
     class="gap-2 sm:gap-3"
     :data-boss-trophy="skinId"
   )
-    div.roulette-grant-tag.font-black.uppercase.game-text.text-amber-300(
-      class="text-xs sm:text-sm tracking-[0.15em]"
+    div.roulette-grant-tag.font-black.uppercase.game-text.text-sun-200(
+      class="text-xs sm:text-sm tracking-[0.04em]"
     ) {{ t('trophySkin.label') }}
     div.trophy-glow.flex.flex-col.items-center.gap-2
-      img.trophy-icon.object-contain.drop-shadow-lg(
+      img.trophy-icon.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
         :src="modelImgPath(skinId)"
         :alt="t(`skins.${skinId}`)"
       )
-      span.trophy-name.text-amber-200.font-black.game-text.uppercase.text-center {{ t('bosses.trophyUnlocked', { name: t(`skins.${skinId}`) }) }}
+      span.trophy-name.text-plum-300.font-black.game-text.uppercase.text-center {{ t('bosses.trophyUnlocked', { name: t(`skins.${skinId}`) }) }}
 </template>
 
 <style scoped lang="sass">
@@ -44,7 +44,6 @@ const { t } = useI18n()
 
 .trophy-glow
   animation: trophy-glow 2s ease-in-out infinite
-  filter: drop-shadow(0 0 16px rgba(255, 200, 50, 0.6))
 
 .trophy-icon
   width: 5rem
@@ -100,7 +99,7 @@ const { t } = useI18n()
 
 @keyframes trophy-glow
   0%, 100%
-    filter: drop-shadow(0 0 16px rgba(255, 200, 50, 0.6))
+    filter: brightness(1)
   50%
-    filter: drop-shadow(0 0 32px rgba(255, 180, 50, 0.9))
+    filter: brightness(1.18)
 </style>

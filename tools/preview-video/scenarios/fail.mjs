@@ -66,7 +66,7 @@ export default {
     await g.stageHp(ctx, { player: [1, 0, 1], npc: [0.07, 1, 1] })
 
     // Load the opening shot so frame 0 is a drawn slingshot, not a board.
-    await ctx.evaluate(() => window.__chaos.aimAtBlade(0, 'npc', 0, 1))
+    await ctx.evaluate(() => window.__smashers.aimAtBlade(0, 'npc', 0, 1))
 
     const s = await g.snapshot(ctx)
     ctx.log.info(

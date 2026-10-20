@@ -85,9 +85,8 @@ const claim = async () => {
     @click.stop="claim"
   )
     div.relative
-      div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-      div.relative.rounded-lg.border-2.text-white.font-bold.flex.items-center.gap-1.px-3(
-        class="py-1.5 bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30]"
+      div.ad-plate.relative.font-bold.flex.items-center.gap-1.px-3(
+        class="py-1.5"
       )
         //- Ad disclosure (native builds only — Families policy)
         span.game-text.leading-tight(v-if="isNative" class="text-[10px] sm:text-xs") {{ t('spinner.ad') }}
@@ -97,5 +96,16 @@ const claim = async () => {
           class="h-5 w-5 sm:h-6 sm:w-6"
         )
         span.font-black.game-text.leading-tight(class="text-lg sm:text-xl") {{ WIN_AD_MULTIPLIER }}x
-        IconCoin.inline(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300")
+        IconCoin.inline(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-300")
 </template>
+
+<style scoped lang="sass">
+// Sky plate: every rewarded-video CTA is sky (DESIGN.md), ink outline,
+// hard 0-blur drop.
+.ad-plate
+  background-color: var(--color-sky-500)
+  color: var(--color-cream-50)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 3px 0 var(--color-sky-300), inset 0 -3px 0 var(--color-sky-700), 0 4px 0 var(--color-ink)
+</style>

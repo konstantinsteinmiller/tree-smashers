@@ -8,8 +8,8 @@
  * pasted, send, wait, download — one generation at a time. Serialisation and
  * the throttle live in lock.mjs; this file only drives the page.
  *
- * THE WINDOW. Real, headful Chrome on chaos-arena's OWN profile
- * (`~/.art-desk/profiles/chaos-arena`), launched normally and left running
+ * THE WINDOW. Real, headful Chrome on tree-smashers's OWN profile
+ * (`~/.art-desk/profiles/tree-smashers`), launched normally and left running
  * between jobs. The DevTools port is read from the `DevToolsActivePort` file
  * Chrome writes into that profile, which is also how we know a window is OURS
  * and not some other Chrome answering on a guessed port.
@@ -358,7 +358,7 @@ export class Gemini {
    * after the page loads — reading it straight away sees nothing).
    *
    * sandbox-tower's tell: a SPENT allowance drops the picker to Flash-Lite,
-   * which then refuses uploads. But on chaos-arena's profile (Sept 2026) the
+   * which then refuses uploads. But on tree-smashers's profile (Sept 2026) the
    * picker simply STARTS on "3.5 Flash-Lite", and that model painted and took
    * two uploads fine. So Lite alone is not a quota verdict; a Lite label plus
    * an upload Gemini will not take is.

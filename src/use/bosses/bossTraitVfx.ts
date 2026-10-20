@@ -15,7 +15,7 @@
 //     render/tick calls use indexed loops, module-constant colours, no
 //     closures / arrays / strings.
 //   • No shadowBlur, no ctx.filter, no per-frame gradients (the aura and ice
-//     sprites are baked ONCE with a gradient, then blitted); fades are
+//     sprites are baked ONCE as flat concentric rings, then blitted); fades are
 //     globalAlpha.
 //   • FX.low (`low`) follows the §7.3 fallback column: no carrier auras, ice
 //     shell = one stroked hexagon, nova = one stroke, no shards / embers /
@@ -44,6 +44,7 @@
 
 import type { BossTrait } from '@/types/spinner'
 import { BOSS_TRAIT_TUNING } from '@/use/bosses/bossTraits'
+import { fillConcentric } from '@/utils/concentricFill'
 import { playBossSfx, requestBossTraitSfx } from '@/use/bosses/bossTraitSfx'
 
 // ─── Events (the engine's fixed ring feeds this layer) ─────────────────────
@@ -257,12 +258,7 @@ const auraSprites: (Sprite | null | undefined)[] = [undefined, undefined, undefi
 const bakeAura = (i: number): Sprite | null => {
   const s = makeSurface(AURA_R * 2, AURA_R * 2)
   if (s === null) return null
-  const grad = s.g.createRadialGradient(AURA_R, AURA_R, 0, AURA_R, AURA_R, AURA_R)
-  for (const [o, c] of AURA_STOPS[i]!) grad.addColorStop(o, c)
-  s.g.fillStyle = grad
-  s.g.beginPath()
-  s.g.arc(AURA_R, AURA_R, AURA_R, 0, Math.PI * 2)
-  s.g.fill()
+  fillConcentric(s.g, AURA_R, AURA_R, AURA_R, AURA_STOPS[i]!, 14)
   return s.c
 }
 

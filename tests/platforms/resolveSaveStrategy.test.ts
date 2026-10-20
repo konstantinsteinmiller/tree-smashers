@@ -20,7 +20,8 @@ const allOff: PlatformFlags = {
   isY8: false,
   isGamePix: false,
   isPlaygama: false,
-  isPoki: false
+  isPoki: false,
+  isGameMonetize: false
 }
 
 // Same rule as `resolveAdProvider.test.ts`: list EVERY platform flag, because
@@ -31,6 +32,7 @@ const ALL_PLATFORM_ENVS = [
   'VITE_APP_GLITCH',
   'VITE_APP_PLAYGAMA',
   'VITE_APP_POKI',
+  'VITE_APP_GAME_MONETIZE',
   'VITE_APP_YOUTUBE',
   'VITE_APP_GAMEPIX',
   'VITE_APP_Y8',
@@ -106,6 +108,15 @@ describe('resolveSaveStrategy', () => {
     const resolveSaveStrategy = await loadResolver()
     const strategy = await resolveSaveStrategy({ ...allOff, isPoki: true })
     expect(strategy.name).toBe('poki')
+    expect(strategy.hydrateState).toBe('success-with-data')
+  })
+
+  it('returns GameMonetizeStrategy when the GameMonetize env is set', async () => {
+    // Local-only: the GameMonetize SDK is ads only, with no save API.
+    vi.stubEnv('VITE_APP_GAME_MONETIZE', 'true')
+    const resolveSaveStrategy = await loadResolver()
+    const strategy = await resolveSaveStrategy({ ...allOff, isGameMonetize: true })
+    expect(strategy.name).toBe('gamemonetize')
     expect(strategy.hydrateState).toBe('success-with-data')
   })
 

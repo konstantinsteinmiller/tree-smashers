@@ -766,12 +766,12 @@ export const BOTTOM_UPGRADE_BONUS: Record<BottomPartId, { speed: number; decay: 
 //     ...
 //     streak ≥10  → 50% cap
 //
-// Persisted under `spinner_boss_loss_streak`. The `spinner_` prefix means
+// Persisted under `smashers_boss_loss_streak`. The `smashers_` prefix means
 // the SaveManager mirrors it to the cloud strategy, so the nudge follows
 // the player across devices — a frustrating boss on mobile carries its
 // rubber-band into the desktop session.
 
-const BOSS_LOSS_STREAK_KEY = 'spinner_boss_loss_streak'
+const BOSS_LOSS_STREAK_KEY = 'smashers_boss_loss_streak'
 const BOSS_HP_REDUCTION_PER_STEP = 0.10  // 10% off per `STEP` losses
 const BOSS_HP_REDUCTION_STEP = 2         // losses required per +1 reduction tier
 const BOSS_HP_REDUCTION_CAP = 0.5        // never drop the boss below 50% HP

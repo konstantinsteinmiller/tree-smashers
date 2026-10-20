@@ -81,7 +81,7 @@ const sandbox = (
   p: SpinnerConfig[], n: SpinnerConfig[], arena: Parameters<Engine['initGame']>[3], mine?: SkillLoadout, theirs?: SkillLoadout
 ): Engine => {
   const e = useSpinnerGame()
-  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle', false,
+  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle',
     { seed: 1234, skillLoadout: mine, enemySkillLoadout: theirs })
   e.startPhysics() // phase stays 'tap_to_start'
   return e
@@ -194,7 +194,7 @@ describe('skills — Homing Rockets', () => {
     // split boss elsewhere has 1 HP left and is the lowest-HP target.
     const e = useSpinnerGame()
     e.initGame([cfg()], [cfg(), cfg({ isBoss: true, bossAbility: 'split' })], false, 'default', 0, false,
-      undefined, null, 'circle', false, { seed: 99, skillLoadout: [{ id: 'homing_rockets', level: 10 }] })
+      undefined, null, 'circle', { seed: 99, skillLoadout: [{ id: 'homing_rockets', level: 10 }] })
     e.startPhysics()
     const [me] = e.playerBlades.value
     const [grunt, boss] = e.npcBlades.value
@@ -232,7 +232,7 @@ describe('skills — Homing Rockets across a platform pause', () => {
   it('a rocket in flight freezes with the physics loop and does not land on resume', () => {
     const e = useSpinnerGame()
     e.initGame([cfg()], [cfg(), cfg()], false, 'default', 0, false,
-      undefined, null, 'circle', false, { seed: 99, skillLoadout: [{ id: 'homing_rockets', level: 10 }] })
+      undefined, null, 'circle', { seed: 99, skillLoadout: [{ id: 'homing_rockets', level: 10 }] })
     e.startPhysics()
     const [me] = e.playerBlades.value
     const [grunt, other] = e.npcBlades.value
@@ -317,7 +317,7 @@ describe('skills — Static Charge stun (campaign)', () => {
 describe('skills — Opening Salvo (campaign)', () => {
   it('fires once when the meteor intro ends, before the first turn', () => {
     const e = useSpinnerGame()
-    e.initGame([cfg(), cfg()], [cfg(), cfg()], false, 'default', 0, false, undefined, null, 'circle', false,
+    e.initGame([cfg(), cfg()], [cfg(), cfg()], false, 'default', 0, false, undefined, null, 'circle',
       { seed: 5, skillLoadout: [{ id: 'opening_salvo', level: 10 }] })
     e.startMatch()
     expect(e.npcBlades.value.every(b => b.hp === b.maxHp)).toBe(true)

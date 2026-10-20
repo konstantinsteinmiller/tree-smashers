@@ -15,7 +15,7 @@ import { saveDataVersion } from '@/use/useSaveStatus'
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'spinner_pvp_stats'
+const STORAGE_KEY = 'smashers_pvp_stats'
 
 /** Base honor points for a PvP win (fair game / level-1 match). */
 export const HONOR_BASE_WIN = 100

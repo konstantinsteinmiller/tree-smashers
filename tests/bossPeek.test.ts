@@ -123,7 +123,7 @@ describe('boss peek — the real campaign schedule', () => {
 
 describe('boss peek — gates', () => {
   it('only the campaign carries it', () => {
-    for (const mode of ['daily', 'pvp', 'ghost', 'cheat'] as BattleMode[]) {
+    for (const mode of ['pvp', 'ghost', 'cheat'] as BattleMode[]) {
       for (const id of [1, 2, 6, 7]) expect(win(id, mode), `${mode} @${id}`).toBeNull()
     }
     expect(win(1, 'campaign')).not.toBeNull()
@@ -140,10 +140,9 @@ describe('boss peek — gates', () => {
     for (const id of [-1, 0, 1.5, Number.NaN]) expect(win(id), `id ${id}`).toBeNull()
   })
 
-  it('maps the arena flags to one mode, PvP first then daily', () => {
+  it('maps the arena flags to one mode, PvP first', () => {
     expect(battleModeOf({})).toBe('campaign')
-    expect(battleModeOf({ pvp: true, daily: true })).toBe('pvp')
-    expect(battleModeOf({ daily: true, ghost: true })).toBe('daily')
+    expect(battleModeOf({ pvp: true, ghost: true })).toBe('pvp')
     expect(battleModeOf({ ghost: true, cheat: true })).toBe('ghost')
     expect(battleModeOf({ cheat: true })).toBe('cheat')
   })

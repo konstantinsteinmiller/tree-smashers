@@ -12,6 +12,7 @@ import { COINS_KEY, DIAMONDS_KEY } from '@/keys'
 import { isSingleCurrency, diamondsToCoins } from '@/use/useCurrency'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
+import { SMASHERS, isSmasherId, smasherConfig, smasherForParts, type SmasherId } from '@/data/smasherCatalog'
 
 // ─── Part Definitions ────────────────────────────────────────────────────────
 
@@ -116,12 +117,15 @@ export const computeStats = (
   const tb = TOP_UPGRADE_BONUS[config.topPartId]
   const bb = BOTTOM_UPGRADE_BONUS[config.bottomPartId]
 
+  // A smasher's unique profile scales its archetype's part stats; force
+  // decay (how long a launch keeps rolling) stays the archetype's own.
+  const prof = isSmasherId(config.smasherId) ? SMASHERS[config.smasherId].profile : null
   return {
-    maxHp: BASE_HP + top.healthBonus + bottom.healthBonus + tb.hp * topLevel + bb.hp * bottomLevel,
-    totalWeight: bottom.weight,
-    damageMultiplier: top.damageMultiplier + tb.damage * topLevel,
-    defenseMultiplier: top.defenseMultiplier + tb.defense * topLevel,
-    speedMultiplier: bottom.speedMultiplier + bb.speed * bottomLevel,
+    maxHp: (BASE_HP + top.healthBonus + bottom.healthBonus + tb.hp * topLevel + bb.hp * bottomLevel) * (prof?.hp ?? 1),
+    totalWeight: bottom.weight * (prof?.weight ?? 1),
+    damageMultiplier: (top.damageMultiplier + tb.damage * topLevel) * (prof?.damage ?? 1),
+    defenseMultiplier: (top.defenseMultiplier + tb.defense * topLevel) * (prof?.defense ?? 1),
+    speedMultiplier: (bottom.speedMultiplier + bb.speed * bottomLevel) * (prof?.speed ?? 1),
     forceDecay: bottom.forceDecay + bb.decay * bottomLevel,
     top,
     bottom
@@ -130,21 +134,44 @@ export const computeStats = (
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
-const TEAM_KEY = 'spinner_player_team'
+const TEAM_KEY = 'smashers_player_team'
 // COINS_KEY imported from `@/keys` at the top of this file (single source of truth shared with SaveMergePolicy).
-const FIRST_WIN_KEY = 'spinner_first_win'
+const FIRST_WIN_KEY = 'smashers_first_win'
 
-const DEFAULT_TEAM: SpinnerConfig[] = [
-  { topPartId: 'star', bottomPartId: 'balanced' },
-  { topPartId: 'round', bottomPartId: 'balanced' }
-]
+// The team is stored as smasher configs. Only `smasherId` is load-bearing:
+// level and parts are refilled from the roster at battle time
+// (`useSmashers.teamConfigs`), so a stale level in this key can never matter.
+export const DEFAULT_TEAM_SMASHERS: readonly SmasherId[] = ['bramble', 'thumper']
+
+const DEFAULT_TEAM: SpinnerConfig[] = DEFAULT_TEAM_SMASHERS.map(id => smasherConfig(id, 1))
+
+/** A stored team entry as a smasher config; a legacy part-only entry becomes
+ *  the smasher of its parts. Duplicate smashers are not allowed in a team. */
+const toSmasherEntry = (c: Partial<SpinnerConfig>): SpinnerConfig | null => {
+  if (!c || typeof c !== 'object') return null
+  if (isSmasherId(c.smasherId)) return smasherConfig(c.smasherId, 1, c.modelId)
+  if (typeof c.topPartId === 'string' && typeof c.bottomPartId === 'string') {
+    return smasherConfig(smasherForParts(c.topPartId, c.bottomPartId), 1, c.modelId)
+  }
+  return null
+}
 
 const loadStoredTeam = (): SpinnerConfig[] => {
   try {
     const raw = localStorage.getItem(TEAM_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length >= 2) return parsed
+      if (Array.isArray(parsed) && parsed.length >= 2) {
+        const seen = new Set<string>()
+        const team: SpinnerConfig[] = []
+        for (const entry of parsed) {
+          const cfg = toSmasherEntry(entry)
+          if (!cfg || seen.has(cfg.smasherId!)) continue
+          seen.add(cfg.smasherId!)
+          team.push(cfg)
+        }
+        if (team.length >= 2) return team
+      }
     }
   } catch { /* fall through */
   }
@@ -201,7 +228,7 @@ const addCoins = (amount: number) => {
  *
  *  ON SINGLE-CURRENCY BUILDS THIS PAYS COINS INSTEAD. Poki's monetization
  *  policy allows exactly one currency, so the diamond balance is never
- *  touched there and every grant — daily challenge, battle-pass tier,
+ *  touched there and every grant — battle-pass tier,
  *  roulette jackpot, rewarded-ad payout, dev cheat — converts at
  *  `DIAMOND_COIN_VALUE`. Routing it here rather than at the five call
  *  sites is what makes the collapse total: a placement added later gets

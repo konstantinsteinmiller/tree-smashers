@@ -28,12 +28,12 @@ import { SKILL_DOM, mountArena } from './helpers/arenaHarness'
 // test below re-seeds it).
 const SEED: Record<string, string> = vi.hoisted(() => {
   const seed: Record<string, string> = {
-    spinner_campaign_stage: '40',
-    spinner_player_max_stage: '40',
-    spinner_coins: '5000',
-    spinner_first_win: '1',
-    spinner_intro_seen: '1',
-    spinner_config_opened: '1'
+    smashers_campaign_stage: '40',
+    smashers_player_max_stage: '40',
+    smashers_coins: '5000',
+    smashers_first_win: '1',
+    smashers_intro_seen: '1',
+    smashers_config_opened: '1'
   }
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
   return seed
@@ -41,10 +41,6 @@ const SEED: Record<string, string> = vi.hoisted(() => {
 
 // ── Every skill module records its own load ────────────────────────────────
 const loaded = vi.hoisted(() => [] as string[])
-vi.mock('@/use/useSkills', () => {
-  loaded.push('useSkills')
-  return {}
-})
 vi.mock('@/use/skills/arenaSkills', () => {
   loaded.push('arenaSkills')
   return {}
@@ -77,32 +73,8 @@ vi.mock('@/data/skillCatalog', () => {
   loaded.push('skillCatalog')
   return {}
 })
-vi.mock('@/use/skillRevealGate', () => {
-  loaded.push('skillRevealGate')
-  return {}
-})
 vi.mock('@/use/skillText', () => {
   loaded.push('skillText')
-  return {}
-})
-vi.mock('@/components/organisms/SkillsIntroScreen.vue', () => {
-  loaded.push('SkillsIntroScreen')
-  return {}
-})
-vi.mock('@/components/organisms/SkillRevealOverlay.vue', () => {
-  loaded.push('SkillRevealOverlay')
-  return {}
-})
-vi.mock('@/components/organisms/SkillPickerModal.vue', () => {
-  loaded.push('SkillPickerModal')
-  return {}
-})
-vi.mock('@/components/organisms/SkillTopUpButton.vue', () => {
-  loaded.push('SkillTopUpButton')
-  return {}
-})
-vi.mock('@/components/organisms/TeamSkillsSection.vue', () => {
-  loaded.push('TeamSkillsSection')
   return {}
 })
 vi.mock('@/components/organisms/PvpReadySkills.vue', () => {
@@ -117,32 +89,23 @@ vi.mock('@/components/atoms/SkillHudIcon.vue', () => {
   loaded.push('SkillHudIcon')
   return {}
 })
-vi.mock('@/components/atoms/SkillDropChip.vue', () => {
-  loaded.push('SkillDropChip')
-  return {}
-})
 vi.mock('@/components/atoms/SkillIcon.vue', () => {
   loaded.push('SkillIcon')
   return {}
 })
-vi.mock('@/components/molecules/SkillSlotTile.vue', () => {
-  loaded.push('SkillSlotTile')
-  return {}
-})
-vi.mock('@/components/molecules/SkillIntroDemo.vue', () => {
-  loaded.push('SkillIntroDemo')
+vi.mock('@/use/skills/smasherSkillText', () => {
+  loaded.push('smasherSkillText')
   return {}
 })
 
 // Static `/images/…` template srcs become asset imports under Vitest's Vue
 // plugin, which cannot resolve public-dir paths — hand them a URL instead.
-vi.mock('/images/bg/parchment-ribbon_553x188.webp', () => ({ default: '/images/bg/parchment-ribbon_553x188.webp' }))
 vi.mock('/images/icons/movie_128x96.webp', () => ({ default: '/images/icons/movie_128x96.webp' }))
 vi.mock('/images/logo/logo_256x256.webp', () => ({ default: '/images/logo/logo_256x256.webp' }))
 vi.mock('/images/icons/chest_128x128.webp', () => ({ default: '/images/icons/chest_128x128.webp' }))
 vi.mock('/images/icons/trophy_128x128.webp', () => ({ default: '/images/icons/trophy_128x128.webp' }))
 
-const SKILL_KEY = /^spinner_skill/
+const SKILL_KEY = /^smashers_skill/
 const skillKeysInStorage = () => Object.keys(localStorage).filter(k => SKILL_KEY.test(k))
 
 // ── Gate ────────────────────────────────────────────────────────────────────
@@ -152,20 +115,15 @@ describe('skills gate, flag off', () => {
     const gate = await import('@/skills/skillsGate')
     expect(gate.SKILLS_BUILD).toBe(false)
     for (const handle of [
-      gate.SkillsIntroUi, gate.SkillRevealUi, gate.SkillPickerUi, gate.SkillHudChipUi,
-      gate.PvpVsCardUi, gate.SkillDropChipUi, gate.TeamSkillsSectionUi, gate.PvpReadySkillsUi
+      gate.SkillHudChipUi, gate.PvpVsCardUi, gate.PvpReadySkillsUi, gate.SkillIconUi
     ]) expect(handle).toBeNull()
-    expect(await gate.loadSkillsApi()).toBeNull()
+    expect(await gate.loadSmasherSkillText()).toBeNull()
     expect(await gate.loadArenaSkills()).toBeNull()
     expect(await gate.loadSkillEngine()).toBeNull()
     expect(await gate.loadSkillSfx()).toBeNull()
     expect(await gate.loadSkillLoadoutSanitizer()).toBeNull()
-    expect(gate.useSkillsApi().value).toBeNull()
-    const cheat = vi.fn()
-    gate.withSkillsApi(cheat)
     gate.armSkillSfx()
     await flushPromises()
-    expect(cheat).not.toHaveBeenCalled()
     expect(loaded).toEqual([])
   })
 })
@@ -180,7 +138,7 @@ describe('engine, flag off', () => {
     expect(game.hasSkillEngine()).toBe(false)
     const engine = game.useSpinnerGame()
     const cfg = { topPartId: 'round', bottomPartId: 'balanced', topLevel: 3, bottomLevel: 3 } as const
-    engine.initGame([{ ...cfg }], [{ ...cfg }], false, 'default', 0, false, undefined, null, 'circle', false, {
+    engine.initGame([{ ...cfg }], [{ ...cfg }], false, 'default', 0, false, undefined, null, 'circle', {
       skillLoadout: [{ id: 'guard_shell', level: 5 }],
       enemySkillLoadout: [{ id: 'homing_rockets', level: 5 }]
     })
@@ -229,10 +187,10 @@ describe('save merge, flag off', () => {
   it('stored skill levels do not weigh in the merge score', async () => {
     const { computeMeta } = await import('@/utils/save/SaveMergePolicy')
     const read = (snap: Record<string, string>) => ({ get: (k: string) => snap[k] ?? null })
-    const plain = computeMeta(read({ spinner_campaign_stage: '21' }))
+    const plain = computeMeta(read({ smashers_campaign_stage: '21' }))
     const withSkills = computeMeta(read({
-      spinner_campaign_stage: '21',
-      spinner_skills: JSON.stringify({ v: 1, lv: { mirror_plate: 10, guard_shell: 10 } })
+      smashers_campaign_stage: '21',
+      smashers_skills: JSON.stringify({ v: 1, lv: { mirror_plate: 10, guard_shell: 10 } })
     }))
     expect(withSkills.progressScore).toBe(plain.progressScore)
   })
@@ -252,10 +210,10 @@ describe('SpinnerArena, flag off', () => {
       expect(document.querySelector('.stage-badge')?.textContent).toContain('40')
       expect(document.querySelector('img[src*="team_128x128"]')).not.toBeNull()
       for (const sel of SKILL_DOM) expect(document.querySelector(sel), sel).toBeNull()
-      // The Team modal opens (stats bar) with no SKILLS row.
+      // The Team modal opens (smasher detail) with no SKILLS row.
       await arena.openTeam()
       await arena.settle(500)
-      expect(document.querySelector('.stats-bar')).not.toBeNull()
+      expect(document.querySelector('[data-testid="smasher-detail"]')).not.toBeNull()
       for (const sel of SKILL_DOM) expect(document.querySelector(sel), sel).toBeNull()
     } finally {
       arena.unmount()

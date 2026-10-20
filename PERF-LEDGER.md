@@ -1,4 +1,4 @@
-# Perf experiment ledger — Chaos Arena
+# Perf experiment ledger — Tree Smashers
 
 Every performance hypothesis that has been *measured* in this project, kept or
 rejected. **Null results are the most valuable rows here** — they are what stops
@@ -199,7 +199,7 @@ code:
 
 - served and loaded on **`localhost`** (the game only renders on localhost or a
   portal hostname; the committed runner uses `127.0.0.1`);
-- the init seeds also mark the **league unlock popup** seen (`spinner_league`
+- the init seeds also mark the **league unlock popup** seen (`smashers_league`
   `unlockSeen: true`) — since the league landed, stage ≥ the unlock stage opens
   that modal over the arena and every rep measured a static dialog at 60 fps;
 - the bosses seed also marks the skill-UI intros seen, as the skills seed does.

@@ -46,7 +46,7 @@
 //
 // NOTE ON THE PAUSE / AUDIO GATE: this module imports nothing from
 // `useGamePause` or `useSound`, deliberately. Unlike the project this pattern
-// came from, chaos-arena's `useAds` owns no ad gate — so the wrappers below
+// came from, tree-smashers's `useAds` owns no ad gate — so the wrappers below
 // publish `isPokiAdShowing` on the REAL-ad edge and `App.vue` is the single
 // owner that turns that into `setGamePaused()` + music pause/resume, exactly
 // as it already does for the Playgama Bridge's aggregated pause signal.
@@ -331,7 +331,10 @@ const scheduleStart = (): void => {
   }
   pendingStart = setTimeout(() => {
     pendingStart = null
-    if (bracket === 'playing') emitStart()
+    if (bracket !== 'playing') return
+    // Timers may fire a millisecond or two early against performance.now();
+    // re-check so the gap is guaranteed, not just requested.
+    scheduleStart()
   }, MIN_EVENT_GAP_MS - since)
 }
 

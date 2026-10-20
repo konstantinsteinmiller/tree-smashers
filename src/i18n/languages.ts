@@ -19,7 +19,7 @@
  * here has to change.
  *
  * Internal codes: the three legacy codes `jp`, `kr`, `zh` are kept because they
- * live in players' saves (`spinner_user_language`). Everything else uses the
+ * live in players' saves (`smashers_user_language`). Everything else uses the
  * BCP-47 language subtag, plus a region only where one file per variant is
  * needed (`pt-BR` / `pt-PT`, `zh-TW` = Traditional Chinese).
  *
@@ -29,8 +29,8 @@
 
 /** Font / typography bucket. Drives `<html data-script>` → `fonts.sass`. */
 export type ScriptBucket =
-  | 'latin' // fully covered by the `Angry` display face (Latin-1)
-  | 'latin-ext' // needs glyphs Angry lacks (ł ș ğ ő ə ơ…) → system sans
+  | 'latin' // Latin-1 — Nunito (self-hosted)
+  | 'latin-ext' // ł ș ğ ő ə ơ… — Nunito latin-ext / vietnamese subsets
   | 'greek'
   | 'cyrillic'
   | 'arabic'
@@ -288,7 +288,7 @@ export const pluralCategoriesFor = (bcp47: string): string[] => {
  * vue-i18n `pluralRules` entry for one language.
  *
  * Most copy is written number-neutral; the coin-count aria labels
- * (skills.learnAria/upgradeAria/topUpAria, spinner.tripleCoinsAria) use
+ * (sfc.SmasherTeamModal.levelUpAria, spinner.tripleCoinsAria) use
  * `a | b` branches and are called as `t(key, named, count)`. A
  * message may carry either one branch per category from `pluralCategoriesFor`
  * or that plus a leading explicit-zero branch. Anything else keeps vue-i18n's

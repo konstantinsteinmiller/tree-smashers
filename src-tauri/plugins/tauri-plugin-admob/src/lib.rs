@@ -3,22 +3,27 @@
 // ## Why this plugin exists
 //
 // It replaces `tauri-plugin-levelplay` (Unity LevelPlay / ironSource
-// mediation) on the native build. Google Play rejected com.chaos.arena in
+// mediation) on the native build. Google Play rejected com.tree.smashers in
 // 2026-09 under "Families Ad Format Requirements" — unclosable ads, and ads
 // not clearly distinguishable from app content. Through a mediation waterfall
-// the publisher cannot guarantee the winning creative is closeable after 5
-// seconds, so the native build now talks to Google's own SDK directly and uses
-// the one format Google documents as skippable-only: **rewarded interstitial**
-// ad units.
+// the publisher cannot control the winning creative at all, so the native
+// build talks to Google's own SDK directly and shows opt-in rewarded ads only.
+//
+// Going direct did NOT make the ads closeable after 5 seconds: the rewarded
+// interstitial unit was measured serving two-ad pods with no close button for
+// 17–36 s, and version code 1000024 was rejected for it. The template is
+// Google's server-side choice. ADS_STATE.md has the measurements and the check
+// (`tools/ad-closeability/measure.mjs`) that must pass before ads ship.
 //
 // ## Families / COPPA posture (all enforced on the native side)
-//   - `RequestConfiguration` sets TFCD=TRUE, TFUA=TRUE and
-//     maxAdContentRating="G" BEFORE `MobileAds.initialize`, so no request can
-//     leave the device untagged.
-//   - Every request carries the `is_designed_for_families=true` extra.
+//   - `RequestConfiguration` sets TFCD=TRUE (TFUA stays unspecified — the two
+//     must not both be true) and maxAdContentRating="G" BEFORE
+//     `MobileAds.initialize`, so no request can leave the device untagged.
 //   - The plugin manifest strips AD_ID and every Privacy Sandbox ad permission.
 //   - There is no interstitial, banner, app-open or native-ad code path in the
 //     shipped binary.
+//   - Android shows ads non-immersive, so the system's first-run "Viewing
+//     full screen" panel never covers an ad's close button.
 //
 // ## Design
 //   - Desktop builds get an inert stub (no GMA SDK for desktop); the JS-side
@@ -30,7 +35,7 @@
 // Commands (JS invoke names are snake_case, native methods camelCase to match
 // Kotlin `@Command` + Swift `@objc` conventions):
 //   - plugin:admob|init          -> init the SDK and preload one rewarded ad
-//   - plugin:admob|show_rewarded -> show the loaded rewarded-interstitial ad
+//   - plugin:admob|show_rewarded -> show the loaded rewarded ad
 
 use tauri::{
     plugin::{Builder, TauriPlugin},

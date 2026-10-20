@@ -2,13 +2,13 @@
  * ─── Tiny JSON-over-localStorage accessor ───────────────────────────────────
  *
  * The leaderboard modules were written against a game with one central save
- * blob (`getState` / `setState`). Chaos Arena does not have one — every
+ * blob (`getState` / `setState`). Tree Smashers does not have one — every
  * composable owns its own `localStorage` key of plain text (see `src/keys.ts`)
  * — so this is the adapter, and it is deliberately the whole adapter: two
  * functions, no store, no reactivity.
  *
  * Writes go through `localStorage.setItem`, which `SaveManager` patches on the
- * cloud-save builds. That is what makes a `spinner_`-prefixed key here reach
+ * cloud-save builds. That is what makes a `smashers_`-prefixed key here reach
  * the platform's cloud store without this module knowing anything about it —
  * and equally why a key that must NOT sync has to be named outside the payload
  * prefixes (see `SaveMergePolicy.PAYLOAD_PREFIXES`).

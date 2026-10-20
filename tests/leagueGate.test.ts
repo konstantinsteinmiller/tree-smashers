@@ -31,7 +31,7 @@ afterEach(() => {
 
 describe('league OFF', () => {
   it('every export is null / false, even at stage 999 with a stored unlock', async () => {
-    localStorage.setItem('spinner_league', STORED_UNLOCKED)
+    localStorage.setItem('smashers_league', STORED_UNLOCKED)
     const { gate } = await load({ VITE_APP_FEATURE_LEAGUE: 'false' })
     expect(gate.LEAGUE_BUILD).toBe(false)
     expect(gate.LEAGUE_ONLINE).toBe(false)
@@ -102,7 +102,7 @@ describe('league ON', () => {
   })
 
   it('a stored unlock survives a stage below the unlock (progress reset, LD5) — read-only', async () => {
-    localStorage.setItem('spinner_league', STORED_UNLOCKED)
+    localStorage.setItem('smashers_league', STORED_UNLOCKED)
     const { gate } = await load({ VITE_APP_FEATURE_LEAGUE: 'true' })
     const set = vi.spyOn(Storage.prototype, 'setItem')
     expect(gate.leagueMountAllowed(1)).toBe(true)
@@ -113,7 +113,7 @@ describe('league ON', () => {
   it('a corrupt or locked stored state does not unlock', async () => {
     const { gate } = await load({ VITE_APP_FEATURE_LEAGUE: 'true' })
     for (const raw of ['{', 'null', '"x"', JSON.stringify({ unlocked: 'yes' }), JSON.stringify({ unlocked: false })]) {
-      localStorage.setItem('spinner_league', raw)
+      localStorage.setItem('smashers_league', raw)
       expect(gate.leagueMountAllowed(1), raw).toBe(false)
     }
   })
@@ -125,7 +125,7 @@ describe('league ON', () => {
   })
 
   it('CrazyGames guest (account gate false) → no league at all (LD4), sign-in brings it', async () => {
-    localStorage.setItem('spinner_league', STORED_UNLOCKED)
+    localStorage.setItem('smashers_league', STORED_UNLOCKED)
     const { gate, board } = await load({ VITE_APP_FEATURE_LEAGUE: 'true' })
     let signedIn = false
     board.setLeaderboardAuthGate(() => signedIn)

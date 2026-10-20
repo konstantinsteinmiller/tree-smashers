@@ -68,7 +68,7 @@ const GATES: GateTier[] = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'c
 </script>
 
 <template lang="pug">
-  div.min-h-screen.p-4(class="bg-[radial-gradient(circle_at_50%_20%,#2b4f8c,#0b1426_70%)] text-white font-sans" data-testid="league-ui-preview")
+  div.min-h-screen.p-4(class="bg-forest-900 text-cream-100" data-testid="league-ui-preview")
     //- A fake idle HUD behind the modals, so the backdrop has something to dim.
     div.flex.items-center.gap-3.mb-4
       LeagueHudButton(:league="league" :champion-position="lp >= 1800 ? 3 : null" @open="hubOpen = true")

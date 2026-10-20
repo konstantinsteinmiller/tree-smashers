@@ -74,7 +74,7 @@ const onFight = () => {
   background: none
   cursor: pointer
   text-align: center
-  color: #fff
+  color: var(--ui-text)
   -webkit-tap-highlight-color: transparent
   transition: transform 0.08s ease
 
@@ -83,17 +83,18 @@ const onFight = () => {
   &:not(:disabled):active
     transform: translateY(2px) scale(0.97)
   &:focus-visible
-    outline: 3px solid #ffcd00
+    outline: 3px solid var(--ui-focus)
     outline-offset: 3px
-    border-radius: 1rem
+    border-radius: var(--radius-ui-lg)
 
 .loc__shadow
   position: absolute
   inset: 0
   transform: translateY(4px)
-  border-radius: 1rem
-  background: #0c1626
+  border-radius: var(--radius-ui-lg)
+  background: var(--color-ink)
 
+// Cream fabric card; the difficulty colour is the ribbon on top.
 .loc__body
   position: relative
   display: flex
@@ -101,9 +102,10 @@ const onFight = () => {
   align-items: center
   gap: 0.35rem
   padding: 1.35rem 0.4rem 0.5rem
-  border-radius: 1rem
-  border: 3px solid #0f1a30
-  background: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--loc-from) 30%, #243a66), #172846 70%)
+  border-radius: var(--radius-ui-lg)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-cream-100)
+  box-shadow: inset 0 -4px 0 var(--color-cream-300)
   overflow: hidden
 
 .loc__ribbon
@@ -112,14 +114,14 @@ const onFight = () => {
   left: 0
   right: 0
   padding: 0.2rem 0.3rem
-  font-size: 0.68rem
+  font-size: 0.7rem
   font-weight: 900
-  letter-spacing: 0.08em
-  text-transform: uppercase
+  letter-spacing: 0.03em
   line-height: 1.1
   color: var(--loc-ink)
-  background: linear-gradient(to bottom, var(--loc-from), var(--loc-to))
-  border-bottom: 2px solid #0f1a30
+  background-color: var(--loc-from)
+  box-shadow: inset 0 -3px 0 var(--loc-to)
+  border-bottom: 2px solid var(--color-ink)
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
@@ -133,9 +135,9 @@ const onFight = () => {
   width: 3.1rem
   height: 3.1rem
   border-radius: 999px
-  border: 2px solid #0f1a30
-  background: radial-gradient(circle at 50% 35%, #3a5c94, #101d36)
-  box-shadow: 0 2px 0 #0f1a30
+  border: 2px solid var(--color-ink)
+  background-color: var(--color-cream-300)
+  box-shadow: 0 2px 0 var(--color-ink)
   overflow: hidden
   display: flex
   align-items: center
@@ -154,11 +156,12 @@ const onFight = () => {
   font-size: clamp(0.68rem, 3.1vw, 0.85rem)
   font-weight: 900
   line-height: 1.15
+  color: var(--ui-text)
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  text-shadow: 0 1px 0 #000
 
+// Primary (leaf) fight CTA, same look as .ui-btn--primary.
 .loc__cta
   display: inline-flex
   align-items: center
@@ -167,15 +170,15 @@ const onFight = () => {
   width: 100%
   min-height: 2.1rem
   padding: 0.2rem 0.4rem
-  border-radius: 0.6rem
-  border: 2px solid #0f1a30
-  background: linear-gradient(to bottom, #ffcd00, #f7a000)
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 2px 0 #0f1a30
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-ink)
+  background-color: var(--color-leaf-500)
+  box-shadow: inset 0 2px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 2px 0 var(--color-ink)
+  color: var(--color-cream-50)
   font-size: 0.85rem
   font-weight: 900
-  text-transform: uppercase
-  letter-spacing: 0.04em
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000
+  letter-spacing: 0.02em
+  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink), 0 2px 0 var(--color-ink)
   white-space: nowrap
   overflow: hidden
 
@@ -183,7 +186,7 @@ const onFight = () => {
   width: 1rem
   height: 1rem
   flex-shrink: 0
-  filter: drop-shadow(0 1px 0 #000)
+  filter: drop-shadow(0 1px 0 var(--color-ink))
 
 // Narrow cards (3 across on a 320px phone): smaller portraits, no glyph on
 // the CTA, so neither the team nor the label is clipped.
@@ -200,9 +203,9 @@ const onFight = () => {
     display: none
   .loc__cta
     font-size: 0.78rem
-    letter-spacing: 0.02em
+    letter-spacing: 0
 
 .loc--disabled
   cursor: default
-  filter: grayscale(0.85) brightness(0.8)
+  filter: grayscale(0.85) brightness(0.9)
 </style>

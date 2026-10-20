@@ -30,7 +30,8 @@ import {
   SKILL_BIT,
   SKILL_HIT_MUL_CAP,
   SKILL_MAX_LEVEL,
-  SKILL_TEAM_SLOTS,
+  SKILL_BLADE_SLOTS,
+  applySkillMods,
   isSkillId,
   skillParams,
   type BladeSkills,
@@ -110,7 +111,7 @@ const clampLevel = (level: number): number =>
  * unset then, so the engine's `!a.skills && !b.skills` fast path (and the
  * empty-loadout hash baseline) stays intact.
  *
- * Sanitises: unknown ids and duplicates dropped, at most SKILL_TEAM_SLOTS
+ * Sanitises: unknown ids and duplicates dropped, at most SKILL_BLADE_SLOTS
  * entries, levels clamped to 1…10.
  *
  * @param seed    the match seed (`getMatchSeed()` / `currentMatchSeed()`)
@@ -127,13 +128,15 @@ export function createBladeSkills(
   if (!loadout || loadout.length === 0) return undefined
   const ids: SkillId[] = []
   const lv: Partial<Record<SkillId, number>> = {}
+  const mods: Partial<Record<SkillId, Partial<Record<string, number>>>> = {}
   let has = 0
   for (const entry of loadout) {
-    if (ids.length >= SKILL_TEAM_SLOTS) break
+    if (ids.length >= SKILL_BLADE_SLOTS) break
     const id = entry?.id
     if (!isSkillId(id) || (has & SKILL_BIT[id]) !== 0) continue
     ids.push(id)
     lv[id] = clampLevel(entry.level)
+    if (entry.mods) mods[id] = entry.mods
     has |= SKILL_BIT[id]
   }
   if (has === 0) return undefined
@@ -175,55 +178,55 @@ export function createBladeSkills(
     const level = lv[id] as number
     switch (id) {
       case 'mirror_plate': {
-        const p = skillParams('mirror_plate', level)
+        const p = applySkillMods(skillParams('mirror_plate', level), mods.mirror_plate)
         s.mirrorChance = p.chance
         s.mirrorShare = p.share
         break
       }
       case 'phase_step': {
-        const p = skillParams('phase_step', level)
+        const p = applySkillMods(skillParams('phase_step', level), mods.phase_step)
         s.phaseChance = p.chance
         s.phaseCooldownMs = p.cooldownMs
         break
       }
       case 'guard_shell': {
-        const p = skillParams('guard_shell', level)
+        const p = applySkillMods(skillParams('guard_shell', level), mods.guard_shell)
         s.shieldMax = s.shield = Math.max(1, Math.round(maxHp * p.shield))
         break
       }
       case 'second_wind': {
-        const p = skillParams('second_wind', level)
+        const p = applySkillMods(skillParams('second_wind', level), mods.second_wind)
         s.windThreshold = p.threshold
         s.windHeal = p.heal
         break
       }
       case 'lucky_edge': {
-        const p = skillParams('lucky_edge', level)
+        const p = applySkillMods(skillParams('lucky_edge', level), mods.lucky_edge)
         s.luckyChance = p.chance
         s.luckyMult = p.mult
         break
       }
       case 'momentum': {
-        const p = skillParams('momentum', level)
+        const p = applySkillMods(skillParams('momentum', level), mods.momentum)
         s.momentumPerStack = p.perStack
         s.momentumMaxStacks = p.maxStacks
         break
       }
       case 'homing_rockets': {
-        const p = skillParams('homing_rockets', level)
+        const p = applySkillMods(skillParams('homing_rockets', level), mods.homing_rockets)
         s.rocketEveryN = p.everyN
         s.rocketFrac = p.frac
         s.rocketMaxTargets = p.maxTargets
         break
       }
       case 'opening_salvo':
-        s.salvoPct = skillParams('opening_salvo', level).pct
+        s.salvoPct = applySkillMods(skillParams('opening_salvo', level), mods.opening_salvo).pct
         break
       case 'static_charge':
-        s.staticChance = skillParams('static_charge', level).chance
+        s.staticChance = applySkillMods(skillParams('static_charge', level), mods.static_charge).chance
         break
       case 'hazard_ward': {
-        const p = skillParams('hazard_ward', level)
+        const p = applySkillMods(skillParams('hazard_ward', level), mods.hazard_ward)
         s.wardLava = p.lava
         s.wardThunder = p.thunder
         s.wardChip = p.chip

@@ -1,24 +1,23 @@
 #!/usr/bin/env node
-// ─── Display face for the scripts `Angry` cannot draw ───────────────────────
+// ─── Self-hosted display faces (family-friendly rounded UI type) ────────────
 //
-// `Angry` (angrybirds-regular.ttf) is Latin-1 only. Latin-extended, Vietnamese,
-// Cyrillic (incl. Kazakh) and Greek locales used to drop to plain system sans.
-// They now use Playpen Sans (TypeTogether, SIL OFL 1.1) — a bold comic face
-// that covers all of them, incl. Uzbek ʻ (U+02BB).
-//
-// This script rebuilds the self-hosted woff2 subsets from the upstream
-// variable font, pinned to one google/fonts commit so a rerun is byte-stable:
+// The game's UI face is NUNITO (Vernon Adams et al., SIL OFL 1.1) — a rounded
+// sans that reads soft and friendly at heavy weights. It covers Latin,
+// Latin-extended, Vietnamese and Cyrillic (incl. Kazakh). It has NO Greek, so
+// Greek keeps PLAYPEN SANS (TypeTogether, SIL OFL 1.1), a rounded comic face.
+// Every other script (CJK, Arabic, Devanagari, Thai) uses OS faces — see
+// src/assets/css/fonts.sass.
 //
 //   node scripts/subset-display-font.mjs
 //
-// npm-only (subset-font = harfbuzz compiled to wasm; no python / fonttools).
-// Output: src/assets/css/font/playpen-sans/playpen-sans-800-<subset>.woff2
-// plus OFL.txt. The @font-face blocks in `src/assets/css/fonts.sass` carry
-// the SAME unicode-range per subset — keep the two in sync (the test
-// `tests/displayFontSubsets.test.ts` checks it).
+// Pinned to one google/fonts commit so a rerun is byte-stable. npm-only
+// (subset-font = harfbuzz in wasm). Output per face:
+//   src/assets/css/font/<dir>/<file>-<weight>-<subset>.woff2  + OFL.txt
+// The @font-face blocks in fonts.sass carry the SAME unicode-range per subset
+// (tests/displayFontSubsets.test.ts checks it).
 //
-// One weight (800) is instanced from the `wght` axis: `Angry` is a single
-// heavy weight too, so every string in the game already reads as one weight.
+// One weight per face is instanced from the wght axis: the whole UI is set in
+// one heavy weight (900 for Nunito, 800 for Playpen Sans).
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -30,9 +29,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(path.join(ROOT, 'package.json'))
 
 const COMMIT = '8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5'
-const UPSTREAM = `https://raw.githubusercontent.com/google/fonts/${COMMIT}/ofl/playpensans`
-const WEIGHT = 800
-const OUT = path.join(ROOT, 'src/assets/css/font/playpen-sans')
 
 /** Google-Fonts-style subsets. MUST match the unicode-range lines in fonts.sass. */
 export const SUBSETS = {
@@ -43,6 +39,12 @@ export const SUBSETS = {
   'cyrillic-ext': 'U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F',
   greek: 'U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF'
 }
+
+/** Which face draws which subsets. */
+export const FACES = [
+  { family: 'nunito', file: 'Nunito[wght].ttf', dir: 'nunito', prefix: 'nunito', weight: 900, subsets: ['latin', 'latin-ext', 'vietnamese', 'cyrillic', 'cyrillic-ext'] },
+  { family: 'playpensans', file: 'PlaypenSans[wght].ttf', dir: 'playpen-sans', prefix: 'playpen-sans', weight: 800, subsets: ['greek'] }
+]
 
 const codepoints = (range) => {
   const out = []
@@ -55,12 +57,12 @@ const codepoints = (range) => {
   return out
 }
 
-const fetchCached = async (name) => {
-  const dir = path.join(tmpdir(), 'chaos-arena-font-src', COMMIT)
+const fetchCached = async (family, name) => {
+  const dir = path.join(tmpdir(), 'tree-smashers-font-src', COMMIT, family)
   mkdirSync(dir, { recursive: true })
   const file = path.join(dir, name)
   if (!existsSync(file)) {
-    const res = await fetch(`${UPSTREAM}/${encodeURIComponent(name)}`)
+    const res = await fetch(`https://raw.githubusercontent.com/google/fonts/${COMMIT}/ofl/${family}/${encodeURIComponent(name)}`)
     if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`)
     writeFileSync(file, Buffer.from(await res.arrayBuffer()))
   }
@@ -75,20 +77,20 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error('subset-display-font: `subset-font` is not installed — run `pnpm add -D subset-font` first.')
     process.exit(1)
   }
-  const src = await fetchCached('PlaypenSans[wght].ttf')
-  const license = await fetchCached('OFL.txt')
-  mkdirSync(OUT, { recursive: true })
-  writeFileSync(path.join(OUT, 'OFL.txt'), license)
-  for (const [name, range] of Object.entries(SUBSETS)) {
-    // Codepoints the face lacks are simply dropped by the subsetter.
-    const text = String.fromCodePoint(...codepoints(range).filter((c) => c > 0x1f && (c < 0xd800 || c > 0xdfff)))
-    const woff2 = await subsetFont(src, text, {
-      targetFormat: 'woff2',
-      variationAxes: { wght: WEIGHT },
-      noLayoutClosure: true
-    })
-    const file = path.join(OUT, `playpen-sans-${WEIGHT}-${name}.woff2`)
-    writeFileSync(file, woff2)
-    console.log(`${path.relative(ROOT, file)}  ${(woff2.length / 1024).toFixed(1)} KB`)
+  for (const face of FACES) {
+    const src = await fetchCached(face.family, face.file)
+    const license = await fetchCached(face.family, 'OFL.txt')
+    const out = path.join(ROOT, 'src/assets/css/font', face.dir)
+    mkdirSync(out, { recursive: true })
+    writeFileSync(path.join(out, 'OFL.txt'), license)
+    for (const name of face.subsets) {
+      const range = SUBSETS[name]
+      // Codepoints the face lacks are simply dropped by the subsetter.
+      const text = String.fromCodePoint(...codepoints(range).filter((c) => c > 0x1f && (c < 0xd800 || c > 0xdfff)))
+      const woff2 = await subsetFont(src, text, { targetFormat: 'woff2', variationAxes: { wght: face.weight }, noLayoutClosure: true })
+      const file = path.join(out, `${face.prefix}-${face.weight}-${name}.woff2`)
+      writeFileSync(file, woff2)
+      console.log(`${path.relative(ROOT, file)}  ${(woff2.length / 1024).toFixed(1)} KB`)
+    }
   }
 }

@@ -25,6 +25,7 @@ import useSounds from '@/use/useSound.ts'
 import usePvpStats, { HONOR_PER_STAGE, HONOR_TOTAL_STAGES } from '@/use/usePvpStats'
 import usePVP from '@/use/usePVP'
 import { stopGameplay } from '@/use/useCrazyGames'
+import { revealRewards } from '@/use/useRewardReveal'
 
 const {
   currentXp,
@@ -301,10 +302,17 @@ const onClaim = (stage: number) => {
   playSound('happy')
   const res = claimStage(stage, offeredSkins.value[stage])
   if (res) {
-    if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
-    if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value, res.diamonds)
     refreshOfferedSkins()
     refreshHonorOfferedSkins()
+    // Granted by claimStage; the gift screen shows it, then the VFX fly.
+    void revealRewards([
+      { kind: 'coins', amount: res.coins },
+      { kind: 'diamonds', amount: res.diamonds },
+      ...(res.skin ? [{ kind: 'skin' as const, modelId: res.skin }] : [])
+    ]).then(() => {
+      if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
+      if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value, res.diamonds)
+    })
   }
 }
 
@@ -321,6 +329,7 @@ const onClaimHonor = (stage: number) => {
     }
   }
   refreshHonorOfferedSkins()
+  void revealRewards([{ kind: 'skin', modelId: skin }])
 }
 
 // ─── Drag-to-scroll for the BP strip ────────────────────────────────────────
@@ -377,24 +386,24 @@ const onStripPointerUp = (e: PointerEvent) => {
       @click="isModalOpen = true"
     )
       div.relative
-        div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-        div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-3.py-2(
-          class="bg-gradient-to-b from-[#5b3bff] to-[#2a1a88] border-[#0f1a30] pt-3 sm:pt-2"
+        //- Wood plank HUD button (DESIGN.md: HUD buttons on the arena).
+        div.ui-wood.relative.font-black.flex.flex-col.items-center.px-3.py-2(
+          class="pt-3 sm:pt-2"
         )
           //- Glyph instead of the English-only "BP" caption; the button's
           //- aria-label / title carry the translated name.
-          IconBattlePass.text-white(class="w-[18px] h-[18px] sm:w-5 sm:h-5 -my-0.5 drop-shadow-[1px_1px_0_#000]")
+          IconBattlePass.text-sun-300(class="w-[18px] h-[18px] sm:w-5 sm:h-5 -my-0.5 drop-shadow-[1px_1px_0_var(--color-ink)]")
           div.flex.items-center(class="gap-0.5")
-            span.font-black.game-text.leading-none(
-              class="text-[11px] sm:text-sm text-amber-300"
+            span.font-black.ui-outline-sm.leading-none(
+              class="text-[11px] sm:text-sm !text-sun-300"
             ) {{ unlockedStages }}
-            span.font-black.game-text.leading-none.text-white(
-              class="text-[9px] sm:text-[10px] opacity-70"
+            span.font-black.ui-outline-sm.leading-none(
+              class="text-[9px] sm:text-[10px]"
             ) /{{ BP_TOTAL_STAGES }}
           //- Tiny unclaimed-count badge
-          div.absolute.flex.items-center.justify-center.rounded-full.font-black.game-text(
+          div.absolute.flex.items-center.justify-center.rounded-full.font-black(
             v-if="pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) > 0"
-            class="bg-red-500 text-white text-[9px] w-4 h-4 -top-1 -right-1 border border-[#0f1a30]"
+            class="bg-berry-500 text-cream-50 text-[9px] w-4 h-4 -top-1 -right-1 border-2 border-ink"
           ) {{ pendingClaimCount + (canShowPvP ? pendingHonorClaims : 0) }}
 
   //- Battle Pass Modal
@@ -410,21 +419,20 @@ const onStripPointerUp = (e: PointerEvent) => {
       //- Summary row: current stage + xp progress bar
       div(class="flex items-center gap-2 px-1 sm:px-2")
         div.flex.flex-col.items-start.shrink-0
-          span.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") {{ t('stage') }}
-          span.text-white.font-black.game-text.leading-none(class="text-lg sm:text-xl") {{ unlockedStages }}/{{ BP_TOTAL_STAGES }}
+          span.text-ink-soft.font-black(class="text-[0.7rem] sm:text-[0.8rem]") {{ t('stage') }}
+          span.text-ink.font-black.leading-none(class="text-lg sm:text-xl") {{ unlockedStages }}/{{ BP_TOTAL_STAGES }}
         div.flex-1.flex.flex-col.gap-1
           div.flex.justify-between.items-end
-            span.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]")
+            span.text-ink-soft.font-black(class="text-[0.7rem] sm:text-[0.8rem]")
               template(v-if="isMaxed") {{ t('complete') }}
               template(v-else) {{ t('stageN', { n: inProgressStage }) }}
-            span.text-yellow-400.font-black.game-text(class="text-[0.7rem] sm:text-xs")
+            span.text-sun-600.font-black(class="text-[0.7rem] sm:text-xs")
               template(v-if="isMaxed") {{ t('max') }}
               template(v-else) {{ Math.floor(currentXp) }}/{{ BP_XP_PER_STAGE }} xp
-          div.relative.w-full.overflow-hidden.rounded-full.border(
-            class="h-2.5 sm:h-3 bg-slate-800/70 border-slate-700"
+          div.ui-bar.w-full(
+            class="!h-3 sm:!h-3.5"
           )
-            div.h-full.rounded-full.transition-all(
-              class="bg-gradient-to-r from-[#8b5cf6] via-[#a78bfa] to-[#fbbf24]"
+            div.ui-bar__fill.bp-fill.transition-all(
               :style="{ width: `${progressFraction * 100}%` }"
             )
 
@@ -443,19 +451,11 @@ const onStripPointerUp = (e: PointerEvent) => {
             v-for="card in stageCards"
             :key="card.stage"
             :data-bp-stage="card.stage"
-            class="shrink-0 flex flex-col items-center rounded-xl p-1 sm:p-2 border-2 transition-all w-16 sm:w-20"
-            :class="[\
-              card.claimed \
-                ? 'bg-green-900/40 border-green-500/50' \
-                : card.unlocked \
-                  ? (card.isDiamond ? 'bg-cyan-900/40 border-cyan-400' : card.isSkin ? 'bg-purple-900/40 border-purple-400' : 'bg-yellow-900/40 border-yellow-400') \
-                  : card.inProgress \
-                    ? (card.isDiamond ? 'bg-cyan-900/25 border-cyan-500/70' : card.isSkin ? 'bg-purple-900/25 border-purple-500/70' : 'bg-yellow-900/25 border-yellow-500/70') \
-                    : (card.isDiamond ? 'bg-cyan-900/20 border-cyan-700/60' : card.isSkin ? 'bg-purple-900/20 border-purple-700/60' : 'bg-slate-700/50 border-slate-600')\
-            ]"
+            class="bp-tier ui-inset shrink-0 flex flex-col items-center p-1 sm:p-2 transition-all w-16 sm:w-20"
+            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
             //- Stage number
-            div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") S{{ card.stage }}
+            div.text-ink-soft.font-black(class="text-[0.65rem] sm:text-[0.8rem]") S{{ card.stage }}
 
             //- Reward icon. On a single-currency build the diamond tier
             //- pays coins, so it has to LOOK like coins — see useCurrency.
@@ -466,7 +466,7 @@ const onStripPointerUp = (e: PointerEvent) => {
               )
             template(v-else-if="card.isDiamond")
               IconCoin(
-                class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 my-0.5"
+                class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5"
                 :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
               )
             template(v-else-if="card.isSkin && bpSkinForStage(card.stage)")
@@ -482,75 +482,76 @@ const onStripPointerUp = (e: PointerEvent) => {
             template(v-else-if="card.isSkin")
               //- Skin stage but no unowned skin previewable — show a
               //- generic coin icon (claim will fall back to coins).
-              IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 my-0.5 opacity-70")
+              IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5 opacity-70")
             template(v-else)
-              IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 my-0.5")
+              IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5")
 
             //- Skin label
-            div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
+            div.font-black.text-plum-700.leading-tight(
               v-if="card.isSkin && bpSkinForStage(card.stage)"
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
 
             //- Diamond amount (diamond stages). `diamondTier` carries both
             //- the currency and the already-converted amount.
-            div.font-black.game-text.leading-tight(
+            div.font-black.leading-tight(
               v-if="card.isDiamond"
-              :class="[diamondTier.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-[0.7rem] sm:text-xs']"
+              :class="[diamondTier.currency === 'diamonds' ? 'text-plum-700' : 'text-sun-600', 'text-[0.7rem] sm:text-xs']"
             ) +{{ diamondTier.amount }}
             //- Coin amount (coin stages + skin stages with an empty pool)
-            div.text-yellow-400.font-black.game-text.leading-tight(
+            div.text-sun-600.font-black.leading-tight(
               v-else-if="!card.isSkin || !bpSkinForStage(card.stage)"
               class="text-[0.7rem] sm:text-xs"
             ) +{{ card.coins }}
 
             //- Status row
             div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-              span.text-green-400(v-if="card.claimed") ✓
+              span.text-leaf-700(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
                 FIconButton(
-                  type="primary"
+                  type="premium"
                   size="sm"
                   icon="right"
                   @click="onClaim(card.stage)"
                 )
               template(v-else-if="card.inProgress")
-                span.text-amber-300 {{ Math.floor(progressFraction * 100) }}%
-              span.text-slate-500(v-else) —
+                span.text-sun-600 {{ Math.floor(progressFraction * 100) }}%
+              span.text-ink-soft(v-else) —
 
       //- ── Honor Track (only visible when PvP is enabled) ──────────────
-      div.rounded-xl.border-2.border-purple-700.bg-purple-900.bg-opacity-20.p-3(
+      div.ui-panel.ui-stitch-dark.p-3(
         v-if="canShowPvP"
         class="mt-2 space-y-2"
       )
         //- Header row with title + info icon
         div.flex.items-center.justify-between
           div.flex.items-center.gap-2
-            span.text-purple-300.font-black.game-text.uppercase(class="text-xs sm:text-sm") {{ t('honorTrack') }}
+            span.text-plum-700.font-black(class="text-xs sm:text-sm") {{ t('honorTrack') }}
             //- Info tooltip toggle
-            button.cursor-pointer.flex.items-center.justify-center.rounded-full.border.border-purple-500.text-purple-300.transition-colors(
-              class="w-4 h-4 sm:w-5 sm:h-5 hover:bg-purple-800"
+            button.cursor-pointer.flex.items-center.justify-center.rounded-full.border-2.border-ink.bg-cream-200.text-ink.transition-colors(
+              type="button"
+              :aria-label="t('honorTrack')"
+              class="w-6 h-6 hover:bg-cream-300 focus-visible:outline-3 focus-visible:outline-sky-400"
               @click="showHonorInfo = !showHonorInfo"
             )
               span.font-bold(class="text-[0.7rem] sm:text-[0.75rem]") ?
           //- Progress
-          span.text-purple-300.font-bold.game-text(class="text-[0.75rem] sm:text-xs")
+          span.text-plum-700.font-black(class="text-[0.75rem] sm:text-xs")
             template(v-if="isHonorMaxed") {{ t('complete') }}
             template(v-else) {{ honorPoints }}/{{ HONOR_PER_STAGE }} {{ t('honorAbbr') }}
 
         //- Info tooltip (toggled)
-        div.text-purple-200.rounded-lg.bg-purple-900.bg-opacity-60.p-2(
+        div.ui-inset.text-ink.p-2(
           v-if="showHonorInfo"
           class="text-[0.7rem] sm:text-xs leading-snug"
         ) {{ t('honorInfo') }}
 
         //- Honor progress bar
-        div.relative.w-full.overflow-hidden.rounded-full.border(
+        div.ui-bar.w-full(
           v-if="!isHonorMaxed"
-          class="h-2 bg-slate-800/70 border-purple-700/50"
+          class="!h-2.5"
         )
-          div.h-full.rounded-full.transition-all(
-            class="bg-gradient-to-r from-purple-500 via-purple-400 to-yellow-400"
+          div.ui-bar__fill.honor-fill.transition-all(
             :style="{ width: `${honorProgressFraction * 100}%` }"
           )
 
@@ -559,19 +560,11 @@ const onStripPointerUp = (e: PointerEvent) => {
           div(
             v-for="card in honorStageCards"
             :key="card.stage"
-            class="flex flex-col items-center rounded-xl p-2 border-2 transition-all w-20 sm:w-24"
-            :class="[\
-              card.claimed \
-                ? 'bg-green-900/40 border-green-500/50' \
-                : card.unlocked \
-                  ? 'bg-purple-900/40 border-purple-400' \
-                  : card.inProgress \
-                    ? 'bg-purple-900/25 border-purple-500/70' \
-                    : 'bg-purple-900/20 border-purple-700/60'\
-            ]"
+            class="bp-tier ui-inset flex flex-col items-center p-2 transition-all w-20 sm:w-24"
+            :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
             //- Stage label
-            div.text-purple-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") H{{ card.stage }}
+            div.text-plum-700.font-black(class="text-[0.65rem] sm:text-[0.8rem]") H{{ card.stage }}
 
             //- Skin preview
             template(v-if="honorSkinForStage(card.stage)")
@@ -585,37 +578,37 @@ const onStripPointerUp = (e: PointerEvent) => {
                   :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
                 )
             template(v-else-if="card.claimed")
-              div.flex.items-center.justify-center.text-green-400(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-lg") ✓
+              div.flex.items-center.justify-center.text-leaf-700(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-lg") ✓
             template(v-else)
-              div.flex.items-center.justify-center.text-purple-500(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-[0.75rem]") ?
+              div.flex.items-center.justify-center.text-plum-500(class="w-8 h-8 sm:w-10 sm:h-10 my-0.5 text-[0.75rem]") ?
 
             //- Skin label
-            div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
+            div.font-black.text-plum-700.leading-tight(
               v-if="honorSkinForStage(card.stage)"
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + honorSkinForStage(card.stage)) }}
 
             //- Status
             div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-              span.text-green-400(v-if="card.claimed") ✓
+              span.text-leaf-700(v-if="card.claimed") ✓
               template(v-else-if="card.unlocked")
                 FIconButton(
-                  type="primary"
+                  type="premium"
                   size="sm"
                   icon="right"
                   @click="onClaimHonor(card.stage)"
                 )
               template(v-else-if="card.inProgress")
-                span.text-purple-300 {{ Math.floor(honorProgressFraction * 100) }}%
-              span.text-slate-500(v-else) —
+                span.text-plum-700 {{ Math.floor(honorProgressFraction * 100) }}%
+              span.text-ink-soft(v-else) —
 
       //- Season reset countdown
       div.text-center(
         v-if="daysUntilReset != null"
-        class="text-[0.75rem] sm:text-xs text-amber-400/80 font-bold"
+        class="text-[0.75rem] sm:text-xs text-sun-600 font-black"
       ) {{ t('seasonReset', { n: daysUntilReset }) }}
       //- Footer tip
-      div.text-center(class="text-[0.75rem] sm:text-xs text-slate-400")
+      div.text-center.ui-body(class="text-[0.75rem] sm:text-xs")
         template(v-if="isMaxed")
           | {{ t('battlePassComplete') }}
         template(v-else-if="hasUnclaimedReward")
@@ -639,10 +632,34 @@ const onStripPointerUp = (e: PointerEvent) => {
   &::-webkit-scrollbar
     display: none
 
-// Soft whiteish halo that sits behind skin thumbnails so dark models
-// stay readable on the dark modal background (mirrors DailyRewards).
+// Flat cream disc behind skin thumbnails so the model reads on any tier tint.
 .skin-thumb-halo
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.28) 35%, rgba(255, 255, 255, 0) 75%)
-  filter: blur(4px)
-  transform: scale(1.15)
+  background: var(--color-cream-50)
+  border-radius: 9999px
+  box-shadow: 0 0 0 2px var(--color-cream-400)
+  transform: scale(0.95)
+
+// Tier states: claimed = leaf, ready to claim = premium sun, in progress =
+// dashed sun edge, locked = plain recessed well.
+.bp-tier
+  &.is-claimed
+    background-color: var(--color-leaf-300)
+    border-color: var(--color-leaf-600)
+  &.is-ready
+    background-color: var(--color-sun-200)
+    border-color: var(--color-sun-600)
+    box-shadow: 0 3px 0 var(--color-sun-600)
+  &.is-progress
+    border-color: var(--color-sun-500)
+    border-style: dashed
+  &.is-locked
+    opacity: 0.85
+
+.bp-fill
+  background-color: var(--color-sun-400)
+  box-shadow: inset 0 3px 0 var(--color-sun-200), inset 0 -3px 0 var(--color-sun-600)
+
+.honor-fill
+  background-color: var(--color-plum-400)
+  box-shadow: inset 0 3px 0 var(--color-plum-300), inset 0 -3px 0 var(--color-plum-500)
 </style>

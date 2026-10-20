@@ -1,8 +1,8 @@
 // Regression test for the mute-sync default-restoration bug CG QA
 // caught in the Opera log on 2026-05-05.
 //
-// Symptom: cloud has `spinner_user_music_volume = 0` and
-// `spinner_user_sound_volume = 0` (user deliberately muted in-game on
+// Symptom: cloud has `smashers_user_music_volume = 0` and
+// `smashers_user_sound_volume = 0` (user deliberately muted in-game on
 // another device). Player opens the iframe in a fresh browser; the CG
 // SDK reports `muted=false` (player has NOT platform-muted via the CG
 // chrome) and `applyMute(false)` runs. The previous implementation's

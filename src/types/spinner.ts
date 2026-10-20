@@ -1,4 +1,5 @@
 import type { SkillRuntime } from '@/use/skills/skillCore'
+import type { SmasherId } from '@/data/smasherCatalog'
 
 // ─── Top & Bottom Part Identifiers ───────────────────────────────────────────
 
@@ -72,6 +73,14 @@ export type BossAbility =
 export type BossTrait = 'ember' | 'frost' | 'chill'
 
 export interface SpinnerConfig {
+  /** The smasher this blade is (src/data/smasherCatalog.ts). Player blades
+   *  always carry one; its archetype fills topPartId / bottomPartId, its level
+   *  fills topLevel / bottomLevel (level − 1 each) and its unlocked skills ride
+   *  on the blade itself. NPC blades without it look like the smasher of their
+   *  parts (`smasherForParts`) and fight on their part stats only. */
+  smasherId?: SmasherId
+  /** Smasher level (1 … SMASHER_MAX_LEVEL); only meaningful with smasherId. */
+  level?: number
   topPartId: TopPartId
   bottomPartId: BottomPartId
   topLevel?: number
@@ -84,8 +93,8 @@ export interface SpinnerConfig {
   /** Trait handed to this boss's split children (Shattering Glacier: 'chill');
    *  children otherwise drop the parent's trait. */
   shardTrait?: BossTrait
-  /** Boss-tier HP (2×) without the boss size/spin/arena treatment. Used by the
-   *  daily challenge's lone enemy, which fights at boss stats but normal size. */
+  /** Boss-tier HP (2×) without the boss size/spin/arena treatment. Read by the
+   *  engine's blade setup; no current mode sets it. */
   bossStats?: boolean
 }
 

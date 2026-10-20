@@ -9,15 +9,15 @@
 // `...(LEAGUE_BUILD ? [LEAGUE_STATE_KEY] : [])`), else the literal ships in a
 // league-off build and `scripts/feature-flag-audit.mjs --flag league` fails.
 
-/** The player's league state (LG2, `LeagueStateV1`). `spinner_`-prefixed →
+/** The player's league state (LG2, `LeagueStateV1`). `smashers_`-prefixed →
  *  part of the cloud payload; kept across a progress reset (KEEP_KEYS, F7).
  *  The gate reads ONE field of it, read-only: a top-level `unlocked: true`
  *  (see `leagueMountAllowed`). */
-export const LEAGUE_STATE_KEY = 'spinner_league'
-/** Device-only opponent-pool cache (LG1). Deliberately NOT `spinner_`-
+export const LEAGUE_STATE_KEY = 'smashers_league'
+/** Device-only opponent-pool cache (LG1). Deliberately NOT `smashers_`-
  *  prefixed, so it never reaches the cloud payload. */
-export const LEAGUE_POOL_KEY = 'chaosarena_league_pool'
+export const LEAGUE_POOL_KEY = 'treesmashers_league_pool'
 /** Device-only: today's chosen three cards per fight index (LG3), so a live
  *  pool that changes during the day can never reroll them. Named after the
- *  pool cache so the flag audit's `chaosarena_league_pool` marker covers it. */
-export const LEAGUE_PICKS_KEY = 'chaosarena_league_pool_picks'
+ *  pool cache so the flag audit's `treesmashers_league_pool` marker covers it. */
+export const LEAGUE_PICKS_KEY = 'treesmashers_league_pool_picks'

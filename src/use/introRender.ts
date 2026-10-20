@@ -14,7 +14,8 @@
 //
 // Performance, for the low-end devices this game already struggles on:
 //   • no `shadowBlur` anywhere (it is what kills Firefox) — every glow is a
-//     radial-gradient sprite baked once and blitted with globalAlpha;
+//     flat concentric-ring sprite baked once and blitted with globalAlpha
+//     (no radial gradients either);
 //   • no gradient is created per frame, no string is built per frame (fonts,
 //     numbers and colours are constants; text is drawn at a fixed 100px font
 //     through a context scale);
@@ -23,6 +24,7 @@
 //     colour-grade blend, and the component caps the backing-store DPR.
 
 import { hash01 } from '@/use/useDeterministicRng'
+import { fillConcentric } from '@/utils/concentricFill'
 import {
   BODY_R, BOSS, BOSS_HOME, BUMPER, F_ALIVE, F_HP, F_ROT, F_SPEED, F_X, F_Y,
   FIGHT_SCRIPT, INTRO_ARENA_R, P1, P2, sampleTrack,
@@ -94,15 +96,12 @@ const mkCanvas = (w: number, h: number): Cnv => {
 }
 const ctx2d = (c: Cnv): C2D => c.getContext('2d') as C2D
 
-/** A radial-gradient disc, baked once. */
+/** A soft disc of flat concentric rings (radial-gradient look), baked once. */
 const radialSprite = (stops: [number, string][], size = 256): Cnv => {
   const c = mkCanvas(size, size)
   const g = ctx2d(c)
   const r = size / 2
-  const grad = g.createRadialGradient(r, r, 0, r, r, r)
-  for (const [o, col] of stops) grad.addColorStop(o, col)
-  g.fillStyle = grad
-  g.fillRect(0, 0, size, size)
+  fillConcentric(g, r, r, r, stops, 32, true)
   return c
 }
 
@@ -184,14 +183,7 @@ const arenaSprite = (): Cnv => {
   g.translate(size / 2, size / 2)
   g.scale(ARENA_PX_PER_UNIT, ARENA_PX_PER_UNIT)
   const R = INTRO_ARENA_R
-  const floor = g.createRadialGradient(0, 0, 0, 0, 0, R)
-  floor.addColorStop(0, '#2c1014')
-  floor.addColorStop(0.7, '#1f0a0d')
-  floor.addColorStop(1, '#150507')
-  g.fillStyle = floor
-  g.beginPath()
-  g.arc(0, 0, R, 0, TAU)
-  g.fill()
+  fillConcentric(g, 0, 0, R, [[0, '#2c1014'], [0.7, '#1f0a0d'], [1, '#150507']], 10)
   // Floor texture: faint radial spokes + rings.
   g.strokeStyle = 'rgba(255,80,60,0.05)'
   g.lineWidth = 1
@@ -438,21 +430,26 @@ export const createIntroRenderer = (
     g.beginPath()
     g.arc(4, 7, 74, 0, TAU)
     g.fill()
-    const rim = g.createRadialGradient(-20, -24, 10, 0, 0, 76)
-    rim.addColorStop(0, '#fff3b8')
-    rim.addColorStop(0.55, '#ffc21f')
-    rim.addColorStop(1, '#a35a00')
-    g.fillStyle = rim
+    // Flat discs (no gradients): gold rim + highlight, red core + highlight.
+    g.fillStyle = '#a35a00'
     g.beginPath()
     g.arc(0, 0, 76, 0, TAU)
     g.fill()
-    const core = g.createRadialGradient(-12, -14, 4, 0, 0, 52)
-    core.addColorStop(0, '#ff9a6a')
-    core.addColorStop(0.6, '#d3202c')
-    core.addColorStop(1, '#6a0710')
-    g.fillStyle = core
+    g.fillStyle = '#ffc21f'
+    g.beginPath()
+    g.arc(-4, -5, 66, 0, TAU)
+    g.fill()
+    g.fillStyle = '#6a0710'
     g.beginPath()
     g.arc(0, 0, 52, 0, TAU)
+    g.fill()
+    g.fillStyle = '#d3202c'
+    g.beginPath()
+    g.arc(-4, -5, 42, 0, TAU)
+    g.fill()
+    g.fillStyle = '#ff9a6a'
+    g.beginPath()
+    g.arc(-14, -16, 13, 0, TAU)
     g.fill()
     g.lineWidth = 5
     g.strokeStyle = '#fff6d0'

@@ -64,8 +64,8 @@ describe('useIntroCutscene — first-timer detection, live', () => {
     armIntro()
     expect(introPhase.value).toBe('waiting')
     // The cloud save arrives: it brings progress and the seen state.
-    localStorage.setItem('spinner_campaign_stage', '23')
-    localStorage.setItem('spinner_last_result', 'win')
+    localStorage.setItem('smashers_campaign_stage', '23')
+    localStorage.setItem('smashers_last_result', 'win')
     hydrateState.value = 'success-with-data'
     await nextTick()
     expect(introPhase.value).toBe('done')
@@ -125,7 +125,7 @@ describe('resetAllProgress — the intro comes back', () => {
     const manager = new SaveManager(strategy, window.localStorage, { blob: { persistToRaw: false } })
     ;(window as unknown as { __saveManager: SaveManager }).__saveManager = manager
     await manager.init()
-    localStorage.setItem('spinner_campaign_stage', '12')
+    localStorage.setItem('smashers_campaign_stage', '12')
     localStorage.setItem(INTRO_SEEN_KEY, '1')
     armIntro()
     expect(introPhase.value).toBe('done')
@@ -172,21 +172,21 @@ const fakeCtx = (): CanvasRenderingContext2D => {
 
 describe('IntroCutscene — side-effect free', () => {
   const FIXTURE: Record<string, string> = {
-    spinner_owned_skins: JSON.stringify(['star:ice', 'round:turtle']),
-    spinner_selected_skins: JSON.stringify({ 'star:0': 'ice', star: 'ice' }),
-    spinner_player_team: JSON.stringify([{ topPartId: 'star', bottomPartId: 'speedy' }, {
+    smashers_owned_skins: JSON.stringify(['star:ice', 'round:turtle']),
+    smashers_selected_skins: JSON.stringify({ 'star:0': 'ice', star: 'ice' }),
+    smashers_player_team: JSON.stringify([{ topPartId: 'star', bottomPartId: 'speedy' }, {
       topPartId: 'round',
       bottomPartId: 'tanky'
     }]),
-    spinner_coins: '1234',
-    spinner_diamonds: '7',
-    spinner_campaign_stage: '9',
-    spinner_player_max_stage: '9',
-    spinner_upgrades: JSON.stringify({ tops: { star: 3 }, bottoms: { speedy: 2 } }),
-    spinner_battle_pass: JSON.stringify({ xp: 120 }),
-    spinner_pvp_stats: JSON.stringify({ wins: 2, losses: 1 }),
-    spinner_leaderboard: '[]',
-    spinner_last_result: 'win'
+    smashers_coins: '1234',
+    smashers_diamonds: '7',
+    smashers_campaign_stage: '9',
+    smashers_player_max_stage: '9',
+    smashers_upgrades: JSON.stringify({ tops: { star: 3 }, bottoms: { speedy: 2 } }),
+    smashers_battle_pass: JSON.stringify({ xp: 120 }),
+    smashers_pvp_stats: JSON.stringify({ wins: 2, losses: 1 }),
+    smashers_leaderboard: '[]',
+    smashers_last_result: 'win'
   }
 
   it('plays start to finish at 60 fps, emits done, and writes NOTHING', async () => {
@@ -227,15 +227,15 @@ describe('IntroCutscene — side-effect free', () => {
     expect(snapshot()).toEqual(before)
 
     // And the whole lifecycle around it adds exactly one key: the seen flag.
-    localStorage.removeItem('spinner_last_result')
-    localStorage.removeItem('spinner_campaign_stage')
-    localStorage.removeItem('spinner_player_max_stage')
-    localStorage.removeItem('spinner_coins')
-    localStorage.removeItem('spinner_diamonds')
-    localStorage.removeItem('spinner_upgrades')
-    localStorage.removeItem('spinner_battle_pass')
-    localStorage.removeItem('spinner_pvp_stats')
-    localStorage.removeItem('spinner_owned_skins')
+    localStorage.removeItem('smashers_last_result')
+    localStorage.removeItem('smashers_campaign_stage')
+    localStorage.removeItem('smashers_player_max_stage')
+    localStorage.removeItem('smashers_coins')
+    localStorage.removeItem('smashers_diamonds')
+    localStorage.removeItem('smashers_upgrades')
+    localStorage.removeItem('smashers_battle_pass')
+    localStorage.removeItem('smashers_pvp_stats')
+    localStorage.removeItem('smashers_owned_skins')
     const pre = snapshot()
     armIntro()
     expect(introPhase.value).toBe('playing')

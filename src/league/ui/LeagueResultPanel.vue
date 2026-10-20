@@ -74,13 +74,14 @@ const status = computed<Status | null>(() => {
     div.lrp__status(v-if="status" :class="`lrp__status--${status.tone}`" role="status")
       | {{ t(status.key, { rank: rankName }) }}
     div.lrp__coins(v-if="outcome.coins > 0")
-      IconCoin.lrp__coin(class="text-yellow-300" aria-hidden="true")
+      IconCoin.lrp__coin(class="text-sun-500" aria-hidden="true")
       span {{ t('league.result.coins', { n: n(outcome.coins) }) }}
 </template>
 
 <style scoped lang="sass">
+// Cream parchment card (works inside the result modal and on art).
 .lrp
-  --lrp-accent: #ffc93c
+  --lrp-accent: var(--color-sun-400)
   position: relative
   display: flex
   flex-direction: column
@@ -89,20 +90,24 @@ const status = computed<Status | null>(() => {
   max-width: 24rem
   margin: 0 auto
   padding: 0.6rem 0.8rem 0.7rem
-  border-radius: 1rem
-  border: 3px solid #0f1a30
-  background: linear-gradient(to bottom, #213a66, #172846)
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), 0 4px 0 #0c1626
-  color: #fff
+  border-radius: var(--radius-ui-lg)
+  border: 3px solid var(--color-wood-700)
+  background-color: var(--color-cream-100)
+  box-shadow: inset 0 3px 0 var(--color-cream-50), 0 4px 0 var(--color-wood-800)
+  color: var(--ui-text)
   text-align: left
 
+// Promotion: sun-gold card with a stitched edge and a short bounce (no glow).
 .lrp--promoted
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--lrp-accent) 45%, #213a66), #172846 75%)
-  animation: lrp-glow 1.6s ease-in-out 2
+  background-color: var(--color-sun-200)
+  border-color: var(--color-ink)
+  outline: 2px dashed rgba(110, 69, 39, 0.35)
+  outline-offset: -7px
+  animation: lrp-pop 0.8s ease-in-out 2
 
-@keyframes lrp-glow
+@keyframes lrp-pop
   50%
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), 0 4px 0 #0c1626, 0 0 1.4rem color-mix(in srgb, var(--lrp-accent) 70%, transparent)
+    transform: scale(1.03)
 
 .lrp__head
   display: flex
@@ -115,11 +120,10 @@ const status = computed<Status | null>(() => {
   min-width: 0
   font-size: 1rem
   font-weight: 900
-  color: var(--lrp-accent)
+  color: var(--ui-text)
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
 
 .lrp__delta
   flex-shrink: 0
@@ -128,22 +132,24 @@ const status = computed<Status | null>(() => {
   align-self: center
   padding: 0.25rem 0.8rem
   border-radius: 999px
-  border: 2px solid #0f1a30
+  border: 2px solid var(--color-ink)
+  box-shadow: 0 2px 0 var(--color-ink)
   font-size: 0.85rem
   font-weight: 900
   text-align: center
-  text-shadow: 0 1px 0 #000
+  color: var(--color-cream-50)
+  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
 
 .lrp__status--gold
-  color: #3d2600
+  color: var(--color-ink)
   text-shadow: none
-  background: linear-gradient(to bottom, #ffe27a, #f0a400)
+  background-color: var(--color-sun-400)
 .lrp__status--up
-  background: linear-gradient(to bottom, #3fbf6e, #1f8a4a)
+  background-color: var(--color-leaf-500)
 .lrp__status--down
-  background: linear-gradient(to bottom, #d9533f, #9c2331)
+  background-color: var(--color-berry-500)
 .lrp__status--calm
-  background: #2f4a7d
+  background-color: var(--color-wood-600)
 
 .lrp__coins
   display: flex
@@ -152,7 +158,7 @@ const status = computed<Status | null>(() => {
   gap: 0.35rem
   font-size: 1.05rem
   font-weight: 900
-  text-shadow: 0 2px 0 #000
+  color: var(--ui-text)
 
 .lrp__coin
   width: 1.35rem

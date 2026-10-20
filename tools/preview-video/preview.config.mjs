@@ -1,5 +1,5 @@
 /**
- * ─── Chaos Arena preview-video configuration ────────────────────────────────
+ * ─── Tree Smashers preview-video configuration ────────────────────────────────
  *
  *   pnpm preview:video                          # all eight clips, both qualities
  *   pnpm preview:video --formats 30s            # just the 30 s 1080p pair
@@ -19,9 +19,9 @@ export default {
   // `index.html`'s <title>. The port-ownership check refuses to record if
   // something else is already answering on the port — this repo has eleven
   // build targets and a habit of leaving dev servers running.
-  title: 'Chaos Arena',
+  title: 'Tree Smashers',
 
-  // The DEV server, not a production build: `window.__chaos` and the
+  // The DEV server, not a production build: `window.__smashers` and the
   // clean-feed flag are both `import.meta.env.DEV` only (see
   // `src/utils/previewSeam.ts` and `src/utils/cleanFeed.ts`), and the
   // scenarios are written against them.
@@ -40,7 +40,7 @@ export default {
     args: ['exec', 'vite', '--port', '{port}', '--strictPort'],
     // The recording page never hears HMR. This project has art and locale
     // files written by other tooling; a hot update mid-take remounts
-    // SpinnerArena, which drops `window.__chaos` and kills the run.
+    // SpinnerArena, which drops `window.__smashers` and kills the run.
     hotReload: false
   },
 
@@ -167,7 +167,7 @@ export default {
   //
   // NOTE this does NOT cover the gameplay RNG — `useDeterministicRng`'s
   // mulberry32 is separate and `initGame` re-seeds it randomly on every
-  // non-PvP match. The scenarios pin that themselves via `__chaos.seed()`,
+  // non-PvP match. The scenarios pin that themselves via `__smashers.seed()`,
   // AFTER the match is built. Both are needed.
   seedRandom: 7,
 
@@ -194,13 +194,16 @@ export default {
 
   // The one adaptive thing in this game is the quality tier
   // (`useQuality.ts`), and it is pinned in the SAVE FIXTURE rather than here
-  // — it reads `chaosarena_quality_pref` from localStorage, not the URL.
+  // — it reads `treesmashers_quality_pref` from localStorage, not the URL.
   // See `scenarios/_drive.mjs`. It matters: the detector measures a
   // WALL-CLOCK window, and the whole of `setup()` runs in real time on a
   // machine that is also launching Chrome and a Vite dev server. Left on
   // 'auto' it can latch `FX.low` before the first recorded frame and quietly
   // halve the particle density of one take out of five.
-  urlParams: {},
+  //
+  // `darkguard=off` (src/main.ts, dev builds only) switches the forced-dark-
+  // mode guard off for every take, so its notice can never be filmed.
+  urlParams: { darkguard: 'off' },
 
   async onPageReady(_ctx) {
   }

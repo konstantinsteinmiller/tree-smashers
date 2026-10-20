@@ -100,7 +100,7 @@ const sandbox = (
   p: SpinnerConfig[], n: SpinnerConfig[], arena: ArenaType = 'boss', mine?: SkillLoadout, seed: number | null = 99
 ): Engine => {
   const e = useSpinnerGame()
-  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle', false,
+  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle',
     seed === null ? { skillLoadout: mine } : { seed, skillLoadout: mine })
   e.startPhysics()
   return e
@@ -464,7 +464,7 @@ describe('trait rosters are deterministic; trait-free matches stay on the fast p
         topLevel: 30,
         bottomLevel: 30
       })],
-      team, false, 'boss', 0, false, undefined, null, 'circle', false, { seed })
+      team, false, 'boss', 0, false, undefined, null, 'circle', { seed })
     e.startMatch()
     const hashes: string[] = []
     let last = e.phase.value

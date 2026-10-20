@@ -63,7 +63,7 @@ export default {
     // A full, even board. Thirty seconds has room to EARN the deficit that
     // the 10 s clip has to start from.
     await g.stageHp(ctx, { player: [1, 1, 1], npc: [2.5, 2.5, 2.5] })
-    await ctx.evaluate(() => window.__chaos.aimAtBlade(0, 'npc', 0, 1))
+    await ctx.evaluate(() => window.__smashers.aimAtBlade(0, 'npc', 0, 1))
 
     const s = await g.snapshot(ctx)
     ctx.log.info(`staged stage ${s.stage}: ${s.alive.player} blue vs ${s.alive.npc} red${ctx.clean ? ' (clean feed)' : ''}`)

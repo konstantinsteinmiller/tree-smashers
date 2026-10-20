@@ -50,7 +50,7 @@ describe('painted UI art', () => {
   })
 
   it('no ⬆ character or raw stat-icon component is left in the upgrade surfaces', () => {
-    for (const f of ['src/components/organisms/SpinnerConfigModal.vue', 'src/views/SpinnerArena.vue', 'src/components/organisms/SkillPickerModal.vue']) {
+    for (const f of ['src/components/organisms/SmasherTeamModal.vue', 'src/views/SpinnerArena.vue']) {
       const s = fs.readFileSync(path.join(ROOT, f), 'utf8')
       expect(s, f).not.toMatch(/⬆/)
       expect(s, f).not.toMatch(/\bIcon(Attack|Defense|Speed|Hp|Weight)\b/)

@@ -183,21 +183,18 @@ describe('A2 — trophy card names the stage', () => {
   })
 
   it('the shop card uses the lookup', () => {
-    const modal = read('src/components/organisms/SpinnerConfigModal.vue')
+    const modal = read('src/components/organisms/SmasherTeamModal.vue')
     expect(modal).toContain('t(\'trophySkin.beatStage\', { n })')
     expect(modal).toContain('trophySkinFirstStage(modelId)')
     expect(modal).toContain('span.game-text {{ trophyCardText(modelId) }}')
   })
 })
 
-describe('W1 — cheats load the skills module lazily', () => {
+describe('W1 — cheats never pull the retired skill state in', () => {
   const cheats = read('src/use/useCheats.ts')
-  it('no value import of useSkills; the skills gate loads it on demand', () => {
-    expect(cheats).not.toMatch(/^import\s+(?!type\b)[^\n]*from\s+['"]@\/use\/useSkills['"]/m)
-    // Batch 3 D: every lazy skill load goes through src/skills/skillsGate.ts
-    // (inert on a skills-off build, where the shortcuts are not registered).
-    expect(cheats).toContain('import { SKILLS_BUILD, withSkillsApi } from \'@/skills/skillsGate\'')
-    expect(cheats).toContain('...(SKILLS_BUILD ? {')
-    expect(read('src/skills/skillsGate.ts')).toContain('import(\'@/use/useSkills\')')
+  it('no import of useSkills (removed); smasher cheats use the roster', () => {
+    expect(cheats).not.toMatch(/@\/use\/useSkills/)
+    expect(cheats).toContain("import { levelUpSmasher, resetRoster } from '@/use/useSmashers'")
+    expect(read('src/skills/skillsGate.ts')).not.toContain("import('@/use/useSkills')")
   })
 })

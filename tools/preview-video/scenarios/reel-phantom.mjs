@@ -35,7 +35,7 @@ export default {
       aim: { blade: 0, angle: (3 * Math.PI) / 4, power: 0.35 }
     })
     const phase = await ctx.evaluate(() => {
-      const c = window.__chaos
+      const c = window.__smashers
       const frozen = c.freezeOnPhase('npc_turn')
       c.fire()
       c.unfreeze()

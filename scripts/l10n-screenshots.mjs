@@ -16,7 +16,7 @@
 //                                                               # the browser language decides
 //   node scripts/l10n-screenshots.mjs --locale ar --out ./shots
 //
-// Output: PNGs + report.json in <out> (default: <os tmp>/chaos-arena-l10n/<locale>).
+// Output: PNGs + report.json in <out> (default: <os tmp>/tree-smashers-l10n/<locale>).
 // Then LOOK at the PNGs: tofu (□), clipped or wrapped button captions, text
 // running out of a badge, isolated (unjoined) Arabic letters, mixed fonts
 // inside one word.
@@ -29,7 +29,7 @@
 //     can never be screenshotted by mistake.
 //
 // The dev server (not a build) is deliberate: the battle and win screens are
-// reached through the dev-only `window.__chaos` seam (src/utils/previewSeam.ts).
+// reached through the dev-only `window.__smashers` seam (src/utils/previewSeam.ts).
 
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
@@ -67,7 +67,7 @@ const VIEWPORTS = {
   desktop: { width: 1280, height: 720, mobile: false }
 }
 const viewports = (arg('viewports') ?? Object.keys(VIEWPORTS).join(',')).split(',').map((s) => s.trim())
-const outDir = path.resolve(arg('out') ?? path.join(tmpdir(), 'chaos-arena-l10n', locale ?? `browser-${browserLang}`))
+const outDir = path.resolve(arg('out') ?? path.join(tmpdir(), 'tree-smashers-l10n', locale ?? `browser-${browserLang}`))
 const CHROME = arg('chrome') ?? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
 
 for (const s of screens) if (!ALL_SCREENS.includes(s)) fail(`unknown screen "${s}" (have: ${ALL_SCREENS.join(', ')})`)
@@ -132,7 +132,7 @@ while (Date.now() < deadline) {
   }
 }
 if (title === null) fail(`dev server never answered on ${origin}\n${serverLog}`)
-if (title !== 'Chaos Arena') fail(`${origin} serves "${title}", not Chaos Arena — refusing to screenshot the wrong game`)
+if (title !== 'Tree Smashers') fail(`${origin} serves "${title}", not Tree Smashers — refusing to screenshot the wrong game`)
 console.log(`l10n-screenshots: dev server ${origin} ("${title}")`)
 
 // ─── Browser ──────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ if (!locale) delete save.spinner_user_language
 /** Wait until the game is interactive: seam up, both splashes gone. */
 const waitForGame = async (page) => {
   // Generous: the first load of a fresh dev server compiles the whole graph.
-  await page.waitForFunction(() => !!window.__chaos && window.__chaos.snapshot().player.length > 0, null, { timeout: 120_000 })
+  await page.waitForFunction(() => !!window.__smashers && window.__smashers.snapshot().player.length > 0, null, { timeout: 120_000 })
   await page.waitForFunction(() => !document.getElementById('static-splash'), null, { timeout: 60_000 })
   await sleep(1800) // splash fade + menu entrance animations
 }
@@ -178,9 +178,9 @@ const clickIcon = async (page, imgPart) => {
 }
 
 const startBattle = async (page) => {
-  await page.evaluate(() => window.__chaos.seed(1337))
-  await page.evaluate(() => window.__chaos.begin())
-  await page.waitForFunction(() => window.__chaos.snapshot().phase === 'player_turn', null, { timeout: 30_000 })
+  await page.evaluate(() => window.__smashers.seed(1337))
+  await page.evaluate(() => window.__smashers.begin())
+  await page.waitForFunction(() => window.__smashers.snapshot().phase === 'player_turn', null, { timeout: 30_000 })
   await sleep(600)
 }
 
@@ -198,11 +198,11 @@ const SCREENS = {
   win: async (page) => {
     await startBattle(page)
     await page.evaluate(() => {
-      window.__chaos.setSideHp('npc', 0.001)
-      window.__chaos.aimAtBlade(0, 'npc', 0, 1)
-      window.__chaos.fire()
+      window.__smashers.setSideHp('npc', 0.001)
+      window.__smashers.aimAtBlade(0, 'npc', 0, 1)
+      window.__smashers.fire()
     })
-    await page.waitForFunction(() => window.__chaos.snapshot().result === 'win', null, { timeout: 30_000 })
+    await page.waitForFunction(() => window.__smashers.snapshot().result === 'win', null, { timeout: 30_000 })
     // The reward overlay animates in after the verdict.
     await sleep(3500)
   }

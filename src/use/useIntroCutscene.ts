@@ -54,7 +54,7 @@ const clearBudgetTimer = (): void => {
 
 /** Persist "seen". Written when the cutscene STARTS (and again when it ends),
  *  so a reload mid-cutscene never replays it. Through the patched
- *  localStorage, i.e. into the cloud save like every other `spinner_` key. */
+ *  localStorage, i.e. into the cloud save like every other `smashers_` key. */
 export const markIntroSeen = (): void => {
   try {
     if (window.localStorage.getItem(INTRO_SEEN_KEY) !== '1') {
@@ -138,7 +138,7 @@ export const finishIntro = (): void => {
 }
 
 /**
- * The full-progress reset deleted `spinner_intro_seen` along with the rest of
+ * The full-progress reset deleted `smashers_intro_seen` along with the rest of
  * the progress keys. Play the intro again right away — the reset is a "start
  * over", which is exactly what the cutscene stages — rather than waiting for a
  * reload the reset deliberately no longer does.

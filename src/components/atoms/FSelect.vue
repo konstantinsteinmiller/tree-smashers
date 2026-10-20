@@ -51,84 +51,63 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 
 <template lang="pug">
   div(class="relative w-full font-black" ref="dropdownRef")
-    //- Label (Optional)
-    div(v-if="label" class="label-text mb-1 ml-1 text-white uppercase italic text-lg tracking-wider") {{ label }}
+    div(v-if="label" class="ui-label mb-1 ml-1") {{ label }}
 
-    //- The Trigger (Styled like FButton)
-    button(
+    //- Trigger: a cream secondary button (DESIGN.md) with a wood chevron.
+    button.ui-btn.ui-btn--secondary(
       type="button"
       @click="toggle"
-      class="group relative w-full inline-block cursor-pointer select-none transition-all duration-75 active:scale-[0.98] hover:scale-[1.02] touch-manipulation focus:outline-none"
+      :aria-expanded="isOpen"
+      aria-haspopup="listbox"
+      class="w-full !justify-between min-w-[140px] px-4 py-3"
     )
-      //- 3D Shadow
-      span(class="absolute inset-0 translate-y-[4px] rounded-2xl bg-[#1a2b4b]")
-
-      //- Main Button Body
-      span(class="relative flex items-center justify-between min-w-[140px] rounded-2xl border-[3px] border-[#0f1a30] px-4 py-3 bg-gradient-to-b from-[#ffcd00] to-[#f7a000]")
-        //- Inner Top Shine
-        span(class="absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-white/25")
-
-        //- Selected Text
-        span(class="text relative block text-sm md:text-lg tracking-wide text-white uppercase truncate mr-2") {{ selectedLabel }}
-
-        //- Arrow Icon
-        span(
-          class="relative transition-transform duration-200"
-          :class="{ 'rotate-180': isOpen }"
-        )
-          svg(width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]")
-            path(d="m6 9 6 6 6-6")
-
-    //- The Dropdown Menu
-    transition(name="pop")
-      div(
-        v-if="isOpen"
-        class="absolute z-1 left-0 right-0 mt-3 rounded-2xl border-[3px] border-[#0f1a30] bg-[#1a2b4b] shadow-2xl overflow-hidden"
+      span(class="relative block text-sm md:text-lg truncate mr-2") {{ selectedLabel }}
+      span(
+        class="relative transition-transform duration-200 text-[var(--color-wood-700)]"
+        :class="{ 'rotate-180': isOpen }"
       )
-        //- Scrollable Area
+        svg(width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true")
+          path(d="m6 9 6 6 6-6")
+
+    transition(name="pop")
+      div.select-menu(
+        v-if="isOpen"
+        role="listbox"
+        class="absolute z-1 left-0 right-0 mt-3 overflow-hidden"
+      )
         div(
-          class="custom-scrollbar overflow-y-auto p-2"
+          class="ui-scroll overflow-y-auto p-2"
           :style="{ maxHeight: maxHeight }"
         )
-          div(
+          div.select-option(
             v-for="option in options"
             :key="option.value"
+            role="option"
+            :aria-selected="modelValue === option.value"
             @click="selectOption(option.value)"
-            class="group/item relative mb-1 last:mb-0 cursor-pointer p-3.5 rounded-xl transition-all duration-75 active:scale-[0.97]"
-            :class="modelValue === option.value ? 'bg-[#50aaff]' : 'hover:bg-[#2266ff]'"
+            class="relative mb-1 last:mb-0 cursor-pointer p-3.5 rounded-xl active:scale-[0.97]"
+            :class="{ 'is-selected': modelValue === option.value }"
           )
-            //- Option Shine (only for selected/hover)
-            span(class="absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-white/10")
-
-            //- Was `text-md`, which is not a Tailwind class — it emitted
-            //- nothing, so every dropdown row silently inherited whatever
-            //- font-size the parent happened to carry (10px in the Options
-            //- modal). `text-base sm:text-lg` makes the language list legible,
-            //- which matters most for exactly the locales QA tested.
-            span(class="text relative block text-white uppercase text-base sm:text-lg tracking-wide") {{ option.label }}
+            //- `text-base sm:text-lg` keeps the language list legible.
+            span(class="relative block text-base sm:text-lg") {{ option.label }}
 </template>
 
 <style scoped lang="sass">
-.text, .label-text
-  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+.select-menu
+  background-color: var(--color-cream-100)
+  color: var(--ui-text)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui-lg)
+  box-shadow: 0 5px 0 var(--color-ink)
 
-/* Custom Scrollbar for that game feel */
-.custom-scrollbar
-  &::-webkit-scrollbar
-    width: 12px
-
-  &::-webkit-scrollbar-track
-    background: #0a1425
-    border-radius: 10px
-    margin: 8px
-
-  &::-webkit-scrollbar-thumb
-    background: #50aaff
-    border: 3px solid #0f1a30
-    border-radius: 10px
-
-    &:hover
-      background: #2266ff
+.select-option
+  transition: background-color 0.08s ease
+  &:hover
+    background-color: var(--color-cream-200)
+  &.is-selected
+    background-color: var(--color-leaf-500)
+    color: var(--color-cream-50)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700)
 
 /* Transition Animations */
 .pop-enter-active, .pop-leave-active

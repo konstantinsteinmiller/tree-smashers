@@ -9,12 +9,12 @@
 //      is not one of our internal codes (`jp` is), so Japanese and Chinese
 //      variants silently fell through to the English fallback.
 //
-//   2. The portal locale was PERSISTED into `spinner_user_language` — the
+//   2. The portal locale was PERSISTED into `smashers_user_language` — the
 //      same key that holds the player's explicit OptionsModal choice. Once
 //      anything landed there, `resolveInitialLocale` short-circuited on it
 //      forever, so a load that missed the portal answer poisoned every
 //      later load (and, via the cloud strategy, every later device).
-//      `spinner_user_language` is now player-choice-only.
+//      `smashers_user_language` is now player-choice-only.
 //
 // Docs: https://wiki.playgama.com/playgama/bridge-sdk/api/platform#language
 

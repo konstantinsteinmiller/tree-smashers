@@ -274,7 +274,7 @@ export class SaveManager {
     //   'getItem', {value: fn})`
     //   Better, but CG QA reported on 2026-05-05 that even with this
     //   technique Opera + Firefox still hit the data-loss bug
-    //   (`spinner_player_max_stage` overwritten with `1` on every load).
+    //   (`smashers_player_max_stage` overwritten with `1` on every load).
     //   The own data property either doesn't shadow the prototype method,
     //   or some browser-internal lookup path bypasses it.
     //

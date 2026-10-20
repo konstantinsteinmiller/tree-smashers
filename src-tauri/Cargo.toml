@@ -1,7 +1,7 @@
 [package]
-name = "chaos-arena"
+name = "tree-smashers"
 version = "1.0.1"
-description = "Chaos Arena — casual battle game"
+description = "Tree Smashers — casual battle game"
 authors = ["Konstantin Steinmiller"]
 license = ""
 repository = ""
@@ -21,13 +21,14 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.10.3", features = [] }
 tauri-plugin-log = "2"
-tauri-plugin-shell = "2"
-# Ads: Google AdMob, direct integration, no mediation.
+# Opens links (privacy policy) in the system browser. tauri-plugin-shell's
+# JS `open()` runs the desktop `open` crate and does nothing on Android.
+tauri-plugin-opener = "2"
+# Ads: Unity LevelPlay (ironSource) mediation with the AdMob and Unity Ads
+# bidders. The native app is an 18+ title since 2026-10-03 (ADS_STATE.md).
 #
-# `tauri-plugin-levelplay` (Unity LevelPlay / ironSource) is still on disk at
-# plugins/tauri-plugin-levelplay/ but is NOT listed here on purpose. The Tauri
-# CLI builds gen/android/tauri.settings.gradle from THIS dependency list, so
-# dropping the line is what actually keeps the ironSource + Unity Ads artifacts
-# out of the APK/AAB. Re-adding it re-adds those SDKs — read ADS_STATE.md at
-# the repo root before you do.
-tauri-plugin-admob = { path = "plugins/tauri-plugin-admob" }
+# `tauri-plugin-admob` (direct AdMob, built for the Families programme) stays
+# on disk at plugins/tauri-plugin-admob/ but is NOT listed here on purpose. The
+# Tauri CLI builds gen/android/tauri.settings.gradle from THIS dependency list,
+# so this line decides which ads SDKs reach the APK/AAB.
+tauri-plugin-levelplay = { path = "plugins/tauri-plugin-levelplay" }

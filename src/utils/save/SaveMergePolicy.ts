@@ -11,12 +11,11 @@
 //
 // Score formula (locked with product):
 //   stage              × 500
-// + totalUpgradeLevels × 150
+// + totalUpgradeLevels × 150   (a smasher level above 1 counts as two)
 // + ownedNormalSkins   × 250
 // + ownedSpecialSkins  × 1500
-// + Σ skill levels     × 150   (learning = one level, like a part level)
 //
-// NOT weighed, deliberately: the league (`spinner_league`, league builds).
+// NOT weighed, deliberately: the league (`smashers_league`, league builds).
 // League LP is server-authoritative on online builds and re-synced by
 // /league/me after any hydrate, and a save must never win (or lose) a merge
 // because of a ranked streak — it rides along with whichever blob wins.
@@ -29,11 +28,7 @@
 //   - if remote wins and local had ANY progress (score > 0), the player
 //     gets bonus coins = winner.maxStage × 50 to soften the loss
 
-import { STAGE_KEY, COINS_KEY, UPGRADES_KEY, SKINS_KEY } from '@/keys'
-// Skill levels: flag-boundary modules, folded away on a skills-off build.
-import { SKILLS_BUILD } from '@/skills/skillsGate'
-import { SKILLS_KEY } from '@/skills/skillKeys'
-import { storedSkillLevels } from '@/skills/skillSaveMeta'
+import { STAGE_KEY, COINS_KEY, UPGRADES_KEY, SKINS_KEY, ROSTER_KEY } from '@/keys'
 
 /** Where the meta blob is stored in localStorage / on the remote backend.
  *  NOT prefixed with `__save_internal__` — this key needs to round-trip
@@ -149,7 +144,16 @@ export const computeMeta = (
     }
     return sum
   }
-  const upgradeLevels = sumLevels(upgrades.tops) + sumLevels(upgrades.bottoms)
+  // Smasher levels: one smasher level is one upgrade of both its parts, so
+  // every level above 1 weighs as two part levels.
+  const roster = safeJson<{ lv?: Record<string, number> }>(read.get(ROSTER_KEY), {})
+  let smasherUps = 0
+  if (roster && typeof roster.lv === 'object' && roster.lv) {
+    for (const v of Object.values(roster.lv)) {
+      if (typeof v === 'number' && Number.isFinite(v) && v > 1) smasherUps += 2 * (Math.min(v, 30) - 1)
+    }
+  }
+  const upgradeLevels = sumLevels(upgrades.tops) + sumLevels(upgrades.bottoms) + smasherUps
 
   const ownedSkins = safeJson<unknown[]>(read.get(SKINS_KEY), [])
   let normalSkins = 0
@@ -165,17 +169,11 @@ export const computeMeta = (
     }
   }
 
-  // Skills (`{"v":1,"lv":{id: level}}`): every stored level scores like a
-  // part level (known ids, each clamped to 0..10). Skills-off builds do not
-  // weigh them at all — and fold this away with the key and the id list.
-  const skillLevels = SKILLS_BUILD ? storedSkillLevels(read.get(SKILLS_KEY)) : 0
-
   const progressScore =
     stage * 500
     + upgradeLevels * 150
     + normalSkins * 250
     + specialSkins * 1500
-    + skillLevels * 150
 
   return { savedAt, progressScore, schemaVersion: SCHEMA_VERSION, maxStage: stage }
 }
@@ -277,7 +275,7 @@ export const applyBonusCoins = (read: SnapshotReader, bonus: number): string => 
  * surface the cloud should ever see — anything else is by definition
  * not our state.
  */
-const PAYLOAD_PREFIXES = ['spinner_', 'ca_'] as const
+const PAYLOAD_PREFIXES = ['smashers_', 'ca_'] as const
 
 export const isPayloadKey = (key: string): boolean => {
   if (key === META_KEY) return true

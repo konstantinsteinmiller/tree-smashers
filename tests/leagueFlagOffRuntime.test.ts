@@ -21,13 +21,13 @@ const SEED: Record<string, string> = vi.hoisted(() => {
   vi.stubEnv('VITE_LEADERBOARD_URL', 'https://leaderboard.example.test')
   const seed: Record<string, string> = {
     // 51, not 50: a boss stage's win detours through the roulette.
-    spinner_campaign_stage: '51',
-    spinner_player_max_stage: '51',
-    spinner_coins: '5000',
-    spinner_first_win: '1',
-    spinner_intro_seen: '1',
-    spinner_config_opened: '1',
-    spinner_skills_intro_seen: '1'
+    smashers_campaign_stage: '51',
+    smashers_player_max_stage: '51',
+    smashers_coins: '5000',
+    smashers_first_win: '1',
+    smashers_intro_seen: '1',
+    smashers_config_opened: '1',
+    smashers_skills_intro_seen: '1'
   }
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
   return seed
@@ -44,7 +44,6 @@ vi.mock('@/league/leagueArenaBridge', () => {
   return {}
 })
 
-vi.mock('/images/bg/parchment-ribbon_553x188.webp', () => ({ default: '/images/bg/parchment-ribbon_553x188.webp' }))
 vi.mock('/images/icons/movie_128x96.webp', () => ({ default: '/images/icons/movie_128x96.webp' }))
 vi.mock('/images/logo/logo_256x256.webp', () => ({ default: '/images/logo/logo_256x256.webp' }))
 vi.mock('/images/icons/chest_128x128.webp', () => ({ default: '/images/icons/chest_128x128.webp' }))
@@ -90,7 +89,7 @@ describe('league OFF at runtime', () => {
       // player's turn, leave the enemy a sliver of HP and take the shot.
       const seam = await (async () => {
         for (let i = 0; i < 200; i++) {
-          const s = (window as unknown as { __chaos?: Seam }).__chaos
+          const s = (window as unknown as { __smashers?: Seam }).__smashers
           if (s) return s
           await arena.settle(25)
         }

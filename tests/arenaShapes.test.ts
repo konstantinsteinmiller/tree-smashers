@@ -85,9 +85,9 @@ describe('shape-specific geometry', () => {
 })
 
 describe('NON_CIRCLE_SHAPES', () => {
-  it('excludes circle and lists the four custom shapes', () => {
+  it('excludes circle and lists the custom shapes incl. the three Tree Smashers clearings', () => {
     expect(NON_CIRCLE_SHAPES).not.toContain('circle')
-    expect(NON_CIRCLE_SHAPES).toHaveLength(4)
+    expect(NON_CIRCLE_SHAPES).toHaveLength(7)
   })
 })
 

@@ -55,7 +55,7 @@ export default {
 
     // An even board with one red already softened, so exchange 1 lands.
     await g.stageHp(ctx, { player: [2.5, 2.5, 2.5], npc: [0.06, 2.5, 2.5] })
-    await ctx.evaluate(() => window.__chaos.aimAtBlade(0, 'npc', 0, 1))
+    await ctx.evaluate(() => window.__smashers.aimAtBlade(0, 'npc', 0, 1))
 
     const s = await g.snapshot(ctx)
     ctx.log.info(`staged stage ${s.stage}: ${s.alive.player} blue vs ${s.alive.npc} red${ctx.clean ? ' (clean feed)' : ''}`)

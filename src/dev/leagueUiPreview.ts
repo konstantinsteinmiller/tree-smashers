@@ -16,8 +16,8 @@ const params = new URLSearchParams(location.search)
 
 const boot = async () => {
   localStorage.clear()
-  localStorage.setItem('spinner_campaign_stage', String(Number(params.get('stage') ?? 24)))
-  localStorage.setItem('spinner_coins', '1200')
+  localStorage.setItem('smashers_campaign_stage', String(Number(params.get('stage') ?? 24)))
+  localStorage.setItem('smashers_coins', '1200')
   // useUser FIRST (useMatch ↔ useModels ↔ useUser import cycle).
   await import('@/use/useUser')
   const lang = params.get('lang') ?? 'en'

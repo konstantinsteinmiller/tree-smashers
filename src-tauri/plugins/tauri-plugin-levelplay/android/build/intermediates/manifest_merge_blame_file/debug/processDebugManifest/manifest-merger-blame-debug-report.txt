@@ -1,0 +1,61 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    xmlns:tools="http://schemas.android.com/tools"
+4    package="com.plugin.levelplay" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+7
+8    <!-- LevelPlay network fetches and connectivity probes. -->
+9    <uses-permission android:name="android.permission.INTERNET" />
+9-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:6:3-64
+9-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:6:20-62
+10    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+10-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:7:3-76
+10-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:7:20-74
+11
+12    <!--
+13    Advertising ID. The app targets 18+ and is not directed to children,
+14    so the ad networks may read it (personalised ads still need consent in
+15    the EEA/UK/CH — Google UMP collects it before the first ad loads).
+16    Apps targeting Android 13+ must declare this permission explicitly,
+17    and Play Console → App content → Advertising ID must say "yes,
+18    advertising" to match.
+19
+20    The Android 13+ Privacy Sandbox ad permissions that play-services-ads
+21    declares (ACCESS_ADSERVICES_*) are left to the manifest merger.
+22
+23    If the native build ever goes back into Google Play's Families
+24    programme, all four must be removed again with tools:node="remove".
+25    -->
+26    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+26-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:23:3-76
+26-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:23:20-74
+27    <!--
+28    Required by play-services-ads / AdMob: the SDK ships a
+29    `MobileAdsInitProvider` ContentProvider that auto-registers from
+30    the AdMob library's manifest and runs at process startup. It
+31    crashes the whole app if it can't find this meta-data tag, even
+32    when AdMob is not the winning bidder in the LevelPlay waterfall.
+33    Google UMP reads the same tag to find the app's consent message.
+34
+35    The actual value is injected at build time via the manifest
+36    placeholder `admobAppId`, defined in the consuming app's
+37    build.gradle.kts and sourced from the `VITE_APP_ADMOB_ANDROID_APP_ID`
+38    env var (see .env.tauri). When unset, the fallback is Google's
+39    documented AdMob test app ID — benign, returns a static "Test Ad"
+40    placeholder, no account required.
+41
+42    Format reminder: AdMob App ID uses TILDE (`~`) as separator.
+43    A value with a slash (`/`) is an *ad unit* ID — wrong tag.
+44    -->
+45    <application>
+45-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:43:3-47:17
+46        <meta-data
+46-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:44:5-46:38
+47            android:name="com.google.android.gms.ads.APPLICATION_ID"
+47-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:45:7-63
+48            android:value="${admobAppId}" />
+48-->C:\Users\konst\chaos-arena\src-tauri\plugins\tauri-plugin-levelplay\android\src\main\AndroidManifest.xml:46:7-36
+49    </application>
+50
+51</manifest>

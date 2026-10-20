@@ -16,11 +16,12 @@
 //      "Sufficient time to opt out" and "must not be hidden, obstructed, or
 //      non-functional" are the policy's words. Backdrop tap and Escape also
 //      decline, so there is no way to get stuck here.
-//   3. The body promises the ad is closeable. Rewarded interstitial units
-//      serve skippable creatives only, so this is a claim we can actually
-//      keep.
+//   3. The body promises the ad is closeable. That is only true of an ad unit
+//      that has passed `tools/ad-closeability/measure.mjs` — native ads stay
+//      off until one has, so the promise is never printed over an ad that
+//      breaks it (ADS_STATE.md).
 //
-// Kid-safe wording throughout: chaos-arena declares a child-directed
+// Kid-safe wording throughout: tree-smashers declares a child-directed
 // audience (ages 6+), so no urgency language, no dark patterns, no
 // "LAST CHANCE" framing.
 import { isSingleCurrency } from '@/use/useCurrency'
@@ -90,41 +91,43 @@ const rewardText = computed(() => {
         @keydown.esc="declineRewardedIntro"
       )
         //- Backdrop
-        div.absolute.inset-0(class="bg-black/70 backdrop-blur-sm")
+        div.absolute.inset-0(class="bg-[var(--ui-backdrop)]")
 
         //- Card
-        div.relative.w-full.max-w-md.rounded-2xl.text-white.shadow-2xl.text-center(
-          class="bg-gradient-to-b from-slate-700 to-slate-900 border-2 border-slate-500 p-6"
+        div.ui-panel.ui-stitch-dark.relative.w-full.max-w-md.text-center(
+          class="p-6 !border-4 !border-ink shadow-[0_6px_0_var(--color-ink)]"
           @click.stop
         )
           //- Ad disclosure badge — leads the card so the player knows what is
           //- about to happen BEFORE the reward is dangled.
-          div.inline-block.rounded.font-bold.tracking-widest.uppercase.mb-3(
-            class="bg-slate-900/80 border border-slate-400 text-slate-200 text-[11px] px-2 py-0.5"
+          div.ui-chip.ui-chip--sky.mb-3(
+            class="text-[12px] tracking-[0.04em] uppercase"
           ) {{ t('rewardedIntro.badge') }}
 
           div.mb-2.text-5xl 🎬
-          h2.text-2xl.font-bold.mb-2 {{ t('rewardedIntro.title') }}
+          h2.ui-title.text-ink.mb-2 {{ t('rewardedIntro.title') }}
 
           //- Reward is interpolated INSIDE the i18n message, never concatenated
           //- around it — word order differs per language.
-          p.text-base.mb-2(v-if="rewardText" class="text-slate-200")
+          p.text-base.font-extrabold.mb-2(v-if="rewardText" class="text-ink")
             i18n-t(keypath="sfc.RewardedAdIntroModal.rewardedIntro.bodyReward" tag="span" scope="global")
               template(#reward)
-                span.font-bold(class="text-amber-300") {{ rewardText }}
-          p.text-base.mb-2(v-else class="text-slate-200") {{ t('rewardedIntro.body') }}
+                span.font-black(class="text-sun-600") {{ rewardText }}
+          p.text-base.font-extrabold.mb-2(v-else class="text-ink") {{ t('rewardedIntro.body') }}
 
-          p.text-sm.mb-5(class="text-slate-300") {{ t('rewardedIntro.closeable') }}
+          p.text-sm.font-extrabold.mb-5(class="text-ink-soft") {{ t('rewardedIntro.closeable') }}
 
-          button.w-full.rounded-lg.font-bold.text-lg.text-white.shadow-lg.mb-2(
-            class="bg-amber-500 hover:bg-amber-400 active:translate-y-px py-3"
+          button.ui-btn.ui-btn--ad.w-full.text-lg.mb-3(
+            type="button"
+            class="py-3"
             @click="acceptRewardedIntro"
           ) {{ t('rewardedIntro.watch') }}
 
           //- Equal-weight decline. Same width, same hit area, no colour trick
           //- to make it look disabled.
-          button.w-full.rounded-lg.font-bold.text-base.shadow(
-            class="bg-slate-600 hover:bg-slate-500 active:translate-y-px py-3 text-slate-100"
+          button.ui-btn.ui-btn--secondary.w-full.text-lg(
+            type="button"
+            class="py-3"
             @click="declineRewardedIntro"
           ) {{ t('rewardedIntro.decline') }}
 </template>

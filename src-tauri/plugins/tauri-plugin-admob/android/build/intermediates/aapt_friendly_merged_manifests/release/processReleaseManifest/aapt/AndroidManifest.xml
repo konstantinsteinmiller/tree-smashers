@@ -1,69 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools"
-          package="com.plugin.admob">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.plugin.admob" >
 
-  <uses-sdk android:minSdkVersion="24"/>
+    <uses-sdk android:minSdkVersion="24" />
 
-  <!-- AdMob ad fetches and connectivity probes. -->
-  <uses-permission android:name="android.permission.INTERNET"/>
-  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- AdMob ad fetches and connectivity probes. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-  <!--
-  COPPA / Google Play Families Policy: every advertising-identifier
-  permission introduced by the Google Mobile Ads stack must be explicitly
-  removed via manifest merger on a kids app. These overrides win over the
-  transitive declarations pulled in by play-services-ads.
+    <!--
+    COPPA / Google Play Families Policy: every advertising-identifier
+    permission introduced by the Google Mobile Ads stack must be explicitly
+    removed via manifest merger on a kids app. These overrides win over the
+    transitive declarations pulled in by play-services-ads.
 
-  If any of these lines is removed, Google Play will flag the app for a
-  Families Policy violation and block publishing.
+    If any of these lines is removed, Google Play will flag the app for a
+    Families Policy violation and block publishing.
 
-  - AD_ID — classic Google Play Services advertising identifier.
-  - ACCESS_ADSERVICES_AD_ID — Android 13+ Privacy Sandbox ad ID.
-  - ACCESS_ADSERVICES_ATTRIBUTION / _TOPICS — Privacy Sandbox
-    interest-based / attribution APIs. Prohibited on kids apps.
-  -->
-  <uses-permission
-    android:name="com.google.android.gms.permission.AD_ID"
-    tools:node="remove"/>
-  <uses-permission
-    android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
-    tools:node="remove"/>
-  <uses-permission
-    android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
-    tools:node="remove"/>
-  <uses-permission
-    android:name="android.permission.ACCESS_ADSERVICES_TOPICS"
-    tools:node="remove"/>
-  <!--
-  Required by play-services-ads: the SDK ships a `MobileAdsInitProvider`
-  ContentProvider that auto-registers from the AdMob library's manifest and
-  runs at process startup. It crashes the whole app if it cannot find this
-  meta-data tag.
+    - AD_ID — classic Google Play Services advertising identifier.
+    - ACCESS_ADSERVICES_AD_ID — Android 13+ Privacy Sandbox ad ID.
+    - ACCESS_ADSERVICES_ATTRIBUTION / _TOPICS — Privacy Sandbox
+      interest-based / attribution APIs. Prohibited on kids apps.
+    -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_TOPICS"
+        tools:node="remove" />
+    <!--
+    Required by play-services-ads: the SDK ships a `MobileAdsInitProvider`
+    ContentProvider that auto-registers from the AdMob library's manifest and
+    runs at process startup. It crashes the whole app if it cannot find this
+    meta-data tag.
 
-  The value is injected at build time via the manifest placeholder
-  `admobAppId`, defined in the consuming app's build.gradle.kts and sourced
-  from the `VITE_APP_ADMOB_ANDROID_APP_ID` env var (see .env.tauri). When
-  unset, the fallback is Google's documented AdMob test app ID — benign,
-  returns a static "Test Ad" placeholder, no account required.
+    The value is injected at build time via the manifest placeholder
+    `admobAppId`, defined in the consuming app's build.gradle.kts and sourced
+    from the `VITE_APP_ADMOB_ANDROID_APP_ID` env var (see .env.tauri). When
+    unset, the fallback is Google's documented AdMob test app ID — benign,
+    returns a static "Test Ad" placeholder, no account required.
 
-  Format reminder: AdMob App ID uses TILDE (`~`) as separator. A value with
-  a slash (`/`) is an *ad unit* ID — wrong tag.
+    Format reminder: AdMob App ID uses TILDE (`~`) as separator. A value with
+    a slash (`/`) is an *ad unit* ID — wrong tag.
 
-  `OPTIMIZE_INITIALIZATION` / `OPTIMIZE_AD_LOADING` move the SDK's heavy
-  startup work off the main thread. Cheap, and it keeps the game's first
-  frame from stalling behind ad-SDK init on low-end Android devices.
-  -->
-  <application>
-    <meta-data
-      android:name="com.google.android.gms.ads.APPLICATION_ID"
-      android:value="dollar_openBracket_admobAppId_closeBracket"/>
-    <meta-data
-      android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
-      android:value="true"/>
-    <meta-data
-      android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
-      android:value="true"/>
-  </application>
+    `OPTIMIZE_INITIALIZATION` / `OPTIMIZE_AD_LOADING` move the SDK's heavy
+    startup work off the main thread. Cheap, and it keeps the game's first
+    frame from stalling behind ad-SDK init on low-end Android devices.
+    -->
+    <application>
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="dollar_openBracket_admobAppId_closeBracket" />
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+            android:value="true" />
+    </application>
 
 </manifest>

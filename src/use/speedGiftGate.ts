@@ -23,7 +23,7 @@
 //   • EXISTING PLAYERS GET NOTHING. A save that already has progress and no
 //     gift key predates the feature (or belongs to a returning player whose
 //     cloud save just arrived) — it is not a first-timer's save.
-//   • NEVER TWICE. 'used' rides the cloud save (`spinner_` prefix), and a
+//   • NEVER TWICE. 'used' rides the cloud save (`smashers_` prefix), and a
 //     device-local mirror outside the payload prefixes survives a stale cloud
 //     blob that wins a merge and brings an old 'granted' back.
 
@@ -31,14 +31,14 @@ import type { HydrateState } from '@/utils/save/types'
 
 /** Cloud-synced gift state: absent | 'granted' | 'used'. Kept by the
  *  full-progress reset (an anti-farm gate, not progress). */
-export const SPEED_GIFT_KEY = 'spinner_free_2x_gift'
+export const SPEED_GIFT_KEY = 'smashers_free_2x_gift'
 export const SPEED_GIFT_GRANTED = 'granted'
 export const SPEED_GIFT_USED = 'used'
 
 /** Device-local "already used here". Deliberately OUTSIDE the save payload
- *  prefixes (`spinner_` / `ca_`), like `chaosarena_uid`, so no hydrate can
+ *  prefixes (`smashers_` / `ca_`), like `treesmashers_uid`, so no hydrate can
  *  overwrite or delete it. */
-export const SPEED_GIFT_USED_LOCAL_KEY = 'chaosarena_free_2x_used'
+export const SPEED_GIFT_USED_LOCAL_KEY = 'treesmashers_free_2x_used'
 
 export interface SpeedGiftGateInput {
   /** Current SPEED_GIFT_KEY value. */
@@ -74,11 +74,11 @@ export const isSpeedGiftAvailable = (i: Pick<SpeedGiftGateInput, 'stored' | 'use
 // on top of (never stacked with) the first-time gift above:
 //
 //   • SAME DAY AS EVERY DAILY. The day is `utcDayKey()` — 00:00 UTC, the rule
-//     the daily challenge and daily rewards already use.
+//     daily rewards already use.
 //   • FIRST-TIME GIFT WINS. While the first-time gift is unspent the badge is
 //     that gift (3 min); the daily one is hidden. Spending the first-time gift
 //     also stamps today as the daily's day, so that day holds one free boost.
-//   • STORED AS "LAST DAY USED". `spinner_free_2x_daily` (cloud-synced) holds
+//   • STORED AS "LAST DAY USED". `smashers_free_2x_daily` (cloud-synced) holds
 //     the last day a free boost was spent. A device-local mirror outside the
 //     payload prefixes holds the same, so a stale cloud blob that wins a merge
 //     and brings an older day back cannot re-open today on this device.
@@ -100,10 +100,10 @@ export const isSpeedGiftAvailable = (i: Pick<SpeedGiftGateInput, 'stored' | 'use
 
 /** Cloud-synced 'YYYY-MM-DD' (UTC) of the last day a free boost was spent.
  *  Kept by the full-progress reset (anti-farm gate, not progress). */
-export const DAILY_SPEED_GIFT_KEY = 'spinner_free_2x_daily'
+export const DAILY_SPEED_GIFT_KEY = 'smashers_free_2x_daily'
 
 /** Device-local mirror of DAILY_SPEED_GIFT_KEY, outside the payload prefixes. */
-export const DAILY_SPEED_GIFT_LOCAL_KEY = 'chaosarena_free_2x_daily'
+export const DAILY_SPEED_GIFT_LOCAL_KEY = 'treesmashers_free_2x_daily'
 
 /** The daily gift is a taste, not the full paid / ad boost (3 min). */
 export const DAILY_SPEED_GIFT_DURATION_MS = 60 * 1000

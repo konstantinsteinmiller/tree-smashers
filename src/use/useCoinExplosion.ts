@@ -39,7 +39,7 @@ const particleHtml = (variant: CoinExplosionVariant): string => {
   if (variant === 'diamond') {
     const src = prependBaseUrl('images/icons/diamond_256x256.webp')
     return `<img src="${src}" alt="" style="width:20px;height:20px;object-fit:contain;` +
-      `filter:drop-shadow(0 0 3px rgba(120,220,255,0.7))" draggable="false"/>`
+      `" draggable="false"/>`
   }
   if (coinArtFailed.value) return COIN_SVG
   return `<img src="${coinArtSrc()}" alt="" style="width:20px;height:20px;object-fit:contain" draggable="false"/>`

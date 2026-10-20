@@ -1,5 +1,5 @@
 /**
- * ─── Chaos Arena leaderboard ───────────────────────────────────────────────────
+ * ─── Tree Smashers leaderboard ───────────────────────────────────────────────────
  *
  * A Cloudflare Worker over one D1 database. Two leaderboard routes here, plus
  * the league routes under /league/* (see league.ts):
@@ -98,7 +98,7 @@ const WRITE_COOLDOWN_MS = 3_000
  *
  * SET THIS FROM THE GAME'S ARITHMETIC, and set it absurdly high. Work out the
  * fastest a real player could physically produce one point of `score`, multiply
- * by a day of unbroken play, and round up hard. A Chaos Arena stage is a
+ * by a day of unbroken play, and round up hard. A Tree Smashers stage is a
  * turn-based fight that cannot be WON in under ~20 s even at 2x speed, so a full
  * day of unbroken, unbroken-winning play is ~4 300 stages. 10 000 is several
  * days of that.

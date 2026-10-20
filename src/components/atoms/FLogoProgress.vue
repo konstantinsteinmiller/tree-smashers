@@ -1,50 +1,24 @@
 <template lang="pug">
-  //- Splash backdrop — blurred overlay behind the logo during loading
+  //- The forest backdrop: a flat cartoon tile (public/images/bg/forest-tile.svg)
+  //- on one oversized layer that pans very slowly by `transform` only.
+  //- Same rules as #static-splash in index.html, so the hand-over moves nothing.
+  //- `.splash-backdrop` is polled by IntroCutscene.vue — keep the class name.
   Transition(name="splash-fade")
-    div.splash-backdrop.no-os-ui(v-if="!backdropHidden")
-
-  div.no-os-ui(
-    ref="logoRef"
-    class="fixed transition-all ease-in-out"
-    :class="[settled ? 'duration-700' : 'duration-0', done ? 'z-[1]' : 'z-[200]']"
-    :style="positionStyle"
-  )
-    div(class="relative flex flex-col items-center")
-
-      //- Logo Progress Container
-      div(
-        class="relative transition-all duration-700 ease-in-out"
-        :style="sizeStyle"
-      )
-        //- Background (Grayscale).
-        //- `draggable=false` blocks the browser-native drag-to-save image
-        //- behavior; the `.no-os-ui` class on the root suppresses the
-        //- text caret + selection highlight + iOS long-press menu that
-        //- would otherwise pop up next to the logo on touch devices.
-        img(
-          src="/images/logo/logo_256x256.webp" alt="logo loader"
-          draggable="false"
-          class="absolute inset-0 w-full h-full object-contain grayscale opacity-30"
-        )
-
-        //- Foreground (Color - revealed by progress)
-        div(
-          class="absolute inset-0 w-full h-full overflow-hidden transition-all duration-300 ease-out"
-          :style="maskStyle"
-        )
-          img(
-            src="/images/logo/logo_256x256.webp" alt="logo loader"
-            draggable="false"
-            class="w-full h-full object-contain"
-          )
-
-      //- Loading Text
-      div.absolute.-bottom-8(v-if="!done" class="mt-0 flex flex-col items-center gap-1")
-        span(class="percentage-text text-shadow font-mono text-amber-500") {{ Math.round(progress) }}%
-
-      //- Soft hint if loading is stuck — appears after 10s
-      Transition(name="hint-fade")
-        div.stuck-hint.mt-4(v-if="showStuckHint && !done") {{ t('loading.stuckHint') }}
+    div.splash-backdrop.no-os-ui(v-if="!backdropHidden" aria-hidden="true")
+      div.backdrop-pan(ref="panEl")
+  Transition(name="loader-fade")
+    div.loader.no-os-ui(v-if="!done")
+      div.card
+        //- THE logo seam: set LOGO_SRC (below) to a painted logo and it
+        //- replaces the text wordmark everywhere (index.html static splash too).
+        h1.logo(:aria-label="t('gameName')")
+          img.logo-img(v-if="LOGO_SRC" :src="LOGO_SRC" alt="" draggable="false")
+          span.wordmark(v-else aria-hidden="true") {{ t('gameName') }}
+        div.bar(role="progressbar" :aria-valuenow="Math.round(progress)" aria-valuemin="0" aria-valuemax="100")
+          div.lit(aria-hidden="true")
+            div.fill(:style="fillStyle")
+        Transition(name="hint-fade")
+          div.stuck-hint(v-if="showStuckHint") {{ t('loading.stuckHint') }}
 </template>
 
 <script setup lang="ts">
@@ -53,6 +27,17 @@ import { useSfcI18n } from '@/i18n/sfc'
 import useAssets from '@/use/useAssets'
 import { stopLoading } from '@/use/useCrazyGames'
 
+/**
+ * The boot loader (modelled on zora-arena's): a very slowly panning forest
+ * backdrop, the game's wordmark and a flat loading bar, driven by
+ * `useAssets.preloadAssets`. It continues the static splash in index.html
+ * exactly (same pan phase, same bar position), then fades away.
+ *
+ * Painted logo: put its URL in LOGO_SRC (and the same <img> into
+ * #static-splash .s-logo in index.html). Empty → the text wordmark.
+ */
+const LOGO_SRC = ''
+
 const { t } = useSfcI18n('FLogoProgress')
 
 const { loadingProgress, preloadAssets } = useAssets()
@@ -60,39 +45,54 @@ const progress = computed(() => loadingProgress.value)
 
 preloadAssets()
 
+// ── The bar ──
+// One fill scaled by `transform` (compositor-driven, keeps moving through
+// long main-thread tasks). It starts where the static splash's creeping bar
+// has got to so the hand-over never jumps back; while nothing has reported
+// progress yet it creeps toward CREEP_TO.
+const readScaleX = (el: Element | null): number => {
+  if (!el) return 0
+  const m = /matrix\(([^,]+)/.exec(getComputedStyle(el).transform)
+  const v = m ? parseFloat(m[1]!) : 0
+  return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0
+}
+const startAt = typeof document !== 'undefined' ? readScaleX(document.querySelector('#static-splash .s-fill')) : 0
+const CREEP_TO = 0.14
+const armed = ref(false)
+const fillStyle = computed(() => {
+  const real = Math.max(progress.value / 100, startAt)
+  const creeping = progress.value < CREEP_TO * 100
+  const target = armed.value ? (creeping ? Math.max(real, CREEP_TO) : real) : startAt
+  return {
+    transform: `scaleX(${target.toFixed(4)})`,
+    transitionDuration: !armed.value ? '0ms' : creeping ? '3200ms' : '420ms'
+  }
+})
+
 const done = ref(false)
-const settled = ref(false)
 const backdropHidden = ref(false)
 const showStuckHint = ref(false)
 let stuckHintId: number | null = null
-
-// Compute 40% of the smaller viewport dimension
-const viewportSize = ref(Math.min(window.innerWidth, window.innerHeight))
-const logoRef = ref<HTMLElement | null>(null)
-
-const onResize = () => {
-  viewportSize.value = Math.min(window.innerWidth, window.innerHeight)
-}
-
-// Safety timeout: if asset loading glitches and progress never reaches 100,
-// force the logo to its final top-left position after at most 4 seconds so
-// it never sits stuck in the center.
 let settleFallbackId: number | null = null
 
-onMounted(() => {
-  window.addEventListener('resize', onResize)
+// Continue the static splash's pan at the same point of the same loop.
+const panEl = ref<HTMLElement | null>(null)
+const continuePan = (from: Element | null, to: Element | null): void => {
+  if (!from || !to || typeof from.getAnimations !== 'function') return
+  const [a] = from.getAnimations()
+  const [b] = to.getAnimations()
+  if (a && b && a.startTime !== null) b.startTime = a.startTime
+}
 
-  // Hide the static HTML splash from index.html now that Vue has taken over
+onMounted(() => {
+  requestAnimationFrame(() => { armed.value = true })
   const staticSplash = document.getElementById('static-splash')
   if (staticSplash) {
+    continuePan(staticSplash.querySelector('.s-pan'), panEl.value)
     staticSplash.classList.add('hidden')
     setTimeout(() => staticSplash.remove(), 500)
   }
-
-  // Let initial position render before enabling transitions
-  requestAnimationFrame(() => {
-    settled.value = true
-  })
+  // Safety: never sit on the loader if progress glitches short of 100.
   settleFallbackId = window.setTimeout(() => {
     if (!done.value) done.value = true
   }, 4000)
@@ -101,55 +101,20 @@ onMounted(() => {
   }, 10000)
 })
 onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
   if (settleFallbackId !== null) clearTimeout(settleFallbackId)
   if (stuckHintId !== null) clearTimeout(stuckHintId)
 })
 
-const centeredSize = computed(() => Math.floor(viewportSize.value * 0.4))
-const finalSize = 64 // w-16 h-16
-
-const sizeStyle = computed(() => {
-  const s = done.value ? finalSize : centeredSize.value
-  return { width: `${s}px`, height: `${s}px` }
-})
-
-const positionStyle = computed(() => {
-  if (done.value) {
-    // Top-left below stage badge (~52px down, 12px left). Add safe-area
-    // insets so the logo clears the iPhone notch / Dynamic Island in
-    // portrait and the side cutout in landscape PWA standalone mode.
-    return {
-      top: 'calc(52px + env(safe-area-inset-top, 0px))',
-      left: 'calc(12px + env(safe-area-inset-left, 0px))',
-      transform: 'none'
-    }
-  }
-  // Centered
-  return {
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)'
-  }
-})
-
 watch(progress, (val) => {
   if (val >= 100 && !done.value) {
-    // Small delay so user sees 100% before transition
-    setTimeout(() => {
-      done.value = true
-    }, 100)
+    // Let the fill land before the loader fades.
+    setTimeout(() => { done.value = true }, 320)
   }
-})
+}, { immediate: true })
 
-// Once-per-session "loading finished" signal for the CrazyGames SDK.
-// Pairs with the SDK's auto-fired `loadingStart` and tells the SDK the
-// loading phase ended so QA's cold-launch download-size counter stops
-// here. Per-battle `gameplayStart` / `gameplayStop` transitions are
-// driven by the reactive `isGameplayActive` watcher in
-// `SpinnerArena.vue`; the splash deliberately does NOT fire a
-// start+stop pair here — CG QA asked us to drop it so the first
-// gameplay event the SDK sees is a real match entering the arena.
+// Once-per-session CrazyGames "loading finished" (pairs with the SDK's
+// auto loadingStart). Per-battle gameplayStart/Stop live in SpinnerArena.vue;
+// Playgama / Poki loading-finished fire from App.vue on areAllAssetsLoaded.
 let cgLoadSignaled = false
 const signalGameReadyToCG = () => {
   if (cgLoadSignaled) return
@@ -161,82 +126,123 @@ const signalGameReadyToCG = () => {
   }
 }
 
-// Hide backdrop shortly after logo starts moving to corner
 watch(done, (isDone) => {
-  if (isDone) {
-    // Fade out backdrop after a brief delay (let the logo start moving first)
-    setTimeout(() => {
-      backdropHidden.value = true
-      // Fire the CG "ready" signal alongside the backdrop fade — at
-      // this point the menu is interactable and the load chain is
-      // complete from the player's perspective.
-      signalGameReadyToCG()
-    }, 150)
-  }
-})
-
-// Create the circular mask style
-const maskStyle = computed(() => {
-  return {
-    '-webkit-mask-image': `conic-gradient(black ${progress.value}%, transparent ${progress.value}%)`,
-    'mask-image': `conic-gradient(black ${progress.value}%, transparent ${progress.value}%)`,
-    '-webkit-mask-origin': 'content-box',
-    'mask-clip': 'content-box'
-  }
+  if (!isDone) return
+  setTimeout(() => {
+    backdropHidden.value = true
+    signalGameReadyToCG()
+  }, 150)
 })
 </script>
 
 <style scoped lang="sass">
-// Splash is a presentation surface, not a form. Suppress every
-// browser-native UI affordance that would normally surface on this
-// kind of element:
-//   • text caret (the blinking pipe seen near the percentage label
-//     when the user accidentally taps the splash)
-//   • text selection highlight
-//   • iOS / Android long-press image menu ("Save image", "Copy")
-//   • drag-to-save image behavior on desktop browsers
-// `caret-color: transparent` covers the caret on contenteditable
-// fallthroughs; `user-select: none` covers the highlight; the touch
-// callout + tap-highlight kill the mobile context menus; and
-// `-webkit-user-drag: none` on descendant images blocks the desktop
-// drag (the inline `draggable="false"` attribute does the same job
-// for older browsers). Scoped to a class so the rule never leaks.
 .no-os-ui
   caret-color: transparent
   user-select: none
   -webkit-user-select: none
   -webkit-touch-callout: none
   -webkit-tap-highlight-color: transparent
-
   &, & *
     -webkit-user-drag: none
 
-.percentage-text
-  font-size: 1.2rem
-  font-weight: bold
-
-div[style*="conic-gradient"]
-  transform: rotate(0deg)
-  mask-repeat: no-repeat
-  -webkit-mask-repeat: no-repeat
-
-// ─── Splash backdrop ────────────────────────────────────────────────────────
+// Mirrors #static-splash in index.html rule for rule. Change one, change both.
+// Flat fills only: no blur, no radial gradients, no backdrop-filter.
 .splash-backdrop
   position: fixed
   inset: 0
   z-index: 150
-  background-color: #0d1117
-  background-image: url('/images/bg/bg-tile_400x400.webp')
-  background-repeat: repeat
-  background-size: 400px 400px
-// No pointer events so nothing underneath is accidentally clickable anyway
-// (there's nothing interactive rendered yet during initial load)
+  overflow: hidden
+  background-color: #2f5f35
 
-// Fade-out transition for the backdrop
-.splash-fade-leave-active
-  transition: opacity 0.4s ease-out
+.backdrop-pan
+  position: absolute
+  inset: -240px 0 0 -240px
+  background-image: url('/images/bg/forest-tile.svg')
+  background-size: 240px 240px
+  animation: forest-pan 90s linear infinite
+  will-change: transform
+
+@keyframes forest-pan
+  to
+    transform: translate3d(240px, 240px, 0)
+
+.loader
+  position: fixed
+  inset: 0
+  z-index: 200
+  display: flex
+  align-items: center
+  justify-content: center
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px)
+
+.card
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: clamp(14px, 4vmin, 28px)
+  width: min(86vw, 120vh, 560px)
+
+.logo
+  margin: 0
+  width: 100%
+  text-align: center
+.logo-img
+  display: block
+  width: 100%
+  height: auto
+.wordmark
+  display: block
+  font-family: 'Nunito', system-ui, sans-serif
+  font-weight: 700
+  font-size: clamp(2.6rem, min(13vw, 17vh), 5.6rem)
+  line-height: 0.95
+  letter-spacing: 0.02em
+  color: #ffd45e
+  -webkit-text-stroke: 0.14em #1e3a21
+  paint-order: stroke fill
+  text-shadow: 0 0.09em 0 #1e3a21
+  transform: rotate(-3deg)
+
+.bar
+  position: relative
+  width: 72%
+  height: clamp(14px, 3vmin, 20px)
+  border: 3px solid #1e3a21
+  border-radius: 999px
+  background: #24472a
+  box-shadow: 0 4px 0 #1e3a21
+  box-sizing: content-box
+.lit
+  position: absolute
+  inset: 0
+  border-radius: 999px
+  overflow: hidden
+.fill
+  width: 100%
+  height: 100%
+  background: linear-gradient(#fff2b8 0 28%, #ffc93e 28% 100%)
+  transform-origin: left center
+  transition-property: transform
+  transition-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1)
+  will-change: transform
+
+.stuck-hint
+  max-width: 90%
+  font-size: clamp(0.8rem, 3.2vmin, 1rem)
+  color: #f3f7e6
+  text-align: center
+
+.splash-fade-leave-active, .loader-fade-leave-active
+  transition: opacity 0.35s ease-out
   pointer-events: none
-
-.splash-fade-leave-to
+.splash-fade-leave-to, .loader-fade-leave-to
   opacity: 0
+.hint-fade-enter-active
+  transition: opacity 0.4s
+.hint-fade-enter-from
+  opacity: 0
+
+@media (prefers-reduced-motion: reduce)
+  .backdrop-pan
+    animation: none
 </style>

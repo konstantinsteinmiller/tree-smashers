@@ -99,7 +99,7 @@ describe('skillCatalog — ids and unlocks', () => {
   })
 
   it('ships no runtime ad flag (ads are gated by the build-time HAS_REWARDED_ADS)', () => {
-    expect(Object.keys(catalogModule).filter(k => /AD/.test(k))).toEqual([])
+    expect(Object.keys(catalogModule).filter(k => /(^|_)ADS?(_|$)/.test(k))).toEqual([])
   })
 })
 

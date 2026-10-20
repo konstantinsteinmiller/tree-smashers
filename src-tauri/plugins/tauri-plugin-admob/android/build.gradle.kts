@@ -42,10 +42,10 @@ dependencies {
     // requests (see the AdMob "Comply with Google Play's Families Policy"
     // guide). We are far above that floor.
     //
-    // The only format this app loads is a rewarded INTERSTITIAL ad unit:
-    // Google serves skippable creatives exclusively into those units, which
-    // is what satisfies the Families "closeable after 5 seconds" rule that
-    // got version codes 1000012 / 1000020 rejected in 2026-09.
+    // The app loads opt-in rewarded ads only (rewarded interstitial or plain
+    // rewarded, see AdMobPlugin.kt). Neither format is closeable after 5
+    // seconds by itself — that is Google's per-impression template choice,
+    // and it has to be measured before ads ship (ADS_STATE.md).
     implementation("com.google.android.gms:play-services-ads:24.9.0")
 
     // ── DO NOT re-add mediation without re-reading ADS_STATE.md ──────────

@@ -7,23 +7,23 @@ import { saveDataVersion } from '@/use/useSaveStatus'
 // players toward stronger builds. Tip selection is purely client-side and
 // depends on three lightweight counters persisted to localStorage:
 //
-//   spinner_tip_last_lost_stage — the stage_id of the last campaign loss
-//   spinner_tip_losses_on_stage — consecutive losses on that same stage
-//   spinner_tip_tank_loss_streak — consecutive losses against a tanky/boss setup
-//   spinner_tip_last_shown      — id of the tip the player saw last time, so
+//   smashers_tip_last_lost_stage — the stage_id of the last campaign loss
+//   smashers_tip_losses_on_stage — consecutive losses on that same stage
+//   smashers_tip_tank_loss_streak — consecutive losses against a tanky/boss setup
+//   smashers_tip_last_shown      — id of the tip the player saw last time, so
 //                                  successive lose screens rotate the
 //                                  reminder instead of nagging with the same
 //                                  one (only kicks in when multiple tips
 //                                  qualify for the same screen).
 //
-// All keys use the `spinner_` prefix so the SaveManager mirrors them to the
+// All keys use the `smashers_` prefix so the SaveManager mirrors them to the
 // cloud strategy — the nudge follows the player across devices, same
 // pattern as the boss rubber-band streak in useSpinnerCampaign.
 
-const LAST_LOST_STAGE_KEY = 'spinner_tip_last_lost_stage'
-const LOSSES_ON_STAGE_KEY = 'spinner_tip_losses_on_stage'
-const TANK_LOSS_STREAK_KEY = 'spinner_tip_tank_loss_streak'
-const LAST_SHOWN_TIP_KEY = 'spinner_tip_last_shown'
+const LAST_LOST_STAGE_KEY = 'smashers_tip_last_lost_stage'
+const LOSSES_ON_STAGE_KEY = 'smashers_tip_losses_on_stage'
+const TANK_LOSS_STREAK_KEY = 'smashers_tip_tank_loss_streak'
+const LAST_SHOWN_TIP_KEY = 'smashers_tip_last_shown'
 
 const loadInt = (key: string): number => {
   try {
@@ -111,10 +111,10 @@ export const noteCampaignResult = (stage: Stage, result: 'win' | 'lose') => {
 }
 
 export type TipId =
-  | 'tankyBottom'
-  | 'tankPiercer'
+  | 'levelUp'
+  | 'tankBreaker'
   | 'teleporterShock'
-  | 'starSpeedy'
+  | 'teamMix'
   | 'arenaWall'
 
 export interface TipPickResult {
@@ -133,8 +133,8 @@ const GENERAL_TIP_CHANCE = 0.40
  *
  * Priority order inside the pool:
  *   1. Shock arena → teleporter skin tip
- *   2. ≥2 consecutive losses against tanky setups → tank piercer top tip
- *   3. ≥2 losses on the same stage → tanky bottom tip
+ *   2. ≥2 consecutive losses against tanky setups → hard-hitting smashers tip
+ *   3. ≥2 losses on the same stage → level-up-your-smashers tip
  *   4. General arena-wall tip — enters the pool on a 40% roll regardless
  *      of conditions, giving every lose screen a chance at a build hint.
  *
@@ -149,8 +149,8 @@ const GENERAL_TIP_CHANCE = 0.40
 export const pickLoseScreenTip = (stage: Stage): TipPickResult => {
   const pool: TipId[] = []
   if (stage.arenaType === 'shock') pool.push('teleporterShock')
-  if (tankLossStreak.value >= 2) pool.push('tankPiercer')
-  if (lossesOnStage.value >= 2) pool.push('tankyBottom')
+  if (tankLossStreak.value >= 2) pool.push('tankBreaker')
+  if (lossesOnStage.value >= 2) pool.push('levelUp')
   if (Math.random() < GENERAL_TIP_CHANCE) pool.push('arenaWall')
 
   const first = pool[0]
@@ -164,9 +164,9 @@ export const pickLoseScreenTip = (stage: Stage): TipPickResult => {
   return { tip: chosen, pool }
 }
 
-/** Win-screen tip is the star+speedy glass-cannon build, shown 25% of the time. */
+/** Win-screen tip: mix a fragile striker with a tank, shown 25% of the time. */
 export const pickWinScreenTip = (): TipId | null => {
-  return Math.random() < 0.25 ? 'starSpeedy' : null
+  return Math.random() < 0.25 ? 'teamMix' : null
 }
 
 /** Persist the last tip the player saw so the next screen can rotate away from it. */

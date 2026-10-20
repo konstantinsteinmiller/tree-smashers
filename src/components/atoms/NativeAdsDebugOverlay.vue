@@ -58,7 +58,7 @@ const dotColor = (b: boolean): string => (b ? 'text-green-400' : 'text-red-400')
       div.text-zinc-300
         | platform: {{ adMobDebug.platform }}
       div(:class="dotColor(adMobDebug.adUnitConfigured)")
-        | {{ dot(adMobDebug.adUnitConfigured) }} rewarded-interstitial unit
+        | {{ dot(adMobDebug.adUnitConfigured) }} {{ adMobDebug.adFormat }} unit
       div.font-bold(v-if="adMobDebug.usingTestAds" class="text-amber-400")
         | ⚠ TEST ADS — not live inventory
 

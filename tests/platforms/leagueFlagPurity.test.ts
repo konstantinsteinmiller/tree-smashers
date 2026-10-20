@@ -84,7 +84,7 @@ describe('league ON — unobfuscated twin', () => {
 
   it('keeps league components, routes and the pool key out of the hot path', () => {
     const hot = on.hits.filter(h => /^(index|App|SpinnerArena)-/.test(path.basename(h.file)))
-    expect(hot.filter(h => /^League|^\/league\/$|^chaosarena_league_pool$|^data-league$/.test(h.marker))).toEqual([])
+    expect(hot.filter(h => /^League|^\/league\/$|^treesmashers_league_pool$|^data-league$/.test(h.marker))).toEqual([])
   })
 
   it.skipIf(!LEAGUE_LANDED)('emits the lazy league chunks with live markers', () => {

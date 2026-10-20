@@ -10,7 +10,7 @@
  *   1. waits its turn on the cross-process paint lock (lock.mjs) — FIFO, never
  *      fails for being busy — then waits out the throttle gap since the
  *      previous generation (gapSeconds + up to jitterSeconds, art-desk config);
- *   2. reuses the Gemini Chrome on chaos-arena's own profile, or launches it;
+ *   2. reuses the Gemini Chrome on tree-smashers's own profile, or launches it;
  *   3. opens a NEW chat, attaches the --ref images (first --ref = the LAYOUT
  *      sheet, the rest = style refs; the layout sheet is attached LAST, because
  *      Gemini takes the output's shape from the last image), types

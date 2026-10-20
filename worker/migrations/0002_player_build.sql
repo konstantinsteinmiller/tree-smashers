@@ -3,7 +3,7 @@
 -- Run ONCE against the live database BEFORE deploying the Worker that writes
 -- these columns (see SETUP.md, "Upgrading: player builds"):
 --
---   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0002_player_build.sql
+--   npx wrangler d1 execute leaderboard-tree-smashers --remote --file=./migrations/0002_player_build.sql
 --
 -- All three columns are nullable: every existing row, and every post from a
 -- client that predates builds, simply has none. SQLite's ADD COLUMN cannot be

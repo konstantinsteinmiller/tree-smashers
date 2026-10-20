@@ -1,6 +1,6 @@
 // ─── Playgama Bridge plugin (SDK v2) ───────────────────────────────────────
 //
-// Wires the Playgama Bridge into chaos-arena's mute / pause / ad-cadence
+// Wires the Playgama Bridge into tree-smashers's mute / pause / ad-cadence
 // machinery. The Bridge is a unified abstraction over 25+ portals; it
 // auto-detects the host from the parent-frame handshake and the URL, so we DO
 // NOT pass `forciblySetPlatformId` — forcing an id breaks every context except
@@ -149,7 +149,7 @@ export const getPlaygamaBridge = (): Bridge | null => sdk
 //      below, plus a `watch(playgamaLocale)` in `main.ts` for the late answer.
 //
 //   3. Persistence — the reason the SECOND report happened. `main.ts` used to
-//      seed the portal locale into `spinner_user_language`, the same key that
+//      seed the portal locale into `smashers_user_language`, the same key that
 //      holds the player's explicit OptionsModal choice. One load that missed
 //      the portal answer wrote a value that then out-ranked every later
 //      correct answer, and the cloud strategy synced that poisoned state to

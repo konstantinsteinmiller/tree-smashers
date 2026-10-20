@@ -101,7 +101,7 @@ const readSnapshotFile = (file: string = SNAPSHOT_FILE): LeaderboardSnapshotFile
  *           Poki and YouTube.
  */
 const leaderboardSnapshotPlugin = (live: boolean): Plugin => ({
-  name: 'chaos-arena-leaderboard-snapshot',
+  name: 'tree-smashers-leaderboard-snapshot',
   buildStart() {
     if (!live) {
       const seed = readSnapshotFile(SEED_FILE)
@@ -199,7 +199,7 @@ const readLeaguePool = (): { fetchedAt?: number; builds: unknown[] } | null => {
 const leaguePoolPlugin = (leagueBuild: boolean): Plugin => {
   let baked: { v: 1; builds: unknown[] } | null = null
   return {
-    name: 'chaos-arena-league-pool',
+    name: 'tree-smashers-league-pool',
     buildStart() {
       baked = null
       if (!leagueBuild) {
@@ -272,7 +272,8 @@ export default defineConfig(({ mode, command }) => {
     'VITE_APP_Y8',
     'VITE_APP_GAMEPIX',
     'VITE_APP_PLAYGAMA',
-    'VITE_APP_POKI'
+    'VITE_APP_POKI',
+    'VITE_APP_GAME_MONETIZE'
   ]
   const activeFlags = PLATFORM_FLAGS.filter(f => env[f] === 'true')
   if (activeFlags.length > 1) {
@@ -283,7 +284,7 @@ export default defineConfig(({ mode, command }) => {
     )
   }
 
-  // `VITE_APP_YOUTUBE` is a distribution CHANNEL, not a platform: chaos-arena
+  // `VITE_APP_YOUTUBE` is a distribution CHANNEL, not a platform: tree-smashers
   // reaches YouTube Playables through Playgama's partner pipeline, so the
   // Bridge still owns saves, ads and lifecycle. The flag only gates what
   // YouTube forbids on top of that. A YouTube build with no platform beneath
@@ -385,7 +386,7 @@ export default defineConfig(({ mode, command }) => {
   // never even resolves it - and it must never fetch anything then.
   plugins.push(leaguePoolPlugin(leagueBuild))
 
-  // The self-hosted Playpen Sans subsets (fonts.sass) are OFL 1.1, which asks
+  // The self-hosted Nunito + Playpen Sans subsets (fonts.sass) are OFL 1.1, which asks
   // for the licence to travel with the font. Nothing imports OFL.txt, so emit
   // it next to the hashed woff2 files in every build. Never fetched at runtime.
   plugins.push({
@@ -396,6 +397,11 @@ export default defineConfig(({ mode, command }) => {
         type: 'asset',
         fileName: 'assets/playpen-sans-OFL.txt',
         source: readFileSync(fileURLToPath(new URL('./src/assets/css/font/playpen-sans/OFL.txt', import.meta.url)), 'utf-8')
+      })
+      this.emitFile({
+        type: 'asset',
+        fileName: 'assets/nunito-OFL.txt',
+        source: readFileSync(fileURLToPath(new URL('./src/assets/css/font/nunito/OFL.txt', import.meta.url)), 'utf-8')
       })
     }
   } satisfies Plugin)
@@ -409,6 +415,12 @@ export default defineConfig(({ mode, command }) => {
         // rewrites import paths into array lookups that Vite can no longer
         // resolve, which breaks code splitting.
         exclude: [
+          // MUST stay first. A custom `exclude` REPLACES the plugin's default
+          // (`[/node_modules/, /\.nuxt/]`) instead of extending it, so without
+          // this entry every vendor library (Vue, vue-router, vue-i18n, the
+          // Playgama Bridge) went through the stringArray pass: nothing failed,
+          // the chunks were simply bigger and slower to parse.
+          /node_modules/,
           /router\/index\.ts$/,
           /main\.ts$/,
           // i18n loader uses `import.meta.glob` for per-locale code
@@ -591,6 +603,7 @@ export default defineConfig(({ mode, command }) => {
   const isYouTube = env.VITE_APP_YOUTUBE === 'true'
   const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
   const isPoki = env.VITE_APP_POKI === 'true'
+  const isGameMonetize = env.VITE_APP_GAME_MONETIZE === 'true'
   const isGameDistribution = env.VITE_APP_GAME_DISTRIBUTION === 'true'
 
   // Strip the Poki SDK <script> tag from index.html for non-Poki builds. Poki
@@ -737,6 +750,15 @@ export default defineConfig(({ mode, command }) => {
           '@/use/ads/PokiProvider': fileURLToPath(new URL('./src/use/ads/PokiProvider.stub.ts', import.meta.url)),
           '@/utils/pokiPlugin': fileURLToPath(new URL('./src/utils/pokiPlugin.stub.ts', import.meta.url))
         }),
+        // Same swap for GameMonetize, for the same two reasons: the provider
+        // and `App.vue` import these statically, and the plugin hardcodes the
+        // SDK URL (`api.gamemonetize.com`), which the obfuscator would keep
+        // alive in every other bundle — the Poki build included, which may
+        // carry no ad SDK but its own.
+        ...(env.VITE_APP_GAME_MONETIZE === 'true' ? {} : {
+          '@/use/ads/GameMonetizeProvider': fileURLToPath(new URL('./src/use/ads/GameMonetizeProvider.stub.ts', import.meta.url)),
+          '@/utils/gameMonetizePlugin': fileURLToPath(new URL('./src/utils/gameMonetizePlugin.stub.ts', import.meta.url))
+        }),
         // Same swap for the Playgama wrapper on every non-Playgama build
         // (YouTube is a Playgama build and keeps the real one). `App.vue` and
         // `useGameplayLifecycle` import it statically; the env-gated calls
@@ -752,19 +774,41 @@ export default defineConfig(({ mode, command }) => {
         // explicit: "No third-party ads. Only the PokiSDK may serve
         // advertising. Strip every other ad SDK from the Poki build."
         ...(env.VITE_APP_POKI === 'true' ? {
-          '@/utils/gameDistributionPlugin': fileURLToPath(new URL('./src/utils/gameDistributionPlugin.stub.ts', import.meta.url)),
-          // Poki forbids in-app purchases. `VITE_APP_FEATURE_BG_SKINS=false`
-          // already makes the shop unreachable, but it was still BUNDLED — its
-          // real-money price strings ($1.29 / $1.99 / $9.99) sat in the shipped
-          // SpinnerArena chunk, and "unreachable" is not an argument you get to
-          // make to a reviewer who grepped the bundle.
-          '@/components/organisms/InAppPurchaseShop.vue': fileURLToPath(new URL('./src/components/organisms/InAppPurchaseShop.stub.vue', import.meta.url))
+          '@/utils/gameDistributionPlugin': fileURLToPath(new URL('./src/utils/gameDistributionPlugin.stub.ts', import.meta.url))
         } : {}),
+        // ─── Real-money diamond shop, switched off ────────────────
+        //
+        // UNCONDITIONAL: no build ships it. There is no IAP backend behind it
+        // (the buy buttons were inert in production) and its only entry point
+        // in BGSkinModal is commented out, so nothing could open it — but it
+        // was still BUNDLED, and its price strings ($1.29 / $1.99 / $9.99) sat
+        // in the shipped SpinnerArena chunk of every build but Poki. A portal
+        // reviewer who greps the bundle does not care that it is unreachable.
+        //
+        // The component is NOT deleted; selling again is deleting this one
+        // line (and restoring the entry button) once a real IAP provider is
+        // wired in.
+        '@/components/organisms/InAppPurchaseShop.vue': fileURLToPath(new URL('./src/components/organisms/InAppPurchaseShop.stub.vue', import.meta.url)),
+        // ─── PvP, on builds that do not have it ───────────────────
+        //
+        // `VITE_APP_PVP_ENABLED` is "true" only for dev and the GitHub Pages
+        // build; every portal build turns it off. There `isPvpEnabled` already
+        // hides the button and the PeerJS import is behind an env ternary — but
+        // SpinnerArena, BattlePass and the engine import `usePVP` and the lobby
+        // statically, so the lobby state machine, the STUN / TURN host list
+        // (with the TURN credentials) and the WhatsApp invite link all shipped
+        // in the arena chunk anyway. Stubs keep them out; see usePVP.stub.ts.
+        ...(env.VITE_APP_PVP_ENABLED === 'true' ? {} : {
+          '@/use/usePVP': fileURLToPath(new URL('./src/use/usePVP.stub.ts', import.meta.url)),
+          '@/components/organisms/PvPLobbyModal.vue': fileURLToPath(new URL('./src/components/organisms/PvPLobbyModal.stub.vue', import.meta.url)),
+          '@/components/organisms/PvPButton.vue': fileURLToPath(new URL('./src/components/organisms/PvPButton.stub.vue', import.meta.url)),
+          '@/components/organisms/PvpReadySkills.vue': fileURLToPath(new URL('./src/components/organisms/PvpReadySkills.stub.vue', import.meta.url))
+        }),
         // ─── Fake leaderboard, retired ───────────────────────────
         //
         // UNCONDITIONAL: the simulated-NPC board and its HUD button ship in no
         // build package now that the game has a real global one
-        // (`useLiveLeaderboard` + the `leaderboard-chaos-arena` Worker). Two
+        // (`useLiveLeaderboard` + the `leaderboard-tree-smashers` Worker). Two
         // boards on one HUD is one board too many — the fake one would sit
         // beside the real one showing invented players and a different rank for
         // the same player.
@@ -852,6 +896,7 @@ export default defineConfig(({ mode, command }) => {
             if (isPoki && id.includes('utils/pokiPlugin')) return 'plugin-poki'
             if (isPlaygama && id.includes('utils/playgamaPlugin')) return 'plugin-playgama'
             if (isGameDistribution && id.includes('utils/gameDistributionPlugin')) return 'plugin-gd'
+            if (isGameMonetize && id.includes('utils/gameMonetizePlugin')) return 'plugin-gamemonetize'
             // League boundary (LG6): the gate holds every league `import()`,
             // so whichever chunk it lands in carries the preload map of the
             // League* chunk file names. Pinned to its own small chunk — never

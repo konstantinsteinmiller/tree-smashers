@@ -187,7 +187,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
     if (manifestRaw === null && remoteKeys.length === 0) {
       this.setState('success-empty', 'remote has no save')
       // Seed cloud with whatever local already has — gameplay state from
-      // the current/prior session AND user settings (`spinner_user_*`)
+      // the current/prior session AND user settings (`smashers_user_*`)
       // present from useUser.ts's module-init writes. `lastSentByKey` is
       // empty here so every local payload key is genuinely new to remote
       // and gets queued.
@@ -317,7 +317,7 @@ export class CrazyGamesStrategy implements SaveStrategy {
     // from the (post-merge) snapshot held in `lastSentByKey` needs to be
     // queued for upload. Catches the case where useUser.ts seeded its
     // ref defaults into localStorage but the player never explicitly
-    // re-saved them — without this, settings (`spinner_user_*`) and any
+    // re-saved them — without this, settings (`smashers_user_*`) and any
     // other passively-written gameplay keys would live forever in local
     // and never round-trip through `sdk.data`. Per-key dedupe in
     // `doFlush` skips writes already authoritative remotely.

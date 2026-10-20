@@ -69,21 +69,22 @@ const onFight = () => {
 
 <style scoped lang="sass">
 .lgc
-  --lgc-accent: #ffc93c
+  --lgc-accent: var(--color-sun-400)
   position: relative
   width: 100%
   max-width: 22rem
   margin: 0 auto
-  color: #fff
+  color: var(--ui-text)
   text-align: center
 
 .lgc__shadow
   position: absolute
   inset: 0
   transform: translateY(5px)
-  border-radius: 1.25rem
-  background: #0c1626
+  border-radius: var(--radius-ui-lg)
+  background: var(--color-ink)
 
+// Cream card with a stitched edge; the boss sits on a berry patch.
 .lgc__body
   position: relative
   display: flex
@@ -91,22 +92,26 @@ const onFight = () => {
   align-items: center
   gap: 0.35rem
   padding: 0 0.9rem 0.8rem
-  border-radius: 1.25rem
-  border: 3px solid #0f1a30
-  background: radial-gradient(110% 80% at 50% 25%, #5a1f2e, #1f1430 60%, #120d1f)
+  border-radius: var(--radius-ui-lg)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-cream-100)
+  box-shadow: inset 0 -4px 0 var(--color-cream-300)
+  outline: 2px dashed rgba(110, 69, 39, 0.35)
+  outline-offset: -7px
   overflow: hidden
 
 .lgc__ribbon
   align-self: stretch
   margin: 0 -0.9rem
   padding: 0.3rem 0.5rem
-  font-size: 0.8rem
+  font-size: 0.85rem
   font-weight: 900
-  letter-spacing: 0.12em
+  letter-spacing: 0.04em
   text-transform: uppercase
-  color: #3d2600
-  background: linear-gradient(to bottom, #ffe27a, #f0a400)
-  border-bottom: 3px solid #0f1a30
+  color: var(--color-ink)
+  background-color: var(--color-sun-400)
+  box-shadow: inset 0 2px 0 var(--color-sun-200), inset 0 -3px 0 var(--color-sun-600)
+  border-bottom: 3px solid var(--color-ink)
 
 .lgc__stage
   position: relative
@@ -117,12 +122,12 @@ const onFight = () => {
   align-items: center
   justify-content: center
 
+// Flat sunburst petals behind the crest.
 .lgc__rays
   position: absolute
   inset: -1.5rem
-  background: repeating-conic-gradient(from 0deg, rgba(255, 90, 90, 0.22) 0deg 10deg, transparent 10deg 30deg)
-  mask-image: radial-gradient(circle, #000 25%, transparent 70%)
-  -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 70%)
+  background: repeating-conic-gradient(from 0deg, var(--color-sun-200) 0deg 10deg, transparent 10deg 30deg)
+  clip-path: circle(40%)
   animation: lgc-spin 18s linear infinite
 
 @keyframes lgc-spin
@@ -134,9 +139,9 @@ const onFight = () => {
   width: 6.4rem
   height: 6.4rem
   border-radius: 999px
-  border: 3px solid #0f1a30
-  background: radial-gradient(circle at 50% 35%, #ff6a5a, #7a1020 70%)
-  box-shadow: 0 0 0 3px #ff5a5a55, 0 4px 0 #0f1a30
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-berry-400)
+  box-shadow: inset 0 -6px 0 var(--color-berry-600), 0 4px 0 var(--color-ink)
   display: flex
   align-items: center
   justify-content: center
@@ -156,46 +161,46 @@ const onFight = () => {
   position: absolute
   right: -0.4rem
   bottom: -0.4rem
-  filter: drop-shadow(0 2px 0 #0f1a30)
+  filter: drop-shadow(0 2px 0 var(--color-ink))
 
 .lgc__name
   max-width: 100%
   font-size: 1.2rem
   font-weight: 900
   line-height: 1.1
-  color: #ffd2c8
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000
+  color: var(--color-berry-700)
   overflow-wrap: anywhere
 
 .lgc__goal
-  font-size: 0.8rem
+  font-size: 0.85rem
   font-weight: 800
-  color: #d7deea
+  color: var(--ui-text-muted)
   line-height: 1.2
 
+// Boss challenge CTA in the danger (berry) tone, same look as .ui-btn--danger.
 .lgc__cta
   margin-top: 0.3rem
   min-height: 2.75rem
   min-width: 10rem
   max-width: 100%
   padding: 0.35rem 1.2rem
-  border-radius: 0.8rem
-  border: 3px solid #0f1a30
-  background: linear-gradient(to bottom, #ff7a6b, #d9303c)
-  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 3px 0 #0f1a30
-  color: #fff
+  border-radius: var(--radius-ui)
+  border: 3px solid var(--color-ink)
+  background-color: var(--color-berry-500)
+  box-shadow: inset 0 3px 0 var(--color-berry-300), inset 0 -4px 0 var(--color-berry-700), 0 4px 0 var(--color-ink)
+  color: var(--color-cream-50)
   font-size: 1.05rem
   font-weight: 900
-  letter-spacing: 0.06em
+  letter-spacing: 0.03em
   text-transform: uppercase
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000
+  text-shadow: -1.5px -1.5px 0 var(--color-ink), 1.5px -1.5px 0 var(--color-ink), -1.5px 1.5px 0 var(--color-ink), 1.5px 1.5px 0 var(--color-ink), 0 2px 0 var(--color-ink)
   cursor: pointer
   animation: lgc-pulse 1.6s ease-in-out infinite
 
   &:active:not(:disabled)
     transform: translateY(2px) scale(0.97)
   &:focus-visible
-    outline: 3px solid #ffcd00
+    outline: 3px solid var(--ui-focus)
     outline-offset: 3px
   &:disabled
     cursor: default
@@ -206,7 +211,7 @@ const onFight = () => {
     transform: scale(1.04)
 
 .lgc--disabled .lgc__cta
-  filter: grayscale(0.85) brightness(0.8)
+  filter: grayscale(0.85) brightness(0.9)
 
 .lgc--static
   .lgc__rays, .lgc__cta

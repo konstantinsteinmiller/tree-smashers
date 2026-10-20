@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { revealRewards } from '@/use/useRewardReveal'
 import { chestSmallCoins, chestBigCoins } from '@/use/useStageRewards'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { saveDataVersion } from '@/use/useSaveStatus'
@@ -48,13 +49,13 @@ const { addCoins } = useSpinnerConfig()
 const SMALL_READY_AT_MS = 3 * 60 * 1000   // 3 min
 const BIG_READY_AT_MS = 10 * 60 * 1000    // 10 min
 
-// `spinner_chest_last_collected_at` is a NEW key (the previous component
+// `smashers_chest_last_collected_at` is a NEW key (the previous component
 // stored a future-`chestReadyAt` timestamp under different names). Using
 // a fresh key avoids a migration: any old data is harmlessly ignored,
 // the chest just behaves as if last-collected = epoch (i.e. ready for
 // the big reward right away on first ever load — a small one-time gift
 // that's not worth a migration helper for).
-const STORAGE_KEY = 'spinner_chest_last_collected_at'
+const STORAGE_KEY = 'smashers_chest_last_collected_at'
 
 // ─── Reactive timer state ──────────────────────────────────────────────────
 
@@ -165,9 +166,12 @@ const collectChest = () => {
   addCoins(reward)
   const { playSound } = useSounds()
   playSound('happy')
-  if (chestRef.value && props.targetEl) {
-    spawnCoinExplosion({ sourceEl: chestRef.value, targetEl: props.targetEl })
-  }
+  // Granted above; the gift screen shows it, then the coins fly home.
+  void revealRewards([{ kind: 'coins', amount: reward }]).then(() => {
+    if (chestRef.value && props.targetEl) {
+      spawnCoinExplosion({ sourceEl: chestRef.value, targetEl: props.targetEl })
+    }
+  })
 }
 </script>
 
@@ -181,7 +185,7 @@ const collectChest = () => {
     div.relative(ref="chestRef" class="w-10 h-10 sm:w-12 sm:h-12")
       img.object-contain.w-full.h-full(
         src="/images/icons/chest_128x128.webp"
-        :style="isReady ? { filter: `drop-shadow(0 0 8px ${auraColor})` } : undefined"
+        :style="isReady ? { filter: 'brightness(1.25)' } : undefined"
       )
       //- Circular cooldown overlay — only during the pre-small cooldown phase.
       //- During the small → big window we show the running
@@ -205,7 +209,7 @@ const collectChest = () => {
           circle(
             cx="20" cy="20" r="19"
             fill="none"
-            stroke="rgba(0,0,0,0.35)"
+            stroke="rgba(58,35,20,0.4)"
             stroke-width="40"
             :stroke-dasharray="119.38"
             :stroke-dashoffset="119.38 * (1 - cooldownRingPct)"
@@ -218,15 +222,15 @@ const collectChest = () => {
     //- the way.
     div.flex.flex-col.items-center.leading-tight(class="mt-0.5")
       template(v-if="phase === 'cooldown'")
-        span.game-text.text-white.font-bold(class="text-[0.75rem] sm:text-xs") {{ timeDisplay }}
+        span.game-text.text-cream-50.font-bold(class="text-[0.75rem] sm:text-xs") {{ timeDisplay }}
       template(v-else-if="phase === 'small'")
         //- Coin icon styled to match the DailyRewards button
         //- (`<IconCoin class="text-yellow-300">`) so reward labels read
         //- as the same visual currency across the HUD.
-        span.font-black.text-yellow-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
+        span.font-black.text-sun-300.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
           span.game-text +{{ chestSmallCoins }}
           IconCoin(class="w-4 h-4")
-        span.game-text.text-white.font-bold(class="text-[0.6rem] sm:text-[0.75rem] opacity-80") {{ timeDisplay }}
+        span.game-text.text-cream-50.font-bold(class="text-[0.6rem] sm:text-[0.75rem] opacity-80") {{ timeDisplay }}
       template(v-else)
         //- Big-reward state — chest aura + the amber amount is signal
         //- enough; the older "READY" suffix duplicated the meaning of
@@ -236,7 +240,7 @@ const collectChest = () => {
         //- `+25` / `+100` here while `currentReward` (the value actually
         //- granted) lived in the script — so scaling the payout silently
         //- left the label lying about it.
-        span.font-black.text-amber-400.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
+        span.font-black.text-sun-400.flex.items-center(class="text-[0.85rem] sm:text-sm gap-0.5")
           span.game-text +{{ chestBigCoins }}
           IconCoin(class="w-4 h-4")
 </template>

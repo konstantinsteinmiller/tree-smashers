@@ -170,7 +170,9 @@ describe('engine: every skill-only path is behind the literal', () => {
     expect(engine).toMatch(/skillPort = SKILLS_BUILD \? port : null/)
     expect(engine).toMatch(/const ownSkills = SKILLS_BUILD && equipSide\(/)
     expect(engine).toMatch(/const otherSkills = SKILLS_BUILD && equipSide\(/)
-    expect(engine).toMatch(/if \(skillPort === null \|\| !loadout \|\| loadout\.length === 0\) return false/)
+    // Per-blade loadouts (each smasher brings its own skills) — still nothing
+    // without the installed port.
+    expect(engine).toMatch(/const equipSide = [^\n]*\n    if \(skillPort === null\) return false/)
   })
 
   it('the HP-loss, collision, contact, salvo, rocket and render hooks fold on SKILLS_BUILD', () => {
@@ -224,7 +226,9 @@ describe('build config', () => {
 
   // The .env files are git-ignored (secrets), so this only runs where they
   // exist; a build without the base value fails the vite.config assertion.
-  it('the base .env ships skills off; dev and CrazyGames opt in', () => {
+  // Skills are mandatory since the reskin (each smasher carries its skills):
+  // every env that sets the flag must turn it on.
+  it('the base .env, dev and CrazyGames all ship skills on', () => {
     const env = (f: string) => {
       try {
         return read(path.join(ROOT, f))
@@ -232,9 +236,14 @@ describe('build config', () => {
         return null
       }
     }
-    for (const [file, value] of [['.env', 'false'], ['.env.development', 'true'], ['.env.crazy-web.local', 'true']]) {
-      const text = env(file!)
-      if (text !== null) expect(text, file).toMatch(new RegExp(`^VITE_APP_FEATURE_SKILLS=${value}$`, 'm'))
+    const base = env('.env')
+    if (base !== null) expect(base, '.env').toMatch(/^VITE_APP_FEATURE_SKILLS=true$/m)
+    // A mode file may inherit the base value; one that sets the flag sets it on.
+    for (const file of ['.env.development', '.env.crazy-web.local']) {
+      const text = env(file)
+      if (text !== null && /^VITE_APP_FEATURE_SKILLS=/m.test(text)) {
+        expect(text, file).toMatch(/^VITE_APP_FEATURE_SKILLS=true$/m)
+      }
     }
   })
 })

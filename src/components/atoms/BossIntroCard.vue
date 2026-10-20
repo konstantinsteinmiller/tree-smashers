@@ -72,7 +72,7 @@ onUnmounted(() => timer.cancel())
         decoding="async"
       )
       div.boss-intro__text.flex.flex-col.items-center.min-w-0
-        span.boss-intro__name.font-black.uppercase.italic.whitespace-nowrap(ref="nameRef") {{ bossName }}
+        span.boss-intro__name.font-black.uppercase.whitespace-nowrap(ref="nameRef") {{ bossName }}
         div.boss-intro__traits.flex.items-center.justify-center
           BossTraitGlyph(v-for="tr in traits" :key="tr" :trait="tr" :size="28")
 </template>
@@ -94,10 +94,13 @@ onUnmounted(() => timer.cancel())
 .boss-intro__row
   gap: 0.6rem
   padding: 0.4rem 1rem
-  border-radius: 1rem
-  background: linear-gradient(to bottom, rgba(40, 4, 8, 0.88), rgba(14, 1, 3, 0.88))
-  border: 2px solid #b91c1c
-  box-shadow: 0 4px 0 #0c0102
+  border-radius: var(--radius-ui-lg)
+  // Wood plank with a berry trim and a stitched edge — a cozy "boss!" sign.
+  background-color: var(--color-wood-700)
+  border: 3px solid var(--color-ink)
+  box-shadow: inset 0 0 0 3px var(--color-berry-500), inset 0 5px 0 var(--color-wood-500), 0 4px 0 var(--color-ink)
+  outline: 2px dashed rgba(255, 250, 240, 0.5)
+  outline-offset: -9px
   animation: boss-intro-slam 1.5s ease-out both
 
 .boss-intro__crest
@@ -114,8 +117,8 @@ onUnmounted(() => timer.cancel())
   font-size: clamp(1.3rem, 5.5vw, 2.4rem)
   line-height: 1.1
   letter-spacing: 0.03em
-  color: #ff5a4a
-  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 10px rgba(255, 60, 20, 0.55)
+  color: var(--color-berry-300)
+  text-shadow: 2px 0 0 var(--color-ink), -2px 0 0 var(--color-ink), 0 2px 0 var(--color-ink), 0 -2px 0 var(--color-ink), 2px 2px 0 var(--color-ink), -2px 2px 0 var(--color-ink), 2px -2px 0 var(--color-ink), -2px -2px 0 var(--color-ink), 0 3px 0 var(--color-ink)
 
 .boss-intro__traits
   gap: 0.4rem

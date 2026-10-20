@@ -1,6 +1,7 @@
 {
-  "name": "Chaos Arena",
-  "short_name": "Chaos Arena",
+  "name": "Tree Smashers",
+  "short_name": "Tree Smashers",
+  "description": "Flick angry plush smashers across forest arenas and smash the enemy Team Tower!",
   "display": "standalone",
   "display_override": [
     "fullscreen",
@@ -9,7 +10,7 @@
   "orientation": "portrait",
   "start_url": "./#/battle",
   "scope": "./",
-  "theme_color": "#0d1117",
+  "theme_color": "#16261b",
   "background_color": "#0d1117",
   "icons": [
     {

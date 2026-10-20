@@ -1,6 +1,6 @@
 // ─── End-to-end: the Playgama build inside YouTube's runtime ───────────────
 //
-// chaos-arena reaches YouTube Playables THROUGH Playgama, so the artefact
+// tree-smashers reaches YouTube Playables THROUGH Playgama, so the artefact
 // under test is a normal Playgama build (`VITE_APP_PLAYGAMA=true`) with the
 // YouTube channel modifier on top. Two QA rejections are pinned here:
 //
@@ -323,7 +323,7 @@ describe('YouTube Playables build (Playgama channel)', () => {
       null,
       { timeout: 40_000 }
     )
-    await page.evaluate(() => localStorage.setItem('spinner_coins', '4321'))
+    await page.evaluate(() => localStorage.setItem('smashers_coins', '4321'))
 
     await page.waitForFunction(
       () => ((window as any).__ytCalls as { m: string; data?: string }[])
@@ -346,7 +346,7 @@ describe('YouTube Playables build (Playgama channel)', () => {
       null,
       { timeout: 40_000 }
     )
-    await page.evaluate(() => localStorage.setItem('spinner_coins', '4321'))
+    await page.evaluate(() => localStorage.setItem('smashers_coins', '4321'))
     await page.waitForFunction(
       () => ((window as any).__ytCalls as { m: string; data?: string }[])
         .some(c => c.m === 'saveData' && (c.data ?? '').includes('4321')),
@@ -365,7 +365,7 @@ describe('YouTube Playables build (Playgama channel)', () => {
       null,
       { timeout: 30_000 }
     )
-    const coins = await second.page.evaluate(() => localStorage.getItem('spinner_coins'))
+    const coins = await second.page.evaluate(() => localStorage.getItem('smashers_coins'))
     expect(coins).toBe('4321')
     await second.page.close()
   })

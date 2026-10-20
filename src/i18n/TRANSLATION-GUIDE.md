@@ -1,4 +1,4 @@
-# Chaos Arena — translation guide
+# Tree Smashers — translation guide
 
 Everything a translator needs to add or finish one language. The infrastructure
 (detection, lazy loading, fonts, RTL, the language picker) is done: **a language
@@ -135,7 +135,6 @@ Reuse these decisions for consistency; the Arabic column is the pilot.
 | `sfc.BattlePass.battlePass`                             | Battle Pass           | Battle Pass                | Pase de Batalla          | Battle Pass               | バトルパス          | 배틀 패스            | Боевой пропуск              | 战斗通行证        | تذكرة المعركة               |
 | `sfc.BattlePass.honorTrack`                             | Honor Track           | Ehren-Track                | Pista de Honor           | Piste d'Honneur           | 名誉トラック         | 명예 트랙            | Путь Чести                  | 荣誉通道         | مسار الشرف                  |
 | `sfc.BattlePass.honorAbbr`                              | HP                    | EP                         | PH                       | PH                        | 名誉P            | 명예P              | ОЧ                          | 荣誉点          | ن.ش                         |
-| `challenge.title`                                       | Daily Challenge       | Tägliche Herausforderung   | Desafío diario           | Défi quotidien            | デイリーチャレンジ      | 일일 도전            | Ежедневный вызов            | 每日挑战         | التحدي اليومي               |
 | `leaderboard.title`                                     | Leaderboard           | Bestenliste                | Clasificación            | Classement                | ランキング          | 순위표              | Таблица лидеров             | 排行榜          | لوحة الصدارة                |
 | `spinner.youWin`                                        | YOU WIN!              | DU GEWINNST!               | ¡GANASTE!                | VICTOIRE !                | 勝利！            | 승리!              | ПОБЕДА!                     | 胜利！          | لقد فزت!                    |
 | `spinner.youLose`                                       | YOU LOSE!             | DU VERLIERST!              | ¡PERDISTE!               | DÉFAITE !                 | 敗北！            | 패배!              | ПОРАЖЕНИЕ!                  | 失败！          | لقد خسرت!                   |
@@ -178,8 +177,8 @@ What the terms mean in the game:
   a loanword in your language may stay, allowlist it).
 - **Battle Pass** — XP track with rewards; **Honor Track** — the PvP reward
   track, paid in **Honor Points** (`honorAbbr` is its 1–4 character
-  abbreviation, shown after a number). **Daily Challenge** — one special fight
-  a day. **Daily Rewards** — log-in calendar (`dayShort` = "D{n}" = day badge).
+  abbreviation, shown after a number).
+  **Daily Rewards** — log-in calendar (`dayShort` = "D{n}" = day badge).
 - **Leaderboard** — global ranking; `leaderboard.score` is the stage reached.
 - `easy` / `medium` / `hard` in OptionsModal are difficulty NAMES (Novice /
   Squire / Master) — keep them as rank titles, not "easy/normal/hard".
@@ -212,7 +211,7 @@ for Latin/Cyrillic/Greek (CJK: about half):
 | badges, tags, table heads                                  | `lv`, `spinner.ad`, `vs`, `you`, `stage`, `sfc.BattlePass.max`/`complete`/`honorAbbr`, `sfc.DailyRewards.dayShort`/`collectCta`, `sfc.BGSkinModal.bg.equipped`/`equippedShort`/`select`/`buy`, `sfc.SpinnerConfigModal.equipped`/`selectButton`/`bladeLabel`, `sfc.CombatLog.short`, `sfc.InAppPurchaseShop.shop.popular`/`bestValue`, `leaderboard.player`/`score`/`power`/`you`, `pvp.wins`/`losses`/`honor`/`host`/`guest`/`join`/`copy`/`leave`, `prev`/`next`/`page`, `spinner.skip`/`surrenderCancel`/`surrenderQuit` | **≤ 10**, and never longer than 1.5 × English                           |
 | button captions                                            | `continue`, `close`, `cancel`, `spinner.playAgain`/`buildTeam`/`spinAgain`, `sfc.OptionsModal.close`/`resetCampaign`/`reset`, `pvp.createLobby`/`joinLobby`/`startMatch`/`copyLink`/`setReady`, `sfc.RewardedAdIntroModal.rewardedIntro.watch`/`decline`, `sfc.AdsBlockedModal.adsBlocked.gotIt`, `sfc.SaveStatusBanner.save.retry`/`dismiss`                                                                                                                                                                               | **≤ 18**, one line                                                      |
 | names in cards and badges (truncated with … when too long) | `parts.*`, `sfc.CombatLog.types.*`, `skins.*`, `sfc.BGSkinModal.bg.skins.*`, `arenas.*`, `elements.*`, `stages.*`                                                                                                                                                                                                                                                                                                                                                                                                           | **≤ 20** (`parts.*`, `arenas.*`, `bg.skins.*` truncate — ≤ 14 is safer) |
-| headlines and modal titles (title ribbons do not wrap)     | `spinner.youWin`/`youLose`/`rewards`, `leaderboard.title`, `challenge.title`, `sfc.DailyRewards.dailyRewards`, `sfc.BattlePass.battlePass`/`honorTrack`, `sfc.OptionsModal.options`/`language`, `sfc.BGSkinModal.bg.title`, `sfc.InAppPurchaseShop.shop.title`, `sfc.FakeLeaderBoard.leaderboard`, `sfc.CombatLog.title`                                                                                                                                                                                                    | **≤ 16**                                                                |
+| headlines and modal titles (title ribbons do not wrap)     | `spinner.youWin`/`youLose`/`rewards`, `leaderboard.title`, `sfc.DailyRewards.dailyRewards`, `sfc.BattlePass.battlePass`/`honorTrack`, `sfc.OptionsModal.options`/`language`, `sfc.BGSkinModal.bg.title`, `sfc.InAppPurchaseShop.shop.title`, `sfc.FakeLeaderBoard.leaderboard`, `sfc.CombatLog.title`                                                                                                                                                                                                    | **≤ 16**                                                                |
 | sentences (wrap)                                           | `tips.*`, hints, `*.body`, `*Note`, `*.desc`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | ≤ 1.3 × English                                                         |
 
 If a natural translation is longer, shorten the wording (drop articles, use the
@@ -260,7 +259,7 @@ the result; overflow flags appear in its output and `report.json`.
 
 ## 7. What stays in English
 
-- `gameName` ("Chaos Arena") and `pvp.shareTitle` ("Chaos Arena PvP") — the
+- `gameName` ("Tree Smashers") and `pvp.shareTitle` ("Tree Smashers PvP") — the
   product name is never translated, in any script.
 - `vs` ("VS") and `leaderboard.rank` ("#").
 - Brand and platform names inside sentences: CrazyGames, WhatsApp, PvP, XP
@@ -273,10 +272,10 @@ the result; overflow flags appear in its output and `report.json`.
 
 ## 8. Script notes
 
-Fonts are handled for every script (`src/assets/css/fonts.sass`). The Latin
-display face `Angry` only covers Latin-1, so **latin-ext (incl. Vietnamese),
-Greek and Cyrillic render in Playpen Sans** — a self-hosted OFL comic face,
-subset per script by `scripts/subset-display-font.mjs` and downloaded only
+Fonts are handled for every script (`src/assets/css/fonts.sass`). The UI face
+**Nunito** (self-hosted, OFL, rounded) covers Latin, latin-ext (incl.
+Vietnamese) and Cyrillic; **Greek renders in Playpen Sans** (Nunito has no
+Greek) — both subset per script by `scripts/subset-display-font.mjs` and downloaded only
 when such a locale is active — and **Arabic, Devanagari and Thai render in a
 clean system sans** (zero download). That is intended, not a bug. What
 translators must do:
@@ -324,9 +323,9 @@ translators must do:
    `pt-PT`, `zh-HK`, `nb-NO`) must boot your file.
 
 The screenshot script starts its own Vite dev server on a random port, checks
-the served `<title>` is "Chaos Arena", and drives its own headless Chrome with a
+the served `<title>` is "Tree Smashers", and drives its own headless Chrome with a
 throwaway profile — it never touches a browser you have open. PNGs and
-`report.json` go to `<os tmp>/chaos-arena-l10n/<code>/` unless `--out` is given.
+`report.json` go to `<os tmp>/tree-smashers-l10n/<code>/` unless `--out` is given.
 Options: `--screens menu,options,language,config,battle,win`,
 `--viewports mobile-landscape,mobile-portrait,desktop`.
 

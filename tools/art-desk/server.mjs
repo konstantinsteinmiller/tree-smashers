@@ -18,8 +18,8 @@
  *   that job's name, then slices and compresses it. Dropping or pasting an
  *   image onto the desk does the same.
  *
- *   BY QUEUE. The desk drives gemini.google.com itself in chaos-arena's own
- *   Chrome profile (~/.art-desk/profiles/chaos-arena), one generation at a
+ *   BY QUEUE. The desk drives gemini.google.com itself in tree-smashers's own
+ *   Chrome profile (~/.art-desk/profiles/tree-smashers), one generation at a
  *   time, throttled — see gemini.mjs. The queue takes the same cross-process
  *   paint lock as `paint.mjs` (lock.mjs), so the desk and agents calling the
  *   CLI never drive the window at the same time, and the throttle gap is

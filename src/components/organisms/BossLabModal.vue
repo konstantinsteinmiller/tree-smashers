@@ -114,7 +114,7 @@ const resetKnobs = () => {
   FModal(v-model="open" title="Boss Lab")
     div.boss-lab.flex.flex-col.gap-3(data-boss-lab)
       //- Level + arena switches
-      div.flex.flex-wrap.items-center.gap-3.text-white.text-xs
+      div.flex.flex-wrap.items-center.gap-3.text-ink.text-xs
         label.flex.items-center.gap-1
           span.opacity-70 level
           select.boss-lab__select(v-model="bossLabLevelMode")
@@ -143,7 +143,7 @@ const resetKnobs = () => {
             BossTraitGlyph(v-for="tr in entry.traits" :key="tr" :trait="tr" :size="16")
 
       //- Knobs → live BOSS_TRAIT_TUNING (dev only, not persisted)
-      div.flex.flex-wrap.items-center.gap-2.text-white.text-xs
+      div.flex.flex-wrap.items-center.gap-2.text-ink.text-xs
         label.flex.items-center.gap-1(v-for="k in KNOBS" :key="k.key")
           span.opacity-70 {{ k.label }}
           input.boss-lab__num(
@@ -170,24 +170,24 @@ const resetKnobs = () => {
   gap: 0.15rem
   padding: 0.4rem 0.3rem
   border-radius: 0.6rem
-  border: 2px solid #3b2230
-  background: linear-gradient(to bottom, #2a0a10, #12040a)
-  color: #fff
+  border: 2px solid var(--color-wood-700)
+  background: var(--color-wood-600)
+  color: var(--color-cream-50)
   cursor: pointer
   text-align: center
 
   &:hover, &:focus-visible
-    border-color: #f87171
+    border-color: var(--color-berry-500)
     outline: none
 
   &.is-sandbox
-    background: linear-gradient(to bottom, #0f2233, #07121c)
+    background: var(--color-sky-600)
 
   &.is-last
-    border-color: #fbbf24
+    border-color: var(--color-sun-400)
 
   &.is-next
-    box-shadow: 0 0 0 2px #22d3ee
+    box-shadow: 0 0 0 2px var(--color-sky-400)
 
 .boss-lab__skin
   width: 3rem
@@ -205,9 +205,9 @@ const resetKnobs = () => {
   line-height: 1.1
 
 .boss-lab__select, .boss-lab__num
-  background: #111827
-  color: #fff
-  border: 1px solid #4b5563
+  background: var(--color-cream-50)
+  color: var(--color-ink)
+  border: 1px solid var(--color-wood-700)
   border-radius: 0.3rem
   padding: 0.1rem 0.3rem
 
@@ -215,10 +215,10 @@ const resetKnobs = () => {
   width: 4.5rem
 
 .boss-lab__reset
-  border: 1px solid #4b5563
+  border: 1px solid var(--color-wood-700)
   border-radius: 0.3rem
   padding: 0.1rem 0.5rem
-  background: #1f2937
-  color: #fff
+  background: var(--color-cream-200)
+  color: var(--color-ink)
   cursor: pointer
 </style>

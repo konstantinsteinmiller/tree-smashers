@@ -16,11 +16,14 @@
  * locale, including non-Latin ones.
  */
 export const BRAND_KEYS: readonly string[] = [
-  'gameName', // "Chaos Arena" — the product name is never translated
-  'pvp.shareTitle', // "Chaos Arena PvP"
+  'gameName', // "Tree Smashers" — the product name is never translated
+  'pvp.shareTitle', // "Tree Smashers PvP"
   'vs', // "VS" — universal fight-card token
   'leaderboard.rank', // "#"
-  'sfc.BGSkinModal.bg.skins.prism' // "K-Pop" — a genre name
+  'rewardReveal.minutes', // "{n} min" — the SI-style minute abbreviation most Latin-script locales share
+  'sfc.BGSkinModal.bg.skins.prism', // "K-Pop" — a genre name
+  // smasher names (proper nouns; Latin-script locales keep them, others transliterate)
+  'smasher_bramble', 'smasher_thumper', 'smasher_grizzle', 'smasher_chomper', 'smasher_ramsey', 'smasher_vixie', 'smasher_shellby', 'smasher_pecks', 'smasher_mossy', 'smasher_zippy', 'smasher_hootsie', 'smasher_tuskar'
 ]
 
 /**
@@ -47,6 +50,8 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   // ── The original eight — reviewed legacy values (cognates, loanwords,
   //    gaming abbreviations) when the parity test was introduced ──
   de: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'smasher_skill_stampede',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -59,10 +64,14 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BattlePass.battlePass', 'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short',
     'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner', 'sfc.OptionsModal.audio',
-    'sfc.SpinnerConfigModal.bladeLabel',
-    'skills.max' // same "MAX" badge as sfc.BattlePass.max
+
+ // same "MAX" badge as sfc.BattlePass.max
   ],
-  es: ['labBadge',
+  es: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statDef','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'ok', 'pvp.arena', 'pvp.honor', 'stages.stage_43', 'arenas.lava', 'elements.metal', 'elements.psi',
     'elements.neutral', 'skins.chip', 'skins.wulf', 'skins.prisma', 'skins.tornado', 'skins.tsunami',
@@ -72,6 +81,10 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.OptionsModal.audio'
   ],
   fr: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     // league tier names: the native word is spelled as in English
@@ -81,76 +94,102 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.wulf', 'skins.prisma', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.taiko',
     'sfc.BattlePass.battlePass', 'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.OptionsModal.audio',
-    'sfc.OptionsModal.options', 'sfc.OptionsModal.easy', 'sfc.SpinnerConfigModal.statsLabel',
-    'skills.max'
+    'sfc.OptionsModal.options', 'sfc.OptionsModal.easy',
+
   ],
   // skills.max / skills.new: the "MAX" / "NEW" badges JP/KR games print in Latin letters
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
-  jp: ['league.lp', 'league.lpProgress', 'ok', 'pvp.okay', 'lv', 'sfc.AdsBlockedModal.adsBlocked.gotIt', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
+  jp: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.levelShort', 'sfc.SmasherTeamModal.statHp','league.lp', 'league.lpProgress', 'ok', 'pvp.okay', 'lv', 'sfc.AdsBlockedModal.adsBlocked.gotIt', 'sfc.BattlePass.max',],
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
-  kr: ['league.lp', 'league.lpProgress', 'lv', 'sfc.BattlePass.max', 'skills.max', 'skills.new'],
+  kr: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.levelShort', 'sfc.SmasherTeamModal.statHp','league.lp', 'league.lpProgress', 'lv', 'sfc.BattlePass.max',],
   ru: [],
-  zh: ['lv'],
+  zh: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.levelShort','lv'],
   // ── New locales: add entries in the translator's batch ──
   // pl: loanwords / proper nouns Polish players use as-is (Arena, Honor, Demon, Tornado, Tsunami,
   //     Ninja, Kraken, Taiko, Hydra, Teleporter), genre names, "Log", "D{n}" (Dzień)
-  pl: ['labBadge',
+  pl: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statAtk','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'pvp.honor', 'skins.wulf', 'skins.demon', 'skins.tornado', 'skins.teleporter', 'skins.dark',
     'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short',
     'sfc.DailyRewards.dayShort',
-    'skills.slotChip' // skills: "Slot" — the Polish gaming term
+ // skills: "Slot" — the Polish gaming term
   ],
   // cs / hr / ro / hu / lt: loanwords that are the native word (Arena, Lava, Demon, Tornado, Tsunami,
   //     Ninja, Kraken, Taiko, Hydra, Teleporter, Scorpion, Cactus, Piranha, Popular), the proper
   //     noun Wulf, genre names (Fidget, Brainrot, Steampunk), "Log", "MAX", "Lv." (hu),
   //     "D{n}" (den / dan / diena)
-  cs: ['labBadge',
+  cs: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.wulf', 'skins.dark', 'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short', 'sfc.DailyRewards.dayShort',
-    'skills.slotChip', 'skills.max' // skills: "Slot" — the Czech gaming term; "MAX" badge
+ // skills: "Slot" — the Czech gaming term; "MAX" badge
   ],
-  hr: ['labBadge',
+  hr: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.demon', 'skins.tornado', 'skins.teleporter',
     'skins.tsunami', 'skins.kraken', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short',
     'sfc.DailyRewards.dayShort'
   ],
-  ro: ['labBadge',
+  ro: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'skins.wulf', 'skins.scorpion', 'skins.demon', 'skins.piranha', 'skins.tsunami', 'skins.ninja',
     'skins.cactus', 'skins.kraken', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short',
     'sfc.InAppPurchaseShop.shop.popular',
-    'skills.slotChip' // skills: "Slot" — the Romanian gaming term
+ // skills: "Slot" — the Romanian gaming term
   ],
   hu: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'lv', 'skins.wulf', 'skins.kraken', 'skins.taiko', 'sfc.BattlePass.max', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
-    'skills.max' // skills: "MAX" badge
+ // skills: "MAX" badge
   ],
-  lt: ['labBadge',
+  lt: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statAtk','labBadge',
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.DailyRewards.dayShort'
   ],
   // it / pt-BR / pt-PT / ca / gl / nl: cognates and loanwords that are the native word (Arena,
   //     Lava, Psi, Tornado, Tsunami, Ninja, Kraken, Taiko, Prisma, Chip…), proper nouns (Wulf),
   //     genre names (Fidget, Brainrot, Steampunk), "D{n}" (dia / día / dag), "Popular", "MAX"
-  it: ['labBadge',
+  it: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'pvp.host', 'arenas.lava', 'elements.psi', 'skins.chip', 'skins.wulf', 'skins.prisma',
     'skins.tornado', 'skins.piranha', 'skins.tsunami', 'skins.ninja', 'skins.cactus', 'skins.kraken',
     'skins.taiko', 'skins.armadillo', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.max', 'sfc.OptionsModal.audio', 'sfc.CombatLog.short',
-    'skills.slotChip', 'skills.max' // skills: "Slot" and "MAX" as players say them
+ // skills: "Slot" and "MAX" as players say them
   ],
-  'pt-BR': ['labBadge',
+  'pt-BR': [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statDef','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze',
@@ -159,7 +198,11 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
-  'pt-PT': ['labBadge',
+  'pt-PT': [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statDef','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze',
@@ -168,7 +211,11 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.CombatLog.short'
   ],
-  ca: ['labBadge',
+  ca: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statDef','labBadge',
     // league tier names: the native word is spelled as in English
     'league.tiers.bronze',
     'pvp.arena', 'pvp.honor', 'arenas.lava', 'elements.psi', 'skins.wulf', 'skins.prisma', 'skins.tornado',
@@ -176,14 +223,22 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular', 'sfc.OptionsModal.general'
   ],
-  gl: ['labBadge',
+  gl: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statDef','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'elements.psi', 'elements.metal', 'skins.chip', 'skins.wulf', 'skins.prisma',
     'skins.tornado', 'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.DailyRewards.dayShort', 'sfc.InAppPurchaseShop.shop.popular'
   ],
-  nl: ['labBadge',
+  nl: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statHp', 'smasher_ramsey_species','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -192,29 +247,39 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.tsunami', 'skins.ninja', 'skins.cactus', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos',
     'sfc.BattlePass.battlePass', 'sfc.BattlePass.max', 'sfc.DailyRewards.dayShort', 'sfc.CombatLog.short',
-    'skills.slotChip', 'skills.max' // skills: "Slot" is the Dutch word; "MAX" badge
+ // skills: "Slot" is the Dutch word; "MAX" badge
   ],
   // tr / az / uz / lv / vi / el: loanwords that are the native word (Arena, Lava, Metal, Tsunami),
   //     proper nouns (Wulf, Hydra, Kraken), Ninja, genre names (Brainrot, Steampunk), "Lv." (vi)
-  tr: ['labBadge',
+  tr: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'elements.metal', 'skins.wulf', 'skins.tsunami', 'skins.ninja', 'skins.kraken',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  az: ['labBadge',
+  az: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'elements.metal', 'skins.wulf', 'skins.ninja', 'skins.kraken',
     'sfc.BGSkinModal.bg.skins.nebula'
   ],
-  uz: ['labBadge',
+  uz: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statHp','labBadge',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
     'pvp.arena', 'arenas.lava', 'skins.wulf', 'skins.ninja', 'skins.kraken', 'sfc.BGSkinModal.bg.skins.nebula'
   ],
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
   lv: ['league.lp', 'league.lpProgress', 'labBadge', 'arenas.lava', 'skins.wulf', 'sfc.BGSkinModal.bg.skins.nebula'],
-  vi: ['labBadge',
+  vi: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -228,6 +293,10 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
   //     "HP" (hederspoäng / honorpoentoj), "Log" (da/id), "Lv." and "Battle Pass" (id — the terms
   //     Indonesian players use)
   sv: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statAtk', 'sfc.SmasherTeamModal.statHp',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -238,9 +307,13 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.kraken', 'skins.taiko', 'skins.pyramid', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.max',
     'sfc.BattlePass.honorAbbr',
-    'skills.max' // skills: "MAX" badge
+ // skills: "MAX" badge
   ],
-  nb: ['labBadge',
+  nb: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statHp','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -248,7 +321,11 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.dark', 'skins.tsunami', 'skins.sandstorm', 'skins.ninja', 'skins.kraken', 'skins.taiko',
     'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  da: ['labBadge',
+  da: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.roster', 'sfc.SmasherTeamModal.statHp','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -259,13 +336,21 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.CombatLog.short'
   ],
-  fi: ['labBadge',
+  fi: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statHp','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'elements.psi', 'skins.prisma', 'skins.dark', 'skins.ninja', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.nebula',
     'sfc.BGSkinModal.bg.skins.cosmos'
   ],
-  id: ['labBadge',
+  id: [
+    // "Smasher" — the loanword this locale keeps for the unit name
+    'spinner.spinnerLabel', 'sfc.CombatLog.spinner', 'sfc.CombatLog.whoSpinner',
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.slotLabel', 'sfc.SmasherTeamModal.statHp','labBadge',
     // league: "LP" (League Points) — the abbreviation ranked games in this language use
     'league.lp', 'league.lpProgress',
     'skins.yeti', // bosses 100+ trophy skin: Yeti is the native word
@@ -275,12 +360,18 @@ export const KEEP_ENGLISH: Readonly<Record<string, readonly string[]>> = {
     'skins.tsunami', 'skins.ninja', 'skins.kraken', 'skins.taiko', 'sfc.BGSkinModal.bg.skins.fidget',
     'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BGSkinModal.bg.skins.cosmos', 'sfc.BattlePass.battlePass',
     'sfc.CombatLog.short',
-    'skills.slotChip', 'skills.hudAria' // skills: "Slot", "level" — the terms Indonesian players use
+ 'skills.hudAria' // skills: "Slot", "level" — the terms Indonesian players use
   ],
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
-  eo: ['league.lp', 'league.lpProgress', 'labBadge', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BattlePass.honorAbbr'],
+  eo: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statDef','league.lp', 'league.lpProgress', 'labBadge', 'sfc.BGSkinModal.bg.skins.fidget', 'sfc.BGSkinModal.bg.skins.nebula', 'sfc.BattlePass.honorAbbr'],
   // league: "LP" (League Points) — the abbreviation ranked games in this language use
-  hi: ['league.lp', 'league.lpProgress'],
-  th: ['league.lp', 'league.lpProgress'],
+  hi: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statHp','league.lp', 'league.lpProgress'],
+  th: [
+    // smasher team UI: gaming abbreviations / the game's own unit name / cognates
+    'sfc.SmasherTeamModal.statHp','league.lp', 'league.lpProgress'],
   ar: ['lv'] // "Lv." — the gaming abbreviation, glued to a number in the UI
 }

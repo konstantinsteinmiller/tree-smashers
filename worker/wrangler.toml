@@ -1,4 +1,4 @@
-name = "leaderboard-chaos-arena"
+name = "leaderboard-tree-smashers"
 main = "src/index.ts"
 # Pinned deliberately. This game's Worker lives on its OWN Cloudflare account,
 # separate from the one survivalist uses, so D1's per-account free-tier limits
@@ -14,8 +14,8 @@ compatibility_date = "2024-11-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "leaderboard-chaos-arena"
-database_id = "fa4850bf-c91c-4ca7-b0ca-3a5a168a8759"
+database_name = "leaderboard-tree-smashers"
+database_id = "TODO-run-wrangler-d1-create-leaderboard-tree-smashers"
 
 [vars]
 # Empty = allow any origin. Every portal build serves the game from a different

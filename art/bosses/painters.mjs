@@ -1,5 +1,5 @@
 /**
- * Procedural drawings of the three bosses-100+ trophy skins and their boss
+ * Procedural drawings of the three bosses-100+ boss
  * badges (bosses-100-feature.md §7.1). ONE drawing per drawable, callable on
  * any 2D canvas at any size:
  *
@@ -11,21 +11,17 @@
  * maps every colour onto the four reference greys, so the painter gets
  * outline, parts and centre and nothing to trace).
  *
- * House skin construction (skins-new-designs.md): hex medallion → inner
- * ring(s) → themed rim, bold ink contour, 2-3 cel steps per shape with the
- * light from the top-left, EVEN-fold symmetry (the slicer and fit-skins
- * centre on the bounding box, which for an even-fold shape is the spin axis).
+ * House construction: bold ink contour, 2-3 cel steps per shape with the
+ * light from the top-left, even-fold symmetry (the slicer centres on the
+ * bounding box).
  *
  * No imports and no DOM access at import time: Node imports this module for
  * the registry tests, the browser runs it inside build.mjs's headless page.
- * Everything random is seeded, so a re-bake is byte-stable.
+ * Nothing is random, so a re-bake is byte-stable.
  */
 
 const TAU = Math.PI * 2
 const INK = '#16111c'
-
-/** Seeded LCG — the same seed always draws the same coals / tufts. */
-const rng = (seed) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296)
 
 // ── Notation mode ───────────────────────────────────────────────────────────
 // Reference sheets must show shape, never finish (PROMPT-ANATOMY: the
@@ -42,7 +38,7 @@ const makeCol = (notation) => (hex) => {
   return NOTATION_GREYS[l < 0.2 ? 0 : l < 0.42 ? 1 : l < 0.72 ? 2 : 3]
 }
 
-// ── Drawing kit (unit space: the skin's rim is radius 1) ────────────────────
+// ── Drawing kit (unit space: radius 1 = the drawing's edge) ────────────────────
 
 const withShift = (ctx, dx, dy, build) => {
   ctx.save()
@@ -130,17 +126,6 @@ const poly = (pts) => (c) => {
   c.closePath()
 }
 const polar = (r, a) => [r * Math.cos(a), r * Math.sin(a)]
-const superellipse = (a, p) => (c) => {
-  for (let i = 0; i <= 192; i++) {
-    const t = (i / 192) * TAU
-    const ct = Math.cos(t), st = Math.sin(t)
-    const x = a * Math.sign(ct) * Math.abs(ct) ** (2 / p)
-    const y = a * Math.sign(st) * Math.abs(st) ** (2 / p)
-    if (i) c.lineTo(x, y)
-    else c.moveTo(x, y)
-  }
-  c.closePath()
-}
 const rivet = (ctx, C, x, y, r, { base = '#5a5360', shade = '#221e27', light = '#b9b0bd' } = {}) => {
   cel(ctx, C, circle(r, x, y), { base, shade, light, ink: r * 0.55, d: r * 0.45, h: r * 0.3 })
 }
@@ -161,7 +146,7 @@ const strokeLine = (ctx, C, pts, color, w) => {
   ctx.stroke()
 }
 
-// ── Emblems — ONE drawing each, used in the skin medallion AND the badge ────
+// ── Emblems — ONE drawing each, drawn on the badge ────
 // Drawn in a unit box (fits radius ~1); the caller scales.
 
 /** Cinder Tyrant: a single flame inside a ring. */
@@ -302,294 +287,6 @@ const yetiFace = (ctx, C) => {
     const tusk = poly([[s * 0.2, 0.36], [s * 0.3, 0.12], [s * 0.1, 0.4]])
     cel(ctx, C, tusk, { base: '#f4ecd6', shade: '#c9b98f', light: '#ffffff', ink: 0.06, d: 0.04, h: 0.02 })
   }
-}
-
-// ── Hex medallion (the construction every skin shares) ─────────────────────
-const medallion = (ctx, C, r, { base, shade, light, rim }, emblem, emblemScale = 0.62) => {
-  cel(ctx, C, hex(r), { base: rim, shade: '#1a1620', light: null, ink: 0.05, d: r * 0.12 })
-  cel(ctx, C, hex(r * 0.8), { base, shade, light, ink: 0.025, d: r * 0.14, h: r * 0.07 })
-  ctx.save()
-  ctx.scale(r * emblemScale, r * emblemScale)
-  emblem(ctx, C)
-  ctx.restore()
-}
-
-// ── Skins ───────────────────────────────────────────────────────────────────
-
-/**
- * Cinder (the Cinder Tyrant, Round Guard): a round iron brazier — a smooth
- * closed rim of black cast iron, FOUR riveted grate bars crossing a bed of
- * glowing coals with molten cracks between them. Nothing leaves the circle.
- */
-const cinder = (ctx, C) => {
-  const R = rng(110)
-  // cast-iron body (rim)
-  cel(ctx, C, circle(1), { base: '#3b3640', shade: '#221e27', light: '#77707e', ink: 0.07, d: 0.09, h: 0.045 })
-  // rim bevel line + rivets
-  ctx.beginPath()
-  circle(0.9)(ctx)
-  ctx.strokeStyle = C('#221e27')
-  ctx.lineWidth = 0.02
-  ctx.stroke()
-  for (let i = 0; i < 16; i++) {
-    const [x, y] = polar(0.9, (i / 16) * TAU + Math.PI / 16)
-    rivet(ctx, C, x, y, 0.035)
-  }
-  // coal bed: molten ground, then coal lumps with cracks left between them
-  cel(ctx, C, circle(0.8), { base: '#ff7a1a', shade: '#d9481a', light: '#ffc25a', ink: 0.05, d: 0.05, h: 0.03 })
-  const bands = [[0.38, 0.58, 9], [0.58, 0.8, 14]]
-  for (const [r0, r1, n] of bands) {
-    const off = R() * TAU
-    for (let i = 0; i < n; i++) {
-      const a0 = off + (i / n) * TAU, a1 = off + ((i + 1) / n) * TAU
-      const gap = 0.008
-      const j = () => (R() - 0.5) * 0.04
-      const ga0 = a0 + gap / r0, ga1 = a1 - gap / r0
-      const pts = [
-        polar(r0 + gap + j(), ga0), polar(r0 + gap + j(), (ga0 + ga1) / 2), polar(r0 + gap + j(), ga1),
-        polar(r1 - gap + j(), a1 - gap / r1), polar(r1 - gap + j(), (a0 + a1) / 2 + j()), polar(r1 - gap + j(), a0 + gap / r1)
-      ]
-      const hot = R() < 0.25
-      // a rounded lump (quadratic through the edge midpoints)
-      const lump = (c) => {
-        const m = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
-        const s0 = m(pts[pts.length - 1], pts[0])
-        c.moveTo(s0[0], s0[1])
-        for (let k = 0; k < pts.length; k++) {
-          const q = m(pts[k], pts[(k + 1) % pts.length])
-          c.quadraticCurveTo(pts[k][0], pts[k][1], q[0], q[1])
-        }
-        c.closePath()
-      }
-      cel(ctx, C, lump, hot
-        ? { base: '#c2461c', shade: '#7a2414', light: '#ff9a3a', ink: 0.018, d: 0.035, h: 0.03 }
-        : { base: '#2e2124', shade: '#1a1216', light: '#5a4448', ink: 0.018, d: 0.03, h: 0.018 })
-      if (hot) {
-        const [cx, cy] = polar((r0 + r1) / 2 - 0.01, (a0 + a1) / 2 - 0.03)
-        ctx.save()
-        ctx.translate(cx, cy)
-        ctx.rotate((a0 + a1) / 2)
-        ctx.beginPath()
-        ctx.ellipse(0, 0, (r1 - r0) * 0.13, (r1 - r0) * 0.26, 0, 0, TAU)
-        ctx.fillStyle = C('#ffd27a')
-        ctx.fill()
-        ctx.restore()
-      }
-    }
-  }
-  // grate: FOUR bars in a # (two vertical, two horizontal), clipped to the bed
-  ctx.save()
-  ctx.beginPath()
-  circle(0.83)(ctx)
-  ctx.clip()
-  const barW = 0.1, off = 0.48
-  const bar = (vertical, s) => (c) => {
-    if (vertical) c.rect(s * off - barW / 2, -0.9, barW, 1.8)
-    else c.rect(-0.9, s * off - barW / 2, 1.8, barW)
-  }
-  for (const s of [-1, 1]) cel(ctx, C, bar(true, s), {
-    base: '#4a4450',
-    shade: '#221e27',
-    light: '#8d8594',
-    ink: 0.035,
-    d: 0.03,
-    h: 0.02
-  })
-  for (const s of [-1, 1]) cel(ctx, C, bar(false, s), {
-    base: '#4a4450',
-    shade: '#221e27',
-    light: '#8d8594',
-    ink: 0.035,
-    d: 0.03,
-    h: 0.02
-  })
-  ctx.restore()
-  for (const sx of [-1, 1]) for (const sy of [-1, 1]) rivet(ctx, C, sx * off, sy * off, 0.045)
-  // bed edge re-inked over the bar ends
-  ctx.beginPath()
-  circle(0.815)(ctx)
-  ctx.strokeStyle = C(INK)
-  ctx.lineWidth = 0.035
-  ctx.stroke()
-  // inner iron ring with a molten seam
-  cel(ctx, C, ring(0.29, 0.37), { base: '#4a4450', shade: '#221e27', light: '#8d8594', ink: 0.04, d: 0.04, h: 0.025 })
-  ctx.beginPath()
-  circle(0.33)(ctx)
-  ctx.strokeStyle = C('#ff8a2a')
-  ctx.lineWidth = 0.018
-  ctx.stroke()
-  medallion(ctx, C, 0.27, { base: '#3b3640', shade: '#221e27', light: '#5d5664', rim: '#2a252f' }, flameRing, 0.6)
-}
-
-/**
- * Frost Vault (the Glacier Warden, Quad Core): a square steel vault door
- * frozen over — four rounded frost-crusted lobes at the corners with heavy
- * bolts iced in, and a spoked vault wheel as the inner ring.
- */
-const frostVault = (ctx, C) => {
-  const R = rng(120)
-  const A = 0.8
-  // steel face
-  cel(ctx, C, superellipse(A, 5), { base: '#4a5a6e', shade: '#34404f', light: '#7f93aa', ink: 0.07, d: 0.09, h: 0.045 })
-  // riveted inner frame of the door
-  ctx.beginPath()
-  superellipse(A * 0.84, 5)(ctx)
-  ctx.strokeStyle = C('#2c3644')
-  ctx.lineWidth = 0.022
-  ctx.stroke()
-  for (let i = 0; i < 4; i++) {
-    for (const t of [-0.3, 0, 0.3]) {
-      const a = (i / 4) * TAU
-      const [x, y] = [Math.cos(a) * A * 0.84 - Math.sin(a) * t, Math.sin(a) * A * 0.84 + Math.cos(a) * t]
-      rivet(ctx, C, x * 0.96, y * 0.96, 0.03, { base: '#6f8298', shade: '#2c3644', light: '#c9d6e3' })
-    }
-  }
-  // frost creeping along the door edges (jagged white crust, 4-fold)
-  ctx.save()
-  ctx.beginPath()
-  superellipse(A, 5)(ctx)
-  ctx.clip()
-  for (let q = 0; q < 4; q++) {
-    ctx.save()
-    ctx.rotate((q / 4) * TAU)
-    const pts = [[-0.9, -A - 0.1], [0.9, -A - 0.1]]
-    for (let i = 0; i <= 14; i++) {
-      const x = 0.9 - (i / 14) * 1.8
-      const depth = 0.07 + (i % 2 ? 0.06 : 0) + R() * 0.03 + Math.max(0, Math.abs(x) - 0.35) * 0.3
-      pts.push([x, -A + depth])
-    }
-    cel(ctx, C, poly(pts), { base: '#dff4ff', shade: '#9fd8f2', light: '#ffffff', ink: 0.022, d: 0.03, h: 0.015 })
-    ctx.restore()
-  }
-  ctx.restore()
-  ctx.beginPath()
-  superellipse(A, 5)(ctx)
-  ctx.strokeStyle = C(INK)
-  ctx.lineWidth = 0.04
-  ctx.stroke()
-  // four frost-crusted corner lobes, each with a heavy bolt iced in
-  for (let i = 0; i < 4; i++) {
-    const a = Math.PI / 4 + (i / 4) * TAU
-    const [x, y] = polar(0.7, a)
-    cel(ctx, C, circle(0.27, x, y), { base: '#bfe8fb', shade: '#2a7fc9', light: '#ffffff', ink: 0.06, d: 0.1, h: 0.05 })
-    // hex bolt head
-    ctx.save()
-    ctx.translate(x, y)
-    cel(ctx, C, hex(0.12), { base: '#6f8298', shade: '#34404f', light: '#c9d6e3', ink: 0.035, d: 0.04, h: 0.02 })
-    // ice glaze over the bolt's outer half (it is frozen IN)
-    ctx.rotate(a)
-    const glaze = (c) => {
-      c.moveTo(0.02, -0.2)
-      c.quadraticCurveTo(0.08, 0, 0.02, 0.2)
-      c.lineTo(0.22, 0.12)
-      c.lineTo(0.22, -0.12)
-      c.closePath()
-    }
-    ctx.beginPath()
-    circle(0.25)(ctx)
-    ctx.clip()
-    cel(ctx, C, glaze, { base: '#dff4ff', shade: '#7fd4ff', light: '#ffffff', ink: 0.02, d: 0.03, h: 0.015 })
-    ctx.restore()
-    // icicle glints
-    const [gx, gy] = polar(0.8, a - 0.12)
-    dot(ctx, C, gx, gy, 0.03, '#ffffff')
-  }
-  // vault recess + spoked wheel (the inner ring)
-  cel(ctx, C, circle(0.5), { base: '#2c3644', shade: '#1c232e', light: null, ink: 0.045, d: 0.05 })
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * TAU
-    const [x0, y0] = polar(0.25, a), [x1, y1] = polar(0.47, a)
-    strokeLine(ctx, C, [[x0, y0], [x1, y1]], INK, 0.085)
-    strokeLine(ctx, C, [[x0, y0], [x1, y1]], '#a9bccf', 0.045)
-  }
-  cel(ctx, C, ring(0.36, 0.44), { base: '#a9bccf', shade: '#5f7085', light: '#eef5fb', ink: 0.045, d: 0.05, h: 0.03 })
-  // handle knobs on the wheel (4, on the axes)
-  for (let i = 0; i < 4; i++) {
-    const [x, y] = polar(0.44, (i / 4) * TAU)
-    cel(ctx, C, circle(0.06, x, y), {
-      base: '#7fd4ff',
-      shade: '#2a7fc9',
-      light: '#f2fbff',
-      ink: 0.03,
-      d: 0.03,
-      h: 0.02
-    })
-  }
-  medallion(ctx, C, 0.27, { base: '#2a7fc9', shade: '#1d5d99', light: '#7fd4ff', rim: '#2c3644' }, padlock, 0.56)
-}
-
-/**
- * Yeti (the Frostbite Yeti, Spiky): a round body ringed ALL the way round by
- * shaggy white fur tufts tipped with icicle spikes pointing straight out, a
- * band of blue-grey hide as the inner ring.
- */
-const yeti = (ctx, C) => {
-  const R = rng(130)
-  const N = 16
-  // icicle spikes (behind the fur), two facets each
-  for (let i = 0; i < N; i++) {
-    const a = (i / N) * TAU
-    const half = (Math.PI / N) * 0.78
-    const base0 = polar(0.6, a - half), base1 = polar(0.62, a + half), tip = polar(0.995, a)
-    const mid = polar(0.66, a)
-    union(ctx, C, [poly([base0, tip, base1])], '#9fe7e0', 0.05)
-    // shaded facet (clockwise side), light ridge
-    ctx.beginPath()
-    poly([mid, tip, base1])(ctx)
-    ctx.fillStyle = C('#4aa3d8')
-    ctx.fill()
-    strokeLine(ctx, C, [polar(0.7, a - half * 0.35), polar(0.93, a - half * 0.08)], '#eafffc', 0.022)
-  }
-  // shaggy fur ring: fat, overlapping tufts with hooked tips (all curl the
-  // same way round) — a shaded back layer and a white front layer
-  const tuft = (a, r0, r1, w, hook) => (c) => {
-    const P = (r, da) => polar(r, a + da)
-    c.moveTo(...P(r0, -w))
-    c.bezierCurveTo(...P(r0 + (r1 - r0) * 0.55, -w * 1.15), ...P(r1 * 0.98, -w * 0.35), ...P(r1, hook))
-    c.bezierCurveTo(...P(r1 - (r1 - r0) * 0.3, w * 0.2), ...P(r0 + (r1 - r0) * 0.45, w * 1.1), ...P(r0, w))
-    c.closePath()
-  }
-  const back = [], front = []
-  const step = TAU / (2 * N)
-  // a mane, not a saw: tips lean a little either way and lengths vary
-  for (let i = 0; i < 2 * N; i++) {
-    back.push(tuft(i * step + step / 2, 0.46, 0.79 + (R() - 0.5) * 0.06, step * 0.95, (R() - 0.5) * step * 0.6))
-  }
-  for (let i = 0; i < 2 * N; i++) {
-    front.push(tuft(i * step, 0.42, 0.71 + (i % 2 ? -0.03 : 0.02) + (R() - 0.5) * 0.05, step * 0.9, (R() - 0.5) * step * 0.7))
-  }
-  union(ctx, C, [circle(0.6), ...back], '#bccde0', 0.05)
-  union(ctx, C, [circle(0.55), ...front], '#ffffff', 0.035)
-  // fur shading: a bottom-right shadow over the front layer
-  ctx.save()
-  ctx.beginPath()
-  for (const f of front) f(ctx)
-  circle(0.55)(ctx)
-  ctx.clip('nonzero')
-  ctx.beginPath()
-  circle(0.8, 0.12, 0.12)(ctx)
-  circle(0.8, 0.03, 0.03)(ctx)
-  ctx.fillStyle = C('#dfe9f2')
-  ctx.fill('evenodd')
-  ctx.restore()
-  // fur strands, curling with the tufts
-  for (let i = 0; i < 2 * N; i++) {
-    const a = i * step
-    ctx.beginPath()
-    ctx.moveTo(...polar(0.5, a - step * 0.2))
-    ctx.quadraticCurveTo(...polar(0.6, a - step * 0.25), ...polar(0.66, a + step * 0.2))
-    ctx.strokeStyle = C('#a9bdd1')
-    ctx.lineWidth = 0.014
-    ctx.lineCap = 'round'
-    ctx.stroke()
-  }
-  // blue-grey hide band (inner ring) with stitching
-  cel(ctx, C, ring(0.3, 0.46), { base: '#3b4b63', shade: '#2a3649', light: '#5a6d89', ink: 0.045, d: 0.05, h: 0.03 })
-  for (let i = 0; i < 20; i++) {
-    const a = (i / 20) * TAU
-    strokeLine(ctx, C, [polar(0.36, a), polar(0.4, a + 0.06)], '#9fb3c8', 0.016)
-  }
-  medallion(ctx, C, 0.27, { base: '#9fe7e0', shade: '#4aa3d8', light: '#eafffc', rim: '#2a3649' }, yetiFace, 0.62)
 }
 
 // ── Boss badges — the boss's crest: a big hex shield carrying its emblem ────
@@ -734,9 +431,6 @@ const wrap = (draw) => (ctx, size, { notation = false } = {}) => {
 }
 
 export const PAINTERS = {
-  'skin/cinder': wrap(cinder),
-  'skin/frost-vault': wrap(frostVault),
-  'skin/yeti': wrap(yeti),
   'badge/cinder_tyrant': wrap(cinderBadge),
   'badge/glacier_warden': wrap(wardenBadge),
   'badge/frostbite_yeti': wrap(yetiBadge)

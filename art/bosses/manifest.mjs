@@ -1,6 +1,7 @@
 /**
  * Bosses 100+ art registry — every drawable the three new bosses add
- * (bosses-100-feature.md §7.1): their trophy skins and their boss badges.
+ * (bosses-100-feature.md §7.1): their boss badges.
+ * (Trophy skins are palettes drawn by code now — no skin artwork here.)
  *
  * ONE list, read by:
  *   art/bosses/build.mjs         bakes the procedural fallback into each target,
@@ -10,10 +11,8 @@
  *   tests/bossArt.test.ts        registry ↔ catalog ↔ files contract
  *
  * Plain Node ESM, no DOM: importable from build scripts and from Vitest.
- * The skins' prompt TEXT stays in art/skins/ (concepts.mjs → build-prompts.mjs,
- * the house skin route); the badges' prompt text is built here.
+ * The badges' prompt text is built here.
  */
-import { TROPHY_SKINS } from '../skins/concepts.mjs'
 
 /** Where the Art Desk looks (tools/art-desk/config.mjs `sheetsDir`). */
 export const SHEETS_DIR = 'art-sheets'
@@ -31,29 +30,23 @@ export const BOSSES = [
     emblem: 'a single flame (three tongues, orange with a yellow heart) inside a thick golden ring',
     palette: 'cast-iron frame #221e27 to #3b3640 with ash-grey highlights, a coal-black field #2e2124 with thin molten cracks #ff6a1a, the flame #ff6a1a with a #ffd27a heart',
     frame: 'a heavy cast-iron hexagonal frame with six round rivets at its corners',
-    finishRefs: ['public/images/models/salamaner_256x256.webp', 'public/images/models/boulder_256x256.webp']
+    finishRefs: ['public/images/boss-badges/glacier-warden_256x256.webp', 'public/images/boss-badges/frostbite-yeti_256x256.webp']
   },
   {
     encounter: 'glacier_warden', name: 'The Glacier Warden', skin: 'frost-vault', badgeFile: 'glacier-warden',
     emblem: 'a steel padlock whose keyhole is a white snowflake, a crust of frost on the top of its body',
     palette: 'steel blue-grey frame #4a5a6e with a frost-white crust #f2fbff along its two upper edges, a deep-ice field #2a7fc9, glacier-cyan #7fd4ff highlights',
     frame: 'a steel hexagonal frame with six round bolts at its corners, frost crusted along its top',
-    finishRefs: ['public/images/models/ice_256x256.webp', 'public/images/models/checkmate_256x256.webp']
+    finishRefs: ['public/images/boss-badges/cinder-tyrant_256x256.webp', 'public/images/boss-badges/frostbite-yeti_256x256.webp']
   },
   {
     encounter: 'frostbite_yeti', name: 'The Frostbite Yeti', skin: 'yeti', badgeFile: 'frostbite-yeti',
     emblem: 'a yeti face: a shaggy white fur head, a blue-grey face under a heavy white brow, two icy eyes and two short ivory tusks',
     palette: 'blue-grey hide frame #3b4b63 with snow-white studs, an icy field #9fe7e0 shading to #4aa3d8, snow-white #ffffff fur, ivory tusks',
     frame: 'a blue-grey leather-hide hexagonal frame with six snow-white studs, short icicles hanging off its lower edges',
-    finishRefs: ['public/images/models/mammoth_256x256.webp', 'public/images/models/porcupine_256x256.webp']
+    finishRefs: ['public/images/boss-badges/glacier-warden_256x256.webp', 'public/images/boss-badges/cinder-tyrant_256x256.webp']
   }
 ]
-
-const skinDef = (id) => {
-  const s = TROPHY_SKINS.find((t) => t.id === id)
-  if (!s) throw new Error(`art/bosses: trophy skin "${id}" is not in art/skins/concepts.mjs TROPHY_SKINS`)
-  return s
-}
 
 /**
  * Every drawable. `key` is the painter key (art/bosses/painters.mjs),
@@ -61,25 +54,6 @@ const skinDef = (id) => {
  * `target` the drop-in path under public/ that the game loads.
  */
 export const DRAWABLES = [
-  ...BOSSES.map((b) => {
-    const s = skinDef(b.skin)
-    return {
-      key: `skin/${b.skin}`,
-      kind: 'skin',
-      id: b.skin,
-      boss: b.name,
-      encounter: b.encounter,
-      title: `${s.name} — ${b.name} trophy skin`,
-      stem: `single-${b.skin}`,
-      target: `images/models/${b.skin}_256x256.webp`,
-      size: 256,
-      // the house layout reference and prompt (art/skins/, build-refs + build-prompts)
-      refSource: `art/skins/${s.cls}/single-${b.skin}.png`,
-      promptFile: `art/skins/${s.cls}/prompt-${b.skin}.txt`,
-      freePromptFile: `art/skins/${s.cls}/prompt-${b.skin}-free.txt`,
-      finishRefs: b.finishRefs
-    }
-  }),
   ...BOSSES.map((b) => ({
     key: `badge/${b.encounter}`,
     kind: 'badge',
@@ -90,9 +64,6 @@ export const DRAWABLES = [
     stem: `badge-${b.badgeFile}`,
     target: `images/boss-badges/${b.badgeFile}_256x256.webp`,
     size: 256,
-    refSource: null,
-    promptFile: null,
-    freePromptFile: null,
     finishRefs: ['public/images/boss-frame/boss-frame_384x369.webp', ...b.finishRefs.slice(0, 1)]
   }))
 ]
@@ -104,9 +75,9 @@ One square image, 1024 x 1024 pixels, holding exactly ONE flat hexagonal badge i
 
 WHAT THE ATTACHMENTS ARE — read this before anything else.
 · The LAST attachment is the LAYOUT REFERENCE: one grey hexagonal badge on magenta. Its flat grey shapes are NOTATION: they fix the badge's OUTLINE, SIZE and CENTRE, the frame, the inner field and where the emblem sits. Take nothing else from it — not its grey, not its flat fills. A result that comes back as the same grey shapes neatly shaded is a trace of the placeholder, and it is unusable.
-· Every other attachment is a FINISH REFERENCE from the same game. Copy its finish — the bold ink, the cel shading, the highlights, the level of detail — and NEVER its subject: no horned skull, no bat wings, no other skin's creature.
+· Every other attachment is a FINISH REFERENCE from the same game. Copy its finish — the bold ink, the cel shading, the highlights, the level of detail — and NEVER its subject: no horned skull, no bat wings, no other badge's emblem.
 
-WHAT IT IS — the crest of "${b.name}", a boss in "Chaos Arena", a spinning-top battle game. It is shown on the boss's teaser, intro card and trophy screen, at 48 to 200 pixels across.
+WHAT IT IS — the crest of "${b.name}", a boss in "Tree Smashers", a spinning-top battle game. It is shown on the boss's teaser, intro card and trophy screen, at 48 to 200 pixels across.
 · The FRAME: ${b.frame}.
 · The FIELD inside the frame, and on it the EMBLEM, big and centred: ${b.emblem}.
 

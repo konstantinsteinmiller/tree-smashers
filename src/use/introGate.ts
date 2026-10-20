@@ -28,11 +28,11 @@
 
 import type { HydrateState } from '@/utils/save/types'
 
-/** The one key the intro writes. `spinner_`-prefixed on purpose: that prefix
+/** The one key the intro writes. `smashers_`-prefixed on purpose: that prefix
  *  is cloud-save payload (SaveMergePolicy), so "seen" follows the player to a
  *  new device, and the full-progress reset's KEEP-list sweep deletes it, so a
  *  reset replays the intro. */
-export const INTRO_SEEN_KEY = 'spinner_intro_seen'
+export const INTRO_SEEN_KEY = 'smashers_intro_seen'
 
 /**
  * How long a still-unsettled save read may hold the decision open, measured
@@ -107,9 +107,9 @@ const nonEmptyJsonArray = (get: Getter, key: string): boolean => {
   }
 }
 
-/** True when any upgrade level in `spinner_upgrades` is above 0. */
+/** True when any upgrade level in `smashers_upgrades` is above 0. */
 const hasUpgrades = (get: Getter): boolean => {
-  const raw = get('spinner_upgrades')
+  const raw = get('smashers_upgrades')
   if (!raw) return false
   try {
     const v = JSON.parse(raw) as { tops?: Record<string, number>; bottoms?: Record<string, number> }
@@ -132,23 +132,22 @@ const hasUpgrades = (get: Getter): boolean => {
  * Throws if the getter throws — the caller maps that to "unknown".
  */
 export const hasSavedProgress = (get: Getter): boolean =>
-  int(get, 'spinner_campaign_stage') > 1
-  || int(get, 'spinner_player_max_stage') > 1
-  || int(get, 'spinner_coins') > 0
-  || int(get, 'spinner_diamonds') > 0
-  || int(get, 'spinner_game_start_count') > 0
-  || get('spinner_first_win') === '1'
+  int(get, 'smashers_campaign_stage') > 1
+  || int(get, 'smashers_player_max_stage') > 1
+  || int(get, 'smashers_coins') > 0
+  || int(get, 'smashers_diamonds') > 0
+  || int(get, 'smashers_game_start_count') > 0
+  || get('smashers_first_win') === '1'
   // Written on EVERY finished match, win or lose — the single best signal.
-  || present(get, 'spinner_last_result')
+  || present(get, 'smashers_last_result')
   || hasUpgrades(get)
-  || nonEmptyJsonArray(get, 'spinner_owned_skins')
-  || nonEmptyJsonArray(get, 'spinner_bg_skins_owned')
-  || present(get, 'spinner_battle_pass')
-  || present(get, 'spinner_pvp_stats')
-  || present(get, 'spinner_daily_rewards')
-  || present(get, 'spinner_daily_challenge')
-  || get('spinner_config_opened') === '1'
-  || get('spinner_skin_chest_first_collected') === '1'
+  || nonEmptyJsonArray(get, 'smashers_owned_skins')
+  || nonEmptyJsonArray(get, 'smashers_bg_skins_owned')
+  || present(get, 'smashers_battle_pass')
+  || present(get, 'smashers_pvp_stats')
+  || present(get, 'smashers_daily_rewards')
+  || get('smashers_config_opened') === '1'
+  || get('smashers_skin_chest_first_collected') === '1'
 
 /** Read both flags through a getter that may throw. */
 export const readIntroFlags = (get: Getter): { seen: boolean | null; hasProgress: boolean | null } => {

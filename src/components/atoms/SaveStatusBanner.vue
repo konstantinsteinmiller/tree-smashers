@@ -64,35 +64,52 @@ watch(hasBonusToShow, (on) => {
 
 <template lang="pug">
   div.fixed.left-2.right-2.z-40.pointer-events-none(class="bottom-2 sm:left-auto sm:right-4 sm:max-w-sm")
-    //- Bonus banner — green / celebratory
-    div.pointer-events-auto.rounded-lg.shadow-lg.text-white.text-sm.flex.items-center.gap-3.cursor-pointer(
+    //- Bonus banner — leaf / celebratory
+    div.save-banner.is-bonus.pointer-events-auto.text-sm.flex.items-center.gap-3.cursor-pointer(
       v-if="showBonus"
-      class="bg-emerald-700/95 px-3 py-2 mb-2"
+      class="px-3 py-2 mb-2"
       @click="onDismissBonus"
     )
       span.text-xl 🎉
       div.flex-1
-        div.font-bold {{ t('save.restoredTitle') }}
-        div.text-xs(class="text-emerald-100") {{ t('save.restoredBonus', { n: bonusCoinsAwarded }) }}
-      span.text-xs(class="text-emerald-100/80") {{ t('save.tap') }}
+        div.font-black.ui-outline-sm {{ t('save.restoredTitle') }}
+        div.text-xs.font-extrabold.ui-outline-sm {{ t('save.restoredBonus', { n: bonusCoinsAwarded }) }}
+      span.text-xs.font-extrabold.ui-outline-sm {{ t('save.tap') }}
 
-    //- Offline banner — amber / informational
-    div.pointer-events-auto.rounded-lg.shadow-lg.text-white.text-sm.flex.items-center.gap-3(
+    //- Offline banner — wood / informational
+    div.save-banner.is-offline.pointer-events-auto.text-sm.flex.items-center.gap-3(
       v-else-if="showOffline"
-      class="bg-amber-700/95 px-3 py-2"
+      class="px-3 py-2"
     )
       span.text-xl ☁️
       div.flex-1
-        div.font-bold {{ t('save.offlineTitle') }}
-        div.text-xs(class="text-amber-100") {{ t('save.offlineBody') }}
-      button.text-xs.font-bold.rounded.bg-white.text-amber-800(
-        class="px-2 py-1 disabled:opacity-50"
+        div.font-black.ui-outline-sm {{ t('save.offlineTitle') }}
+        div.text-xs.font-extrabold.ui-outline-sm {{ t('save.offlineBody') }}
+      button.ui-btn.ui-btn--secondary.text-xs(
+        type="button"
+        class="!px-3 !py-1"
         :disabled="retryInFlight"
         @click="onRetry"
       ) {{ retryInFlight ? '…' : t('save.retry') }}
-      button.text-lg.font-bold.px-1(
-        class="text-amber-100/80"
+      button.ui-btn.ui-btn--danger.ui-btn--icon.text-lg(
+        type="button"
+        class="!min-h-[2.75rem] !min-w-[2.75rem] leading-none"
         @click="onDismissOffline"
         :aria-label="t('save.dismiss')"
       ) ×
 </template>
+
+<style scoped lang="sass">
+// Banners sit on the arena: a flat fabric plate with an ink outline and a hard
+// 0-blur drop. Bonus = leaf (celebratory), offline = wood (informational).
+.save-banner
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  color: var(--color-cream-50)
+  &.is-bonus
+    background-color: var(--color-leaf-500)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
+  &.is-offline
+    background-color: var(--color-wood-600)
+    box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -3px 0 var(--color-wood-800), 0 4px 0 var(--color-ink)
+</style>

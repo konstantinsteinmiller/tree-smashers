@@ -15,7 +15,10 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.OnUserEarnedRewardListener
 import com.google.android.gms.ads.RequestConfiguration
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
 
@@ -24,6 +27,7 @@ import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoa
 @InvokeArg
 class InitArgs {
     var rewardedAdUnitId: String = ""
+    var adFormat: String = "rewarded_interstitial"
     var tagForChildDirectedTreatment: Boolean = true
     var tagForUnderAgeOfConsent: Boolean = false
     var maxAdContentRating: String = "G"
@@ -31,22 +35,36 @@ class InitArgs {
     var useTestAds: Boolean = false
 }
 
-// Google AdMob (Google Mobile Ads SDK) integration for Tauri, built to satisfy
-// Google Play's Families Ad Format Requirements.
+// Google AdMob (Google Mobile Ads SDK) integration for Tauri, for an app that
+// is reviewed under Google Play's Families Ad Format Requirements.
 //
-// ## The one format
+// ## Formats
 //
-// This plugin can load and show exactly one thing: a **rewarded interstitial**
-// ad unit. Google serves skippable creatives exclusively into rewarded
-// interstitial units, which is what makes the ad closeable well inside the
-// 5-second Families limit. There is no interstitial / banner / app-open /
-// native-ad code path here, so no build of this app can accidentally show a
-// format that fails review.
+// The plugin holds ONE opt-in rewarded ad at a time, in the AdMob format the
+// init payload names:
 //
-// The caller (JS) is responsible for the second half of the rewarded
-// interstitial contract: an intro screen naming the reward with a visible
-// decline option, shown BEFORE `showRewarded` is invoked. See
+//   • `rewarded_interstitial` (default) — a "Rewarded interstitial" ad unit
+//   • `rewarded`                        — a plain "Rewarded" ad unit
+//
+// The two are loaded through different SDK classes, and a unit of one type
+// fails to load through the other. There is no interstitial / banner /
+// app-open / native-ad code path, so no build can show an ad the player did
+// not ask for.
+//
+// The caller (JS) owns the opt-in: an intro screen naming the reward with a
+// visible decline option, shown BEFORE `showRewarded` is invoked. See
 // `RewardedAdIntroModal.vue`.
+//
+// ## What this file can NOT guarantee
+//
+// Families requires an ad to be closeable after 5 seconds. Whether it is, is
+// decided by the creative template Google's server picks for the impression —
+// not by the format, not by the request tags and not by anything here.
+// Measured 2026-10-02 (ADS_STATE.md): the rewarded-interstitial unit served
+// two-ad pods whose first close button appeared 17–36 s in, tagged TFCD or
+// TFUA alike. That is what got version code 1000024 rejected. Before a build
+// with ads enabled is uploaded, `tools/ad-closeability/measure.mjs` has to
+// pass on the real ad unit.
 //
 // ## Ordering rules
 //
@@ -62,6 +80,13 @@ class InitArgs {
 //      should not (it does disk + network work). Hence the background thread
 //      for init and `runOnUiThread` for everything else.
 //
+//   4. Every ad is shown NON-immersive. Left alone, the SDK hides the
+//      navigation bar, and the first time any window does that on a device
+//      Android slides in its "Viewing full screen" panel — over the top
+//      quarter of the screen, which is where the ad's close button lives, and
+//      it stays until tapped. The game itself never goes immersive, so on a
+//      freshly set up device that panel landed on the very first ad.
+//
 // A single `Invoke` is parked in `pendingRewarded` for the duration of a show
 // and resolved exactly once, from either `onAdDismissedFullScreenContent` or
 // `onAdFailedToShowFullScreenContent`, so a second concurrent show can never
@@ -69,18 +94,24 @@ class InitArgs {
 @TauriPlugin
 class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
 
+    // The ad that is loaded and waiting, in whichever format the unit is. The
+    // two SDK classes share no supertype, so the one call the rest of this
+    // class needs from them is captured here.
+    private class LoadedAd(val show: (Activity, OnUserEarnedRewardListener) -> Unit)
+
     private var initialized = false
     private var rewardedAdUnitId: String = ""
+    private var adFormat: String = FORMAT_REWARDED_INTERSTITIAL
     private var designedForFamilies = true
 
-    private var rewardedAd: RewardedInterstitialAd? = null
+    private var loadedAd: LoadedAd? = null
     private var isLoading = false
 
     private var pendingRewarded: Invoke? = null
     // `onUserEarnedReward` fires before `onAdDismissedFullScreenContent`. We
     // latch it here and resolve on dismiss, so the caller learns both that the
     // ad finished AND whether the reward was actually earned. A player who
-    // uses the skip button dismisses without earning — `rewarded` stays false
+    // closes the ad early dismisses without earning — `rewarded` stays false
     // and no reward is granted. That is the intended, policy-compliant path.
     private var lastRewardGranted = false
 
@@ -92,6 +123,10 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
     fun initialize(invoke: Invoke) {
         val args = invoke.parseArgs(InitArgs::class.java)
         rewardedAdUnitId = args.rewardedAdUnitId
+        // Anything unrecognised falls back to the default format rather than
+        // failing the init: a wrong pairing surfaces as a load error on the
+        // debug HUD, with ads simply staying off.
+        adFormat = if (args.adFormat == FORMAT_REWARDED) FORMAT_REWARDED else FORMAT_REWARDED_INTERSTITIAL
 
         // ── Families / COPPA request configuration — BEFORE SDK init ──────
         val childDirected = args.tagForChildDirectedTreatment
@@ -152,9 +187,10 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
     private fun buildAdRequest(): AdRequest {
         val builder = AdRequest.Builder()
         if (designedForFamilies) {
-            // Designed for Families signal. Narrows the eligible inventory to
-            // the DFF-approved subset on top of the child-directed tagging
-            // already applied through RequestConfiguration.
+            // Legacy Designed for Families extra. SDK 24.9 no longer puts it
+            // on the wire (the request carries `tfcd` and
+            // `max_ad_content_rating` only), so nothing may depend on it; it
+            // is kept because it is harmless and older SDKs honoured it.
             val extras = Bundle()
             extras.putBoolean("is_designed_for_families", true)
             builder.addNetworkExtrasBundle(AdMobAdapter::class.java, extras)
@@ -173,29 +209,53 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     private fun loadRewarded() {
-        if (!initialized || rewardedAdUnitId.isEmpty() || isLoading || rewardedAd != null) return
+        if (!initialized || rewardedAdUnitId.isEmpty() || isLoading || loadedAd != null) return
         isLoading = true
         activity.runOnUiThread {
-            RewardedInterstitialAd.load(
-                activity,
-                rewardedAdUnitId,
-                buildAdRequest(),
-                object : RewardedInterstitialAdLoadCallback() {
-                    override fun onAdLoaded(ad: RewardedInterstitialAd) {
-                        isLoading = false
-                        ad.fullScreenContentCallback = fullScreenCallback
-                        rewardedAd = ad
-                        emitReadiness(true)
-                    }
+            if (adFormat == FORMAT_REWARDED) {
+                RewardedAd.load(
+                    activity,
+                    rewardedAdUnitId,
+                    buildAdRequest(),
+                    object : RewardedAdLoadCallback() {
+                        override fun onAdLoaded(ad: RewardedAd) {
+                            ad.fullScreenContentCallback = fullScreenCallback
+                            ad.setImmersiveMode(false)
+                            onLoaded(LoadedAd { host, listener -> ad.show(host, listener) })
+                        }
 
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        isLoading = false
-                        rewardedAd = null
-                        emitReadiness(false, error.message ?: "load-failed")
+                        override fun onAdFailedToLoad(error: LoadAdError) = onLoadFailed(error)
                     }
-                }
-            )
+                )
+            } else {
+                RewardedInterstitialAd.load(
+                    activity,
+                    rewardedAdUnitId,
+                    buildAdRequest(),
+                    object : RewardedInterstitialAdLoadCallback() {
+                        override fun onAdLoaded(ad: RewardedInterstitialAd) {
+                            ad.fullScreenContentCallback = fullScreenCallback
+                            ad.setImmersiveMode(false)
+                            onLoaded(LoadedAd { host, listener -> ad.show(host, listener) })
+                        }
+
+                        override fun onAdFailedToLoad(error: LoadAdError) = onLoadFailed(error)
+                    }
+                )
+            }
         }
+    }
+
+    private fun onLoaded(ad: LoadedAd) {
+        isLoading = false
+        loadedAd = ad
+        emitReadiness(true)
+    }
+
+    private fun onLoadFailed(error: LoadAdError) {
+        isLoading = false
+        loadedAd = null
+        emitReadiness(false, error.message ?: "load-failed")
     }
 
     private val fullScreenCallback = object : FullScreenContentCallback() {
@@ -204,7 +264,7 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
             pendingRewarded = null
             val granted = lastRewardGranted
             lastRewardGranted = false
-            rewardedAd = null
+            loadedAd = null
 
             val obj = JSObject()
             obj.put("shown", true)
@@ -220,7 +280,7 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
             val pending = pendingRewarded
             pendingRewarded = null
             lastRewardGranted = false
-            rewardedAd = null
+            loadedAd = null
 
             val obj = JSObject()
             obj.put("shown", false)
@@ -247,7 +307,7 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
             resolveShowFailure(invoke, "not-configured")
             return
         }
-        val ad = rewardedAd
+        val ad = loadedAd
         if (ad == null) {
             loadRewarded()
             resolveShowFailure(invoke, "no-fill")
@@ -261,12 +321,10 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
         pendingRewarded = invoke
         lastRewardGranted = false
         activity.runOnUiThread {
-            ad.show(activity) { _ ->
-                // Reward earned. The player watched far enough for Google to
-                // credit it; the promise still resolves from the dismiss
-                // callback so the game never grants coins over a live ad.
-                lastRewardGranted = true
-            }
+            // Reward earned. The player watched far enough for Google to
+            // credit it; the promise still resolves from the dismiss callback
+            // so the game never grants coins over a live ad.
+            ad.show(activity, OnUserEarnedRewardListener { lastRewardGranted = true })
         }
     }
 
@@ -276,5 +334,10 @@ class AdMobPlugin(private val activity: Activity) : Plugin(activity) {
         obj.put("rewarded", false)
         obj.put("error", reason)
         invoke.resolve(obj)
+    }
+
+    private companion object {
+        const val FORMAT_REWARDED_INTERSTITIAL = "rewarded_interstitial"
+        const val FORMAT_REWARDED = "rewarded"
     }
 }

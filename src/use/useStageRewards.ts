@@ -47,9 +47,6 @@
 // Boss stages are NOT smoothed out. `currentStage` returns the boss itself, so
 // its higher `rewardLose` lifts these payouts for exactly as long as the player
 // is standing in front of the boss — which is where a top-up is worth most.
-// (`useDailyChallenge` deliberately does the opposite and reads the stage
-// BEFORE a boss, because that reward is a daily constant rather than an offer
-// made in context.)
 
 import { computed } from 'vue'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'

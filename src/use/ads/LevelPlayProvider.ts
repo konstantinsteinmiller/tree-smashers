@@ -1,32 +1,20 @@
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  DISABLED — NOT WIRED INTO ANY BUILD.  Kept as a reference implementation ║
-// ║  for a future mediation attempt. Do not "fix" it back into service.       ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
+// Unity LevelPlay (ironSource) provider for the native (Tauri Android / iOS)
+// build, wired through the Tauri plugin at
+// `src-tauri/plugins/tauri-plugin-levelplay/`. LevelPlay mediates between
+// ironSource, Google AdMob and Unity Ads.
 //
-// Google Play rejected com.chaos.arena (version codes 1000012 / 1000020) on
-// 2026-09 under "Families Ad Format Requirements" — unclosable ads and ads not
-// clearly distinguishable from app content. A mediation waterfall gives the
-// publisher no control over the winning creative's close affordance, so the
-// native build was switched to `AdMobProvider` (direct Google Mobile Ads SDK,
-// rewarded-interstitial units only).
+// ## Audience
 //
-// What is actually disconnected, in order of what matters:
-//   1. `src-tauri/Cargo.toml` no longer depends on `tauri-plugin-levelplay`,
-//      so the Tauri CLI leaves it out of gen/android/tauri.settings.gradle and
-//      the ironSource + Unity Ads artifacts never enter the APK/AAB.
-//   2. `src-tauri/src/lib.rs` registers `tauri_plugin_admob` instead.
-//   3. `resolveAdProvider` returns `createAdMobProvider()` on native.
-//   4. The `VITE_APP_LEVELPLAY_*` env vars in `.env.tauri` are commented out,
-//      so every id below reads as an empty string.
+// Since 2026-10-03 the Android app is an 18+ title on Google Play — it left
+// the Families programme after two rejections over the "closeable after 5
+// seconds" ad rule (ADS_STATE.md). `VITE_APP_ADS_CHILD_DIRECTED` decides the
+// posture, and anything but an explicit "false" keeps the strict one:
 //
-// Re-enabling is a deliberate, multi-step job with a Play-policy review
-// attached. Read ADS_STATE.md at the repo root before starting it.
-//
-// Unity LevelPlay (ironSource) provider, wired through the Tauri plugin
-// at `src-tauri/plugins/tauri-plugin-levelplay/`. COPPA / Families
-// Policy flags are applied on the native side BEFORE `LevelPlay.init`
-// so every mediation adapter picks them up — see the Kotlin class doc
-// for the ordering rationale.
+//   • "false" — COPPA off, advertising ID allowed, interstitials between
+//     battles on, and Google UMP asks EEA/UK/CH players for GDPR consent
+//     before the first ad loads (the Android plugin does that before
+//     `LevelPlay.init`).
+//   • otherwise — COPPA on, AdMob TFCD, device-ID opt-out, rewarded only.
 //
 // Surface:
 //   • `init()` invokes the native init command once, flips `isReady`
@@ -36,6 +24,8 @@
 //   • `showRewardedAd()` resolves `true` only if the video played all
 //     the way through AND the reward was credited.
 //   • `showMidgameAd()` resolves when the interstitial closed or failed.
+//   • `privacyOptionsRequired` / `showPrivacyOptions()` — the consent
+//     form's re-entry point for the Options menu, where UMP says one is due.
 //
 // Per-format readiness (`isRewardedReady`, `isInterstitialReady`)
 // reflects the actual SDK ad-load state, not just init status. The
@@ -53,9 +43,9 @@ import { ref } from 'vue'
 // `@tauri-apps/api/core` is only meaningful inside a Tauri / native shell.
 // On a CrazyGames (or any web) build the provider is never instantiated
 // at runtime — it's behind an `import.meta.env.VITE_APP_NATIVE === 'true'`
-// gate in `resolveAdProvider`. The previous STATIC import of this package
-// nevertheless dragged ~10KB of Tauri runtime globals into the entry
-// chunk for every web build. The build-time-gated ternary below makes the
+// gate in `resolveAdProvider`. A STATIC import of this package would
+// nevertheless drag ~10KB of Tauri runtime globals into the entry chunk
+// for every web build. The build-time-gated ternary below makes the
 // dynamic import reachable only on native builds, so Rollup eliminates
 // both the call AND the tauri chunk on CrazyGames / GD / itch / Glitch.
 import type { invoke as TauriInvoke, addPluginListener as TauriAddPluginListener } from '@tauri-apps/api/core'
@@ -97,6 +87,13 @@ const addPluginListener: typeof TauriAddPluginListener = (async (...args: unknow
 // interactive Activity over the game.
 const forceTestSuite = import.meta.env.VITE_APP_ADS_TEST_SUITE === 'true'
 
+/** Strict unless the build explicitly says the audience is not children. */
+const childDirected = import.meta.env.VITE_APP_ADS_CHILD_DIRECTED !== 'false'
+
+/** Debug builds only: make Google UMP treat the device as in the EEA, so the
+ *  consent form can be tested from anywhere. Ignored on non-test devices. */
+const consentDebugEea = import.meta.env.VITE_APP_ADS_CONSENT_DEBUG_EEA === 'true'
+
 const androidAppKey = import.meta.env.VITE_APP_LEVELPLAY_ANDROID_APP_ID ?? ''
 const iosAppKey = import.meta.env.VITE_APP_LEVELPLAY_IOS_APP_ID ?? ''
 const androidRewardedAdUnit = import.meta.env.VITE_APP_LEVELPLAY_ANDROID_REWARDED_ID ?? ''
@@ -104,18 +101,13 @@ const androidInterstitialAdUnit = import.meta.env.VITE_APP_LEVELPLAY_ANDROID_INT
 const iosRewardedAdUnit = import.meta.env.VITE_APP_LEVELPLAY_IOS_REWARDED_ID ?? ''
 const iosInterstitialAdUnit = import.meta.env.VITE_APP_LEVELPLAY_IOS_INTERSTITIAL_ID ?? ''
 
-// ─── Families Policy: REWARDED-ONLY on native ──────────────────────────────
-// Google Play "Families Ad Format Requirements" reject full-screen
-// interstitials that can't be closed within 5 seconds — a control the publisher
-// does NOT have over a mediated network ad (the close button belongs to the
-// AdMob/Unity ad surface, not our app). The native (Tauri Android + iOS) build
-// is our kids-6+ / COPPA-strict target, so it ships rewarded-only: no
-// interstitial unit is loaded and `showMidgameAd` is a no-op. User-initiated
-// rewarded ads stay (they end on a close and are clearly opt-in).
-//
-// Flip to `true` ONLY for a non-child-directed native build, and re-confirm the
-// Families policy first.
-const NATIVE_INTERSTITIALS_ENABLED = false
+// ─── Interstitials only outside the children's posture ─────────────────────
+// Google Play's Families ad format rules reject full-screen ads that can't be
+// closed after 5 seconds, a control the publisher does not have over a
+// mediated network ad. A child-directed build therefore ships rewarded-only:
+// no interstitial unit is loaded and `showMidgameAd` is a no-op. The 18+ build
+// shows interstitials between battles (cadence: `midgameCadence.ts`).
+const NATIVE_INTERSTITIALS_ENABLED = !childDirected
 
 const isReady = ref(false)
 const isRewardedReady = ref(false)
@@ -126,16 +118,19 @@ const isInterstitialReady = ref(false)
 // `AdsBlockedModal` therefore never fires on native builds; "no fill"
 // shows up via the per-format readiness ref instead.
 const isAdsBlocked = ref(false)
+/** UMP asked for a way back into the consent form (GDPR regions only). */
+const privacyOptionsRequired = ref(false)
 let initStarted = false
 
 // On-screen debug surface — exported as `levelPlayDebug` and rendered
 // by `LevelPlayDebugOverlay.vue`. Module-level so it's a singleton and
 // any component can read it. Mobile builds have no access to a JS
 // console, so this is the only way to diagnose init/load failures
-// from a sideloaded IPA.
+// from a sideloaded build.
 type LevelPlayInitState = 'idle' | 'no-app-key' | 'starting' | 'ready' | 'failed'
 export const levelPlayDebug = ref({
   platform: 'unknown' as 'android' | 'ios' | 'other' | 'unknown',
+  childDirected,
   appKeyConfigured: false,
   rewardedIdConfigured: false,
   interstitialIdConfigured: false,
@@ -170,9 +165,10 @@ const detectPlatform = (): 'android' | 'ios' | 'other' => {
   return 'other'
 }
 
-type InitResponse = { initialized: boolean }
+type InitResponse = { initialized: boolean; privacyOptionsRequired?: boolean }
 type ShowAdResponse = { shown: boolean; rewarded?: boolean; error?: string }
 type LaunchTestSuiteResponse = { launched: boolean; error?: string }
+type PrivacyOptionsResponse = { shown: boolean; error?: string }
 // `error` only present on `ready=false` events triggered by an SDK
 // load/display failure — used by the debug overlay to surface the
 // underlying reason (no fill, invalid unit ID, etc.) on device.
@@ -184,6 +180,7 @@ export const createLevelPlayProvider = (): AdProvider => ({
   isRewardedReady,
   isInterstitialReady,
   isAdsBlocked,
+  privacyOptionsRequired,
   init: async () => {
     if (initStarted) return
     initStarted = true
@@ -194,8 +191,6 @@ export const createLevelPlayProvider = (): AdProvider => ({
       platform === 'android' ? androidRewardedAdUnit : platform === 'ios' ? iosRewardedAdUnit : ''
     const interstitialAdUnitId =
       platform === 'android' ? androidInterstitialAdUnit : platform === 'ios' ? iosInterstitialAdUnit : ''
-    // Families Policy: suppress the interstitial unit so the SDK never loads or
-    // serves a full-screen interstitial on native (see NATIVE_INTERSTITIALS_ENABLED).
     const effectiveInterstitialAdUnitId = NATIVE_INTERSTITIALS_ENABLED ? interstitialAdUnitId : ''
 
     setDebug({
@@ -204,7 +199,10 @@ export const createLevelPlayProvider = (): AdProvider => ({
       rewardedIdConfigured: !!rewardedAdUnitId,
       interstitialIdConfigured: !!effectiveInterstitialAdUnitId
     })
-    logDebug(`platform=${platform} appKey=${appKey ? 'set' : 'EMPTY'} rew=${rewardedAdUnitId ? 'set' : 'EMPTY'} int=${effectiveInterstitialAdUnitId ? 'set' : 'DISABLED(families)'}`)
+    logDebug(
+      `platform=${platform} childDirected=${childDirected} appKey=${appKey ? 'set' : 'EMPTY'} ` +
+      `rew=${rewardedAdUnitId ? 'set' : 'EMPTY'} int=${effectiveInterstitialAdUnitId ? 'set' : (NATIVE_INTERSTITIALS_ENABLED ? 'EMPTY' : 'OFF(child)')}`
+    )
 
     if (!appKey) {
       setDebug({ initState: 'no-app-key', initError: `no app key for platform "${platform}"` })
@@ -244,23 +242,28 @@ export const createLevelPlayProvider = (): AdProvider => ({
     try {
       setDebug({ initState: 'starting' })
       logDebug('invoke plugin:levelplay|init')
+      // On Android, init also runs Google UMP's consent form where GDPR
+      // needs it, so this can stay pending while the player reads it.
       const res = await invoke<InitResponse>('plugin:levelplay|init', {
         payload: {
           appKey,
           rewardedAdUnitId,
           interstitialAdUnitId: effectiveInterstitialAdUnitId,
-          isChildDirected: true,
-          admobTfcd: true,
-          admobTfua: true,
-          deviceIdOptOut: true,
+          isChildDirected: childDirected,
+          // TFCD only for children, and never together with TFUA.
+          admobTfcd: childDirected,
+          admobTfua: false,
+          deviceIdOptOut: childDirected,
           metaMixedAudience: false,
+          consentDebugEea,
           enableTestSuite: isDebug.value || forceTestSuite
         }
       })
       if (res.initialized) {
         isReady.value = true
+        privacyOptionsRequired.value = res.privacyOptionsRequired === true
         setDebug({ initState: 'ready', initError: '' })
-        logDebug('init OK')
+        logDebug(`init OK${res.privacyOptionsRequired ? ' (privacy options required)' : ''}`)
       } else {
         setDebug({ initState: 'failed', initError: 'plugin returned initialized=false' })
         logDebug('init returned initialized=false')
@@ -291,13 +294,9 @@ export const createLevelPlayProvider = (): AdProvider => ({
       return false
     }
   },
-  // Not part of the cross-provider AdProvider surface — exposed via the
-  // module export `launchLevelPlayTestSuite` below for the debug overlay.
   showMidgameAd: async () => {
-    // Families Policy: rewarded-only on native — interstitials are disabled so
-    // we never risk a non-closeable full-screen ad. No-op (and never loaded).
     if (!NATIVE_INTERSTITIALS_ENABLED) {
-      logDebug('show_interstitial disabled (Families rewarded-only)')
+      logDebug('show_interstitial off (child-directed build: rewarded only)')
       return
     }
     if (!isReady.value) {
@@ -314,6 +313,17 @@ export const createLevelPlayProvider = (): AdProvider => ({
       setDebug({ lastInterstitialShowError: msg })
       logDebug(`show_interstitial threw: ${msg}`)
       console.warn('[ads/levelplay] show_interstitial failed', e)
+    }
+  },
+  showPrivacyOptions: async () => {
+    try {
+      logDebug('invoke show_privacy_options')
+      const res = await invoke<PrivacyOptionsResponse>('plugin:levelplay|show_privacy_options')
+      logDebug(`show_privacy_options → shown=${res.shown}${res.error ? ' err=' + res.error : ''}`)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      logDebug(`show_privacy_options threw: ${msg}`)
+      console.warn('[ads/levelplay] show_privacy_options failed', e)
     }
   }
 })

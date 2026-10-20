@@ -1,7 +1,7 @@
 # Collision Damage Calculation
 
 This document explains how damage is computed when two blades collide in
-Chaos Arena. All source references point at `src/use/useSpinnerGame.ts`
+Tree Smashers. All source references point at `src/use/useSpinnerGame.ts`
 (physics + collision) and `src/use/useSpinnerConfig.ts` (part stats).
 
 ---

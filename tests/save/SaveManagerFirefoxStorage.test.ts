@@ -4,7 +4,7 @@
 // Symptom on Firefox (other browsers fine):
 //   • Hydrate from `sdk.data` returns the right values for every key.
 //   • The game UI nevertheless boots at stage 1 with default settings.
-//   • A few seconds later, the strategy writes `spinner_player_max_stage = 1`
+//   • A few seconds later, the strategy writes `smashers_player_max_stage = 1`
 //     to the cloud, OVERWRITING the player's hard-earned cloud value.
 //
 // Root cause: `SaveManager.patchLocalStorage` was assigning override
@@ -110,8 +110,8 @@ describe('SaveManager — Firefox storage semantics', () => {
 
   it('patched getItem proxies to BlobStorage even in cloud-only mode (persistToRaw=false)', async () => {
     const strategy = makeSeedingStrategy({
-      'spinner_campaign_stage': '7',
-      'spinner_player_max_stage': '14'
+      'smashers_campaign_stage': '7',
+      'smashers_player_max_stage': '14'
     })
     const manager = new SaveManager(strategy, storage, { blob: { persistToRaw: false } })
     await manager.init()
@@ -122,8 +122,8 @@ describe('SaveManager — Firefox storage semantics', () => {
     // silently failed (Firefox bug), the prototype's getItem reads the
     // empty raw map and returns null — which is exactly what
     // `useSpinnerCampaign.loadStage()` saw before the fix.
-    expect(storage.getItem('spinner_campaign_stage')).toBe('7')
-    expect(storage.getItem('spinner_player_max_stage')).toBe('14')
+    expect(storage.getItem('smashers_campaign_stage')).toBe('7')
+    expect(storage.getItem('smashers_player_max_stage')).toBe('14')
   })
 
   it('patched setItem forwards to the strategy (does not stash under a "setItem" key)', async () => {
@@ -131,25 +131,25 @@ describe('SaveManager — Firefox storage semantics', () => {
     const manager = new SaveManager(strategy, storage)
     await manager.init()
 
-    storage.setItem('spinner_campaign_stage', '8')
+    storage.setItem('smashers_campaign_stage', '8')
 
-    expect(strategy.onLocalSet).toHaveBeenCalledWith('spinner_campaign_stage', '8')
-    expect(storage.getItem('spinner_campaign_stage')).toBe('8')
+    expect(strategy.onLocalSet).toHaveBeenCalledWith('smashers_campaign_stage', '8')
+    expect(storage.getItem('smashers_campaign_stage')).toBe('8')
   })
 
   it('reproduces the recordPlayerStage data-loss scenario (defaults must NOT win after hydrate)', async () => {
-    // CG cloud has spinner_player_max_stage=14 from prior sessions on
+    // CG cloud has smashers_player_max_stage=14 from prior sessions on
     // other browsers. Firefox loads the iframe, hydrate succeeds — but
     // if patching is broken, every composable's
     // `ref(parseInt(localStorage.getItem(...) ?? '0', 10))` initialiser
     // sees null, defaults to 0, and the next gameplay tick writes back
     // the default. That was the bug.
-    const strategy = makeSeedingStrategy({ 'spinner_player_max_stage': '14' })
+    const strategy = makeSeedingStrategy({ 'smashers_player_max_stage': '14' })
     const manager = new SaveManager(strategy, storage, { blob: { persistToRaw: false } })
     await manager.init()
 
     const loadPlayerMaxStage = (): number => {
-      const raw = storage.getItem('spinner_player_max_stage')
+      const raw = storage.getItem('smashers_player_max_stage')
       return parseInt(raw ?? '0', 10) || 0
     }
     expect(loadPlayerMaxStage()).toBe(14) // would be 0 with the unpatched assignment
@@ -189,14 +189,14 @@ describe('SaveManager — Proxy path on window.localStorage (Opera/Firefox QA bu
 
   it('reads of `window.localStorage.getItem` go through the SaveManager proxy', async () => {
     const strategy = makeSeedingStrategy({
-      'spinner_campaign_stage': '10',
-      'spinner_player_max_stage': '14'
+      'smashers_campaign_stage': '10',
+      'smashers_player_max_stage': '14'
     })
     const manager = new SaveManager(strategy, window.localStorage, { blob: { persistToRaw: false } })
     await manager.init()
 
-    expect(window.localStorage.getItem('spinner_campaign_stage')).toBe('10')
-    expect(window.localStorage.getItem('spinner_player_max_stage')).toBe('14')
+    expect(window.localStorage.getItem('smashers_campaign_stage')).toBe('10')
+    expect(window.localStorage.getItem('smashers_player_max_stage')).toBe('14')
   })
 
   it('writes via `window.localStorage.setItem` reach the strategy', async () => {
@@ -204,9 +204,9 @@ describe('SaveManager — Proxy path on window.localStorage (Opera/Firefox QA bu
     const manager = new SaveManager(strategy, window.localStorage)
     await manager.init()
 
-    window.localStorage.setItem('spinner_campaign_stage', '11')
+    window.localStorage.setItem('smashers_campaign_stage', '11')
 
-    expect(strategy.onLocalSet).toHaveBeenCalledWith('spinner_campaign_stage', '11')
-    expect(window.localStorage.getItem('spinner_campaign_stage')).toBe('11')
+    expect(strategy.onLocalSet).toHaveBeenCalledWith('smashers_campaign_stage', '11')
+    expect(window.localStorage.getItem('smashers_campaign_stage')).toBe('11')
   })
 })

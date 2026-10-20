@@ -82,20 +82,20 @@ describe('hasSavedProgress', () => {
     // Measured on a fresh Chrome profile: these three keys are all a first
     // boot leaves in storage before the player does anything.
     const fresh = store({
-      spinner_user_sound_volume: '0.7',
-      spinner_user_music_volume: '0.6',
-      spinner_user_difficulty: 'medium'
+      smashers_user_sound_volume: '0.7',
+      smashers_user_music_volume: '0.6',
+      smashers_user_difficulty: 'medium'
     })
     expect(hasSavedProgress(fresh)).toBe(false)
     expect(hasSavedProgress(store({}))).toBe(false)
     // Defaults that parse as "nothing yet".
     expect(hasSavedProgress(store({
-      spinner_campaign_stage: '1',
-      spinner_coins: '0',
-      spinner_owned_skins: '[]'
+      smashers_campaign_stage: '1',
+      smashers_coins: '0',
+      smashers_owned_skins: '[]'
     }))).toBe(false)
     expect(hasSavedProgress(store({
-      spinner_upgrades: JSON.stringify({
+      smashers_upgrades: JSON.stringify({
         tops: { star: 0 },
         bottoms: {}
       })
@@ -103,20 +103,20 @@ describe('hasSavedProgress', () => {
   })
 
   it.each([
-    ['spinner_campaign_stage', '2'],
-    ['spinner_player_max_stage', '7'],
-    ['spinner_coins', '30'],
-    ['spinner_diamonds', '1'],
-    ['spinner_game_start_count', '1'],
-    ['spinner_first_win', '1'],
-    ['spinner_last_result', 'lose'],
-    ['spinner_upgrades', JSON.stringify({ tops: { star: 2 }, bottoms: {} })],
-    ['spinner_owned_skins', JSON.stringify(['star:ice'])],
-    ['spinner_bg_skins_owned', JSON.stringify(['kpop'])],
-    ['spinner_battle_pass', JSON.stringify({ xp: 40 })],
-    ['spinner_pvp_stats', JSON.stringify({ wins: 1 })],
-    ['spinner_daily_rewards', JSON.stringify({ day: 2 })],
-    ['spinner_config_opened', '1']
+    ['smashers_campaign_stage', '2'],
+    ['smashers_player_max_stage', '7'],
+    ['smashers_coins', '30'],
+    ['smashers_diamonds', '1'],
+    ['smashers_game_start_count', '1'],
+    ['smashers_first_win', '1'],
+    ['smashers_last_result', 'lose'],
+    ['smashers_upgrades', JSON.stringify({ tops: { star: 2 }, bottoms: {} })],
+    ['smashers_owned_skins', JSON.stringify(['star:ice'])],
+    ['smashers_bg_skins_owned', JSON.stringify(['kpop'])],
+    ['smashers_battle_pass', JSON.stringify({ xp: 40 })],
+    ['smashers_pvp_stats', JSON.stringify({ wins: 1 })],
+    ['smashers_daily_rewards', JSON.stringify({ day: 2 })],
+    ['smashers_config_opened', '1']
   ])('%s = %s marks a returning player', (key, value) => {
     expect(hasSavedProgress(store({ [key]: value }))).toBe(true)
   })
@@ -127,7 +127,7 @@ describe('readIntroFlags / isIntroLikely', () => {
     expect(readIntroFlags(store({ [INTRO_SEEN_KEY]: '1' }))).toEqual({ seen: true, hasProgress: false })
     expect(isIntroLikely(store({}))).toBe(true)
     expect(isIntroLikely(store({ [INTRO_SEEN_KEY]: '1' }))).toBe(false)
-    expect(isIntroLikely(store({ spinner_last_result: 'win' }))).toBe(false)
+    expect(isIntroLikely(store({ smashers_last_result: 'win' }))).toBe(false)
   })
 
   it('maps a throwing storage to unknown, not to empty', () => {

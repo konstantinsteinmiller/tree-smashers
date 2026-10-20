@@ -1,6 +1,6 @@
 // ─── The league never decides a save merge ─────────────────────────────────
 //
-// `spinner_league` rides along with whichever blob wins (it is a payload key,
+// `smashers_league` rides along with whichever blob wins (it is a payload key,
 // cloud-synced), but it must carry NO weight in the merge score: a ranked
 // streak must neither win nor lose a hydrate, and online builds re-sync the
 // standing from /league/me anyway. Checked with the league flag ON so the
@@ -25,7 +25,7 @@ describe('SaveMergePolicy × league', () => {
     vi.stubEnv('VITE_APP_FEATURE_LEAGUE', 'true')
     const { computeMeta, decideMerge, isPayloadKey } = await import('@/utils/save/SaveMergePolicy')
     const { LEAGUE_STATE_KEY } = await import('@/league/leagueGate')
-    const base = { spinner_campaign_stage: '21', spinner_upgrades: JSON.stringify({ tops: { star: 4 }, bottoms: {} }) }
+    const base = { smashers_campaign_stage: '21', smashers_upgrades: JSON.stringify({ tops: { star: 4 }, bottoms: {} }) }
     const at = '2026-10-10T00:00:00.000Z'
     const plain = computeMeta(read(base), at)
     const withLeague = computeMeta(read({ ...base, [LEAGUE_STATE_KEY]: champion }), at)
@@ -33,7 +33,7 @@ describe('SaveMergePolicy × league', () => {
     // It is cloud payload (travels with the winning blob)…
     expect(isPayloadKey(LEAGUE_STATE_KEY)).toBe(true)
     // …but a Champion league on the lower-progress side does not flip the merge.
-    const remote = computeMeta(read({ ...base, spinner_campaign_stage: '22' }), at)
+    const remote = computeMeta(read({ ...base, smashers_campaign_stage: '22' }), at)
     expect(decideMerge(withLeague, remote)).toEqual({ kind: 'remote-wins', bonusCoins: 22 * 50 })
     expect(decideMerge(remote, withLeague)).toEqual({ kind: 'local-wins' })
     expect(decideMerge(withLeague, plain)).toEqual({ kind: 'tie-keep-local' })

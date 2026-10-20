@@ -213,7 +213,7 @@ describe('leagueOpponents — ladder', () => {
     const cached = JSON.parse(storage.map.get(LEAGUE_POOL_KEY)!)
     expect(cached.v).toBe(1)
     expect(cached.entries.map((e: { id: string }) => e.id)).toEqual(['live0', 'live1', 'live2'])
-    expect(LEAGUE_POOL_KEY.startsWith('spinner_')).toBe(false) // device-only
+    expect(LEAGUE_POOL_KEY.startsWith('smashers_')).toBe(false) // device-only
   })
 
   it('live unreachable → device cache', async () => {
@@ -450,7 +450,7 @@ describe('baked pool (scripts/league-pool-snapshot.mjs)', () => {
     try {
       const loaded = await loadConfigFromFile({ command: 'build', mode: 'crazy-web' }, path.join(ROOT, 'vite.config.ts'), ROOT, 'silent')
       const plugins = (loaded!.config.plugins ?? []).flat(5) as { name?: string; buildStart?: () => void; resolveId?: (id: string) => unknown; load?: (id: string) => unknown }[]
-      const plugin = plugins.find((p) => p?.name === 'chaos-arena-league-pool')!
+      const plugin = plugins.find((p) => p?.name === 'tree-smashers-league-pool')!
       expect(plugin).toBeDefined()
       plugin.buildStart!.call({})
       const resolved = plugin.resolveId!.call({}, 'virtual:league-pool') as string

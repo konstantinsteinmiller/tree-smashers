@@ -6,7 +6,7 @@
 //      turns the engine's traits on (it used to drop them — no trait ever
 //      activated in the real campaign).
 //   2. Trophies: only a real campaign WIN of an encounter stage grants, and
-//      only once (idempotent grant); cheat / Boss Lab, ghost, daily, PvP and
+//      only once (idempotent grant); cheat / Boss Lab, ghost, PvP and
 //      league battles never do. The arena grants on the stage just fought,
 //      before advanceStage, and shows it on the roulette reward screen.
 //   3. HUD: the stat-card view follows the engine's bossTraitHud rows
@@ -142,14 +142,14 @@ describe('trait forwarding into the engine (BW6 blocker)', () => {
 
   it.each([110, 120, 130, 160, 200])('stage %i as the arena builds it turns the engine\'s traits on', (id) => {
     const e = useSpinnerGame()
-    e.initGame(team(), stageEnemyConfigs(getStageById(id)), false, 'boss', 0, false, undefined, null, 'circle', false, { seed: 7 })
+    e.initGame(team(), stageEnemyConfigs(getStageById(id)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 7 })
     expect(e.traitsActive()).toBe(true)
     e.disposePhysics()
   })
 
   it('a classic boss stage stays on the no-trait path', () => {
     const e = useSpinnerGame()
-    e.initGame(team(), stageEnemyConfigs(getStageById(100)), false, 'boss', 0, false, undefined, null, 'circle', false, { seed: 7 })
+    e.initGame(team(), stageEnemyConfigs(getStageById(100)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 7 })
     expect(e.traitsActive()).toBe(false)
     e.disposePhysics()
   })
@@ -185,7 +185,7 @@ describe('boss trophies', () => {
     expect(bossTrophiesFor({ ...win110, stage: getStageById(105) })).toEqual([])
     expect(bossTrophiesFor({ ...win110, stage: getStageById(10) })).toEqual([])
     expect(bossTrophiesFor({ ...win110, stage: getStageById(180) })).toEqual([])
-    for (const mode of ['cheat', 'ghost', 'daily', 'pvp', 'league'] as TrophyMode[]) {
+    for (const mode of ['cheat', 'ghost', 'pvp', 'league'] as TrophyMode[]) {
       expect(bossTrophiesFor({ ...win110, mode }), mode).toEqual([])
     }
     // a Boss Lab stage (id −1) carries the encounter id but never grants
@@ -224,16 +224,18 @@ describe('boss trophies', () => {
     expect(grantAt).toBeGreaterThan(0)
     expect(grantAt).toBeLessThan(branch.indexOf('advanceStage()'))
     expect(branch).toContain('mode: battleModeOf({ ghost: ghostMode.value, cheat: !!cheatStage.value })')
-    // PvP and the daily challenge return before the boss-win branch
-    expect(arenaSrc.indexOf('if (dailyChallengeMode.value) {')).toBeLessThan(i)
+    // the Daily Challenge was removed: no daily branch is left
+    expect(arenaSrc).not.toContain('dailyChallengeMode')
     // shown inside the roulette reward overlay; cleared on its Continue,
-    // which keeps queueing the skills intro after it
+    // which starts the next campaign game (the team skill-system intro was
+    // removed with the reskin: smashers carry their skills)
     const reward = arenaSrc.slice(arenaSrc.indexOf('v-model="showRouletteReward"'), arenaSrc.indexOf('//- 20h Skin Chest reward'))
     expect(reward).toContain('v-for="(id, ti) in trophyGrants"')
     expect(reward).toContain('component(:is="BossTrophyCardUi" :skin-id="id")')
     const cont = arenaSrc.slice(arenaSrc.indexOf('const onRouletteRewardContinue'), arenaSrc.indexOf('// The roulette only opens after a BOSS win'))
     expect(cont).toContain('trophyGrants.value = []')
-    expect(cont.indexOf('initCampaignGame()')).toBeLessThan(cont.indexOf('sk.value?.queueIntro('))
+    expect(cont).toContain('initCampaignGame()')
+    expect(cont).not.toContain('queueIntro(')
   })
 })
 
@@ -272,7 +274,7 @@ describe('Frost Lock: HUD row + refused tap on the frozen spinner', () => {
     const warden = stageEnemyConfigs(getStageById(120))
     // Unseeded: the scripted Math.random drives the Warden's aim (a seeded
     // match would roll its AI on the seed's aux stream — LG-DET).
-    e.initGame(team(), warden, false, 'boss', 0, false, undefined, null, 'circle', false)
+    e.initGame(team(), warden, false, 'boss', 0, false, undefined, null, 'circle')
     e.startPhysics()
     const [a, b] = e.playerBlades.value as [SpinnerState, SpinnerState]
     const w = e.npcBlades.value[0]!
@@ -386,7 +388,7 @@ describe('Boss Lab', () => {
   it('every Lab stage turns the engine traits on', () => {
     for (const entry of BOSS_LAB_ENTRIES) {
       const e = useSpinnerGame()
-      e.initGame(team(), stageEnemyConfigs(buildBossLabStage(entry.id, opts)), false, 'boss', 0, false, undefined, null, 'circle', false, { seed: 3 })
+      e.initGame(team(), stageEnemyConfigs(buildBossLabStage(entry.id, opts)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 3 })
       expect(e.traitsActive(), entry.id).toBe(true)
       e.disposePhysics()
     }

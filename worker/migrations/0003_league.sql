@@ -3,7 +3,7 @@
 -- Run ONCE against the live database, AFTER 0002 and BEFORE deploying the
 -- Worker that serves /league/* (see SETUP.md, "Upgrading: the league"):
 --
---   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0003_league.sql
+--   npx wrangler d1 execute leaderboard-tree-smashers --remote --file=./migrations/0003_league.sql
 --
 -- Only CREATE ... IF NOT EXISTS, so a second run is a harmless no-op. Nothing
 -- here touches `scores`: league opponents are READ from it (the 0002 build

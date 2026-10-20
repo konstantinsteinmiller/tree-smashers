@@ -8,7 +8,7 @@
 //                            meant no trait ever activated in the campaign.
 //   • bossTrophiesFor      — which trophy skins a finished battle may grant:
 //                            a real campaign WIN of an encounter stage only
-//                            (never cheat / Boss Lab, ghost, daily, PvP,
+//                            (never cheat / Boss Lab, ghost, PvP,
 //                            league), before the ownership check.
 //   • grantBossTrophies    — grant them (idempotent) and return the ones this
 //                            win newly unlocked — what the reward screen shows.
@@ -41,7 +41,7 @@ export interface BossTrophyInput {
 /**
  * Trophy skins this battle may grant (§3.5): only a campaign WIN of a real
  * encounter stage (id ≥ 101). A cheat / Boss Lab stage (id −1), a ghost, the
- * daily challenge, PvP and league gatekeepers (LG7) get nothing.
+ * PvP and league gatekeepers (LG7) get nothing.
  */
 export const bossTrophiesFor = ({ stage, result, mode }: BossTrophyInput): readonly BossTrophySkinId[] => {
   if (result !== 'win' || mode !== 'campaign') return []

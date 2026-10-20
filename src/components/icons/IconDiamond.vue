@@ -19,7 +19,5 @@ const src = prependBaseUrl('images/icons/diamond_256x256.webp')
 
 <style scoped lang="sass">
 .icon-diamond
-  // Subtle glow so the gem reads as a premium currency on dark backgrounds.
-  filter: drop-shadow(0 0 3px rgba(120, 220, 255, 0.55))
   -webkit-user-drag: none
 </style>

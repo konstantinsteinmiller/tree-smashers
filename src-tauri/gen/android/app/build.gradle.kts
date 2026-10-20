@@ -23,7 +23,7 @@ val keystoreProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.chaos.arena"
+    namespace = "com.tree.smashers"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         // AdMob App ID injected into the LevelPlay plugin's manifest via
@@ -35,7 +35,7 @@ android {
         // of a crash on startup.
         manifestPlaceholders["admobAppId"] = System.getenv("VITE_APP_ADMOB_ANDROID_APP_ID")
             ?: "ca-app-pub-3940256099942544~3347511713"
-        applicationId = "com.chaos.arena"
+        applicationId = "com.tree.smashers"
         minSdk = 24
         targetSdk = 36
         // versionCode source of truth (in priority order):
@@ -94,7 +94,7 @@ android {
     applicationVariants.all {
         outputs.all {
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                "chaos-arena-${defaultConfig.versionName}.apk"
+                "tree-smashers-${defaultConfig.versionName}.apk"
         }
     }
 }
@@ -103,7 +103,7 @@ afterEvaluate {
     tasks.matching { it.name.startsWith("bundle") && it.name.endsWith("Release") }.configureEach {
         doLast {
             // Mirror the produced AAB to a package-named copy
-            // (`com.chaos.arena.aab`) for upload tooling, while leaving
+            // (`com.tree.smashers.aab`) for upload tooling, while leaving
             // the original `app-universal-release.aab` in place. The
             // earlier version of this block did `renameTo`, which broke
             // AGP's `produceUniversalReleaseBundleIdeListingFile` task

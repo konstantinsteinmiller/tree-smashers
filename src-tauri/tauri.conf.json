@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Chaos Arena",
+  "productName": "Tree Smashers",
   "version": "../package.json",
-  "identifier": "com.chaos.arena",
+  "identifier": "com.tree.smashers",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../dist-tauri",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build-only"
+    "beforeBuildCommand": "pnpm build-only --outDir dist-tauri"
   },
   "app": {
     "windows": [
       {
-        "title": "Chaos Arena",
+        "title": "Tree Smashers",
         "width": 414,
         "height": 896,
         "resizable": true,

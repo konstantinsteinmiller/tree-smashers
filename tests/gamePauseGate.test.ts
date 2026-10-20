@@ -8,7 +8,7 @@
 // gameplay's own intent separately and only runs when both agree.
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { isGamePaused, registerPauseSyncer, setGamePaused } from '@/use/useGamePause'
+import { isGamePaused, registerPauseSyncer, setGamePaused, setPauseHold } from '@/use/useGamePause'
 
 /** Minimal stand-in for a loop owner, mirroring useSpinnerGame's wiring. */
 const makeLoop = () => {
@@ -36,6 +36,7 @@ const makeLoop = () => {
 describe('game pause gate', () => {
   beforeEach(() => {
     setGamePaused(false)
+    setPauseHold('notice', false)
   })
 
   it('stops a running loop when the platform pauses, and resumes it after', () => {
@@ -104,5 +105,38 @@ describe('game pause gate', () => {
     expect(a.loop.running).toBe(false)
     expect(b.loop.running).toBe(true)
     b.loop.dispose()
+  })
+
+  // The second input: a game-side hold (the forced-dark-mode notice). It must
+  // be independent of the platform's pause in BOTH directions.
+  it('a hold pauses the loop, and a platform resume cannot release it', () => {
+    const { loop, start } = makeLoop()
+    start()
+
+    setPauseHold('notice', true)
+    expect(loop.running).toBe(false)
+
+    // The portal pauses and resumes around it (an overlay, an ad).
+    setGamePaused(true)
+    setGamePaused(false)
+    expect(isGamePaused.value).toBe(true)
+    expect(loop.running).toBe(false)
+
+    setPauseHold('notice', false)
+    expect(loop.running).toBe(true)
+    loop.dispose()
+  })
+
+  it('releasing a hold does not resume a game the platform still has paused', () => {
+    const { loop, start } = makeLoop()
+    start()
+    setGamePaused(true)
+    setPauseHold('notice', true)
+    setPauseHold('notice', false)
+    expect(loop.running).toBe(false)
+
+    setGamePaused(false)
+    expect(loop.running).toBe(true)
+    loop.dispose()
   })
 })

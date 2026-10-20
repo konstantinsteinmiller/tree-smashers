@@ -11,10 +11,10 @@
 //      observable from the test.
 //   3. Navigates to the served page and waits for `window.__saveManager`
 //      to appear — that's the signal that SaveManager.init() finished.
-//   4. Triggers a normal `localStorage.setItem('spinner_coins', ...)` from
+//   4. Triggers a normal `localStorage.setItem('smashers_coins', ...)` from
 //      the page.
 //   5. Asserts that, after the strategy's flush debounce, the stub SDK
-//      saw `setItem('spinner_coins', '999')` plus a manifest update.
+//      saw `setItem('smashers_coins', '999')` plus a manifest update.
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { chromium, type Browser } from 'playwright'
@@ -147,7 +147,7 @@ describe('CrazyGames build → sdk.data', () => {
     })
 
     await page.evaluate(() => {
-      window.localStorage.setItem('spinner_coins', '999')
+      window.localStorage.setItem('smashers_coins', '999')
     })
 
     await page.waitForTimeout(1500)
@@ -156,7 +156,7 @@ describe('CrazyGames build → sdk.data', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await page.evaluate(() => (window as any).__cgFakeCalls)
 
-    const setCoinsCalls = calls.filter((c) => c.method === 'set' && c.key === 'spinner_coins')
+    const setCoinsCalls = calls.filter((c) => c.method === 'set' && c.key === 'smashers_coins')
     expect(setCoinsCalls.length).toBeGreaterThan(0)
     expect(setCoinsCalls[setCoinsCalls.length - 1]!.value).toBe('999')
 
@@ -183,7 +183,7 @@ describe('CrazyGames build → sdk.data', () => {
     )
 
     await page.evaluate(() => {
-      window.localStorage.setItem('spinner_player_team', JSON.stringify([1, 2, 3]))
+      window.localStorage.setItem('smashers_player_team', JSON.stringify([1, 2, 3]))
     })
     await page.waitForTimeout(1500)
 
@@ -194,7 +194,7 @@ describe('CrazyGames build → sdk.data', () => {
     expect(manifestRaw).not.toBeNull()
     const manifest = JSON.parse(manifestRaw!)
     expect(Array.isArray(manifest)).toBe(true)
-    expect(manifest).toContain('spinner_player_team')
+    expect(manifest).toContain('smashers_player_team')
 
     await context.close()
   }, 90_000)

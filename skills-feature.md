@@ -1,4 +1,4 @@
-# Skills — design spec (Chaos Arena)
+# Skills — design spec (Tree Smashers)
 
 > Status: **design, not implemented**. Written to be built from without guessing.
 > Every number below is either read from the shipped code (file/function cited) or
@@ -34,7 +34,7 @@
   per-frame work is capped at **≤ 20 extra canvas primitives** in the worst case, all
   pooled, zero per-frame allocation, **no `shadowBlur`**, and every skill has an `FX.low`
   fallback (§8.3).
-- **Modes:** ON everywhere — campaign, bosses, daily challenge, leaderboard ghost fights and
+- **Modes:** ON everywhere — campaign, bosses, leaderboard ghost fights and
   **PvP** (both players' loadouts, exchanged and replayed deterministically, shown in the VS
   preview, §9.1). Campaign and daily AI enemies get **no** skills in v1 (backlog §11).
 
@@ -896,7 +896,7 @@ capped — past the cap every coin flows back to parts.
 
 - **Two states.** *Unlocked* is derived, never stored: `highestClearedStage =
   currentStageId − 1 ≥ unlockStage` — a hydrate race or a fresh device can never lose an
-  unlock. *Learned* = a stored level ≥ 1 in `spinner_skills` (bought with coins).
+  unlock. *Learned* = a stored level ≥ 1 in `smashers_skills` (bought with coins).
 - Order rationale: defensive/comeback skills first (they soften the difficulty spikes a
   stage-10–30 player actually hits), offence next, situational/control last. Thematic
   links (the Bear Mother's hide → Mirror Plate, ghost → Phase Step, iron brotherhood →
@@ -979,7 +979,7 @@ screen, audio guarantee handled centrally by `useAds.showRewardedAd`).
 - Where: on a skill's learn / upgrade button in the skill picker, only when
   `coins < cost && cost − coins ≤ rewardedAdCoins` (`useStageRewards.ts`).
 - Gate: `isRewardedReady` **and** the AdRewardButton cooldown key
-  `spinner_ad_button_ready_at` is expired (the same 30 s cooldown, the same
+  `smashers_ad_button_ready_at` is expired (the same 30 s cooldown, the same
   `useRewardedThrottle` budget of 5 per 7 min). One inventory, no new farm loop.
 - Call: `showRewardedAd({ kind: 'coins', amount: rewardedAdCoins })` (native builds get the
   Families intro modal from there). On `true`: `addCoins(rewardedAdCoins)`, coin burst to
@@ -1228,7 +1228,6 @@ fills and pattern fills dominate, `shadowBlur` is poison on Firefox, pools must 
 |-------------------------------------------------------|----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Campaign (incl. infinite cycles)                      | ON                                                 | the softener's target                                                                                                                                                                                                           |
 | Campaign bosses                                       | ON (rubber band unchanged, applied first)          | bosses are the difficulty spikes                                                                                                                                                                                                |
-| Daily challenge                                       | ON                                                 | PvE; enemies scale to the player's peak **part** levels (`generateChallenge`) and carry boss abilities at 66 %; 3 attempts/day and a fixed once-per-day diamond → no farm; skills make it fair for players who invested in them |
 | Leaderboard ghost fights (`FakeLeaderBoard` rematch)  | ON, **both sides**                                 | the ghost replays a recorded loadout (§9.1); small reward (50 + 2 × stage)                                                                                                                                                      |
 | Global live leaderboard (score = best campaign stage) | indirect                                           | everyone can earn every skill with coins only (no IAP/diamond path) → not pay-to-win. Tie-break `teamPower` stays parts-only (no Worker contract change).                                                                       |
 | PvP (PeerJS)                                          | **ON**, both sides (user decision)                 | loadouts exchanged in `player-ready`, deterministic per-blade proc streams, both loadouts in the VS preview; "level 1" lobbies clamp skills to L1 — §9.1                                                                        |
@@ -1285,7 +1284,7 @@ skills to L1 (≤ 1.15× for any pair at L1, §3.10).
 **AI opponents:** campaign and daily AI enemies get no skills in v1 — giving them skills
 would cancel the softener.
 Backlog: "elite" enemies in campaign cycle ≥ 2 (stage 201+) carrying one L5 skill with a
-visible glyph badge, and a daily-challenge mutator (§11).
+visible glyph badge (§11).
 
 ---
 
@@ -1466,11 +1465,11 @@ cards (`bladeStats` stays as is — skills never change displayed ATK/DEF/SPD).
 
 | key                     | shape                                                          | notes                                                                                                                                                               |
 |-------------------------|----------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `spinner_skills`        | `{"v":1,"lv":{"mirror_plate":3,…}}`                            | learned skills only (level ≥ 1); an unlocked-but-unlearned skill has no entry; unknown ids and entries whose skill is not unlocked by the current stage are ignored |
-| `spinner_skill_loadout` | `{"v":1,"slots":["phase_step","guard_shell"]}`                 | the team's 2 slots (`null` = empty); sanitized on read: unowned skills, a locked slot 2 and duplicates are dropped (the first entry wins)                           |
-| `spinner_skill_ui`      | `{"v":1,"seen":["phase_step"],"teaser":true,"slot2Seen":true}` | which reveals were shown; synced so a second device doesn't replay them                                                                                             |
+| `smashers_skills`        | `{"v":1,"lv":{"mirror_plate":3,…}}`                            | learned skills only (level ≥ 1); an unlocked-but-unlearned skill has no entry; unknown ids and entries whose skill is not unlocked by the current stage are ignored |
+| `smashers_skill_loadout` | `{"v":1,"slots":["phase_step","guard_shell"]}`                 | the team's 2 slots (`null` = empty); sanitized on read: unowned skills, a locked slot 2 and duplicates are dropped (the first entry wins)                           |
+| `smashers_skill_ui`      | `{"v":1,"seen":["phase_step"],"teaser":true,"slot2Seen":true}` | which reveals were shown; synced so a second device doesn't replay them                                                                                             |
 
-- All three are `spinner_`-prefixed → part of the cloud payload
+- All three are `smashers_`-prefixed → part of the cloud payload
   (`SaveMergePolicy.PAYLOAD_PREFIXES`) on every strategy (CrazyGames, Playgama/YouTube,
   GameDistribution, Poki local, Glitch) with no strategy change. Composables write
   `localStorage` only (the SaveManager patches it; Playgama's batching stays inside its
@@ -1481,9 +1480,9 @@ cards (`bladeStats` stays as is — skills never change displayed ATK/DEF/SPD).
   they are coin purchases, so they sync and merge like part upgrades.
 - **Merge score** (`computeMeta`): `+ 150 × Σ levels` over the stored levels — learning and
   each upgrade score exactly like a part upgrade. Update `tests/save/*` expectations.
-- **Reset progress** (`useResetProgress.ts`): the three keys are `spinner_` and not in
+- **Reset progress** (`useResetProgress.ts`): the three keys are `smashers_` and not in
   `KEEP_KEYS` → wiped; stage resets to 1 → skills unowned. Nothing to add.
-- **Migration** (first run of a build with skills, `stage > 10`, no `spinner_skill_ui`):
+- **Migration** (first run of a build with skills, `stage > 10`, no `smashers_skill_ui`):
   unlocks derived, nothing learned, one combined reveal queued (§7.1).
 - **Never persist platform/device state** here (quality tier, mute, language stay where
   they are).
@@ -1600,7 +1599,6 @@ within noise. Record the row in `PERF-LEDGER.md` (null result welcome). Also run
 | **Trajectory Sight** (aim line shows first ricochet; level = bounces shown)     | pure QoL, no power; needs per-drag raycast drawing; better as a free accessibility option                                      |
 | **Third slot** (`new-features.md` said "max 3")                                 | breaks the √1.5 pair argument; would need a per-battle runtime governor                                                        |
 | **Elite enemies with skills** (cycle ≥ 2, stage 201+)                           | late-cycle variety; needs the red glyph badge and a counter-tell                                                               |
-| **Daily-challenge mutators** ("enemies have Static Charge today")               | uses the same runtime on NPC blades                                                                                            |
 | **Battle-pass skill rewards** (e.g. "+1 level of your lowest skill" on 3 tiers) | the unlock schedule already paces them; revisit if the sink feels too steep                                                    |
 | **Skill evolution at L10** (cosmetic trail/colour)                              | pure cosmetics, good for the long tail after all ten are maxed                                                                 |
 | **Rewarded "try a locked skill for one battle"**                                | teaser monetisation; wait for the top-up's numbers first                                                                       |

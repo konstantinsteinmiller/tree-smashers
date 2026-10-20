@@ -71,13 +71,13 @@ const aria = computed(() =>
       span.lhb__tag(v-if="tag") {{ tag }}
     span.lhb__bubble(v-if="hasReward" aria-hidden="true" class="lhb__bubble--gift")
       svg(viewBox="0 0 24 24" width="100%" height="100%")
-        path(d="M4 10h16v3H4zm1 4h6v7H5zm8 0h6v7h-6zM11 10h2v11h-2zM12 9.5C10 6 6.5 5 6.5 7.5 6.5 9 9 9.5 12 9.5zm0 0c2-3.5 5.5-4.5 5.5-2 0 1.5-2.5 2-5.5 2z" fill="#fff" stroke="#0f1a30" stroke-width="1.2" stroke-linejoin="round")
+        path(d="M4 10h16v3H4zm1 4h6v7H5zm8 0h6v7h-6zM11 10h2v11h-2zM12 9.5C10 6 6.5 5 6.5 7.5 6.5 9 9 9.5 12 9.5zm0 0c2-3.5 5.5-4.5 5.5-2 0 1.5-2.5 2-5.5 2z" fill="#fdf2d8" stroke="#3a2314" stroke-width="1.2" stroke-linejoin="round")
     span.lhb__bubble(v-else aria-hidden="true" :class="fights > 0 ? 'lhb__bubble--on' : 'lhb__bubble--off'") {{ fights }}
 </template>
 
 <style scoped lang="sass">
 .lhb
-  --lhb-accent: #ffc93c
+  --lhb-accent: var(--color-sun-400)
   position: relative
   display: inline-block
   padding: 0
@@ -87,17 +87,18 @@ const aria = computed(() =>
   -webkit-tap-highlight-color: transparent
 
   &:focus-visible
-    outline: 3px solid #ffcd00
+    outline: 3px solid var(--ui-focus)
     outline-offset: 3px
-    border-radius: 0.5rem
+    border-radius: var(--radius-ui)
 
 .lhb__shadow
   position: absolute
   inset: 0
   transform: translateY(0.25rem)
-  border-radius: 0.5rem
-  background: #1a2b4b
+  border-radius: var(--radius-ui)
+  background: var(--color-ink)
 
+// Wood plank (matches FIconButton type=wood), tier accent as a top stripe.
 .lhb__body
   position: relative
   display: flex
@@ -110,18 +111,18 @@ const aria = computed(() =>
   width: calc(2.75rem + 4px)
   height: calc(2.75rem + 4px)
   padding: 0
-  border-radius: 0.5rem
-  border: 2px solid #0f1a30
-  background: radial-gradient(90% 80% at 50% 20%, color-mix(in srgb, var(--lhb-accent) 45%, #2a4476), #1a2b4b 80%)
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18)
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-ink)
+  background-color: var(--color-wood-500)
+  box-shadow: inset 0 3px 0 var(--lhb-accent), inset 0 -3px 0 var(--color-wood-700)
 
 .lhb__tag
   font-size: 0.6rem
   font-weight: 900
   line-height: 1
-  color: var(--lhb-accent)
+  color: var(--color-cream-50)
   font-variant-numeric: tabular-nums
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
 
 .lhb__bubble
   position: absolute
@@ -131,25 +132,26 @@ const aria = computed(() =>
   height: 1.3rem
   padding: 0 0.3rem
   border-radius: 999px
-  border: 2px solid #0f1a30
+  border: 2px solid var(--color-ink)
+  box-shadow: 0 2px 0 var(--color-ink)
   display: flex
   align-items: center
   justify-content: center
   font-size: 0.72rem
   font-weight: 900
-  color: #fff
+  color: var(--color-cream-50)
   line-height: 1
-  text-shadow: 0 1px 0 #000
+  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
 
 .lhb__bubble--on
-  background: linear-gradient(to bottom, #5fe08a, #1f9c55)
+  background-color: var(--color-leaf-500)
 .lhb__bubble--off
-  background: linear-gradient(to bottom, #8193ad, #4d5d78)
+  background-color: var(--color-wood-600)
 .lhb__bubble--gift
   width: 1.5rem
   height: 1.5rem
   padding: 0.15rem
-  background: linear-gradient(to bottom, #ff7a6b, #d9303c)
+  background-color: var(--color-berry-500)
 
 .lhb--idle .lhb__body
   filter: saturate(0.7)

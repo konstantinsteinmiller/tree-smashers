@@ -134,7 +134,7 @@ describe('isSpeedBoostUnaffordable', () => {
 
 const makeHarness = async (coinBuild: boolean, startCoins: number) => {
   vi.resetModules()
-  localStorage.setItem('spinner_coins', String(startCoins))
+  localStorage.setItem('smashers_coins', String(startCoins))
   // useUser first (useMatch ↔ useModels ↔ useUser cycle guard).
   await import('@/use/useUser')
   const { default: useSpinnerConfig } = await import('@/use/useSpinnerConfig')
@@ -170,7 +170,7 @@ describe('handleSpeedSwitchTap', () => {
     const h = await makeHarness(true, 250)
     expect(handleSpeedSwitchTap(2, h.deps)).toBe('coins')
     expect(h.wallet.coins.value).toBe(150)
-    expect(localStorage.getItem('spinner_coins')).toBe('150')
+    expect(localStorage.getItem('smashers_coins')).toBe('150')
     expect(h.grants).toEqual(['full'])
     expect(h.speed()).toBe(2)
     expect(h.showAd).not.toHaveBeenCalled()

@@ -29,6 +29,13 @@ impl<R: Runtime> Levelplay<R> {
         Ok(ShowAdResponse::default())
     }
 
+    pub fn show_privacy_options(&self) -> crate::Result<PrivacyOptionsResponse> {
+        Ok(PrivacyOptionsResponse {
+            shown: false,
+            error: Some("desktop: no consent form".into()),
+        })
+    }
+
     pub fn launch_test_suite(&self) -> crate::Result<LaunchTestSuiteResponse> {
         Ok(LaunchTestSuiteResponse {
             launched: false,

@@ -11,7 +11,7 @@ import type {
 
 // ─── Playgama Bridge save strategy (SDK v2) ────────────────────────────────
 //
-// Persists chaos-arena gameplay keys through `bridge.storage`.
+// Persists tree-smashers gameplay keys through `bridge.storage`.
 //
 // ─── Why the v1 version lost saves on YouTube ──────────────────────────────
 //
@@ -41,7 +41,7 @@ import type {
 //    i.e. a read-modify-write of the ENTIRE save. Fire two `storage.set` calls
 //    without waiting and both read the same snapshot, then the second write
 //    clobbers the first. v1 issued one call per key AND a second call for the
-//    key manifest, concurrently — so a `spinner_coins` write and its own
+//    key manifest, concurrently — so a `smashers_coins` write and its own
 //    manifest update raced, and one of them always lost. Observed directly:
 //    coins written, `saveData` called, coins absent from the resulting blob.
 //

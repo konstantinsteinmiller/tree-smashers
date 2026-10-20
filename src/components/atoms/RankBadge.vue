@@ -97,20 +97,21 @@ const ariaLabel = computed(() =>
 </template>
 
 <style scoped lang="sass">
-// Deliberately the same pill the rest of the HUD wears — dark plate, hairline
-// black rule, glyph then number — so the placing reads as one of the game's own
-// numbers rather than a widget bolted on. Gold, and a gold rule, because it is
-// the one number on the screen that is not about this run: it is about everyone
+// The same wood plate the rest of the HUD wears — ink outline, hard 0-blur
+// drop, glyph then number — so the placing reads as one of the game's own
+// numbers rather than a widget bolted on. A sun-gold trophy, because it is the
+// one number on the screen that is not about this run: it is about everyone
 // else.
 .rank-badge
   display: inline-flex
   align-items: baseline
   gap: 0.3em
   padding: clamp(0.15rem, 0.9vmin, 0.3rem) clamp(0.4rem, 2vmin, 0.7rem)
-  border: 2px solid rgba(255, 217, 60, 0.45)
+  border: 2px solid var(--color-ink)
   border-radius: 999px
-  background-color: rgba(255, 217, 60, 0.1)
-  color: #ffd93c
+  background-color: var(--color-wood-600)
+  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
+  color: var(--color-sun-300)
 
 .rank-badge__icon
   // `align-self` rather than `align-items: center` on the row: the numbers set
@@ -121,16 +122,15 @@ const ariaLabel = computed(() =>
   height: clamp(0.85rem, 4vmin, 1.2rem)
 
 .rank-badge__rank
-  color: #fff
+  color: var(--color-cream-50)
   font-weight: 900
   font-size: clamp(0.85rem, 4.2vmin, 1.3rem)
   line-height: 1
-  // Every number in this game sits on a hard black shadow; without it the pill
-  // looks like a different app's component.
-  text-shadow: 2px 2px 0 #000
+  // Every number in this game sits on a hard ink outline.
+  text-shadow: 0 2px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
 
 .rank-badge__of
-  color: #b9cbe8
-  text-transform: uppercase
-  font-size: clamp(0.5rem, 2.4vmin, 0.7rem)
+  color: var(--color-cream-200)
+  font-weight: 800
+  font-size: clamp(0.55rem, 2.4vmin, 0.75rem)
 </style>

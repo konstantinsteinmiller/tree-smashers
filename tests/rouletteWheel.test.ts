@@ -37,7 +37,7 @@ vi.mock('@/use/useModels', () => ({
   SPECIAL_SKINS: new Set(['sp1', 'sp2', 'sp3']),
   isModelFullyOwned: (id: string) => owned.has(id),
   buySkin: (...args: unknown[]) => buySkin(...args),
-  modelImgPath: (id: string) => `images/models/${id}_256x256.webp`
+  modelImgPath: (id: string) => `data:image/png;portrait=${id}`
 }))
 vi.mock('@/use/useAds', () => ({
   isRewardedReady,
@@ -441,5 +441,114 @@ describe('roulette grants: a respin ADDS to the first spin', () => {
 
     const jackpot = rouletteGrantFor({ type: 'diamonds', diamonds: 5 }, base)
     expect(jackpot).toMatchObject({ diamonds: 5, coins: 0 })
+  })
+})
+
+// ─── Skin Chest roulette (`mode="skins"`) ───────────────────────────────────
+// A ripe Skin Chest opens this wheel: unowned skins only, the chest's previewed
+// skin at 3x the chance of every other skin, the boss wheel's ad respin.
+describe('RouletteWheel mode="skins" (Skin Chest roulette)', () => {
+  const FEATURED = { topPartId: 'alpha', modelId: 'n2' }
+
+  const mountSkins = (ownedSet: string[], featured: unknown = FEATURED) => {
+    owned.clear()
+    ownedSet.forEach(id => owned.add(id))
+    buySkin.mockClear()
+    showRewardedAd.mockClear()
+    return mount(RouletteWheel, {
+      props: { mode: 'skins', featuredSkin: featured },
+      global: { plugins: [i18n()] },
+      attachTo: document.body
+    })
+  }
+
+  const runToRest = async (wrapper: any) => {
+    const vm = wrapper.vm as any
+    for (let i = 0; i < 400 && !wrapper.emitted('result') && !vm.showAdButton; i++) {
+      vi.advanceTimersByTime(20)
+      await nextTick()
+    }
+  }
+
+  it('carries only unowned skins — no coins, no jackpot — with the featured skin at 3x weight', () => {
+    const wrapper = mountSkins(['n1'])
+    const segs = (wrapper.vm as any).segments as any[]
+    expect(segs.every(s => s.kind === 'skin')).toBe(true)
+    const ids = segs.map(s => s.result.skin.modelId)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids).not.toContain('n1')
+    const featured = segs.filter(s => s.result.skin.modelId === 'n2')
+    expect(featured).toHaveLength(1)
+    expect(featured[0].weight).toBe(3)
+    for (const s of segs) if (s !== featured[0]) expect(s.weight).toBe(1)
+    expect(segs.length).toBeLessThanOrEqual(8)
+    wrapper.unmount()
+  })
+
+  it('lands the featured skin about 3x as often as any other skin', async () => {
+    const wins: Record<string, number> = {}
+    let total = 0
+    for (let seed = 1; seed <= 160; seed++) {
+      const rnd = seeded(seed)
+      vi.spyOn(Math, 'random').mockImplementation(() => rnd())
+      isRewardedReady.value = false
+      const wrapper = mountSkins(['n1', 'n3', 'n4', 'n5', 'n6', 'sp1'])
+      await runToRest(wrapper)
+      const res = wrapper.emitted('result')![0]![0] as any
+      wins[res.skin.modelId] = (wins[res.skin.modelId] ?? 0) + 1
+      total++
+      expect(buySkin).toHaveBeenCalledWith(res.skin.topPartId, res.skin.modelId)
+      wrapper.unmount()
+      vi.restoreAllMocks()
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => null)
+    }
+    // n2 (3) vs n... others: sp2, sp3 (1 each) → expected 3/5 = 60 %.
+    expect(wins['n2']! / total).toBeGreaterThan(0.45)
+    expect(wins['n2']! / total).toBeLessThan(0.75)
+  })
+
+  it('a featured skin that is already owned is not on the wheel', () => {
+    const wrapper = mountSkins(['n2'])
+    const ids = ((wrapper.vm as any).segments as any[]).map(s => s.result.skin.modelId)
+    expect(ids).not.toContain('n2')
+    expect(ids.length).toBeGreaterThan(0)
+    wrapper.unmount()
+  })
+
+  it('offers the ad respin and rebuilds the wheel without the skin just won', async () => {
+    isRewardedReady.value = true
+    const wrapper = mountSkins([])
+    const vm = wrapper.vm as any
+    await runToRest(wrapper)
+    expect(vm.showAdButton).toBe(true)
+    const first = (wrapper.emitted('result')![0]![0] as any).skin.modelId
+    owned.add(first) // the wheel's buySkin is mocked; mirror the grant
+    const btn = wrapper.findAll('button').find((b: any) => b.text().toLowerCase().includes('spinagain'))
+    await btn!.trigger('click')
+    await flushPromises()
+    const ids = (vm.segments as any[]).map(s => s.result.skin.modelId)
+    expect(ids).not.toContain(first)
+    for (let i = 0; i < 400 && !wrapper.emitted('done'); i++) {
+      vi.advanceTimersByTime(20)
+      await nextTick()
+    }
+    expect(wrapper.emitted('result')).toHaveLength(2)
+    expect(wrapper.emitted('done')).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it('no respin when the first spin won the last unowned skin', async () => {
+    isRewardedReady.value = true
+    const all = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'sp1', 'sp2', 'sp3']
+    const wrapper = mountSkins(all.filter(id => id !== 'n2'))
+    // The mocked buySkin doesn't touch `owned`; make the landing skin owned.
+    buySkin.mockImplementation((_t: unknown, id: unknown) => { owned.add(id as string) })
+    await runToRest(wrapper)
+    expect((wrapper.vm as any).showAdButton).toBe(false)
+    vi.advanceTimersByTime(1500)
+    await nextTick()
+    expect(wrapper.emitted('done')).toHaveLength(1)
+    buySkin.mockReset()
+    wrapper.unmount()
   })
 })

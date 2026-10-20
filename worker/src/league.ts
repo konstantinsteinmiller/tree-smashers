@@ -1,5 +1,5 @@
 /**
- * ─── Chaos Arena league routes (LG4) ────────────────────────────────────────
+ * ─── Tree Smashers league routes (LG4) ────────────────────────────────────────
  *
  * The server half of the simulated-PvP league. Every rule (tiers, LP deltas,
  * floors, shields, the gatekeeper gate, the daily LP cap, season resets) lives

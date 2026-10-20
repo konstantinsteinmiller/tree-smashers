@@ -2,7 +2,7 @@
 
 Every command below is run in PowerShell on Windows, from the repo root unless
 it says otherwise. The Worker is already named for this game —
-`leaderboard-chaos-arena` — so the commands can be pasted as they stand; the only
+`leaderboard-tree-smashers` — so the commands can be pasted as they stand; the only
 value you have to fill in yourself is the D1 `database_id` that step 3 prints.
 
 The board's SCORE is the highest campaign stage a player has ever reached, and
@@ -42,7 +42,7 @@ npx wrangler whoami
 ## 3. Create the database
 
 ```powershell
-npx wrangler d1 create leaderboard-chaos-arena
+npx wrangler d1 create leaderboard-tree-smashers
 ```
 
 It prints a block like this:
@@ -50,7 +50,7 @@ It prints a block like this:
 ```toml
 [[d1_databases]]
 binding = "DB"
-database_name = "leaderboard-chaos-arena"
+database_name = "leaderboard-tree-smashers"
 database_id = "0f2c9a51-....-............"
 ```
 
@@ -68,7 +68,7 @@ local emulator). Wrangler asks before touching remote data — answer `y`. You
 should see two `CREATE TABLE` statements and one `CREATE INDEX` execute.
 
 Verify from the dashboard if you like: **Storage & Databases → D1 →
-leaderboard-chaos-arena → Tables** should now list `scores` and `board_cache`.
+leaderboard-tree-smashers → Tables** should now list `scores` and `board_cache`.
 
 ## 5. Deploy
 
@@ -80,8 +80,8 @@ On a brand-new account this asks you to register a `workers.dev` subdomain
 first — pick anything, it becomes part of the URL. When it finishes it prints:
 
 ```
-Published leaderboard-chaos-arena
-  https://leaderboard-chaos-arena.rodent-race.workers.dev
+Published leaderboard-tree-smashers
+  https://leaderboard-tree-smashers.rodent-race.workers.dev
 ```
 
 **That URL is what the game needs.** Keep it.
@@ -89,7 +89,7 @@ Published leaderboard-chaos-arena
 ## 6. Check it is alive
 
 ```powershell
-$BOARD = 'https://leaderboard-chaos-arena.rodent-race.workers.dev'
+$BOARD = 'https://leaderboard-tree-smashers.rodent-race.workers.dev'
 
 # The board — empty at this point, which is the correct answer.
 Invoke-RestMethod "$BOARD/top"
@@ -116,11 +116,11 @@ Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $bad "$BOAR
 Delete the test row when you are done:
 
 ```powershell
-npx wrangler d1 execute leaderboard-chaos-arena --remote `
+npx wrangler d1 execute leaderboard-tree-smashers --remote `
   --command "DELETE FROM scores WHERE id = 'testplayer01'"
 # The cached blob still holds the old table until BOARD_TTL_MS expires and a
 # read rebuilds it (writes no longer rebuild) — clear it to see the change now:
-npx wrangler d1 execute leaderboard-chaos-arena --remote --command "DELETE FROM board_cache"
+npx wrangler d1 execute leaderboard-tree-smashers --remote --command "DELETE FROM board_cache"
 ```
 
 ## 7. Point the game at it
@@ -128,7 +128,7 @@ npx wrangler d1 execute leaderboard-chaos-arena --remote --command "DELETE FROM 
 In the repo root, edit `.env`:
 
 ```
-VITE_LEADERBOARD_URL=https://leaderboard-chaos-arena.rodent-race.workers.dev
+VITE_LEADERBOARD_URL=https://leaderboard-tree-smashers.rodent-race.workers.dev
 VITE_LEADERBOARD_SECRET=
 ```
 
@@ -174,7 +174,7 @@ BEFORE the Worker that writes them goes live. Order matters:
 
    ```powershell
    cd worker
-   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0002_player_build.sql
+   npx wrangler d1 execute leaderboard-tree-smashers --remote --file=./migrations/0002_player_build.sql
    ```
 
    Four statements run (three `ALTER TABLE`, one `CREATE INDEX`). Running it a
@@ -196,7 +196,7 @@ fail on the missing columns and every post would answer 503.
 Check it took:
 
 ```powershell
-npx wrangler d1 execute leaderboard-chaos-arena --remote `
+npx wrangler d1 execute leaderboard-tree-smashers --remote `
   --command "SELECT COUNT(*) AS with_build FROM scores WHERE build IS NOT NULL"
 ```
 
@@ -224,7 +224,7 @@ secret. Order matters — run everything from `worker/`:
 
    ```powershell
    cd worker
-   npx wrangler d1 execute leaderboard-chaos-arena --remote --file=./migrations/0003_league.sql
+   npx wrangler d1 execute leaderboard-tree-smashers --remote --file=./migrations/0003_league.sql
    ```
 
    Only `CREATE ... IF NOT EXISTS` (tables `league`, `league_cache` and one
@@ -245,7 +245,7 @@ secret. Order matters — run everything from `worker/`:
 Check it took:
 
 ```powershell
-$w = "https://leaderboard-chaos-arena.<your-subdomain>.workers.dev"
+$w = "https://leaderboard-tree-smashers.<your-subdomain>.workers.dev"
 Invoke-RestMethod "$w/league/top"          # { season, total: 0, entries: [], dist: [] }
 Invoke-RestMethod "$w/league/pool?band=4"  # opponents with a posted build, power ~24-59
 ```
@@ -316,14 +316,14 @@ Then `npm run deploy` again.
 ## Watching it in production
 
 * **Live logs:** `npx wrangler tail` (from `worker/`), or the dashboard under
-  **Workers & Pages → leaderboard-chaos-arena → Logs**.
+  **Workers & Pages → leaderboard-tree-smashers → Logs**.
 * **Quota use:** same page, **Metrics**. Watch requests/day (100 k) and D1 rows
   **written**/day (100 k). Reads are effectively free under this design: a view
   costs one row or zero, and a submission three. The fixed ceiling is the two
   materialised rebuilds — the board every `BOARD_TTL_MS` and the histogram every
   `DIST_TTL_MS` — which together are a low tens of thousands of rows a day
   whatever the traffic does.
-* **The data:** **Storage & Databases → D1 → leaderboard-chaos-arena → Console**
+* **The data:** **Storage & Databases → D1 → leaderboard-tree-smashers → Console**
   runs SQL straight from the browser, e.g.
   `SELECT * FROM scores ORDER BY score DESC LIMIT 20;`
 
@@ -335,9 +335,9 @@ the current build repopulate. The rows cannot be merged reliably.
 
 ```powershell
 cd worker
-npx wrangler d1 execute leaderboard-chaos-arena --remote --command "DELETE FROM scores"
+npx wrangler d1 execute leaderboard-tree-smashers --remote --command "DELETE FROM scores"
 # The materialised top-N is a separate row and does not clear itself.
-npx wrangler d1 execute leaderboard-chaos-arena --remote --command "DELETE FROM board_cache"
+npx wrangler d1 execute leaderboard-tree-smashers --remote --command "DELETE FROM board_cache"
 ```
 
 ## The histogram on `/top`, and the baked board

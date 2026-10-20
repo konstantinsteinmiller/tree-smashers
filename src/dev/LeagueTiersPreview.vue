@@ -26,13 +26,13 @@ const POSITION_STRIP = ['1', '12', '123', '1234', '99999']
 /** LeagueRankBadge sizes, straddling the 64 → 65px text/plaque switch. */
 const BADGE_SIZES = [24, 32, 48, 64, 65, 96]
 const PLATES = [
-  { id: 'dark', cls: 'bg-[#0f1420] text-white' },
-  { id: 'light', cls: 'bg-[#eef1f5] text-[#1b2230]' }
+  { id: 'dark', cls: 'bg-forest-900 text-cream-100' },
+  { id: 'light', cls: 'bg-cream-100 text-ink' }
 ]
 </script>
 
 <template lang="pug">
-  div.min-h-screen.p-4(class="bg-[#05070c] text-white font-sans" data-testid="league-tiers-preview")
+  div.min-h-screen.p-4(class="bg-forest-800 text-cream-100" data-testid="league-tiers-preview")
     div.mb-3.flex.flex-wrap.items-center.gap-4(v-if="!shot")
       h1.text-lg.font-black League tier icons (dev)
       label.flex.items-center.gap-2

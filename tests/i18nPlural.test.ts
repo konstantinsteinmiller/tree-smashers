@@ -85,59 +85,57 @@ describe('coin-count aria labels (shipped messages)', () => {
   const at = (loc: string, key: string) => [1, 2, 5, 21].map(n => render(loc, key, n))
 
   it('English: one | other', () => {
-    expect(at('en', 'skills.learnAria')).toEqual([
-      'Learn X for 1 coin', 'Learn X for 2 coins', 'Learn X for 5 coins', 'Learn X for 21 coins'
+    expect(at('en', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Level up X for 1 coin', 'Level up X for 2 coins', 'Level up X for 5 coins', 'Level up X for 21 coins'
     ])
     expect(render('en', 'spinner.tripleCoinsAria', 450)).toBe('Watch an ad to get 450 coins in total')
   })
 
   it('Russian / Ukrainian: 1 & 21 one, 2 few, 5 many', () => {
-    expect(at('ru', 'skills.learnAria')).toEqual([
-      'Изучить X за 1 монету', 'Изучить X за 2 монеты', 'Изучить X за 5 монет', 'Изучить X за 21 монету'
+    expect(at('ru', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Повысить уровень: X за 1 монету', 'Повысить уровень: X за 2 монеты',
+      'Повысить уровень: X за 5 монет', 'Повысить уровень: X за 21 монету'
     ])
-    expect(at('ru', 'skills.topUpAria')).toEqual([
-      'Посмотреть рекламу за 1 монету', 'Посмотреть рекламу за 2 монеты',
-      'Посмотреть рекламу за 5 монет', 'Посмотреть рекламу за 21 монету'
+    expect(at('uk', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Підвищити рівень: X за 1 монету', 'Підвищити рівень: X за 2 монети',
+      'Підвищити рівень: X за 5 монет', 'Підвищити рівень: X за 21 монету'
     ])
-    expect(at('uk', 'skills.upgradeAria')).toEqual([
-      'Покращити X за 1 монету', 'Покращити X за 2 монети', 'Покращити X за 5 монет', 'Покращити X за 21 монету'
-    ])
-    expect(render('ru', 'skills.learnAria', 11)).toBe('Изучить X за 11 монет')
+    expect(render('ru', 'sfc.SmasherTeamModal.levelUpAria', 11)).toBe('Повысить уровень: X за 11 монет')
     expect(render('ru', 'spinner.tripleCoinsAria', 22)).toBe('Посмотри рекламу и получи всего 22 монеты')
   })
 
   it('Polish: 1 one, 2 few, 5 & 21 many', () => {
-    expect(at('pl', 'skills.learnAria')).toEqual([
-      'Naucz się: X za 1 monetę', 'Naucz się: X za 2 monety', 'Naucz się: X za 5 monet', 'Naucz się: X za 21 monet'
+    expect(at('pl', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Awansuj: X za 1 monetę', 'Awansuj: X za 2 monety', 'Awansuj: X za 5 monet', 'Awansuj: X za 21 monet'
     ])
-    expect(render('pl', 'skills.learnAria', 22)).toBe('Naucz się: X za 22 monety')
+    expect(render('pl', 'sfc.SmasherTeamModal.levelUpAria', 22)).toBe('Awansuj: X za 22 monety')
   })
 
   it('Czech: 1 one, 2 few, 5 & 21 other', () => {
-    expect(at('cs', 'skills.upgradeAria')).toEqual([
-      'Vylepšit X za 1 minci', 'Vylepšit X za 2 mince', 'Vylepšit X za 5 mincí', 'Vylepšit X za 21 mincí'
+    expect(at('cs', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Zvýšit úroveň: X za 1 minci', 'Zvýšit úroveň: X za 2 mince', 'Zvýšit úroveň: X za 5 mincí', 'Zvýšit úroveň: X za 21 mincí'
     ])
   })
 
   it('Croatian: 1 & 21 one, 2 few, 5 other', () => {
-    expect(at('hr', 'skills.learnAria')).toEqual([
-      'Nauči X za 1 novčić', 'Nauči X za 2 novčića', 'Nauči X za 5 novčića', 'Nauči X za 21 novčić'
+    expect(at('hr', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Podigni razinu za X za 1 novčić', 'Podigni razinu za X za 2 novčića',
+      'Podigni razinu za X za 5 novčića', 'Podigni razinu za X za 21 novčić'
     ])
   })
 
   it('Lithuanian: 1 & 21 one, 2 & 5 few, 10 & 11 other', () => {
-    expect(at('lt', 'skills.learnAria')).toEqual([
-      'Išmokti X už 1 monetą', 'Išmokti X už 2 monetas', 'Išmokti X už 5 monetas', 'Išmokti X už 21 monetą'
+    expect(at('lt', 'sfc.SmasherTeamModal.levelUpAria')).toEqual([
+      'Kelti X lygį už 1 monetą', 'Kelti X lygį už 2 monetas', 'Kelti X lygį už 5 monetas', 'Kelti X lygį už 21 monetą'
     ])
-    expect(render('lt', 'skills.learnAria', 10)).toBe('Išmokti X už 10 monetų')
-    expect(render('lt', 'skills.learnAria', 11)).toBe('Išmokti X už 11 monetų')
+    expect(render('lt', 'sfc.SmasherTeamModal.levelUpAria', 10)).toBe('Kelti X lygį už 10 monetų')
   })
 
   it('Arabic: one and two drop the digit, few 3–10, other keeps it', () => {
-    expect(render('ar', 'skills.topUpAria', 1)).toBe('شاهد إعلانًا مقابل عملة واحدة')
-    expect(render('ar', 'skills.topUpAria', 2)).toBe('شاهد إعلانًا مقابل عملتين')
-    expect(render('ar', 'skills.topUpAria', 5)).toBe('شاهد إعلانًا مقابل 5 عملات')
-    expect(render('ar', 'skills.topUpAria', 150)).toBe('شاهد إعلانًا مقابل 150 عملة')
+    expect(render('ar', 'sfc.SmasherTeamModal.levelUpAria', 1)).toBe('رفع مستوى X مقابل عملة واحدة')
+    expect(render('ar', 'sfc.SmasherTeamModal.levelUpAria', 2)).toBe('رفع مستوى X مقابل عملتين')
+    expect(render('ar', 'sfc.SmasherTeamModal.levelUpAria', 5)).toBe('رفع مستوى X مقابل 5 عملات')
+    expect(render('ar', 'sfc.SmasherTeamModal.levelUpAria', 150)).toBe('رفع مستوى X مقابل 150 عملة')
   })
 
   it('every shipped locale branches these keys by its own plural categories', () => {
@@ -145,7 +143,7 @@ describe('coin-count aria labels (shipped messages)', () => {
     for (const code of SHIPPED_LOCALES) {
       const want = pluralCategoriesFor(LANGUAGE_BY_CODE[code]!.bcp47).length
       const src = readFileSync(path.join(dir, `${code}.ts`), 'utf8')
-      for (const key of ['learnAria', 'upgradeAria', 'topUpAria', 'tripleCoinsAria']) {
+      for (const key of ['levelUpAria', 'tripleCoinsAria']) {
         const msg = new RegExp(`'${key}': '([^']*)'`).exec(src)?.[1]
         expect(msg, `${code}.${key}`).toBeDefined()
         expect(msg!.split(' | ').length, `${code}.${key}`).toBe(want)

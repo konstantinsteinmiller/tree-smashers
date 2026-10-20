@@ -19,6 +19,7 @@ import useSounds from '@/use/useSound.ts'
 import { stopGameplay } from '@/use/useCrazyGames'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { previousUtcDayKey, utcDayKey } from '@/utils/dayKey'
+import { revealRewards, type RevealItem } from '@/use/useRewardReveal'
 
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
@@ -34,7 +35,7 @@ const DAILY_REWARDS = [100, 200, 300, 400, 500, 750, 1000]
 // Day indices (0-based) on which the reward is a skin unlock instead of coins.
 // Covers day 3, 5, and 7.
 const SKIN_REWARD_DAYS = new Set<number>([2, 4, 6])
-const STORAGE_KEY = 'spinner_daily_rewards'
+const STORAGE_KEY = 'smashers_daily_rewards'
 
 const isSkinDay = (dayIndex: number) => SKIN_REWARD_DAYS.has(dayIndex)
 
@@ -88,7 +89,7 @@ const saveState = (state: DailyState) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
 
-// Shared game day (00:00 UTC), same as the daily challenge and the daily
+// Shared game day (00:00 UTC), same as the daily
 // free speed-up — see utils/dayKey.ts.
 const todayStr = () => utcDayKey()
 
@@ -215,7 +216,7 @@ const collect = (dayIndex: number) => {
 
   // Coin reward is always granted, on every day (skin days are additive).
   addCoins(DAILY_REWARDS[dayIndex]!)
-  if (dailyBtnRef.value) emit('coins-awarded', dailyBtnRef.value)
+  const revealed: RevealItem[] = [{ kind: 'coins', amount: DAILY_REWARDS[dayIndex]! }]
 
   const { playSound } = useSounds()
   playSound('happy')
@@ -238,6 +239,7 @@ const collect = (dayIndex: number) => {
     if (toUnlock) {
       unlockSkinEverywhere(toUnlock)
       state.value.claimedSkins = { ...state.value.claimedSkins, [dayIndex]: toUnlock }
+      revealed.push({ kind: 'skin', modelId: toUnlock })
     }
     // If the pool was empty, the coin reward above already covered the slot.
   }
@@ -251,15 +253,20 @@ const collect = (dayIndex: number) => {
   saveState(state.value)
   // Repopulate previews for whichever day is now current.
   refreshOfferedSkins()
+  // Granted and saved above; the gift screen only SHOWS it. The coins fly
+  // to the badge once the player has seen them.
+  void revealRewards(revealed).then(() => {
+    if (dailyBtnRef.value) emit('coins-awarded', dailyBtnRef.value)
+  })
 }
 </script>
 
 <template lang="pug">
   //- Open-modal button (positioned by parent flex row in SpinnerArena)
   //-
-  //- Free reward, no ad — so it must NOT look like the yellow rewarded-ad
+  //- Free reward, no ad — so it must NOT look like the sky rewarded-ad
   //- "+N coins" button that sits right next to it (D21: players read it as
-  //- an ad). Green body = the game's "free" colour (same as the FREE sticker
+  //- an ad). Leaf body = the game's "free" colour (same as the FREE sticker
   //- on the 2x switch), a gift glyph where the ad button has its film reel,
   //- and never a movie icon. The translated title rides on aria-label.
   div.daily-rewards
@@ -273,14 +280,12 @@ const collect = (dayIndex: number) => {
       @click="isModalOpen = true"
     )
       div.relative
-        div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-        div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-2.py-1(
-          class="bg-gradient-to-b from-[#5ee87c] to-[#149a3f] border-[#0f1a30]"
-        )
-          IconGift.text-white(class="w-5 h-5 drop-shadow-[1px_1px_0_#000]")
+        //- Leaf HUD plate (free = leaf), ink outline + hard drop.
+        div.hud-plate-leaf.relative.font-black.flex.flex-col.items-center.px-2.py-1
+          IconGift.text-cream-50(class="w-5 h-5 drop-shadow-[1px_1px_0_var(--color-ink)]")
           div.flex.items-center(class="gap-0.5")
-            span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
-            IconCoin(class="w-4 h-4 text-yellow-300")
+            span.font-black.ui-outline-sm.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
+            IconCoin(class="w-4 h-4 text-sun-300")
 
   //- Daily Rewards Modal
   FModal(
@@ -312,24 +317,18 @@ const collect = (dayIndex: number) => {
         div(
           v-for="(reward, i) in DAILY_REWARDS"
           :key="i"
-          class="basis-[calc(25%-0.375rem)] sm:basis-[calc(14.2857%-0.5rem)] flex flex-col items-center rounded-xl p-1 sm:p-2 border-2 transition-all"
-          :class="[\
-            i < state.currentDay \
-              ? 'bg-green-900/40 border-green-500/50' \
-              : i === state.currentDay \
-                ? (isSkinDay(i) ? 'bg-purple-900/40 border-purple-400' : 'bg-yellow-900/40 border-yellow-400') \
-                : (isSkinDay(i) ? 'bg-purple-900/20 border-purple-700/60' : 'bg-slate-700/50 border-slate-600')\
-          ]"
+          class="day-tile ui-inset basis-[calc(25%-0.375rem)] sm:basis-[calc(14.2857%-0.5rem)] flex flex-col items-center p-1 sm:p-2 transition-all"
+          :class="{ 'is-past': i < state.currentDay, 'is-today': i === state.currentDay, 'is-skin': isSkinDay(i) }"
         )
           //- Day label. The "D" prefix was hardcoded, so every locale showed
           //- "D1…D7". It goes through i18n now — each language picks its own
           //- abbreviation, kept short because the card is only ~80px wide.
-          div.text-gray-300.font-bold.uppercase(class="text-[0.6rem] sm:text-[0.75rem]") {{ t('dayShort', { n: i + 1 }) }}
+          div.text-ink-soft.font-black(class="text-[0.65rem] sm:text-[0.8rem]") {{ t('dayShort', { n: i + 1 }) }}
 
           //- Reward icon — skin image on skin days, coin on all others
           template(v-if="isSkinDay(i) && dailySkinForDay(i)")
-            //- Whiteish radial halo behind the skin so dark models (snake,
-            //- scorpion, shell, etc.) stay readable on the dark modal bg.
+            //- Cream disc behind the skin so dark models (snake,
+            //- scorpion, shell, etc.) stay readable on any tile.
             div.skin-thumb-wrap.relative.flex.items-center.justify-center(
               class="w-6 h-6 sm:w-8 sm:h-8 my-0.5"
             )
@@ -340,16 +339,16 @@ const collect = (dayIndex: number) => {
                 :class="{ 'opacity-80': i !== state.currentDay }"
               )
           template(v-else)
-            IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-300 my-0.5")
+            IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5")
 
           //- Skin label (only when a skin is actually offered for this day)
-          div.font-black.game-text.text-purple-300.uppercase.tracking-wider.leading-tight(
+          div.font-black.text-plum-700.leading-tight(
             v-if="isSkinDay(i) && dailySkinForDay(i)"
             class="text-[0.6rem] sm:text-[0.75rem]"
           ) {{ t('skins.' + dailySkinForDay(i)) }}
 
           //- Coin reward amount — shown on every day (additive on skin days)
-          div.text-yellow-400.font-black.game-text.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}
+          div.text-sun-600.font-black.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}
 
           //- Status.
           //-
@@ -361,17 +360,17 @@ const collect = (dayIndex: number) => {
           //- CTA; this is now a purely decorative "you are here" marker, so
           //- its size no longer has to carry a hit box.
           div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
-            span.text-green-400(v-if="i < state.currentDay") ✓
+            span.text-leaf-700(v-if="i < state.currentDay") ✓
             template(v-else-if="i === state.currentDay")
-              span.text-yellow-300.attention-bounce.inline-block.pointer-events-none(
+              span.text-leaf-700.attention-bounce.inline-block.pointer-events-none(
                 v-if="!collectedToday"
                 class="text-base sm:text-lg leading-none"
               ) ▾
-              span.text-yellow-300(v-else) ✓
-            span.text-slate-500(v-else) —
+              span.text-leaf-700(v-else) ✓
+            span.text-ink-soft(v-else) —
 
       //- Footer info
-      div.text-center(class="text-[0.75rem] sm:text-xs text-slate-400")
+      div.text-center.ui-body(class="text-[0.75rem] sm:text-xs")
         template(v-if="collectedToday")
           | {{ t('comeBackTomorrow') }}
         template(v-else)
@@ -389,15 +388,38 @@ const collect = (dayIndex: number) => {
     template(#footer)
       FButton(
         v-if="!collectedToday"
+        tone="premium"
         @click="collect(state.currentDay)"
       ) {{ t('collectCta') }}
 </template>
 
 <style scoped lang="sass">
-// Soft whiteish halo that sits behind skin thumbnails so dark models
-// (snake, scorpion, shell, etc.) stay readable on the dark modal background.
+// Flat cream disc behind skin thumbnails so dark models (snake, scorpion,
+// shell, etc.) stay readable on any tile tint.
 .skin-thumb-halo
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.28) 35%, rgba(255, 255, 255, 0) 75%)
-  filter: blur(4px)
-  transform: scale(1.15)
+  background: var(--color-cream-50)
+  border-radius: 9999px
+  box-shadow: 0 0 0 2px var(--color-cream-400)
+  transform: scale(0.95)
+
+// HUD button: leaf plate (free reward), ink outline, hard 0-blur drop.
+.hud-plate-leaf
+  background-color: var(--color-leaf-500)
+  color: var(--color-cream-50)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700), 0 4px 0 var(--color-ink)
+
+// Day tiles: past = soft leaf, today = leaf highlight, skin day = plum edge.
+.day-tile
+  &.is-skin
+    border-color: var(--color-plum-300)
+  &.is-past
+    background-color: var(--color-leaf-300)
+    border-color: var(--color-leaf-600)
+    opacity: 0.85
+  &.is-today
+    background-color: var(--color-cream-50)
+    border: 3px solid var(--color-leaf-600)
+    box-shadow: 0 0 0 2px var(--color-leaf-400), 0 3px 0 var(--color-leaf-700)
 </style>

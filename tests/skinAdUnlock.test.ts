@@ -46,7 +46,7 @@ const freshImport = async () => {
 }
 
 const modalSrc = () =>
-  readFileSync(resolve(__dirname, '../src/components/organisms/SpinnerConfigModal.vue'), 'utf8')
+  readFileSync(resolve(__dirname, '../src/components/organisms/SmasherTeamModal.vue'), 'utf8')
 
 beforeEach(() => {
   localStorage.clear()
@@ -180,7 +180,7 @@ describe('ad-unlock skins — shop paths', () => {
   })
 
   it('a skin already bought with coins before the rule stays owned', async () => {
-    localStorage.setItem('spinner_owned_skins', JSON.stringify(['star:cheetah', 'round:kraken']))
+    localStorage.setItem('smashers_owned_skins', JSON.stringify(['star:cheetah', 'round:kraken']))
     const { models } = await freshImport()
     expect(models.isSkinOwned('star', 'cheetah')).toBe(true)
     expect(models.isSkinOwned('round', 'kraken')).toBe(true)
@@ -191,7 +191,7 @@ describe('ad-unlock skins — shop paths', () => {
 
 describe('ad-unlock skins — legacy 3-ad progress', () => {
   it('opening the shop settles 1–2 saved watches into ownership and clears the store', async () => {
-    localStorage.setItem('spinner_skin_ad_progress', JSON.stringify({
+    localStorage.setItem('smashers_skin_ad_progress', JSON.stringify({
       lancer: 2, cheetah: 1, kraken: 0, ice: 2, bogus: 1
     }))
     const { models } = await freshImport()
@@ -201,26 +201,26 @@ describe('ad-unlock skins — legacy 3-ad progress', () => {
     expect(models.isSkinOwned('star', 'cheetah')).toBe(true)
     expect(models.isSkinOwned('round', 'kraken')).toBe(false) // 0 watches: nothing paid
     expect(models.isSkinOwned('star', 'ice')).toBe(false) // coin skin: never via ads
-    expect(JSON.parse(localStorage.getItem('spinner_skin_ad_progress')!)).toEqual({})
+    expect(JSON.parse(localStorage.getItem('smashers_skin_ad_progress')!)).toEqual({})
     // Idempotent, and the grant persisted.
     expect(models.settleSkinAdProgress()).toEqual([])
     expect((await freshImport()).models.isSkinOwned('piercer', 'lancer')).toBe(true)
   })
 
   it('a skin already owned keeps its entry harmless (dropped, no double grant)', async () => {
-    localStorage.setItem('spinner_owned_skins', JSON.stringify(['piercer:lancer']))
-    localStorage.setItem('spinner_skin_ad_progress', JSON.stringify({ lancer: 2 }))
+    localStorage.setItem('smashers_owned_skins', JSON.stringify(['piercer:lancer']))
+    localStorage.setItem('smashers_skin_ad_progress', JSON.stringify({ lancer: 2 }))
     const { models } = await freshImport()
     expect(models.settleSkinAdProgress()).toEqual([])
-    expect(JSON.parse(localStorage.getItem('spinner_skin_ad_progress')!)).toEqual({})
+    expect(JSON.parse(localStorage.getItem('smashers_skin_ad_progress')!)).toEqual({})
   })
 
   it('without settling, the next ad unlocks a skin with partial progress', async () => {
-    localStorage.setItem('spinner_skin_ad_progress', JSON.stringify({ lancer: 2 }))
+    localStorage.setItem('smashers_skin_ad_progress', JSON.stringify({ lancer: 2 }))
     const { models } = await freshImport()
     expect(models.recordSkinAdWatch('piercer', 'lancer')).toBe(true)
     expect(models.isSkinOwned('piercer', 'lancer')).toBe(true)
-    expect(JSON.parse(localStorage.getItem('spinner_skin_ad_progress')!)).toEqual({})
+    expect(JSON.parse(localStorage.getItem('smashers_skin_ad_progress')!)).toEqual({})
   })
 })
 
@@ -262,7 +262,7 @@ describe('ad-unlock skins — pre-ad copy', () => {
     expect(files.length).toBeGreaterThanOrEqual(39)
     for (const [file, msgs] of Object.entries(locales)) {
       const intro = msgs.sfc.RewardedAdIntroModal.rewardedIntro.rewardSkinAd as string
-      const btn = msgs.sfc.SpinnerConfigModal.watchAdsToUnlock as string
+      const btn = msgs.sfc.SmasherTeamModal.watchAdsToUnlock as string
       for (const s of [intro, btn]) {
         expect(typeof s, file).toBe('string')
         expect(s.trim().length, file).toBeGreaterThan(0)
@@ -278,10 +278,11 @@ describe('ad-unlock skins — reward systems still grant them', () => {
       .flatMap(([top, ids]) => ids.filter(id => !AD_UNLOCK_SKINS.has(id)).map(id => `${top}:${id}`))
 
   it('Skin Chest grants an ad-unlock skin once the coin skins are all owned', async () => {
-    localStorage.setItem('spinner_owned_skins', JSON.stringify(ownAllButAdSkins()))
+    localStorage.setItem('smashers_owned_skins', JSON.stringify(ownAllButAdSkins()))
     const { models, chest } = await freshImport()
-    const granted = chest.collectSkinChest()
+    const granted = chest.openSkinChest() // featured on the roulette…
     expect(granted).not.toBeNull()
+    models.buySkin(granted!.topPartId, granted!.modelId) // …and landed
     expect(AD_UNLOCK_SKINS.has(granted!.modelId)).toBe(true)
     expect(models.isSkinOwned(granted!.topPartId, granted!.modelId)).toBe(true)
   })

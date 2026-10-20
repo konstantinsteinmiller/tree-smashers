@@ -22,7 +22,7 @@ export const SPINNER_MODEL_IDS = [
   'teleporter', 'thunderstorm', 'tsunami', 'wasp', 'wolf-demon',
   'boulder', 'diamond',
   // 2026-09 expansion — 4 regular skins per top part (skins-new-designs.md,
-  // art in art/skins/). APPEND-ONLY: never reorder or insert above, see
+  // now smasher colourways, src/smashers/smasherSkins.ts). APPEND-ONLY: never reorder or insert above, see
   // tests/skinCatalog.newSkins.test.ts.
   'cheetah', 'jester', 'ninja', 'pirate',
   'porcupine', 'lionfish', 'morningstar', 'cactus',
@@ -82,8 +82,8 @@ export const topPartOfSkin = (modelId: SpinnerModelId): TopPartId | null => {
 }
 
 /** `SKINS_PER_TOP[topPartId]` minus the earn-only skins — the list every
- *  RANDOM or PURCHASABLE skin draw must use (random NPC skins, the daily
- *  challenge, chest / wheel pools). */
+ *  RANDOM or PURCHASABLE skin draw must use (random NPC skins,
+ *  chest / wheel pools). */
 export const offerableSkinsForTop = (topPartId: TopPartId): SpinnerModelId[] =>
   SKINS_PER_TOP[topPartId].filter(id => !isEarnOnlySkin(id))
 
@@ -98,7 +98,7 @@ export const SPECIAL_SKIN_COST = 1500
  *  the Skin Chest, the roulette wheel, the Battle Pass and Daily Rewards keep
  *  handing them out (`getOfferableSkinPool` does not exclude them). A player
  *  who bought one with coins before this rule keeps it — ownership lives in
- *  `spinner_owned_skins` and nothing here revokes it. */
+ *  `smashers_owned_skins` and nothing here revokes it. */
 export const AD_UNLOCK_SKINS: ReadonlySet<SpinnerModelId> = new Set<SpinnerModelId>([
   'cheetah', 'jester', 'ninja', 'pirate',
   'porcupine', 'lionfish', 'morningstar', 'cactus',

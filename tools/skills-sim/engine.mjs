@@ -1,5 +1,5 @@
 const hyp = (x, y) => Math.sqrt(x * x + y * y)
-// Headless replica of the Chaos Arena battle simulation + the proposed skills.
+// Headless replica of the Tree Smashers battle simulation + the proposed skills.
 //
 // Every block cites the function in src/use/useSpinnerGame.ts it replicates.
 // Rendering, sound, VFX timers and screen shake are dropped; every rule that

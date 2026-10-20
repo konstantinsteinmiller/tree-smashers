@@ -31,17 +31,17 @@ const SEED: Record<string, string> = vi.hoisted(() => {
   // No endpoint → offline league (LEAGUE_ONLINE false), no server at all.
   vi.stubEnv('VITE_LEADERBOARD_URL', '')
   const seed: Record<string, string> = {
-    spinner_campaign_stage: '20',
-    spinner_player_max_stage: '20',
-    spinner_coins: '5000',
-    spinner_first_win: '1',
-    spinner_intro_seen: '1',
-    spinner_config_opened: '1',
+    smashers_campaign_stage: '20',
+    smashers_player_max_stage: '20',
+    smashers_coins: '5000',
+    smashers_first_win: '1',
+    smashers_intro_seen: '1',
+    smashers_config_opened: '1',
     // Skills intro still PENDING (an existing player past stage 10): a league
     // result close must not queue it.
-    spinner_skill_ui: JSON.stringify({ v: 1, seen: [], intro: false, slot2Seen: true, filled: 2, viewed: [] }),
+    smashers_skill_ui: JSON.stringify({ v: 1, seen: [], intro: false, slot2Seen: true, filled: 2, viewed: [] }),
     // Unlocked, popup already seen — the fight tests start from the menu.
-    spinner_league: JSON.stringify({ v: 1, unlocked: true, unlockSeen: true })
+    smashers_league: JSON.stringify({ v: 1, unlocked: true, unlockSeen: true })
   }
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
   return seed
@@ -73,7 +73,6 @@ vi.mock('@/league/leagueApi', async (orig) => {
   }
 })
 
-vi.mock('/images/bg/parchment-ribbon_553x188.webp', () => ({ default: '/images/bg/parchment-ribbon_553x188.webp' }))
 vi.mock('/images/icons/movie_128x96.webp', () => ({ default: '/images/icons/movie_128x96.webp' }))
 vi.mock('/images/logo/logo_256x256.webp', () => ({ default: '/images/logo/logo_256x256.webp' }))
 vi.mock('/images/icons/chest_128x128.webp', () => ({ default: '/images/icons/chest_128x128.webp' }))
@@ -94,7 +93,7 @@ const vmOf = (arena: ArenaHarness): Vm => arena.wrapper.vm as unknown as Vm
 
 const seamOf = async (arena: ArenaHarness): Promise<Seam> => {
   for (let i = 0; i < 200; i++) {
-    const s = (window as unknown as { __chaos?: Seam }).__chaos
+    const s = (window as unknown as { __smashers?: Seam }).__smashers
     if (s) return s
     await arena.settle(25)
   }
@@ -125,10 +124,10 @@ const remount = async (league: Record<string, unknown> | null): Promise<ArenaHar
   const { default: useAssets } = await import('@/use/useAssets')
   useAssets().areAllAssetsLoaded.value = true
   const seed = { ...SEED }
-  delete seed.spinner_league
+  delete seed.smashers_league
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
-  if (league) localStorage.setItem('spinner_league', JSON.stringify(league))
-  else localStorage.removeItem('spinner_league')
+  if (league) localStorage.setItem('smashers_league', JSON.stringify(league))
+  else localStorage.removeItem('smashers_league')
   saveDataVersion.value++
   return mountArena({})
 }
@@ -176,7 +175,7 @@ describe('league fights in the arena (league build, offline)', () => {
 
     // Bias the NEXT first turn toward the player (80 %) — league fights must
     // ignore it (DT1).
-    localStorage.setItem('spinner_last_result', 'lose')
+    localStorage.setItem('smashers_last_result', 'lose')
     const arena = await mountArena(SEED)
     try {
       const vm = vmOf(arena)
@@ -207,7 +206,7 @@ describe('league fights in the arena (league build, offline)', () => {
       await winBattle(arena, seam)
       expect(await arena.waitFor('[data-league="result-panel"]')).toBe(true)
       // A league outcome never feeds the campaign's first-turn bias.
-      expect(localStorage.getItem('spinner_last_result')).toBe('lose')
+      expect(localStorage.getItem('smashers_last_result')).toBe('lose')
 
       const fin = vm.leagueResult
       expect(fin).not.toBeNull()
@@ -215,7 +214,7 @@ describe('league fights in the arena (league build, offline)', () => {
       expect(fin.lpAfter).toBeGreaterThan(fin.lpBefore)
       // Nothing of the campaign's win path.
       expect(vm.currentStageId).toBe(20)
-      expect(localStorage.getItem('spinner_campaign_stage')).toBe('20')
+      expect(localStorage.getItem('smashers_campaign_stage')).toBe('20')
       expect(vm.showRoulette).toBe(false)
       expect(vm.showBossDefeated).toBe(false)
       expect(vm.lastWinWasBoss).toBe(false)
@@ -236,15 +235,15 @@ describe('league fights in the arena (league build, offline)', () => {
       expect(pvp.wins.value).toBe(wins0) // not a PvP win
       expect(await bpTotal() - bp0).toBe(25)
 
-      // Closing the result: back to the hub, no skills intro, still stage 20.
+      // Closing the result: back to the hub, still stage 20 (the team skill
+      // intro was removed with the reskin — smashers carry their skills).
       vm.onRewardContinue()
       await arena.settle(300)
       expect(vm.leagueSession).toBeNull()
       expect(vm.ghostMode).toBe(false)
       expect(vm.leagueHubOpen).toBe(true)
-      expect(vm.sk.introOpen).toBe(false)
       await arena.settle(1500)
-      expect(vm.sk.introOpen).toBe(false)
+      expect(vm.leagueHubOpen).toBe(true)
       expect(vm.currentStageId).toBe(20)
 
       // ── Fight 2: surrender = a ranked LOSS ──
@@ -294,7 +293,7 @@ describe('league fights in the arena (league build, offline)', () => {
     }
   }, 60_000)
 
-  it('unlock popup: armed by a win-screen close only, tap_to_start only, never over a skills surface, ≥ 1.2 s after it closed; Enter → seen + hub', async () => {
+  it('unlock popup: armed by a win-screen close only, tap_to_start only, never over another surface, ≥ 1.2 s after a league surface closed; Enter → seen + hub', async () => {
     // Stored state: never unlocked (the arena's load stores the unlock at stage 20).
     const arena = await remount(null)
     try {
@@ -302,7 +301,7 @@ describe('league fights in the arena (league build, offline)', () => {
       await until(arena, () => vm.league !== null && vm.sk !== null, 10_000)
       const L = vm.league
       expect(L.state.value.unlocked).toBe(true) // loadLeague() at mount stored it
-      expect(JSON.parse(localStorage.getItem('spinner_league') ?? '{}').unlocked).toBe(true)
+      expect(JSON.parse(localStorage.getItem('smashers_league') ?? '{}').unlocked).toBe(true)
 
       // Never at boot: only a closed campaign WIN screen arms it — a loss or a
       // non-campaign win does not.
@@ -316,12 +315,17 @@ describe('league fights in the arena (league build, offline)', () => {
       await vm.armLeagueUnlockAfterWin('win', 'campaign')
       expect(vm.leagueUnlockArmed).toBe(true)
 
-      // A skills surface is up → the popup waits.
-      vm.sk.introOpen = true
+      // Another surface is up (the team modal) → the popup waits.
+      vm.configModalOpen = true
       await arena.settle(900)
       expect(vm.leagueUnlockOpen).toBe(false)
-      // It closes → still ≥ 1.2 s of quiet before the popup.
-      vm.sk.introOpen = false
+      vm.configModalOpen = false
+      // A league surface (the hub) is up → waits; it closes → still ≥ 1.2 s
+      // of quiet before the popup.
+      vm.leagueHubOpen = true
+      await arena.settle(900)
+      expect(vm.leagueUnlockOpen).toBe(false)
+      vm.leagueHubOpen = false
       const closedAt = performance.now()
       await until(arena, () => vm.leagueUnlockOpen === true, 5000)
       expect(vm.leagueUnlockOpen).toBe(true)
@@ -371,7 +375,7 @@ describe('league bridge on an ONLINE build (O3 / typed errors)', () => {
   const load = async () => {
     vi.resetModules()
     vi.stubEnv('VITE_LEADERBOARD_URL', 'https://leaderboard.example.test')
-    localStorage.setItem('spinner_league', JSON.stringify({ v: 1, unlocked: true, unlockSeen: true }))
+    localStorage.setItem('smashers_league', JSON.stringify({ v: 1, unlocked: true, unlockSeen: true }))
     // The Worker is unreachable (every request fails): /league/me flips the
     // league to 'unreachable'; each case sets it back where it needs to.
     vi.stubGlobal('fetch', vi.fn(async () => {

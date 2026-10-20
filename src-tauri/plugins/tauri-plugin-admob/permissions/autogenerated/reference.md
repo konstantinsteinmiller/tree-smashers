@@ -1,7 +1,6 @@
 ## Default Permission
 
-Default permissions for the AdMob plugin — exposes init plus the rewarded-interstitial show command, and the
-framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state.
+Default permissions for the AdMob plugin — exposes init plus the rewarded-interstitial show command, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state.
 
 #### This default permission set includes the following:
 

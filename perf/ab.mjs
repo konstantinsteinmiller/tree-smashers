@@ -166,7 +166,7 @@ async function runRep(port, query, repIdx) {
   await page.goto(url, { waitUntil: 'domcontentloaded' })
 
   const title = await page.title()
-  if (!/chaos/i.test(title)) {
+  if (!/tree smashers/i.test(title)) {
     throw new Error(`served the wrong app: title="${title}" at ${url}`)
   }
 

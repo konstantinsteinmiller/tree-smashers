@@ -289,7 +289,7 @@ const runEngine = async () => {
   const e = useSpinnerGame()
   let seed = 7
   const start = () => {
-    e.initGame(player, npc, false, stage.arenaType, 0, false, undefined, null, 'circle', false, { seed: seed++ })
+    e.initGame(player, npc, false, stage.arenaType, 0, false, undefined, null, 'circle', { seed: seed++ })
     e.startPhysics()
     e.startMatch()
   }

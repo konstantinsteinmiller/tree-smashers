@@ -127,7 +127,7 @@ describe('useBattlePass keeps an existing save across the switch', () => {
   it('loads a mid-season save, then expires it at 00:00 UTC on day 30', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(Date.UTC(2026, 11, 31, 23, 30)) // day 29 of a 2026-12-02 season
-    localStorage.setItem('spinner_battle_pass', JSON.stringify({
+    localStorage.setItem('smashers_battle_pass', JSON.stringify({
       xp: 40,
       unlockedStages: 7,
       claimedStages: [1, 2],
@@ -155,7 +155,7 @@ describe('useBattlePass keeps an existing save across the switch', () => {
     // The first XP of the new season stamps today's UTC day key.
     bp.awardLoss()
     expect(bp.state.value.seasonStartedAt).toBe('2027-01-01')
-    const saved = JSON.parse(localStorage.getItem('spinner_battle_pass')!)
+    const saved = JSON.parse(localStorage.getItem('smashers_battle_pass')!)
     expect(saved.seasonStartedAt).toBe('2027-01-01')
   })
 })

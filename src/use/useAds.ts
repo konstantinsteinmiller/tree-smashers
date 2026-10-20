@@ -9,13 +9,14 @@
 //                                  `isCrazyGamesFullRelease` inside the
 //                                  provider)
 //   • `isGameDistribution` build → GameDistribution.com SDK
-//   • `showMediatorAds && isNative` → Google AdMob (Tauri plugin, direct —
-//                                  no mediation; see AdMobProvider.ts)
+//   • `showMediatorAds && isNative` → Unity LevelPlay (Tauri plugin;
+//                                  ironSource + AdMob + Unity Ads)
+//   • `isPlaygama` / `isPoki` / `isGameMonetize` → that portal's SDK
 //   • everything else           → Noop (ads UI hidden, calls inert)
 //
 // The CrazyGames SDK is still initialised directly from `main.ts` — it
-// has to run before the SaveManager hydrates. AdMob and GameDistribution
-// init happen after mount via `initAds()` — AdMob because the native
+// has to run before the SaveManager hydrates. LevelPlay and GameDistribution
+// init happen after mount via `initAds()` — LevelPlay because the native
 // side needs the Android Activity / iOS ViewController to be alive,
 // GameDistribution because the SDK script is dynamically injected and we
 // don't want to pay that latency on the boot critical path.
@@ -30,6 +31,7 @@ import {
   isGamePix,
   isPlaygama,
   isPoki,
+  isGameMonetize,
   isNative,
   showMediatorAds
 } from '@/use/useUser'
@@ -43,11 +45,12 @@ import {
   requiresRewardedIntro,
   type RewardedIntroReward
 } from '@/use/useRewardedIntro'
+import { isForcedDarkBlocking, whenForcedDarkGuardClear } from '@/use/useForcedDarkModeGuard'
 
 const provider: AdProvider = resolveAdProvider({
   flags: {
     isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
-    isPlaygama, isPoki
+    isPlaygama, isPoki, isGameMonetize
   },
   showMediatorAds,
   isNative
@@ -80,6 +83,12 @@ export const isInterstitialReady = computed(() => provider.isInterstitialReady.v
  *  ad-blocker (uBlock, AdGuard, Brave Shields, etc.). Drives the
  *  shared `AdsBlockedModal`. Always false on native builds. */
 export const isAdsBlocked = computed(() => provider.isAdsBlocked.value)
+
+/** The provider's consent platform wants a way back into the player's privacy
+ *  choice (LevelPlay + Google UMP, GDPR regions only) — the Options menu shows
+ *  a "Privacy settings" entry while this is true. */
+export const privacyOptionsRequired = computed(() => provider.privacyOptionsRequired?.value ?? false)
+export const showPrivacyOptions = (): Promise<void> => provider.showPrivacyOptions?.() ?? Promise.resolve()
 
 /**
  * Toggled true by `showRewardedAd()` when the rewarded show resolved
@@ -116,6 +125,11 @@ const trackAd = async <T>(run: () => Promise<T>): Promise<T> => {
 
 export const initAds = (): Promise<void> => provider.init()
 
+// No ad opens over the forced-dark-mode notice (`isForcedDarkBlocking`, checked
+// at the top of both show paths below) — an ad on top of a "please turn off
+// dark mode" card reads as a scam. The notice blocks input, so that wait only
+// ever catches a request that was already on its way when it appeared.
+
 /**
  * Show a rewarded ad and report whether the reward was earned.
  *
@@ -146,6 +160,7 @@ const showRewardedAdInner = async (reward: RewardedIntroReward | null): Promise<
   // `isRewardedReady`; this only fires if one bypassed it).
   if (!HAS_REWARDED_ADS) return false
   if (isRewardedThrottled.value) return false
+  if (isForcedDarkBlocking.value) await whenForcedDarkGuardClear()
   if (requiresRewardedIntro) {
     const accepted = await requestRewardedIntro(reward)
     if (!accepted) return false
@@ -172,7 +187,10 @@ const showRewardedAdInner = async (reward: RewardedIntroReward | null): Promise<
  *   and never fires on a no-fill, so an unfilled break leaves the music alone.
  */
 export const showMidgameAd = (onImpression?: () => void): Promise<void> =>
-  trackAd(() => provider.showMidgameAd(onImpression))
+  trackAd(async () => {
+    if (isForcedDarkBlocking.value) await whenForcedDarkGuardClear()
+    await provider.showMidgameAd(onImpression)
+  })
 
 const useAds = () => ({
   adProviderName,

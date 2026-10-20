@@ -33,7 +33,8 @@
 //   3. isGameDistribution → GameDistributionStrategy (fallback to LocalStorageStrategy)
 //   4. isPlaygama        → PlaygamaStrategy (fallback to LocalStorageStrategy)
 //   5. isPoki            → PokiStrategy (local-only)
-//   6. else              → LocalStorageStrategy
+//   6. isGameMonetize    → GameMonetizeStrategy (local-only)
+//   7. else              → LocalStorageStrategy
 
 import type { SaveStrategy } from '@/utils/save/types'
 import type { PlatformFlags } from './capabilities'
@@ -82,6 +83,12 @@ export const resolveSaveStrategy = async (_flags: PlatformFlags): Promise<SaveSt
     // can have a zero quota, and Poki traffic includes it).
     const { PokiStrategy } = await import('@/utils/save/PokiStrategy')
     return new PokiStrategy()
+  }
+  if (import.meta.env.VITE_APP_GAME_MONETIZE === 'true') {
+    // GameMonetize's SDK is ads only — no cloud-save API. Local-only, with its
+    // own class so `SaveManager.strategyName` reports `gamemonetize`.
+    const { GameMonetizeStrategy } = await import('@/utils/save/GameMonetizeStrategy')
+    return new GameMonetizeStrategy()
   }
   const { LocalStorageStrategy } = await import('@/utils/save/LocalStorageStrategy')
   return new LocalStorageStrategy()

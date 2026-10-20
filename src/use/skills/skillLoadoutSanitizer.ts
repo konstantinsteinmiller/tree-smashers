@@ -5,7 +5,7 @@
 // (`loadSkillLoadoutSanitizer`), so a skills-off build never bundles it. The
 // rules are listed in loadoutSanitizer.ts.
 
-import { SKILL_MAX_LEVEL, SKILL_TEAM_SLOTS, isSkillId } from '@/data/skillCatalog'
+import { SKILL_MAX_LEVEL, SKILL_BLADE_SLOTS, SKILL_MOD_MAX, SKILL_MOD_MIN, isSkillId } from '@/data/skillCatalog'
 import type { SkillId, SkillLoadout } from '@/types/skills'
 
 export interface SkillSanitizeOptions {
@@ -25,7 +25,7 @@ export function sanitizeSkillLoadout(raw: unknown, opts: SkillSanitizeOptions = 
   const out: SkillLoadout = []
   const seen = new Set<SkillId>()
   for (const entry of raw) {
-    if (out.length >= SKILL_TEAM_SLOTS) break
+    if (out.length >= SKILL_BLADE_SLOTS) break
     if (!isRecord(entry)) continue
     const id = entry.id
     if (!isSkillId(id) || seen.has(id)) continue
@@ -33,7 +33,16 @@ export function sanitizeSkillLoadout(raw: unknown, opts: SkillSanitizeOptions = 
     if (typeof lvRaw !== 'number' || !Number.isFinite(lvRaw) || lvRaw < 1) continue
     const level = opts.levelOne ? 1 : Math.min(SKILL_MAX_LEVEL, Math.floor(lvRaw))
     seen.add(id)
-    out.push({ id, level })
+    const row: SkillLoadout[number] = { id, level }
+    if (isRecord(entry.mods)) {
+      const mods: Record<string, number> = {}
+      for (const [k, v] of Object.entries(entry.mods)) {
+        if (typeof v === 'number' && Number.isFinite(v)) mods[k] = Math.min(SKILL_MOD_MAX, Math.max(SKILL_MOD_MIN, v))
+      }
+      if (Object.keys(mods).length) row.mods = mods
+    }
+    if (typeof entry.key === 'string' && entry.key.length <= 32) row.key = entry.key
+    out.push(row)
   }
   return out
 }

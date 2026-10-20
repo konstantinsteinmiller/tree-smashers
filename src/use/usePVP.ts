@@ -866,7 +866,7 @@ const usePVP = () => {
   /** Generate a WhatsApp share link */
   const whatsappShareLink = computed(() => {
     if (!inviteLink.value) return ''
-    const text = encodeURIComponent(`Join my Chaos Arena PvP battle!\n${inviteLink.value}`)
+    const text = encodeURIComponent(`Join my Tree Smashers PvP battle!\n${inviteLink.value}`)
     return `https://wa.me/?text=${text}`
   })
 

@@ -18,10 +18,8 @@
 //     useAssets' deferred tier) requests the battle set once a skill is owned
 //     and the drum roll once the intro can come up.
 
-import { watch } from 'vue'
 import useSounds, { type SoundHandle } from '@/use/useSound'
 import { preloadSfxList } from '@/use/useAssets'
-import { loadSkillsApi } from '@/skills/skillsGate'
 
 // Skill SFX files — deferred tier, but GATED: never part of SOUND_ASSETS (and
 // named nowhere outside the skill system, so a skills-off build ships none of
@@ -157,30 +155,21 @@ export function createSkillSfxPreloader(
 
 let armed: SkillSfxPreloader | null = null
 
-/** Wire the preloader to the skill state (idempotent; deferred tier). */
+/** Request the battle set (idempotent; deferred tier). Every smasher carries
+ *  skills from level 1, so the set is always needed; the drum roll belonged to
+ *  the retired skills intro and is never requested. */
 export async function armSkillSfxPreload(): Promise<void> {
   if (armed) return
-  const s = await loadSkillsApi()
-  if (armed || !s || !s.isSkillsEnabled) return
   const pre = createSkillSfxPreloader(
     list => {
       void preloadSfxList(list).catch(() => { /* best-effort */
       })
     },
-    () => s.unlockedIds.value.length > 0,
-    () => s.showTeaser.value || s.isSkillsIntroPending.value
+    () => true,
+    () => false
   )
   armed = pre
   pre.check()
-  if (!(pre.battleRequested && pre.introRequested)) {
-    const stop = watch(
-      () => s.unlockedIds.value.length > 0 || s.showTeaser.value || s.isSkillsIntroPending.value,
-      () => {
-        pre.check()
-        if (pre.battleRequested && pre.introRequested) stop()
-      }
-    )
-  }
 }
 
 let battleSetRequested = false

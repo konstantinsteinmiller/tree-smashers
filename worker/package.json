@@ -1,12 +1,13 @@
 {
-  "name": "leaderboard-chaos-arena",
+  "name": "leaderboard-tree-smashers",
   "private": true,
   "version": "1.0.0",
+  "description": "Leaderboard API (Cloudflare Worker + D1) for Tree Smashers",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:init": "wrangler d1 execute leaderboard-chaos-arena --remote --file=./schema.sql",
-    "db:init:local": "wrangler d1 execute leaderboard-chaos-arena --local --file=./schema.sql"
+    "db:init": "wrangler d1 execute leaderboard-tree-smashers --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute leaderboard-tree-smashers --local --file=./schema.sql"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241106.0",

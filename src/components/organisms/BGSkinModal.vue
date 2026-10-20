@@ -55,41 +55,41 @@ const swatchStyle = (skin: BgSkinDef) =>
     div(class="space-y-3 px-2 sm:px-4 py-2")
       //- Balance row
       div.flex.items-center.justify-center.gap-3
-        div.flex.items-center.gap-1.rounded-full.font-bold(class="px-2 py-0.5 bg-yellow-600/50 text-yellow-200 text-xs sm:text-sm")
-          IconCoin(class="w-4 h-4 text-yellow-300")
+        div.ui-chip.ui-chip--sun(class="text-xs sm:text-sm")
+          IconCoin(class="w-4 h-4")
           span {{ coins }}
-        div.flex.items-center.gap-1.rounded-full.font-bold(class="px-2 py-0.5 bg-cyan-700/40 text-cyan-100 text-xs sm:text-sm")
+        div.ui-chip.diamond-chip(class="text-xs sm:text-sm")
           IconDiamond(class="w-4 h-4")
           span {{ diamonds }}
 
       //- Skin grid
       div.grid.gap-2(class="grid-cols-2 sm:grid-cols-3")
-        div.bg-skin-card.flex.flex-col.rounded-xl.border-2.overflow-hidden(
+        div.bg-skin-card.flex.flex-col.overflow-hidden(
           v-for="skin in bgSkins"
           :key="skin.id"
-          :class="selectedBgSkinId === skin.id ? 'border-cyan-400' : 'border-slate-600'"
+          :class="{ 'is-equipped': selectedBgSkinId === skin.id }"
         )
           //- Preview swatch
           div.relative(class="h-16 sm:h-20" :style="swatchStyle(skin)")
-            span.absolute.rounded-full.font-black.uppercase.game-text(
+            span.absolute.ui-chip.ui-chip--leaf(
               v-if="selectedBgSkinId === skin.id"
-              class="top-1 right-1 bg-cyan-400 text-[#04161a] text-[0.6rem] px-1.5 py-0.5"
+              class="top-1 right-1 text-[0.6rem]"
             ) {{ t('bg.equipped') }}
           //- `flex-1 justify-center` centres the label + action block in the
           //- space the grid row gives this card. Grid rows stretch every card
           //- to the tallest one, so an owned skin (one short "Equipped" line)
           //- otherwise sat pinned to the top of a card sized for two stacked
           //- price buttons, leaving a big dead gap underneath.
-          div.flex.flex-col.items-center.justify-center.gap-1.p-1.bg-slate-800(class="flex-1")
-            span.text-white.font-bold.game-text.truncate.max-w-full(class="text-[0.75rem] sm:text-xs") {{ t('bg.skins.' + skin.id) }}
+          div.bg-skin-card__body.flex.flex-col.items-center.justify-center.gap-1.p-1(class="flex-1")
+            span.bg-skin-card__name.truncate.max-w-full(class="text-[0.75rem] sm:text-xs") {{ t('bg.skins.' + skin.id) }}
             //- Action area
             template(v-if="isBgSkinOwned(skin.id)")
-              button.w-full.rounded-lg.font-bold.cursor-pointer.transition-all(
+              button.ui-btn.ui-btn--primary.w-full(
                 v-if="selectedBgSkinId !== skin.id"
-                class="px-3 py-2 text-[0.85rem] sm:text-sm bg-cyan-600 hover:bg-cyan-500 text-white"
+                class="px-3 py-2 text-[0.85rem] sm:text-sm"
                 @click="selectBgSkin(skin.id)"
               ) {{ t('bg.select') }}
-              span.text-cyan-300.font-bold(v-else class="text-[0.75rem] sm:text-[0.85rem]") {{ t('bg.equippedShort') }}
+              span.bg-skin-card__equipped(v-else class="text-[0.75rem] sm:text-[0.85rem]") {{ t('bg.equippedShort') }}
             template(v-else)
               //- The two price buttons are STACKED, not side by side.
               //-
@@ -101,17 +101,17 @@ const swatchStyle = (skin: BgSkinDef) =>
               //- entirely and give each button a comfortable height.
               div.flex.flex-col.items-stretch.gap-1.w-full
                 //- Coin price
-                button.w-full.rounded-lg.font-bold.flex.items-center.justify-center.gap-1.transition-all(
+                button.ui-btn.ui-btn--premium.w-full.gap-1(
                   class="px-2 py-2.5 text-[0.75rem] sm:text-[0.9rem]"
-                  :class="coins >= skin.coinCost ? 'bg-yellow-500 hover:bg-yellow-400 text-white cursor-pointer' : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
+                  :class="{ 'is-disabled': coins < skin.coinCost }"
                   @click="buyBgSkinWithCoins(skin.id)"
                 )
-                  IconCoin(class="w-5 h-5 text-yellow-200")
+                  IconCoin(class="w-5 h-5")
                   span.game-text {{ skin.coinCost >= 1000 ? (skin.coinCost / 1000) + 'k' : skin.coinCost }}
                 //- Diamond price
-                button.w-full.rounded-lg.font-bold.flex.items-center.justify-center.gap-1.transition-all(
+                button.ui-btn.ui-btn--premium.w-full.gap-1(
                   class="px-2 py-2.5 text-[0.75rem] sm:text-[0.9rem]"
-                  :class="diamonds >= skin.diamondCost ? 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer' : 'bg-slate-600 text-slate-400 cursor-not-allowed'"
+                  :class="{ 'is-disabled': diamonds < skin.diamondCost }"
                   @click="buyBgSkinWithDiamonds(skin.id)"
                 )
                   IconDiamond(class="w-5 h-5")
@@ -138,5 +138,33 @@ const swatchStyle = (skin: BgSkinDef) =>
 
 <style scoped lang="sass">
 .bg-skin-card
-  background: #1e293b
+  border: 2px solid var(--color-wood-700)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-cream-50)
+  color: var(--ui-text)
+  box-shadow: 0 3px 0 var(--color-wood-700)
+  &.is-equipped
+    border-color: var(--color-ink)
+    background-color: var(--color-sun-200)
+    box-shadow: 0 3px 0 var(--color-ink)
+
+.bg-skin-card__body
+  border-top: 2px solid var(--color-wood-700)
+
+.bg-skin-card__name
+  font-weight: 900
+  font-size: 0.75rem
+  color: var(--ui-text)
+
+.bg-skin-card__equipped
+  font-weight: 900
+  color: var(--color-leaf-700)
+
+// Diamonds are the plum accent.
+.diamond-chip
+  background-color: var(--color-plum-500)
+  color: var(--color-cream-50)
+
+.ui-btn .game-text
+  text-shadow: inherit
 </style>

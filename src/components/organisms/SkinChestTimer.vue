@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  collectSkinChest,
+  openSkinChest,
   skinChestCooldownPct,
   skinChestHasRewards,
   skinChestIconSkin,
@@ -13,7 +13,8 @@ import { modelImgPath } from '@/use/useModels'
 import useSounds from '@/use/useSound'
 
 const emit = defineEmits<{
-  (e: 'collected', granted: GrantedSkin): void
+  /** A ripe chest was tapped: put `featured` on the skin roulette. */
+  (e: 'opened', featured: GrantedSkin): void
 }>()
 
 const iconSrc = computed(() => modelImgPath(skinChestIconSkin.value))
@@ -30,11 +31,11 @@ const overlayMaskStyle = computed(() => ({
 
 const onClick = () => {
   if (!skinChestReady.value) return
-  const granted = collectSkinChest()
-  if (!granted) return
+  const featured = openSkinChest()
+  if (!featured) return
   const { playSound } = useSounds()
   playSound('happy')
-  emit('collected', granted)
+  emit('opened', featured)
 }
 </script>
 
@@ -51,7 +52,7 @@ const onClick = () => {
       img.object-contain.w-full.h-full.rounded-full(
         :src="iconSrc"
         alt="skin-chest-preview"
-        :style="skinChestReady ? { filter: 'drop-shadow(0 0 6px rgba(168,85,247,0.95))' } : undefined"
+        :style="skinChestReady ? { filter: 'brightness(1.25)' } : undefined"
       )
       //- Circular cooldown overlay — opacity ~30% lower than the chest
       //- variant (stroke alpha 0.25 vs 0.35) so the muted skin preview
@@ -76,12 +77,12 @@ const onClick = () => {
           circle(
             cx="20" cy="20" r="19"
             fill="none"
-            stroke="rgba(0,0,0,0.25)"
+            stroke="rgba(58,35,20,0.3)"
             stroke-width="40"
             :stroke-dasharray="119.38"
             :stroke-dashoffset="119.38 * (1 - skinChestCooldownPct)"
           )
-    //- Timer label — warm orange (#f4a35d-ish), tuned to be readable
+    //- Timer label — warm sun gold, tuned to be readable
     //- without yelling for attention. Stays on the right of the skin.
     span.game-text.font-bold.skin-chest-timer-label(
       class="text-[0.75rem] sm:text-xs"
@@ -98,13 +99,13 @@ const onClick = () => {
   50%
     opacity: 0.55
 
-// Warm muted orange — matches the parchment-ribbon palette and reads
+// Warm muted orange — matches the warm wood palette and reads
 // as "passive cooldown" rather than the urgent yellow/red used by the
 // game-loop UI. Slight text-shadow keeps it legible against any
 // arena background.
 .skin-chest-timer-label
-  color: #f4a35d
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7)
+  color: var(--color-sun-300)
+  text-shadow: 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 1px 0 var(--color-ink), 0 -1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
   // `tabular-nums` gives every digit the same advance width so a
   // ticking countdown ("12:34" → "12:33" → ...) doesn't reflow the
   // row by a couple of pixels each second. Combined with a fixed

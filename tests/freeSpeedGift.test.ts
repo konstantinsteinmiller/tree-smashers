@@ -105,8 +105,8 @@ describe('useFreeSpeedGift', () => {
 
   it('an unused gift survives a reload after the player has made progress', async () => {
     await boot()
-    localStorage.setItem('spinner_campaign_stage', '3')
-    localStorage.setItem('spinner_coins', '120')
+    localStorage.setItem('smashers_campaign_stage', '3')
+    localStorage.setItem('smashers_coins', '120')
     const { gift } = await boot()
     expect(gift.hasFreeSpeedGift.value).toBe(true)
   })
@@ -134,8 +134,8 @@ describe('useFreeSpeedGift', () => {
     const { status, gift } = await boot('pending')
     expect(gift.hasFreeSpeedGift.value).toBe(false)
     // The hydrate lands with the player's save …
-    localStorage.setItem('spinner_campaign_stage', '12')
-    localStorage.setItem('spinner_last_result', 'win')
+    localStorage.setItem('smashers_campaign_stage', '12')
+    localStorage.setItem('smashers_last_result', 'win')
     status.hydrateState.value = 'success-with-data'
     status.saveDataVersion.value++
     await nextTick()
@@ -145,7 +145,7 @@ describe('useFreeSpeedGift', () => {
 
   it('a hydrate that brings back a spent gift is honoured on a fresh device', async () => {
     const { status, gift } = await boot('pending')
-    localStorage.setItem('spinner_campaign_stage', '4')
+    localStorage.setItem('smashers_campaign_stage', '4')
     localStorage.setItem(SPEED_GIFT_KEY, 'used')
     status.hydrateState.value = 'success-with-data'
     await nextTick()
@@ -198,8 +198,8 @@ describe('useFreeSpeedGift', () => {
 
   it('no-ad build: an existing player gets no first-time gift (daily only)', async () => {
     setBuild(CG_BASIC_LAUNCH)
-    localStorage.setItem('spinner_campaign_stage', '9')
-    localStorage.setItem('spinner_coins', '400')
+    localStorage.setItem('smashers_campaign_stage', '9')
+    localStorage.setItem('smashers_coins', '400')
     const { gift } = await boot()
     expect(gift.hasFreeSpeedGift.value).toBe(false)
     expect(localStorage.getItem(SPEED_GIFT_KEY)).toBeNull()

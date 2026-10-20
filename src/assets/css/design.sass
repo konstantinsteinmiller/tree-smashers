@@ -1,0 +1,318 @@
+// ─── Tree Smashers UI recipes (see DESIGN.md) ───────────────────────────────
+//
+// Colour tokens live in tailwind.css (@theme). This file turns them into the
+// few reusable shapes every screen is built from:
+//
+//   .ui-btn  (+ --primary / --secondary / --danger / --premium / --ad)
+//   .ui-panel        cream parchment card, dark text — modal content, cards
+//   .ui-wood         wooden frame / plank (dark surface, cream text)
+//   .ui-inset        recessed well inside a panel (rows, list items)
+//   .ui-banner       flat fabric banner with notched tails (titles, ribbons)
+//   .ui-chip         small rounded pill (badges, counters, tags)
+//   .ui-title / .ui-label / .ui-body   typography scale
+//   .ui-outline      cream/white text with a hard ink outline (on colour / art)
+//
+// Perf: flat fills, hard 0-blur shadows only. No blur, no backdrop-filter, no
+// radial-gradient.
+
+:root
+  // Semantic aliases — change a role here, not at the call sites.
+  --ui-outline: var(--color-ink)
+  --ui-text: var(--color-ink)
+  --ui-text-muted: var(--color-ink-soft)
+  --ui-surface: var(--color-cream-100)
+  --ui-surface-2: var(--color-cream-200)
+  --ui-surface-3: var(--color-cream-300)
+  --ui-frame: var(--color-wood-600)
+  --ui-frame-dark: var(--color-wood-800)
+  --ui-backdrop: rgba(26, 18, 10, 0.72)
+  --ui-focus: var(--color-sky-400)
+  --ui-border-w: 3px
+  --ui-drop: 4px
+
+// ─── Typography ──────────────────────────────────────────────────────────────
+.ui-title
+  font-weight: 900
+  font-size: clamp(1.25rem, 4.2vmin, 2rem)
+  line-height: 1.05
+  letter-spacing: 0.01em
+
+.ui-label
+  font-weight: 900
+  font-size: clamp(0.85rem, 2.6vmin, 1.1rem)
+  line-height: 1.15
+
+.ui-body
+  font-weight: 800
+  font-size: clamp(0.8rem, 2.3vmin, 1rem)
+  line-height: 1.3
+  color: var(--ui-text-muted)
+
+// Light text over colour or art: hard ink outline (8 directions, 0 blur) plus
+// a 2px drop. Reads on any background, keeps ≥ 4.5:1 against the outline.
+.ui-outline
+  color: var(--color-cream-50)
+  text-shadow: 0 2px 0 var(--ui-outline), 2px 0 0 var(--ui-outline), -2px 0 0 var(--ui-outline), 0 -2px 0 var(--ui-outline), 1.5px 1.5px 0 var(--ui-outline), -1.5px 1.5px 0 var(--ui-outline), 1.5px -1.5px 0 var(--ui-outline), -1.5px -1.5px 0 var(--ui-outline), 0 3px 0 var(--ui-outline)
+
+.ui-outline-sm
+  color: var(--color-cream-50)
+  text-shadow: 0 1px 0 var(--ui-outline), 1px 0 0 var(--ui-outline), -1px 0 0 var(--ui-outline), 0 -1px 0 var(--ui-outline), 1px 1px 0 var(--ui-outline), -1px 1px 0 var(--ui-outline), 1px -1px 0 var(--ui-outline), -1px -1px 0 var(--ui-outline), 0 2px 0 var(--ui-outline)
+
+// ─── Buttons ─────────────────────────────────────────────────────────────────
+//
+// One shape: rounded, thick ink outline, flat fill, a lighter top lip and a
+// darker bottom band (inset, 0 blur) and a HARD drop shadow that the button
+// sinks into when pressed. Five colours, each with one meaning:
+//   primary  leaf green  — the main / go / confirm action
+//   secondary wood/cream — neutral, back, settings, tabs
+//   danger   berry       — close, reset, surrender, destructive
+//   premium  sun gold    — spend coins / diamonds, purchases, claim
+//   ad       sky blue    — every rewarded-video CTA
+.ui-btn
+  --btn-bg: var(--color-leaf-500)
+  --btn-lip: var(--color-leaf-300)
+  --btn-band: var(--color-leaf-700)
+  --btn-fg: var(--color-cream-50)
+  position: relative
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  gap: 0.4em
+  min-height: 2.75rem
+  padding: 0.55em 1.2em 0.65em
+  border: var(--ui-border-w) solid var(--ui-outline)
+  border-radius: var(--radius-ui)
+  background-color: var(--btn-bg)
+  color: var(--btn-fg)
+  font-weight: 900
+  line-height: 1.05
+  cursor: pointer
+  user-select: none
+  touch-action: manipulation
+  -webkit-tap-highlight-color: transparent
+  box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 -4px 0 var(--btn-band), 0 var(--ui-drop) 0 var(--ui-outline)
+  transition: transform 0.07s ease, box-shadow 0.07s ease, filter 0.1s ease
+  text-shadow: 0 2px 0 var(--ui-outline), 1.5px 0 0 var(--ui-outline), -1.5px 0 0 var(--ui-outline), 0 -1.5px 0 var(--ui-outline), 1.5px 1.5px 0 var(--ui-outline), -1.5px 1.5px 0 var(--ui-outline), 1.5px -1.5px 0 var(--ui-outline), -1.5px -1.5px 0 var(--ui-outline)
+
+  &:hover
+    filter: brightness(1.06)
+
+  &:active, &.is-pressed
+    transform: translateY(calc(var(--ui-drop) - 1px))
+    box-shadow: inset 0 3px 0 var(--btn-lip), inset 0 -2px 0 var(--btn-band), 0 1px 0 var(--ui-outline)
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 3px
+
+  &:disabled, &.is-disabled
+    --btn-bg: #b9ab95
+    --btn-lip: #d4c8b4
+    --btn-band: #978a75
+    cursor: not-allowed
+    filter: none
+    transform: none
+
+.ui-btn--primary
+  --btn-bg: var(--color-leaf-500)
+  --btn-lip: var(--color-leaf-300)
+  --btn-band: var(--color-leaf-700)
+
+.ui-btn--secondary
+  --btn-bg: var(--color-cream-200)
+  --btn-lip: var(--color-cream-50)
+  --btn-band: var(--color-cream-400)
+  --btn-fg: var(--color-ink)
+  text-shadow: none
+
+.ui-btn--wood
+  --btn-bg: var(--color-wood-500)
+  --btn-lip: var(--color-wood-300)
+  --btn-band: var(--color-wood-700)
+
+.ui-btn--danger
+  --btn-bg: var(--color-berry-500)
+  --btn-lip: var(--color-berry-300)
+  --btn-band: var(--color-berry-700)
+
+.ui-btn--premium
+  --btn-bg: var(--color-sun-400)
+  --btn-lip: var(--color-sun-200)
+  --btn-band: var(--color-sun-600)
+
+.ui-btn--ad
+  --btn-bg: var(--color-sky-500)
+  --btn-lip: var(--color-sky-300)
+  --btn-band: var(--color-sky-700)
+
+// Square icon variant (HUD buttons, close X).
+.ui-btn--icon
+  min-height: 0
+  padding: 0.45rem
+  border-radius: var(--radius-ui)
+
+// ─── Surfaces ────────────────────────────────────────────────────────────────
+
+// Cream parchment card: the readable surface. Dark ink text on it.
+.ui-panel
+  background-color: var(--ui-surface)
+  color: var(--ui-text)
+  border: var(--ui-border-w) solid var(--color-wood-700)
+  border-radius: var(--radius-ui-lg)
+  box-shadow: inset 0 3px 0 var(--color-cream-50), 0 3px 0 var(--color-wood-800)
+
+// Recessed well inside a panel: list rows, stat boxes, reward tiles.
+.ui-inset
+  background-color: var(--ui-surface-2)
+  color: var(--ui-text)
+  border: 2px solid var(--color-cream-400)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
+
+// Wooden plank: frames, HUD plates, dark badges. Cream text on it.
+.ui-wood
+  background-color: var(--color-wood-600)
+  color: var(--color-cream-50)
+  border: var(--ui-border-w) solid var(--ui-outline)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -4px 0 var(--color-wood-800), 0 var(--ui-drop) 0 var(--ui-outline)
+
+// Stitched edge — a dashed "sewn" line inset from the border (plush motif).
+.ui-stitch
+  outline: 2px dashed rgba(255, 250, 240, 0.55)
+  outline-offset: -7px
+
+.ui-stitch-dark
+  outline: 2px dashed rgba(110, 69, 39, 0.35)
+  outline-offset: -7px
+
+// ─── Banner (fabric ribbon with notched tails) ──────────────────────────────
+//
+// Pure CSS: a flat-filled centre band + two darker tails cut with clip-path.
+// ART-DESK SEAM: `.ui-banner` is the slot a painted fabric ribbon can replace
+// (keep the content box; swap the background for a border-image).
+.ui-banner
+  --banner-bg: var(--color-leaf-500)
+  --banner-lip: var(--color-leaf-300)
+  --banner-band: var(--color-leaf-700)
+  --banner-tail: var(--color-leaf-700)
+  position: relative
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  padding: 0.35em 1.4em 0.45em
+  min-width: 8rem
+  border: var(--ui-border-w) solid var(--ui-outline)
+  border-radius: var(--radius-ui-sm)
+  background-color: var(--banner-bg)
+  box-shadow: inset 0 3px 0 var(--banner-lip), inset 0 -4px 0 var(--banner-band), 0 4px 0 var(--ui-outline)
+  z-index: 0
+
+  // Tails: an ink "outline" shape with a coloured shape inside, both clipped
+  // into a swallow-tail. They sit behind and a little below the band.
+  &::before, &::after
+    content: ''
+    position: absolute
+    top: 0.45em
+    bottom: -0.45em
+    width: 1.6em
+    background-color: var(--banner-band)
+    z-index: -1
+
+  &::before
+    left: -1.25em
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 38% 50%)
+
+  &::after
+    right: -1.25em
+    clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%)
+
+.ui-banner__tail
+  // optional inner fill for tails (placed by components that want two-tone tails)
+  position: absolute
+
+.ui-banner--berry
+  --banner-bg: var(--color-berry-500)
+  --banner-lip: var(--color-berry-300)
+  --banner-band: var(--color-berry-700)
+
+.ui-banner--sun
+  --banner-bg: var(--color-sun-400)
+  --banner-lip: var(--color-sun-200)
+  --banner-band: var(--color-sun-600)
+
+.ui-banner--wood
+  --banner-bg: var(--color-wood-500)
+  --banner-lip: var(--color-wood-300)
+  --banner-band: var(--color-wood-700)
+
+.ui-banner--sky
+  --banner-bg: var(--color-sky-500)
+  --banner-lip: var(--color-sky-300)
+  --banner-band: var(--color-sky-700)
+
+// ─── Chips / badges ──────────────────────────────────────────────────────────
+.ui-chip
+  display: inline-flex
+  align-items: center
+  gap: 0.25em
+  padding: 0.15em 0.6em 0.2em
+  border: 2px solid var(--ui-outline)
+  border-radius: 999px
+  background-color: var(--color-cream-100)
+  color: var(--ui-text)
+  font-weight: 900
+  line-height: 1
+  box-shadow: 0 2px 0 var(--ui-outline)
+
+.ui-chip--leaf
+  background-color: var(--color-leaf-500)
+  color: var(--color-cream-50)
+
+.ui-chip--berry
+  background-color: var(--color-berry-500)
+  color: var(--color-cream-50)
+
+.ui-chip--sun
+  background-color: var(--color-sun-400)
+  color: var(--color-ink)
+
+.ui-chip--sky
+  background-color: var(--color-sky-500)
+  color: var(--color-cream-50)
+
+.ui-chip--wood
+  background-color: var(--color-wood-600)
+  color: var(--color-cream-50)
+
+// ─── Progress bar (wood well, leaf fill) ─────────────────────────────────────
+.ui-bar
+  position: relative
+  height: 0.9rem
+  border: 2px solid var(--ui-outline)
+  border-radius: 999px
+  background-color: var(--color-wood-800)
+  overflow: hidden
+
+.ui-bar__fill
+  height: 100%
+  background-color: var(--color-leaf-400)
+  box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
+  border-radius: 999px
+
+// ─── Scrollbar inside cream panels ───────────────────────────────────────────
+.ui-scroll
+  scrollbar-width: thin
+  scrollbar-color: var(--color-wood-500) var(--color-cream-200)
+
+  &::-webkit-scrollbar
+    width: 0.55rem
+
+  &::-webkit-scrollbar-track
+    background: var(--color-cream-200)
+    border-radius: 999px
+
+  &::-webkit-scrollbar-thumb
+    background: var(--color-wood-500)
+    border: 2px solid var(--color-cream-200)
+    border-radius: 999px

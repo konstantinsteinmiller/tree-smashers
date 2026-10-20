@@ -76,11 +76,11 @@ const bg = prependBaseUrl('images/bg/bg-tile-beyblade_800x436.webp')
 
 <template lang="pug">
   div.fixed.inset-0.overflow-hidden(
-    :style="{ background: `#0b1120 url(${bg}) center / cover` }"
+    :style="{ background: `var(--color-forest-900) url(${bg}) center / cover` }"
   )
     //- Stand-in for the arena ring the card sits over.
     div.absolute.rounded-full.border-4(
-      class="border-cyan-400/40 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      class="border-cream-50/40 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
       style="width: min(88vw, 88vh); height: min(88vw, 88vh)"
     )
     PvpVsPreview(
@@ -95,7 +95,7 @@ const bg = prependBaseUrl('images/bg/bg-tile-beyblade_800x436.webp')
       :duration-ms="DURATION"
       :low="low"
     )
-    button.absolute.bottom-2.right-2.rounded.bg-slate-700.text-white.px-3.py-1.text-xs(
+    button.absolute.bottom-2.right-2.ui-btn.ui-btn--secondary.text-xs(
       v-if="at == null"
       @click="replay"
     ) replay

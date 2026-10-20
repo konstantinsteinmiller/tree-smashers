@@ -6,13 +6,14 @@ import usePVP, { type PvPGameConfig } from '@/use/usePVP'
 import usePvpStats from '@/use/usePvpStats'
 import { ARENA_TYPES, type ArenaType } from '@/use/useSpinnerCampaign'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
-import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { getSelectedSkin } from '@/use/useModels'
 import { isSdkActive } from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease } from '@/use/useMatch'
 // Skills: lazy through the skills gate — null / [] on a skills-off build,
 // where the lobby sends an empty loadout and keeps its plain ready dots.
-import { PvpReadySkillsUi, useSkillsApi } from '@/skills/skillsGate'
+import { PvpReadySkillsUi } from '@/skills/skillsGate'
+import { teamConfigs } from '@/use/useSmashers'
+import { smasherConfig, smasherLoadout, isSmasherId } from '@/data/smasherCatalog'
 import type { SkillLoadout } from '@/types/skills'
 
 interface Props {
@@ -37,8 +38,8 @@ const {
   gameConfig,
   hostReady,
   guestReady,
-  hostSkills,
-  guestSkills,
+  hostTeam,
+  guestTeam,
   bothReady,
   pendingInviteCode,
   createLobby,
@@ -63,7 +64,6 @@ const whatsappShareLink = computed(() => {
 // ─── Local UI State ──────────────────────────────────────────────────────
 
 const { playerTeam } = useSpinnerConfig()
-const { playerUpgrades } = useSpinnerCampaign()
 
 const selectedArena = ref<ArenaType>('default')
 const selectedTeamSize = ref<1 | 2>(1)
@@ -73,14 +73,14 @@ const codeCopied = ref(false)
 const joiningPeerId = ref('')
 const clipboardHighlight = ref(false)
 
-// Arena display config — colors matching ARENA_THEMES
+// Arena display config — flat cozy tints (tokens), one hue per arena
 const ARENA_CARDS: Record<string, { color: string; bg: string; border: string }> = {
-  default: { color: '#4fdfff', bg: 'from-[#1c2a3d] to-[#161b22]', border: 'border-[#4fdfff]' },
-  lava: { color: '#ff6622', bg: 'from-[#2a1508] to-[#1a0c04]', border: 'border-[#ff6622]' },
-  ice: { color: '#88ccff', bg: 'from-[#0e2238] to-[#081828]', border: 'border-[#88ccff]' },
-  forest: { color: '#44cc66', bg: 'from-[#0a1a0c] to-[#061208]', border: 'border-[#44cc66]' },
-  thunder: { color: '#ffcc22', bg: 'from-[#1a1a08] to-[#12120a]', border: 'border-[#ffcc22]' },
-  shock: { color: '#ff66cc', bg: 'from-[#2a0a2a] to-[#150518]', border: 'border-[#ff66cc]' }
+  default: { color: 'var(--color-sky-400)', bg: 'bg-sky-200', border: 'border-ink' },
+  lava: { color: 'var(--color-berry-500)', bg: 'bg-berry-300', border: 'border-ink' },
+  ice: { color: 'var(--color-sky-300)', bg: 'bg-sky-200', border: 'border-ink' },
+  forest: { color: 'var(--color-leaf-500)', bg: 'bg-leaf-300', border: 'border-ink' },
+  thunder: { color: 'var(--color-sun-400)', bg: 'bg-sun-200', border: 'border-ink' },
+  shock: { color: 'var(--color-plum-400)', bg: 'bg-plum-300', border: 'border-ink' }
 }
 
 // Filter out 'boss' — not selectable for PvP
@@ -146,36 +146,31 @@ watch(joiningPeerId, (val) => {
 
 // ─── Team Resolution ──────────────────────────────────────────────────────
 
-/** Build the player's PvP team with the correct levels and team size */
+/** Build the player's PvP team: the roster's smashers at their current
+ *  levels ("level 1" lobbies: level 1), each with its colourway. */
 const buildPvpTeam = (): import('@/types/spinner').SpinnerConfig[] => {
   const size = gameConfig.value.teamSize
   const isLvl1 = gameConfig.value.levelOne
-  const team = playerTeam.value.slice(0, size)
-  return team.map((c, i) => ({
-    ...c,
-    topLevel: isLvl1 ? 1 : (playerUpgrades.value.tops[c.topPartId] ?? 0),
-    bottomLevel: isLvl1 ? 1 : (playerUpgrades.value.bottoms[c.bottomPartId] ?? 0),
-    modelId: getSelectedSkin(c.topPartId, i)
-  }))
+  const team = teamConfigs(playerTeam.value.slice(0, size), (c, i) => getSelectedSkin(c.topPartId, i))
+  return isLvl1 ? team.map(c => smasherConfig(c.smasherId!, 1, c.modelId)) : team
 }
 
-/** The player's skill loadout for this lobby — "level 1" lobbies clamp every
- *  skill to L1 here (sender side); the receiver re-applies the same clamp. */
-const skillsApi = useSkillsApi()
-const buildPvpSkills = (): SkillLoadout =>
-  skillsApi.value?.loadoutForBattle('pvp', { levelOne: gameConfig.value.levelOne }) ?? []
+/** Smashers carry their own skills, so the side loadout sent with
+ *  player-ready is always empty (old peers still accept it). */
+const buildPvpSkills = (): SkillLoadout => []
+
+/** A team's skills for the ready card: every smasher's unlocked skills. */
+const teamSkills = (team: import('@/types/spinner').SpinnerConfig[]): SkillLoadout =>
+  team.flatMap(c => (isSmasherId(c.smasherId) ? smasherLoadout(c) : []))
 
 // ─── Ready card: both sides' skills ────────────────────────────────────────
 
-/** Before Ready the local row previews what WILL be sent; once ready it
- *  shows the sanitised copy usePVP stores. Refreshed by a watcher (not a
- *  computed) because loadoutForBattle may run the slot auto-fill. */
 const previewSkills = ref<SkillLoadout>([])
 const refreshPreviewSkills = () => {
-  previewSkills.value = buildPvpSkills()
+  previewSkills.value = teamSkills(buildPvpTeam())
 }
 watch(
-  () => [status.value, gameConfig.value.levelOne, props.isOpen, skillsApi.value] as const,
+  () => [status.value, gameConfig.value.levelOne, props.isOpen] as const,
   ([s]) => {
     if (s === 'lobby' || s === 'ready') refreshPreviewSkills()
   },
@@ -184,12 +179,12 @@ watch(
 
 const mySkills = computed<SkillLoadout>(() => {
   if (!localReady.value) return previewSkills.value
-  return isHost.value ? hostSkills.value : guestSkills.value
+  return teamSkills(isHost.value ? hostTeam.value : guestTeam.value)
 })
 const opponentReady = computed(() => isHost.value ? guestReady.value : hostReady.value)
 const opponentSkills = computed<SkillLoadout>(() => {
   if (!opponentReady.value) return []
-  return isHost.value ? guestSkills.value : hostSkills.value
+  return teamSkills(isHost.value ? guestTeam.value : hostTeam.value)
 })
 const showSkillRows = computed(() => PvpReadySkillsUi !== null)
 
@@ -342,7 +337,7 @@ watch(() => props.isOpen, (open) => {
 
           //- Arena Selection
           div
-            div.text-gray-400.game-text.uppercase.font-bold.mb-2(class="text-xs") {{ t('pvp.selectArena') }}
+            div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.selectArena') }}
             div.grid.gap-2(class="grid-cols-3 sm:grid-cols-6")
               div(
                 v-for="arena in selectableArenas"
@@ -350,96 +345,96 @@ watch(() => props.isOpen, (open) => {
                 @click="onSelectArena(arena)"
                 class="relative cursor-pointer rounded-lg p-2 text-center transition-all duration-150 hover:scale-105 active:scale-95 border-2"
                 :class="selectedArena === arena \
-                  ? ['bg-gradient-to-b', ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'ring-1 ring-white/20'] \
-                  : 'bg-slate-700 border-slate-600 hover:border-slate-400'"
+                  ? [ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'shadow-[0_3px_0_var(--color-ink)]'] \
+                  : 'bg-cream-200 border-cream-400 hover:border-wood-500'"
               )
                 //- Color dot
-                div.mx-auto.rounded-full.mb-1(
+                div.mx-auto.rounded-full.mb-1.border-2.border-ink(
                   class="w-4 h-4 sm:w-5 sm:h-5"
                   :style="{ backgroundColor: ARENA_CARDS[arena]?.color }"
                 )
-                div.text-white.font-bold.game-text.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
+                div.text-ink.font-black.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
 
           //- Team Size
           div
-            div.text-gray-400.game-text.uppercase.font-bold.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
+            div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
               button(
                 v-for="size in [1, 2]"
                 :key="size"
                 @click="onSelectTeamSize(size)"
-                class="flex-1 py-2 rounded-lg border-2 font-bold game-text transition-all cursor-pointer text-sm"
+                class="flex-1 min-h-[2.75rem] py-2 rounded-lg border-2 font-black transition-all cursor-pointer text-sm"
                 :class="selectedTeamSize === size \
-                  ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-yellow-300 text-white' \
-                  : 'bg-slate-700 border-slate-600 text-gray-300 hover:border-slate-400'"
+                  ? 'bg-leaf-500 border-ink ui-outline-sm shadow-[0_3px_0_var(--color-ink)]' \
+                  : 'bg-cream-200 border-cream-400 text-ink hover:border-wood-500'"
               ) {{ size }}v{{ size }}
 
           //- Level 1 toggle
           div.flex.items-center.gap-3.cursor-pointer(@click="onToggleLevelOne")
             div.rounded-full.border-2.flex.items-center.justify-center.transition-colors(
               class="w-5 h-5"
-              :class="levelOne ? 'bg-yellow-500 border-yellow-400' : 'bg-slate-700 border-slate-600'"
+              :class="levelOne ? 'bg-leaf-500 border-ink' : 'bg-cream-50 border-wood-700'"
             )
               svg(
                 v-if="levelOne"
-                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white"
+                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-cream-50)"
                 class="w-3 h-3"
               )
                 path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
-            span.text-gray-300.game-text.font-bold(class="text-sm") {{ t('pvp.levelOne') }}
+            span.text-ink.font-black(class="text-sm") {{ t('pvp.levelOne') }}
 
           //- Join section
           div.flex.flex-col.gap-2
-            div.text-gray-400.game-text.uppercase.font-bold(class="text-xs") {{ t('pvp.joinLobby') }}
+            div.text-ink-soft.uppercase.font-black(class="text-xs") {{ t('pvp.joinLobby') }}
             div.flex.gap-2
               div.relative.min-w-0.flex-1
-                input.w-full.rounded-lg.border-2.bg-slate-800.text-white.py-2.font-mono.tracking-wider(
+                input.w-full.rounded-lg.border-2.bg-cream-50.text-ink.py-2.font-mono(
                   v-model="joiningPeerId"
                   :placeholder="t('pvp.enterCode')"
-                  class="text-sm focus:outline-none focus:border-blue-400 pl-3 pr-8"
+                  class="text-sm focus:outline-none focus:border-sky-500 placeholder:text-ink-soft pl-3 pr-8"
                   :class="clipboardHighlight \
-                    ? 'border-yellow-400 ring-2 ring-yellow-400/40' \
-                    : 'border-slate-600'"
+                    ? 'border-sun-500 ring-2 ring-sun-400' \
+                    : 'border-wood-700'"
                 )
                 //- Clear button
-                button.absolute.flex.items-center.justify-center.text-gray-400.cursor-pointer(
+                button.absolute.flex.items-center.justify-center.text-ink-soft.cursor-pointer(
                   v-if="joiningPeerId"
                   @click="clearJoinInput"
-                  class="right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full hover:text-white hover:bg-slate-600 transition-colors"
+                  class="right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full hover:text-ink hover:bg-cream-300 transition-colors"
                 )
                   svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3")
                     path(d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z")
               button.shrink-0(
                 @click="onJoinLobby"
                 :disabled="!joiningPeerId.trim()"
-                class="px-4 py-2 rounded-lg border-2 border-[#0f1a30] bg-gradient-to-b from-[#50aaff] to-[#2266ff] text-white font-bold game-text uppercase cursor-pointer hover:from-[#60bbff] hover:to-[#3377ff] transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                class="ui-btn ui-btn--primary uppercase text-sm"
               ) {{ t('pvp.join') }}
 
       //- ── Creating / Connecting ──────────────────────────────────────────
       template(v-else-if="status === 'creating' || status === 'connecting'")
         div.flex.flex-col.items-center.gap-4.py-8
-          div.animate-spin.rounded-full.border-4.border-blue-400(
+          div.animate-spin.rounded-full.border-4.border-leaf-500(
             class="border-t-transparent w-10 h-10"
           )
-          div.text-white.game-text.font-bold {{ status === 'creating' ? t('pvp.creatingLobby') : t('pvp.connecting') }}
+          div.text-ink.font-black {{ status === 'creating' ? t('pvp.creatingLobby') : t('pvp.connecting') }}
 
       //- ── Waiting for Guest ──────────────────────────────────────────────
       template(v-else-if="status === 'waiting'")
         div.flex.flex-col.gap-4
           //- Countdown
           div.text-center
-            div.text-yellow-400.font-bold.game-text(class="text-lg") {{ t('pvp.waitingForPlayer') }}
-            div.text-gray-400.game-text(class="text-sm mt-1") {{ t('pvp.inviteExpires') }}
-              span.text-yellow-300.font-bold.ml-1 {{ expiryFormatted }}
+            div.text-ink.font-black(class="text-lg") {{ t('pvp.waitingForPlayer') }}
+            div.text-ink-soft.font-bold(class="text-sm mt-1") {{ t('pvp.inviteExpires') }}
+              span.text-sun-600.font-black.ml-1 {{ expiryFormatted }}
 
           //- Invite code (easy to copy on mobile)
-          div.rounded-lg.border-2.border-slate-600.bg-slate-800.p-3
-            div.text-gray-400.game-text.uppercase.font-bold.mb-1(class="text-[0.75rem]") {{ t('pvp.inviteCode') }}
+          div.ui-inset.p-3
+            div.text-ink-soft.uppercase.font-black.mb-1(class="text-[0.75rem]") {{ t('pvp.inviteCode') }}
             div.flex.items-center.gap-2
-              div.text-yellow-300.font-mono.font-bold.truncate.flex-1.select-all.tracking-widest(class="text-base") {{ inviteCode }}
+              div.text-ink.font-mono.font-black.truncate.flex-1.select-all.tracking-wider(class="text-base") {{ inviteCode }}
               button.shrink-0.cursor-pointer(
                 @click="onCopyCode"
-                class="px-3 py-1 rounded border border-slate-500 bg-slate-700 text-white game-text font-bold text-xs hover:bg-slate-600 transition-colors"
+                class="ui-btn ui-btn--secondary text-xs"
               ) {{ codeCopied ? t('pvp.copied') : t('pvp.copy') }}
 
           //- Invite link actions
@@ -447,7 +442,7 @@ watch(() => props.isOpen, (open) => {
             //- Copy full link
             button.w-full(
               @click="onCopyLink"
-              class="py-2 rounded-lg border-2 border-slate-600 bg-slate-700 text-white font-bold game-text transition-all cursor-pointer text-sm hover:bg-slate-600"
+              class="ui-btn ui-btn--secondary text-sm"
             )
               span(v-if="copied") {{ t('pvp.copied') }}
               span(v-else) {{ t('pvp.copyLink') }}
@@ -457,9 +452,9 @@ watch(() => props.isOpen, (open) => {
               :href="whatsappShareLink"
               target="_blank"
               rel="noopener"
-              class="py-2 rounded-lg border-2 border-[#25D366] bg-[#25D366] text-white font-bold game-text transition-all cursor-pointer text-sm hover:bg-[#20bd5a]"
+              class="ui-btn ui-btn--secondary text-sm"
             )
-              svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 shrink-0")
+              svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 shrink-0 text-leaf-600")
                 path(d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z")
               span {{ t('pvp.shareWhatsApp') }}
 
@@ -467,7 +462,7 @@ watch(() => props.isOpen, (open) => {
             button.flex.items-center.justify-center.gap-2.w-full(
               v-if="canNativeShare"
               @click="onNativeShare"
-              class="py-2 rounded-lg border-2 border-blue-500 bg-blue-600 text-white font-bold game-text transition-all cursor-pointer text-sm hover:bg-blue-500"
+              class="ui-btn ui-btn--secondary text-sm"
             )
               svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 shrink-0")
                 path(d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z")
@@ -477,7 +472,7 @@ watch(() => props.isOpen, (open) => {
             button.w-full(
               v-if="isSdkActive && isCrazyGamesFullRelease"
               @click="sendCrazyGamesInvite"
-              class="py-2 rounded-lg border-2 border-purple-500 bg-purple-600 text-white font-bold game-text transition-all cursor-pointer text-sm hover:bg-purple-500"
+              class="ui-btn ui-btn--secondary text-sm"
             ) {{ t('pvp.inviteFriend') }}
 
       //- ── Lobby: Both Connected ──────────────────────────────────────────
@@ -486,28 +481,28 @@ watch(() => props.isOpen, (open) => {
 
           //- Status badge
           div.text-center
-            div.text-green-400.font-bold.game-text(class="text-lg") {{ t('pvp.connected') }}
-            div.text-gray-400.game-text(class="text-xs mt-1")
+            div.text-leaf-700.font-black(class="text-lg") {{ t('pvp.connected') }}
+            div.text-ink-soft.font-bold(class="text-xs mt-1")
               span(v-if="isHost") {{ t('pvp.youAreHost') }}
               span(v-else) {{ t('pvp.youAreGuest') }}
 
           //- Win:Loss stats
-          div.flex.items-center.justify-center.gap-4.rounded-lg.border-2.border-slate-600.bg-slate-800.py-2.px-4
+          div.ui-inset.flex.items-center.justify-center.gap-4.py-2.px-4
             div.flex.flex-col.items-center
-              span.text-green-400.font-black.game-text(class="text-lg") {{ wins }}
-              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.wins') }}
-            div.text-slate-500.font-bold.game-text(class="text-lg") :
+              span.text-leaf-700.font-black(class="text-lg") {{ wins }}
+              span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.wins') }}
+            div.text-ink-soft.font-black(class="text-lg") :
             div.flex.flex-col.items-center
-              span.text-red-400.font-black.game-text(class="text-lg") {{ losses }}
-              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.losses') }}
-            div.border-l.border-slate-600.h-8
+              span.text-berry-600.font-black(class="text-lg") {{ losses }}
+              span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.losses') }}
+            div.border-l-2.border-cream-400.h-8
             div.flex.flex-col.items-center
-              span.text-yellow-400.font-black.game-text(class="text-lg") {{ honor }}
-              span.text-gray-400.font-bold.uppercase(class="text-[0.7rem]") {{ t('pvp.honor') }}
+              span.text-plum-700.font-black(class="text-lg") {{ honor }}
+              span.text-ink-soft.font-black.uppercase(class="text-[0.7rem]") {{ t('pvp.honor') }}
 
           //- Arena Selection (host can change, guest sees read-only)
           div
-            div.text-gray-400.game-text.uppercase.font-bold.mb-2(class="text-xs") {{ t('pvp.arena') }}
+            div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.arena') }}
             div.grid.gap-2(class="grid-cols-3 sm:grid-cols-6")
               div(
                 v-for="arena in selectableArenas"
@@ -516,32 +511,32 @@ watch(() => props.isOpen, (open) => {
                 class="relative rounded-lg p-2 text-center transition-all duration-150 border-2"
                 :class="[\
                   gameConfig.arenaType === arena \
-                    ? ['bg-gradient-to-b', ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'ring-1 ring-white/20'] \
-                    : 'bg-slate-700 border-slate-600',\
-                  isHost ? 'cursor-pointer hover:scale-105 active:scale-95 hover:border-slate-400' : 'cursor-default opacity-70'\
+                    ? [ARENA_CARDS[arena]?.bg, ARENA_CARDS[arena]?.border, 'shadow-[0_3px_0_var(--color-ink)]'] \
+                    : 'bg-cream-200 border-cream-400',\
+                  isHost ? 'cursor-pointer hover:scale-105 active:scale-95 hover:border-wood-500' : 'cursor-default opacity-70'\
                 ]"
               )
-                div.mx-auto.rounded-full.mb-1(
+                div.mx-auto.rounded-full.mb-1.border-2.border-ink(
                   class="w-4 h-4 sm:w-5 sm:h-5"
                   :style="{ backgroundColor: ARENA_CARDS[arena]?.color }"
                 )
-                div.text-white.font-bold.game-text.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
+                div.text-ink.font-black.truncate(class="text-[0.7rem] sm:text-xs") {{ t('arenas.' + arena) }}
 
           //- Team size (host can change)
           div
-            div.text-gray-400.game-text.uppercase.font-bold.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
+            div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
               button(
                 v-for="size in [1, 2]"
                 :key="size"
                 @click="onSelectTeamSize(size)"
                 :disabled="!isHost"
-                class="flex-1 py-2 rounded-lg border-2 font-bold game-text transition-all text-sm"
+                class="flex-1 min-h-[2.75rem] py-2 rounded-lg border-2 font-black transition-all text-sm"
                 :class="[\
                   gameConfig.teamSize === size \
-                    ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 border-yellow-300 text-white' \
-                    : 'bg-slate-700 border-slate-600 text-gray-300',\
-                  isHost ? 'cursor-pointer hover:border-slate-400' : 'cursor-default'\
+                    ? 'bg-leaf-500 border-ink ui-outline-sm shadow-[0_3px_0_var(--color-ink)]' \
+                    : 'bg-cream-200 border-cream-400 text-ink',\
+                  isHost ? 'cursor-pointer hover:border-wood-500' : 'cursor-default'\
                 ]"
               ) {{ size }}v{{ size }}
 
@@ -552,15 +547,15 @@ watch(() => props.isOpen, (open) => {
           )
             div.rounded-full.border-2.flex.items-center.justify-center.transition-colors(
               class="w-5 h-5"
-              :class="gameConfig.levelOne ? 'bg-yellow-500 border-yellow-400' : 'bg-slate-700 border-slate-600'"
+              :class="gameConfig.levelOne ? 'bg-leaf-500 border-ink' : 'bg-cream-50 border-wood-700'"
             )
               svg(
                 v-if="gameConfig.levelOne"
-                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white"
+                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--color-cream-50)"
                 class="w-3 h-3"
               )
                 path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
-            span.text-gray-300.game-text.font-bold(class="text-sm") {{ t('pvp.levelOne') }}
+            span.text-ink.font-black(class="text-sm") {{ t('pvp.levelOne') }}
 
           //- Ready card: ready dot per side; with skills on, each side's
           //- skill loadout (icon + level). The local side previews what
@@ -571,17 +566,17 @@ watch(() => props.isOpen, (open) => {
               :key="side"
               class="gap-1.5"
               :class="sideReady(side) \
-                ? 'border-green-500/70 bg-green-900/20' \
-                : 'border-slate-600 bg-slate-800'"
+                ? 'border-leaf-600 bg-leaf-300' \
+                : 'border-cream-400 bg-cream-200'"
               :data-side="side"
             )
               div.flex.items-center.gap-2
                 div.rounded-full(
                   class="w-3 h-3"
-                  :class="sideReady(side) ? 'bg-green-400' : 'bg-gray-600'"
+                  :class="sideReady(side) ? 'bg-leaf-500 border-2 border-ink' : 'bg-cream-400 border-2 border-wood-700'"
                 )
-                span.text-white.game-text.font-bold(class="text-sm") {{ t('pvp.' + side) }}
-                span.text-yellow-300.game-text.font-bold.uppercase(
+                span.text-ink.font-black(class="text-sm") {{ t('pvp.' + side) }}
+                span.ui-chip.ui-chip--sun.uppercase(
                   v-if="isMine(side)"
                   class="text-[0.65rem]"
                 ) {{ t('you') }}
@@ -594,21 +589,21 @@ watch(() => props.isOpen, (open) => {
             div.flex.items-center.gap-2
               div.rounded-full(
                 class="w-3 h-3"
-                :class="hostReady ? 'bg-green-400' : 'bg-gray-600'"
+                :class="hostReady ? 'bg-leaf-500 border-2 border-ink' : 'bg-cream-400 border-2 border-wood-700'"
               )
-              span.text-white.game-text.font-bold(class="text-sm") {{ t('pvp.host') }}
+              span.text-ink.font-black(class="text-sm") {{ t('pvp.host') }}
             div.flex.items-center.gap-2
               div.rounded-full(
                 class="w-3 h-3"
-                :class="guestReady ? 'bg-green-400' : 'bg-gray-600'"
+                :class="guestReady ? 'bg-leaf-500 border-2 border-ink' : 'bg-cream-400 border-2 border-wood-700'"
               )
-              span.text-white.game-text.font-bold(class="text-sm") {{ t('pvp.guest') }}
+              span.text-ink.font-black(class="text-sm") {{ t('pvp.guest') }}
 
       //- ── Disconnected / Error / Expired ──────────────────────────────────
       template(v-else-if="status === 'disconnected' || status === 'error' || status === 'expired'")
         div.flex.flex-col.items-center.gap-4.py-6
-          div.text-red-400.font-bold.game-text(class="text-lg") {{ t('pvp.' + status) }}
-          div.text-gray-400.game-text.text-center(class="text-sm") {{ errorMessage }}
+          div.text-berry-600.font-black(class="text-lg") {{ t('pvp.' + status) }}
+          div.text-ink-soft.font-bold.text-center(class="text-sm") {{ errorMessage }}
 
     //- ── Sticky Footer Actions (always visible) ─────────────────────────
     template(#footer)
@@ -616,7 +611,7 @@ watch(() => props.isOpen, (open) => {
       template(v-if="status === 'idle'")
         button.w-full(
           @click="onCreateLobby"
-          class="py-3 rounded-lg border-2 border-[#0f1a30] bg-gradient-to-b from-[#ff8800] to-[#dd5500] text-white font-bold game-text uppercase cursor-pointer hover:from-[#ff9922] hover:to-[#ee6600] transition-all text-sm"
+          class="ui-btn ui-btn--primary uppercase text-sm"
         ) {{ t('pvp.createLobby') }}
 
       //- Lobby: Ready / Start
@@ -624,22 +619,20 @@ watch(() => props.isOpen, (open) => {
         button.w-full(
           v-if="isHost && bothReady"
           @click="onStartMatch"
-          class="py-3 rounded-lg border-2 border-[#0f1a30] bg-gradient-to-b from-[#44cc66] to-[#22aa44] text-white font-bold game-text uppercase cursor-pointer hover:from-[#55dd77] hover:to-[#33bb55] transition-all text-sm"
+          class="ui-btn ui-btn--primary uppercase text-sm"
         ) {{ t('pvp.startMatch') }}
         button.w-full(
           v-else
           @click="onToggleReady"
-          class="py-3 rounded-lg border-2 border-[#0f1a30] text-white font-bold game-text uppercase cursor-pointer transition-all text-sm"
-          :class="localReady \
-            ? 'bg-gradient-to-b from-green-500 to-green-600' \
-            : 'bg-gradient-to-b from-[#50aaff] to-[#2266ff] hover:from-[#60bbff] hover:to-[#3377ff]'"
+          class="ui-btn uppercase text-sm"
+          :class="localReady ? 'ui-btn--secondary' : 'ui-btn--primary'"
         ) {{ localReady ? t('pvp.ready') : t('pvp.setReady') }}
 
       //- Error states: Back to Menu
       template(v-else-if="status === 'disconnected' || status === 'error' || status === 'expired'")
         button.w-full(
           @click="onClose"
-          class="px-6 py-2 rounded-lg border-2 border-slate-600 bg-slate-800 text-gray-300 font-bold game-text cursor-pointer hover:bg-slate-700 transition-all text-sm"
+          class="ui-btn ui-btn--secondary text-sm"
         ) {{ t('pvp.backToMenu') }}
 </template>
 
@@ -649,13 +642,13 @@ watch(() => props.isOpen, (open) => {
 @media (pointer: coarse)
   .pvp-scroll
     scrollbar-width: thin
-    scrollbar-color: rgba(148, 163, 184, 0.5) transparent
+    scrollbar-color: var(--color-wood-500) transparent
 
     &::-webkit-scrollbar
       width: 6px
 
     &::-webkit-scrollbar-thumb
-      background: rgba(148, 163, 184, 0.5)
+      background: var(--color-wood-500)
       border-radius: 3px
 
     &::-webkit-scrollbar-track

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ─── Chaos Arena 12 s showreel ──────────────────────────────────────────────
+ * ─── Tree Smashers 12 s showreel ──────────────────────────────────────────────
  *
  *   pnpm preview:reel                          # record the scenes, cut the showreel
  *   pnpm preview:reel --no-record              # re-cut from the recorded scenes

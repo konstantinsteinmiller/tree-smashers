@@ -3,25 +3,29 @@
 //
 // ## Why this replaced LevelPlayProvider
 //
-// Google Play rejected com.chaos.arena (version codes 1000012 / 1000020) in
+// Google Play rejected com.tree.smashers (version codes 1000012 / 1000020) in
 // 2026-09 under **Families Ad Format Requirements**: "Unclosable ads — ads
 // interfere with app use and can't be closed after 5 seconds" and "Unclear
-// ads/offers". Chaos Arena declares a child-directed audience, and the
+// ads/offers". Tree Smashers declares a child-directed audience, and the
 // Families policy says that ads which interfere with normal app use —
 // *including rewarded and opt-in ads* — must be closeable after 5 seconds.
 //
 // A mediation waterfall (LevelPlay/ironSource + Unity Ads + an AdMob adapter)
-// gives the publisher no control over the winning creative's close affordance,
-// and a standard rewarded video is non-skippable by design. So the native
-// build now:
+// gives the publisher no control over the winning creative at all, so the
+// native build talks to Google's own SDK directly — AdMob is a Families
+// Self-Certified Ads SDK — with no mediation adapters compiled in, and shows
+// opt-in rewarded ads only.
 //
-//   1. talks to Google's own SDK directly — AdMob is a Families
-//      Self-Certified Ads SDK — with no mediation adapters compiled in, and
-//   2. uses a **rewarded interstitial** ad unit, the one AdMob format Google
-//      documents as serving skippable creatives exclusively.
+// That did NOT settle it. Version code 1000024 shipped exactly this with a
+// **rewarded interstitial** unit — Google's docs say those serve "only
+// skippable ads" — and was rejected again: measured on device, the unit
+// serves two-ad pods whose first close button appears 17–36 s in. Whether an
+// ad is closeable after 5 seconds is Google's per-impression template choice;
+// nothing in this file or in the request tags changes it.
 //
-// See `ADS_STATE.md` at the repo root for the full rollout state and the
-// conditions under which mediation may come back.
+// So ads on the native build stay OFF (`VITE_APP_SHOW_MEDIATOR_ADS=false`)
+// until `tools/ad-closeability/measure.mjs` passes on the real ad unit — see
+// `ADS_STATE.md` at the repo root for the measurements and the way back.
 //
 // ## Contract notes
 //
@@ -74,17 +78,29 @@ const addPluginListener: typeof TauriAddPluginListener = (async (...args: unknow
   return (t.addPluginListener as any)(...args)
 }) as unknown as typeof TauriAddPluginListener
 
-// Google's documented rewarded-INTERSTITIAL test ad unit IDs. They always
-// fill, are not tied to our AdMob account, and generate no invalid traffic.
-// Used only when `VITE_APP_ADS_TEST_ADS=true` — never as a silent production
-// fallback, because serving test ads to real users would be ad-fraud-adjacent
-// and earns nothing.
+// Google's documented test ad unit IDs. They always fill, are not tied to our
+// AdMob account, and generate no invalid traffic. Used only when
+// `VITE_APP_ADS_TEST_ADS=true` — never as a silent production fallback,
+// because serving test ads to real users would be ad-fraud-adjacent and earns
+// nothing.
 const TEST_REWARDED_INTERSTITIAL_ANDROID = 'ca-app-pub-3940256099942544/5354046379'
+const TEST_REWARDED_ANDROID = 'ca-app-pub-3940256099942544/5224354917'
 const TEST_REWARDED_INTERSTITIAL_IOS = 'ca-app-pub-3940256099942544/6978759866'
 
 const useTestAds = import.meta.env.VITE_APP_ADS_TEST_ADS === 'true'
 
-const androidRewardedUnit = import.meta.env.VITE_APP_ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID ?? ''
+// Which AdMob format the ANDROID ad unit is. The two load through different
+// SDK classes, so the unit ID and the format travel together: a "Rewarded"
+// unit with `rewarded`, a "Rewarded interstitial" unit with anything else.
+// iOS loads a rewarded interstitial whatever this says.
+type AdMobFormat = 'rewarded' | 'rewarded_interstitial'
+const androidFormat: AdMobFormat =
+  import.meta.env.VITE_APP_ADMOB_ANDROID_FORMAT === 'rewarded' ? 'rewarded' : 'rewarded_interstitial'
+
+const androidRewardedUnit =
+  (androidFormat === 'rewarded'
+    ? import.meta.env.VITE_APP_ADMOB_ANDROID_REWARDED_ID
+    : import.meta.env.VITE_APP_ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID) ?? ''
 const iosRewardedUnit = import.meta.env.VITE_APP_ADMOB_IOS_REWARDED_INTERSTITIAL_ID ?? ''
 
 const isReady = ref(false)
@@ -106,6 +122,7 @@ let initStarted = false
 type AdMobInitState = 'idle' | 'no-ad-unit' | 'starting' | 'ready' | 'failed'
 export const adMobDebug = ref({
   platform: 'unknown' as 'android' | 'ios' | 'other' | 'unknown',
+  adFormat: 'rewarded_interstitial' as AdMobFormat,
   adUnitConfigured: false,
   usingTestAds: useTestAds,
   initState: 'idle' as AdMobInitState,
@@ -140,7 +157,8 @@ const detectPlatform = (): 'android' | 'ios' | 'other' => {
 
 const resolveAdUnitId = (platform: 'android' | 'ios' | 'other'): string => {
   if (platform === 'android') {
-    return useTestAds ? TEST_REWARDED_INTERSTITIAL_ANDROID : androidRewardedUnit
+    if (!useTestAds) return androidRewardedUnit
+    return androidFormat === 'rewarded' ? TEST_REWARDED_ANDROID : TEST_REWARDED_INTERSTITIAL_ANDROID
   }
   if (platform === 'ios') {
     return useTestAds ? TEST_REWARDED_INTERSTITIAL_IOS : iosRewardedUnit
@@ -168,16 +186,18 @@ export const createAdMobProvider = (): AdProvider => ({
     const platform = detectPlatform()
     const rewardedAdUnitId = resolveAdUnitId(platform)
 
-    setDebug({ platform, adUnitConfigured: !!rewardedAdUnitId })
-    logDebug(`platform=${platform} unit=${rewardedAdUnitId ? (useTestAds ? 'TEST' : 'set') : 'EMPTY'}`)
+    const adFormat: AdMobFormat = platform === 'android' ? androidFormat : 'rewarded_interstitial'
+
+    setDebug({ platform, adFormat, adUnitConfigured: !!rewardedAdUnitId })
+    logDebug(`platform=${platform} format=${adFormat} unit=${rewardedAdUnitId ? (useTestAds ? 'TEST' : 'set') : 'EMPTY'}`)
 
     if (!rewardedAdUnitId) {
       setDebug({
         initState: 'no-ad-unit',
-        initError: `no rewarded-interstitial ad unit for platform "${platform}"`
+        initError: `no ${adFormat} ad unit for platform "${platform}"`
       })
       logDebug('init aborted: no ad unit id')
-      console.warn(`[ads/admob] no rewarded-interstitial ad unit for platform "${platform}" — ads disabled`)
+      console.warn(`[ads/admob] no ${adFormat} ad unit for platform "${platform}" — ads disabled`)
       return
     }
 
@@ -207,6 +227,7 @@ export const createAdMobProvider = (): AdProvider => ({
       const res = await invoke<InitResponse>('plugin:admob|init', {
         payload: {
           rewardedAdUnitId,
+          adFormat,
           // ── Families / COPPA posture ──────────────────────────────────
           // TFCD only. Google's targeting guide says TFCD and TFUA must not
           // both be true, and a child-directed declaration is the stronger,

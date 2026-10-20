@@ -1,7 +1,7 @@
 // ─── BlobStorage ───────────────────────────────────────────────────────────
 //
 // In-memory mirror of the gameplay-state subset of localStorage. Holds
-// allowlisted gameplay keys (`spinner_*`, `ca_*`) plus the META blob
+// allowlisted gameplay keys (`smashers_*`, `ca_*`) plus the META blob
 // (`__save_meta__`) and gives the strategy a single source of truth to
 // flush to its remote backend.
 //
@@ -19,7 +19,7 @@
 //     bookkeeping keys (the strategy's manifest, META) live in a
 //     separate in-memory shadow. Used by the CrazyGames strategy where
 //     `sdk.data` is the sole persistence backend and CG QA explicitly
-//     requires that no `spinner_*` / `ca_*` / `__save_*` keys appear
+//     requires that no `smashers_*` / `ca_*` / `__save_*` keys appear
 //     in raw localStorage. Construction additionally scrubs any
 //     leftovers from prior runs that DID mirror to raw, so QA's
 //     localStorage panel ends up clean after the next reload.

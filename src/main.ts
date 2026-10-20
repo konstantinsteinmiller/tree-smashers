@@ -30,7 +30,8 @@ import useUser, {
   isY8,
   isGamePix,
   isPlaygama,
-  isPoki
+  isPoki,
+  isGameMonetize
 } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch.ts'
 import { SaveManager } from '@/utils/save/SaveManager'
@@ -38,6 +39,8 @@ import { resolveSaveStrategy } from '@/platforms/resolveSaveStrategy'
 import { installSaveStatus } from '@/use/useSaveStatus'
 import { bootstrapVConsoleFromUrl, setVConsoleMounter } from '@/use/useVConsole'
 import { installBootDiagnostics } from '@/utils/bootDiagnostics'
+import { startForcedDarkModeGuard } from '@/use/useForcedDarkModeGuard'
+import { registerPauseSyncer } from '@/use/useGamePause'
 
 // ─── Build-config self-check ──────────────────────────────────────────────
 //
@@ -68,9 +71,27 @@ const bootstrap = async () => {
   // base, href + the host-appended fragment, storage-shim state, framing) and
   // arms window-level `error` / `unhandledrejection` taps, so a rejection
   // thrown out of any `await` below is loud instead of leaving a finished
-  // splash sitting over nothing. Also installs `window.__chaosDebug()` for a
+  // splash sitting over nothing. Also installs `window.__smashersDebug()` for a
   // full snapshot on demand — the one expression to ask portal QA to run.
   installBootDiagnostics(router)
+
+  // Forced dark-mode guard. Re-applies the opt-out metas from index.html (a
+  // build transform could drop them) and starts watching for an overrider
+  // that those cannot stop — Dark Reader's filter modes, Chromium's force-dark
+  // flag on a light OS. `ForcedDarkModeModal` (App.vue) is what the player
+  // sees; the loader is deliberately not gated on it.
+  //
+  // Re-checks ride the pause gate rather than `visibilitychange`: YouTube
+  // Playables forbids Page Visibility listeners, and coming back from a
+  // platform pause is when a player has just switched the overrider off.
+  // `?darkguard=off` is the preview recorder's seam, dev builds only.
+  startForcedDarkModeGuard({
+    disabled: import.meta.env.DEV
+      && new URLSearchParams(window.location.search).get('darkguard') === 'off',
+    subscribeRecheck: (recheck) => registerPauseSyncer(recheck),
+    onDetected: (r) => console.info('[forced-dark] override detected:', r.kind, r.confidence, r.browser),
+    onContinueAnyway: (r) => console.info('[forced-dark] player continued anyway:', r.kind)
+  })
 
   // vConsole is mounted on demand via either:
   //   • the StageBadge chord (N taps in 60s) — see `useVConsole.ts`
@@ -85,7 +106,7 @@ const bootstrap = async () => {
   // `setVConsoleMounter` so vConsole stays out of the main chunk
   // and off the hot path.
   //
-  // Why this matters: chaos-arena's main bundle ballooned by ~250KB
+  // Why this matters: tree-smashers's main bundle ballooned by ~250KB
   // gzipped when vConsole was statically imported. CrazyGames flagged
   // the regression. Putting the dynamic-import here fixes it without
   // breaking the trigger paths.
@@ -183,12 +204,12 @@ const bootstrap = async () => {
   // not edit this file.
   const strategy = await resolveSaveStrategy({
     isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
-    isPlaygama, isPoki
+    isPlaygama, isPoki, isGameMonetize
   })
 
   // CrazyGames cloud-only mode: gameplay state and our save bookkeeping
   // (`__save_*`) live in memory only; `sdk.data` is the sole persistence
-  // backend. CG QA explicitly requires that no `spinner_*` / `ca_*` /
+  // backend. CG QA explicitly requires that no `smashers_*` / `ca_*` /
   // `__save_*` keys appear in raw localStorage — only dev toggles
   // (`fps`, `debug`, `cheat`, `campaign-test`, `full_unlocked`) are
   // exempt. Inline env-literal so Vite tree-shakes the dead branch on
@@ -205,13 +226,13 @@ const bootstrap = async () => {
     // matter the hydrate timing.
   ;(window as any).__saveManager = saveManager
 
-  // Defense-in-depth `spinner_*` / `ca_*` / `__save_*` safety remove on
+  // Defense-in-depth `smashers_*` / `ca_*` / `__save_*` safety remove on
   // CG builds. BlobStorage's `scrubRawForCloudOnly()` already wiped these
   // at construction (it seeded into `state` first, so progress is
   // preserved); this second pass catches anything BlobStorage missed.
   // MUST run BEFORE `saveManager.init()` because init patches
   // `localStorage.setItem` / `removeItem` to forward to the strategy —
-  // calling the patched removeItem on a `spinner_*` key would issue a
+  // calling the patched removeItem on a `smashers_*` key would issue a
   // cloud delete via `sdk.data.removeItem`, wiping the player's save.
   // Pre-init, `localStorage.removeItem` is still native and these
   // removes are local-only.
@@ -220,7 +241,7 @@ const bootstrap = async () => {
       const stragglers: string[] = []
       for (let i = 0; i < window.localStorage.length; i++) {
         const k = window.localStorage.key(i)
-        if (k && (k.startsWith('spinner_') || k.startsWith('ca_') || k.startsWith('__save_'))) {
+        if (k && (k.startsWith('smashers_') || k.startsWith('ca_') || k.startsWith('__save_'))) {
           stragglers.push(k)
         }
       }
@@ -387,6 +408,18 @@ const bootstrap = async () => {
     window.addEventListener('unhandledrejection', (e) => pokiCaptureError(e.reason))
   }
 
+  // ─── GameMonetize ───────────────────────────────────────────────────────
+  //
+  // PARALLEL init, not awaited. The plugin sets `window.SDK_OPTIONS`, injects
+  // the SDK script and settles on SDK_READY; the AdProvider's `init()` (via
+  // `initAds()` after mount) joins the same promise. Nothing on the boot path
+  // depends on it: GameMonetize is ads only — no save API, no locale, no
+  // loading / game-ready signal. Starting it here rather than after mount buys
+  // the first-load interstitial about a second (`useFirstLoadInterstitial`).
+  if (import.meta.env.VITE_APP_GAME_MONETIZE === 'true') {
+    void import('@/utils/gameMonetizePlugin').then(({ gameMonetizePlugin }) => gameMonetizePlugin())
+  }
+
   // ─── Portal locale ─────────────────────────────────────────────────────
   //
   // Both CrazyGames and Playgama tell us which language the player picked on
@@ -466,7 +499,7 @@ const bootstrap = async () => {
     fallbackWarn: false,
     // CLDR-aware `a | b | c` branch selection per language (ru/uk/pl/cs/ar…
     // have 3–6 categories). Used by the coin-count aria labels
-    // (skills.learnAria/upgradeAria/topUpAria, spinner.tripleCoinsAria),
+    // (sfc.SmasherTeamModal.levelUpAria, spinner.tripleCoinsAria),
     // called as t(key, named, count).
     pluralRules: buildPluralRules()
   })
@@ -483,7 +516,7 @@ const bootstrap = async () => {
   // Two sources, and the split between them is what Playgama QA's repeated
   // "language parameter was ignored on initialization" came down to:
   //
-  //   • The PLAYER's choice lives in `spinner_user_language` and is written
+  //   • The PLAYER's choice lives in `smashers_user_language` and is written
   //     by exactly one path — the OptionsModal dropdown. It is authoritative
   //     forever and syncs through the cloud strategy.
   //   • The PORTAL's language (Playgama `bridge.platform.language`, CG
@@ -491,7 +524,7 @@ const bootstrap = async () => {
   //     never needs persisting. It drives the live `userLanguage` ref and
   //     i18n only.
   //
-  // The old code seeded the portal locale INTO `spinner_user_language`. That
+  // The old code seeded the portal locale INTO `smashers_user_language`. That
   // made the two indistinguishable, so the first load that failed to get a
   // portal answer in time wrote 'en'-equivalent state that then out-ranked
   // every subsequent correct answer — the bug survived a re-test because it

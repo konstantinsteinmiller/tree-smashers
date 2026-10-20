@@ -18,7 +18,8 @@ import { prependBaseUrl } from '@/utils/function'
 export interface RouletteResult {
   type: 'multiplier' | 'skin' | 'diamonds'
   multiplier?: number
-  skin?: { topPartId: TopPartId; modelId: SpinnerModelId }
+  /** `isSpecial` is only set by the skin roulette (`mode="skins"`). */
+  skin?: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial?: boolean }
   diamonds?: number
 }
 
@@ -36,6 +37,15 @@ interface Segment {
 // BEFORE the "Spin Again" ad is even offered, and the respin, when watched,
 // emits a SECOND result that is paid on top: a respin adds, never replaces.
 // `done` fires once, when the wheel has nothing more to give.
+// `mode="skins"` turns the wheel into the Skin Chest roulette: skin segments
+// only (no coins, no jackpot), the chest's `featuredSkin` on the wheel with
+// FEATURED_SKIN_WEIGHT times the chance of every other skin. The default
+// (boss) wheel is untouched.
+const props = withDefaults(defineProps<{
+  mode?: 'boss' | 'skins'
+  featuredSkin?: { topPartId: TopPartId; modelId: SpinnerModelId } | null
+}>(), { mode: 'boss', featuredSkin: null })
+
 const emit = defineEmits<{
   (e: 'result', value: RouletteResult): void
   (e: 'done'): void
@@ -61,10 +71,10 @@ const { t } = useI18n()
 // Skins (5 + 5 + 1) and the jackpot sit on top of that 100.
 
 const MULTIPLIER_DEFS: { label: string; multiplier: number; color: string; count: number; weight: number }[] = [
-  { label: '0.75x', multiplier: 0.75, color: '#dc2626', count: 2, weight: 12.5 / 2 },
-  { label: '1x', multiplier: 1, color: '#2563eb', count: 3, weight: 27.5 / 3 },
-  { label: '2x', multiplier: 2, color: '#d97706', count: 2, weight: 40 / 2 },
-  { label: '3x', multiplier: 3, color: '#a855f7', count: 2, weight: 20 / 2 }
+  { label: '0.75x', multiplier: 0.75, color: '#fdf2d8', count: 2, weight: 12.5 / 2 },
+  { label: '1x', multiplier: 1, color: '#b5e67a', count: 3, weight: 27.5 / 3 },
+  { label: '2x', multiplier: 2, color: '#c4ebff', count: 2, weight: 40 / 2 },
+  { label: '3x', multiplier: 3, color: '#ff9e93', count: 2, weight: 20 / 2 }
 ]
 
 /** Diamonds granted by the jackpot segment. */
@@ -94,7 +104,37 @@ const getUnownedSkins = (): { topPartId: TopPartId; modelId: SpinnerModelId; isS
   return result
 }
 
+/** Skin-roulette tuning: the chest's previewed skin vs each other skin. */
+const FEATURED_SKIN_WEIGHT = 3
+/** Other unowned skins drawn onto the skin roulette next to the featured one. */
+const SKIN_ROULETTE_OTHERS = 7
+// Cozy palette (tailwind.css tokens): leaf-300, cream-200, sky-200, berry-300, wood-300, plum-300, sun-200.
+const SKIN_ROULETTE_COLORS = ['#b5e67a', '#f7e3b8', '#c4ebff', '#ff9e93', '#deb07a', '#d7b0ff', '#fff0a8']
+
+const skinSegment = (skin: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }, color: string, weight: number): Segment => ({
+  kind: 'skin',
+  label: '',
+  color,
+  result: { type: 'skin', skin: { topPartId: skin.topPartId, modelId: skin.modelId, isSpecial: skin.isSpecial } },
+  imgSrc: modelImgPath(skin.modelId),
+  weight
+})
+
+/** Skin Chest roulette: unowned skins only, the featured one weighted up.
+ *  A featured skin that got owned in the meantime simply isn't on the wheel. */
+const buildSkinSegments = (): Segment[] => {
+  const unowned = getUnownedSkins()
+  const featuredId = props.featuredSkin?.modelId
+  const featured = unowned.find(s => s.modelId === featuredId) ?? null
+  const others = unowned.filter(s => s.modelId !== featuredId).sort(() => Math.random() - 0.5)
+    .slice(0, SKIN_ROULETTE_OTHERS)
+  const segs = others.map((s, i) => skinSegment(s, SKIN_ROULETTE_COLORS[i % SKIN_ROULETTE_COLORS.length]!, 1))
+  if (featured) segs.push(skinSegment(featured, '#ffc933', FEATURED_SKIN_WEIGHT))
+  return segs.sort(() => Math.random() - 0.5)
+}
+
 const buildSegments = (): Segment[] => {
+  if (props.mode === 'skins') return buildSkinSegments()
   const segments: Segment[] = []
 
   for (const def of MULTIPLIER_DEFS) {
@@ -119,7 +159,7 @@ const buildSegments = (): Segment[] => {
   segments.push({
     kind: 'diamonds',
     label: String(jackpotDisplay.amount),
-    color: '#0e7490',
+    color: '#ffc933',
     result: { type: 'diamonds', diamonds: DIAMOND_JACKPOT },
     weight: DIAMOND_JACKPOT_WEIGHT
   })
@@ -128,7 +168,7 @@ const buildSegments = (): Segment[] => {
   const normalSkins = unowned.filter(s => !s.isSpecial).sort(() => Math.random() - 0.5)
   const specialSkins = unowned.filter(s => s.isSpecial).sort(() => Math.random() - 0.5)
 
-  const skinColors = ['#db2777', '#0891b2']
+  const skinColors = ['#d7b0ff', '#d7b0ff']
   const normalSlots = Math.min(2, normalSkins.length)
   for (let i = 0; i < normalSlots; i++) {
     const skin = normalSkins[i]!
@@ -147,7 +187,7 @@ const buildSegments = (): Segment[] => {
     segments.push({
       kind: 'skin',
       label: '',
-      color: '#fbbf24',
+      color: '#d7b0ff',
       result: { type: 'skin', skin: { topPartId: special.topPartId, modelId: special.modelId } },
       imgSrc: modelImgPath(special.modelId),
       weight: 1
@@ -362,35 +402,90 @@ if (coinImg) whenLoaded(coinImg)
 
 // ─── Face drawing (static — runs when the segments/size change, not per frame)
 
-/** Mix a #rrggbb colour toward white (`to` = 255) or black (`to` = 0). */
-const mix = (hex: string, to: number, amt: number): string => {
-  const n = parseInt(hex.slice(1), 16)
-  const m = (c: number) => Math.round(c + (to - c) * amt)
-  return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`
+// ─── Cozy palette (mirrors the @theme tokens in tailwind.css; canvas cannot
+// read CSS variables cheaply, so the hexes are repeated here). Flat fills only:
+// no gradients, no shadowBlur, no ctx.filter.
+const C = {
+  ink: '#3a2314',
+  wood700: '#6e4527',
+  wood600: '#8c5a32',
+  wood300: '#deb07a',
+  cream50: '#fffaf0',
+  cream200: '#f7e3b8',
+  leaf300: '#b5e67a',
+  sun200: '#fff0a8',
+  sun400: '#ffc933',
+  sun600: '#c98208',
+  sky200: '#c4ebff',
+  berry300: '#ff9e93',
+  plum300: '#d7b0ff'
+} as const
+
+/** Rotation the multiplier wedges cycle through: leaf / cream / sun / sky /
+ *  berry-light / wood-light. */
+const FACE_CYCLE = [C.leaf300, C.cream200, C.sun200, C.sky200, C.berry300, C.wood300]
+
+/** Face colour per segment, by position: the boss wheel's jackpot is sun gold
+ *  and its skins plum-light; every other wedge takes the next colour of the
+ *  cycle that differs from both neighbours (the wheel wraps round). The skin
+ *  roulette keeps each segment's own colour (featured = sun gold). Pure
+ *  function of the segment list — no Math.random. */
+const faceColors = (segs: Segment[], skinMode: boolean): string[] => {
+  const n = segs.length
+  const fixed = segs.map(seg => {
+    if (skinMode) return seg.color
+    if (seg.kind === 'diamonds') return C.sun400
+    if (seg.kind === 'skin') return C.plum300
+    return null
+  })
+  const out: string[] = []
+  let k = 0
+  for (let i = 0; i < n; i++) {
+    const f = fixed[i]
+    if (f) {
+      out.push(f)
+      continue
+    }
+    const prev = i > 0 ? out[i - 1] : null
+    const next = fixed[(i + 1) % n] ?? (i === n - 1 ? out[0] : null)
+    let c = FACE_CYCLE[k % FACE_CYCLE.length]!
+    for (let tries = 0; tries < FACE_CYCLE.length && (c === prev || c === next); tries++) {
+      k++
+      c = FACE_CYCLE[k % FACE_CYCLE.length]!
+    }
+    k++
+    out.push(c)
+  }
+  return out
 }
 
-const LABEL_FONT = 'Angry, \'Arial Black\', Impact, sans-serif'
+const LABEL_FONT = "Nunito, 'Arial Rounded MT Bold', 'Arial Black', sans-serif"
 
 const drawCoin = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
   ctx.beginPath()
   ctx.arc(x, y, r, 0, TAU)
-  ctx.fillStyle = '#1c1204'
+  ctx.fillStyle = C.ink
   ctx.fill()
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r)
-  g.addColorStop(0, '#fff8c4')
-  g.addColorStop(0.45, '#facc15')
-  g.addColorStop(1, '#b7791f')
+  // Flat concentric discs (no gradient): rim, face, highlight.
   ctx.beginPath()
   ctx.arc(x, y, r * 0.84, 0, TAU)
-  ctx.fillStyle = g
+  ctx.fillStyle = C.sun600
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(x - r * 0.06, y - r * 0.06, r * 0.66, 0, TAU)
+  ctx.fillStyle = C.sun400
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.2, 0, TAU)
+  ctx.fillStyle = C.sun200
   ctx.fill()
   ctx.beginPath()
   ctx.arc(x, y, r * 0.62, 0, TAU)
-  ctx.strokeStyle = 'rgba(146,84,6,0.55)'
+  ctx.strokeStyle = C.sun600
   ctx.lineWidth = Math.max(1, r * 0.1)
   ctx.stroke()
-  ctx.fillStyle = '#2f920e'
-  ctx.font = `bold ${Math.round(r * 1.15)}px Arial, Helvetica, sans-serif`
+  ctx.fillStyle = C.ink
+  ctx.font = `900 ${Math.round(r * 1.15)}px ${LABEL_FONT}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('$', x, y + r * 0.06)
@@ -405,9 +500,9 @@ const drawDiamondFallback = (ctx: CanvasRenderingContext2D, cx: number, cy: numb
   ctx.lineTo(0, size)
   ctx.lineTo(-size * 0.8, -size * 0.15)
   ctx.closePath()
-  ctx.fillStyle = '#67e8f9'
+  ctx.fillStyle = C.plum300
   ctx.fill()
-  ctx.strokeStyle = '#0e7490'
+  ctx.strokeStyle = C.ink
   ctx.lineWidth = 1.5
   ctx.stroke()
   ctx.restore()
@@ -421,14 +516,13 @@ const drawGlint = (ctx: CanvasRenderingContext2D, x: number, y: number, r: numbe
   ctx.quadraticCurveTo(x, y, x, y + r)
   ctx.quadraticCurveTo(x, y, x - r, y)
   ctx.quadraticCurveTo(x, y, x, y - r)
-  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.fillStyle = C.cream50
   ctx.fill()
+  ctx.strokeStyle = C.ink
+  ctx.lineWidth = Math.max(1, r * 0.18)
+  ctx.stroke()
 }
 
-const labelFill = (seg: Segment): string => {
-  if (seg.kind === 'diamonds') return '#d6fbff'
-  return (seg.result.multiplier ?? 0) >= 2 ? '#ffe066' : '#ffffff'
-}
 
 const drawFace = () => {
   const canvas = faceRef.value
@@ -458,88 +552,55 @@ const drawFace = () => {
   const arcSize = TAU / segCount
   const hubR = (GEO.hub / 2 / GEO.disk) * R
 
-  // Segment faces: lacquered jewel tone, light at the hub → deep at the rim.
+  // Segment faces: one flat fill per wedge (cozy palette, see faceColors).
+  const colors = faceColors(segments.value, props.mode === 'skins')
   for (let i = 0; i < segCount; i++) {
-    const seg = segments.value[i]!
     const a0 = i * arcSize
-    const a1 = a0 + arcSize
-
     ctx.beginPath()
     ctx.moveTo(0, 0)
-    ctx.arc(0, 0, R + 1, a0, a1)
+    ctx.arc(0, 0, R + 1, a0, a0 + arcSize)
     ctx.closePath()
-    const g = ctx.createRadialGradient(0, 0, hubR * 0.6, 0, 0, R)
-    g.addColorStop(0, mix(seg.color, 255, 0.38))
-    g.addColorStop(0.45, seg.color)
-    g.addColorStop(1, mix(seg.color, 0, 0.42))
-    ctx.fillStyle = g
+    ctx.fillStyle = colors[i]!
     ctx.fill()
-
-    // Alternating lacquer rhythm + fine sunburst grain inside the wedge.
-    ctx.save()
-    ctx.clip()
-    if (i % 2 === 1) {
-      ctx.fillStyle = 'rgba(0,0,0,0.07)'
-      ctx.fillRect(-R, -R, D, D)
-    }
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)'
-    ctx.lineWidth = Math.max(0.75, R * 0.008)
-    for (let k = 1; k < 6; k++) {
-      const a = a0 + (arcSize * k) / 6
-      ctx.beginPath()
-      ctx.moveTo(Math.cos(a) * hubR * 1.1, Math.sin(a) * hubR * 1.1)
-      ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R)
-      ctx.stroke()
-    }
-    ctx.restore()
   }
 
-  // Rim shadow onto the face, and the hub's contact shadow. Both are circular,
-  // so baking them into the turning layer is invisible.
-  const rimShade = ctx.createRadialGradient(0, 0, R * 0.8, 0, 0, R)
-  rimShade.addColorStop(0, 'rgba(0,0,0,0)')
-  rimShade.addColorStop(1, 'rgba(0,0,0,0.45)')
-  ctx.fillStyle = rimShade
-  ctx.fillRect(-R, -R, D, D)
-  const hubShade = ctx.createRadialGradient(0, 0, hubR * 0.9, 0, 0, hubR * 1.55)
-  hubShade.addColorStop(0, 'rgba(0,0,0,0.5)')
-  hubShade.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = hubShade
-  ctx.fillRect(-R, -R, D, D)
-
-  // Gold dividers, each ending in the peg the pointer ticks against.
+  // Ink dividers, each ending in a little wooden peg the pointer ticks against.
   for (let i = 0; i < segCount; i++) {
     ctx.save()
     ctx.rotate(i * arcSize)
     ctx.beginPath()
     ctx.moveTo(hubR * 0.95, 0)
     ctx.lineTo(R, 0)
-    ctx.strokeStyle = 'rgba(28,12,0,0.6)'
-    ctx.lineWidth = Math.max(2, R * 0.038)
-    ctx.stroke()
-    const lg = ctx.createLinearGradient(hubR, 0, R, 0)
-    lg.addColorStop(0, '#8a5a14')
-    lg.addColorStop(0.55, '#ffe9a6')
-    lg.addColorStop(1, '#c98a1b')
-    ctx.strokeStyle = lg
-    ctx.lineWidth = Math.max(1, R * 0.016)
+    ctx.strokeStyle = C.ink
+    ctx.lineWidth = Math.max(2, R * 0.026)
+    ctx.lineCap = 'round'
     ctx.stroke()
 
     const pr = Math.max(2, R * 0.036)
     ctx.beginPath()
     ctx.arc(R * 0.925, 0, pr, 0, TAU)
-    ctx.fillStyle = '#2a1602'
+    ctx.fillStyle = C.wood600
     ctx.fill()
-    const pg = ctx.createRadialGradient(R * 0.925 - pr * 0.35, -pr * 0.35, pr * 0.1, R * 0.925, 0, pr)
-    pg.addColorStop(0, '#fff7cf')
-    pg.addColorStop(0.5, '#f2b632')
-    pg.addColorStop(1, '#8a5310')
+    ctx.lineWidth = Math.max(1, pr * 0.4)
+    ctx.strokeStyle = C.ink
+    ctx.stroke()
     ctx.beginPath()
-    ctx.arc(R * 0.925, 0, pr * 0.78, 0, TAU)
-    ctx.fillStyle = pg
+    ctx.arc(R * 0.925, 0, pr * 0.35, 0, TAU)
+    ctx.fillStyle = C.cream200
     ctx.fill()
     ctx.restore()
   }
+
+  // Ink outline where the face meets the rim and the hub (circular, so baking
+  // them into the turning layer is invisible).
+  ctx.strokeStyle = C.ink
+  ctx.lineWidth = Math.max(2, R * 0.03)
+  ctx.beginPath()
+  ctx.arc(0, 0, R * 0.985, 0, TAU)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(0, 0, hubR * 1.02, 0, TAU)
+  ctx.stroke()
 
   // Segment content: labels, currency icons, skins. Laid out TANGENTIALLY —
   // "up" points out of the wheel — so whichever segment the pointer stops on
@@ -557,15 +618,12 @@ const drawFace = () => {
       ctx.save()
       ctx.translate(mx, 0)
       ctx.rotate(Math.PI / 2)
-      const mg = ctx.createRadialGradient(0, 0, mr * 0.2, 0, 0, mr)
-      mg.addColorStop(0, 'rgba(255,255,255,0.3)')
-      mg.addColorStop(1, 'rgba(0,0,0,0.38)')
       ctx.beginPath()
       ctx.arc(0, 0, mr, 0, TAU)
-      ctx.fillStyle = mg
+      ctx.fillStyle = C.cream50
       ctx.fill()
-      ctx.lineWidth = Math.max(1, R * 0.016)
-      ctx.strokeStyle = 'rgba(255,236,170,0.9)'
+      ctx.lineWidth = Math.max(1.5, R * 0.02)
+      ctx.strokeStyle = C.ink
       ctx.stroke()
       const img = skinImages.get(seg.imgSrc)
       if (img?.complete && img.naturalWidth > 0) {
@@ -587,14 +645,14 @@ const drawFace = () => {
       ctx.save()
       ctx.translate(labelR, 0)
       ctx.rotate(Math.PI / 2)
-      ctx.font = `bold ${fs}px ${LABEL_FONT}`
+      ctx.font = `900 ${fs}px ${LABEL_FONT}`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.lineJoin = 'round'
-      ctx.lineWidth = Math.max(2.5, fs * 0.26)
-      ctx.strokeStyle = '#140a24'
+      ctx.lineWidth = Math.max(2.5, fs * 0.22)
+      ctx.strokeStyle = C.cream50
       ctx.strokeText(seg.label, 0, 1, labelMaxW)
-      ctx.fillStyle = labelFill(seg)
+      ctx.fillStyle = C.ink
       ctx.fillText(seg.label, 0, 1, labelMaxW)
       ctx.restore()
 
@@ -751,7 +809,10 @@ const spin = () => {
       grantResult(landed)
 
       // After the first spin, offer the ad respin if an ad is ready.
-      if (spinCount.value === 1 && canShowAd()) {
+      // (A skin roulette that just won the last unowned skin has nothing
+      // left to put on a second wheel.)
+      if (spinCount.value === 1 && canShowAd()
+        && (props.mode !== 'skins' || getUnownedSkins().length > 0)) {
         showAdButton.value = true
       } else {
         // Last spin (the first with no ad on offer, or the respin) — hand
@@ -821,7 +882,7 @@ onMounted(() => {
   // the first draw had to fall back.
   const fonts = (document as Document & { fonts?: FontFaceSet }).fonts
   if (fonts?.load) {
-    fonts.load(`bold 16px ${LABEL_FONT}`).then(queueFaceDraw).catch(() => {
+    fonts.load(`900 16px ${LABEL_FONT}`).then(queueFaceDraw).catch(() => {
     })
   }
   requestAnimationFrame(() => {
@@ -843,9 +904,9 @@ onUnmounted(() => {
   )
     div.wheel-stage.relative.shrink-0(
       :class="{ 'is-spinning': isSpinning, 'is-won': showWin, 'is-low': isLowQuality }"
-      :style="{ width: wheelSize + 'px', height: wheelSize + 'px' }"
+      :style="{ width: wheelSize + 'px', height: wheelSize + 'px', '--ws': wheelSize + 'px' }"
     )
-      //- Warm halo + slow god-rays behind the wheel (CSS only).
+      //- Soft sunny halo + slow rays behind the wheel (CSS only, flat fills).
       div.wheel-backdrop(aria-hidden="true")
         div.wheel-halo
         div.wheel-rays
@@ -853,9 +914,6 @@ onUnmounted(() => {
       //- holding the face canvas, which is painted once per set of segments.
       div.wheel-rotor(ref="rotorRef" :style="diskBox")
         canvas.wheel-face(ref="faceRef")
-      //- Fixed lighting over the turning face (a highlight baked into the
-      //- canvas would spin with it).
-      div.wheel-gloss(:style="diskBox" aria-hidden="true")
       svg.wheel-win(
         v-if="showWin"
         :style="diskBox"
@@ -864,7 +922,8 @@ onUnmounted(() => {
       )
         path.win-glow(:d="winWedgePath")
         path.win-edge(:d="winWedgePath")
-      //- Rim: painted ring, gold CSS ring until/unless it has loaded.
+      //- Rim: flat wooden ring (CSS). A painted rim is used only if one is
+      //- listed in useRouletteArt (none is, since the cozy restyle).
       img.wheel-rim(
         v-if="art.rim"
         :src="artSrc.rim"
@@ -872,8 +931,8 @@ onUnmounted(() => {
         draggable="false"
       )
       div.wheel-rim-fallback(v-else aria-hidden="true")
-      //- Marquee bulbs: the unlit bulbs are static; the light is four group
-      //- layers (every 4th bulb) that blink / chase / flash as a whole.
+      //- Cream bolts on the wooden rim; four group layers (every 4th bolt)
+      //- turn sun-yellow in a chase / flash as a whole.
       div.wheel-bulbs(aria-hidden="true")
         span.wheel-bulb(
           v-for="b in BULBS"
@@ -922,24 +981,18 @@ onUnmounted(() => {
           draggable="false"
         )
         svg.pointer-img(v-else viewBox="0 0 100 154")
-          defs
-            linearGradient#roulette-ptr-gold(x1="0" y1="0" x2="1" y2="1")
-              stop(offset="0" stop-color="#fff3b8")
-              stop(offset="0.45" stop-color="#f5c542")
-              stop(offset="1" stop-color="#a8661a")
-            radialGradient#roulette-ptr-gem(cx="0.38" cy="0.35" r="0.7")
-              stop(offset="0" stop-color="#bfdbfe")
-              stop(offset="0.4" stop-color="#1d4ed8")
-              stop(offset="1" stop-color="#172554")
+          //- Flat wooden ticker with ink outline: plank tip + round cap + cream bolt.
           path(
-            d="M18 55 L82 55 L50 150 Z"
-            fill="url(#roulette-ptr-gold)"
-            stroke="#3b2208"
-            stroke-width="5"
+            d="M20 55 L80 55 L50 148 Z"
+            fill="#a9733f"
+            stroke="#3a2314"
+            stroke-width="6"
             stroke-linejoin="round"
           )
-          circle(cx="50" cy="44" r="41" fill="url(#roulette-ptr-gold)" stroke="#3b2208" stroke-width="5")
-          circle(cx="50" cy="44" r="19" fill="url(#roulette-ptr-gem)" stroke="#3b2208" stroke-width="4")
+          path(d="M50 70 L50 128" stroke="#c89058" stroke-width="5" stroke-linecap="round")
+          circle(cx="50" cy="44" r="38" fill="#8c5a32" stroke="#3a2314" stroke-width="6")
+          circle(cx="50" cy="44" r="26" fill="none" stroke="#fdf2d8" stroke-width="3" stroke-dasharray="7 6")
+          circle(cx="50" cy="44" r="11" fill="#fdf2d8" stroke="#3a2314" stroke-width="4")
       //- One-shot burst when the wheel stops.
       div.wheel-burst(v-if="showWin && !isLowQuality" aria-hidden="true")
         span.burst-ring
@@ -951,46 +1004,37 @@ onUnmounted(() => {
 
     //- Fixed-height slot — no layout shift
     div.flex.flex-col.items-center.justify-center.gap-2(class="min-h-[3rem] mt-1")
-      span.spin-label.font-black.game-text.uppercase.animate-pulse(
+      span.spin-label.ui-outline-sm.animate-pulse(
         v-if="isSpinning"
-        class="text-sm tracking-[0.2em]"
+        class="text-sm tracking-[0.06em]"
       ) {{ t('spinner.spinning') }}
       //- Post-first-spin: ad respin + skip — laid out side-by-side so the
       //- "Skip" link sits inline with the "Spin Again" CTA instead of
       //- stacking under it.
       div.flex.items-center.gap-4(v-if="showAdButton")
-        button.respin-btn.relative.cursor-pointer.select-none(
-          class="active:translate-y-0.5"
+        button.respin-btn.ui-btn.ui-btn--ad(
+          class="text-sm sm:text-base"
           @click="onAdRespin"
         )
-          span.absolute.inset-0.translate-y-1.rounded-xl(class="bg-[#6b3100]")
-          span.relative.flex.items-center.gap-2.rounded-xl.border-2.font-black.uppercase.text-white(
-            class="px-4 py-1.5 text-sm sm:text-base bg-gradient-to-b from-[#ffe27a] via-[#ffc21a] to-[#ef8a00] border-[#3b1d00]"
+          span(v-if="isNative") {{ t('spinner.ad') }}
+          img.object-contain(
+            :src="prependBaseUrl('images/icons/movie_128x96.webp')"
+            alt=""
+            class="h-5 w-5"
           )
-            span.game-text(v-if="isNative") {{ t('spinner.ad') }}
-            img.object-contain(
-              :src="prependBaseUrl('images/icons/movie_128x96.webp')"
-              class="h-5 w-5"
-            )
-            span.game-text {{ t('spinner.spinAgain') }}
-        button.text-white.font-bold.game-text.uppercase.tracking-wider.cursor-pointer.underline.opacity-60(
-          class="text-xs hover:opacity-100"
+          span {{ t('spinner.spinAgain') }}
+        button.skip-btn.ui-outline-sm.font-black.cursor-pointer.underline(
+          class="text-xs min-h-[44px] px-2 opacity-80 hover:opacity-100"
           @click="onSkipAd"
         ) {{ t('spinner.skip') }}
 </template>
 
 <style scoped lang="sass">
-// Layer order, back to front: backdrop → rotor (face) → gloss → win wedge →
-// rim → bulbs → hub → pointer → burst. Everything that ANIMATES animates only
-// `transform` or `opacity`, so the spin and the bulbs run on the compositor:
-// no filter, box-shadow or blur is ever animated, and nothing here reads
-// layout during the spin.
-
-.wheel-stage
-  --gold-hi: #fff3b8
-  --gold: #f5c542
-  --gold-lo: #a8661a
-  --ink: #2b1804
+// Layer order, back to front: backdrop → rotor (face) → win wedge → rim →
+// bolts → hub → pointer → burst. Everything that ANIMATES animates only
+// `transform` or `opacity`, so the spin and the bolts run on the compositor.
+// Cozy flat style: wood, cream, ink outlines — no filter, no blur, no radial
+// gradients, every shadow 0-blur.
 
 // ─── Backdrop ───────────────────────────────────────────────────────────────
 
@@ -1006,12 +1050,14 @@ onUnmounted(() => {
 
 .wheel-halo
   opacity: 0.85
-  background: radial-gradient(closest-side, rgba(255, 214, 110, 0.55) 58%, rgba(255, 170, 40, 0.24) 78%, rgba(255, 150, 0, 0) 100%)
+  border-radius: 50%
+  background: rgba(255, 240, 168, 0.22)
 
 .wheel-rays
-  background: repeating-conic-gradient(from 0deg, rgba(255, 228, 150, 0.3) 0deg 6deg, rgba(255, 228, 150, 0) 6deg 22.5deg)
-  -webkit-mask-image: radial-gradient(closest-side, #000 40%, rgba(0, 0, 0, 0.55) 70%, transparent 100%)
-  mask-image: radial-gradient(closest-side, #000 40%, rgba(0, 0, 0, 0.55) 70%, transparent 100%)
+  background: repeating-conic-gradient(from 0deg, rgba(255, 240, 168, 0.28) 0deg 6deg, rgba(255, 240, 168, 0) 6deg 22.5deg)
+  // clipped to the halo disc instead of a radial mask
+  clip-path: circle(50%)
+  opacity: 0.7
   animation: rays-turn 36s linear infinite
 
 .is-spinning .wheel-rays
@@ -1040,12 +1086,6 @@ onUnmounted(() => {
   width: 100%
   height: 100%
 
-.wheel-gloss
-  position: absolute
-  border-radius: 50%
-  pointer-events: none
-  background: radial-gradient(90% 70% at 32% 18%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.07) 40%, rgba(255, 255, 255, 0) 62%), radial-gradient(circle, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.2) 100%)
-
 .wheel-win
   position: absolute
   overflow: visible
@@ -1053,14 +1093,14 @@ onUnmounted(() => {
   animation: win-pulse 0.55s ease-in-out infinite alternate
 
 .win-glow
-  fill: rgba(255, 240, 170, 0.24)
-  stroke: rgba(255, 210, 80, 0.55)
-  stroke-width: 0.075
+  fill: rgba(255, 250, 240, 0.35)
+  stroke: var(--color-sun-400)
+  stroke-width: 0.07
   stroke-linejoin: round
 
 .win-edge
   fill: none
-  stroke: #fff6c8
+  stroke: var(--color-ink)
   stroke-width: 0.022
   stroke-linejoin: round
 
@@ -1080,13 +1120,23 @@ onUnmounted(() => {
   pointer-events: none
   user-select: none
 
-// Stand-in for the painted rim, in the same bands (lip 0.357, pinstripe 0.40,
-// filigree band, outer bevel, ink) so nothing jumps when the painting lands.
+// Flat wooden ring from the face lip (r 0.36) to the outer edge (r 0.5), ink
+// outlines on both edges and a darker inner lip; the face canvas (r 0.372)
+// tucks under it. A stitched cream dash runs round the outer band.
 .wheel-rim-fallback
   border-radius: 50%
-  background: radial-gradient(circle closest-side, transparent 0 71%, #2b1804 71.6%, #4a2a08 72.8%, #ffe9a6 74.5%, #d9a03a 77%, #7a4a12 78.4%, #9b1c2e 79.2%, #b3122e 80.4%, #3b2208 81.4%, #f5c542 83%, #c98a1b 88%, #f7d774 91%, #2b1804 93%, #fff3b8 94.6%, #b8791f 96.6%, #2b1804 98.2%, transparent 99.6%)
+  border: calc(var(--ws) * 0.14) solid var(--color-wood-600)
+  box-shadow: inset 0 0 0 3px var(--color-ink), inset 0 0 0 calc(3px + var(--ws) * 0.012) var(--color-wood-700), 0 0 0 3px var(--color-ink), 0 4px 0 3px var(--color-ink)
 
-// ─── Bulbs ──────────────────────────────────────────────────────────────────
+  &::after
+    content: ''
+    position: absolute
+    inset: calc(var(--ws) * -0.122)
+    border-radius: 50%
+    border: 2px dashed var(--color-cream-200)
+    opacity: 0.7
+
+// ─── Bolts (the former marquee bulbs) ───────────────────────────────────────
 
 .wheel-bulbs
   position: absolute
@@ -1103,35 +1153,33 @@ onUnmounted(() => {
   width: 100%
   height: 100%
 
-// Unlit glass reads darker than the painting so a lit bulb pops. A STATIC
-// filter: rasterised once with the bulb, never animated.
-.bulb-img
-  filter: brightness(0.62) saturate(1.15)
-
+// Flat cream bolt with ink outline.
 .bulb-fallback
   border-radius: 50%
-  background: radial-gradient(circle at 42% 38%, #fff6d8 0 10%, #f2cf7c 24%, #c28a2c 42%, #6f420e 50%, #ffe7a0 56%, #c58b22 72%, #4a2906 90%, transparent 95%)
+  background: var(--color-cream-200)
+  box-shadow: 0 0 0 1.5px var(--color-ink)
 
-// Light + halo of one bulb. Static: the GROUP layer around it is what animates.
+// Lit state: a sun-yellow bolt laid over the cream one. Static — the GROUP
+// layer around it is what animates.
 .bulb-lit
   position: absolute
-  inset: -75%
+  inset: 0
   border-radius: 50%
-  background: radial-gradient(closest-side, #ffffff 0 16%, #fff6c8 24%, rgba(255, 222, 100, 1) 32%, rgba(255, 184, 40, 0.75) 46%, rgba(255, 160, 20, 0.3) 68%, rgba(255, 150, 0, 0) 100%)
+  background: var(--color-sun-300)
+  box-shadow: 0 0 0 1.5px var(--color-ink)
 
 .bulb-lit-img
   position: absolute
-  left: 30%
-  top: 30%
-  width: 40%
-  height: 40%
+  inset: 0
+  width: 100%
+  height: 100%
 
-// Four group layers (bulbs i % 4 === g); only their opacity animates.
-// Idle: even and odd bulbs alternate (groups 0 + 2 against 1 + 3).
+// Four group layers (bolts i % 4 === g); only their opacity animates.
+// Idle: even and odd bolts alternate (groups 0 + 2 against 1 + 3).
 .bulb-group
   position: absolute
   inset: 0
-  opacity: 0.12
+  opacity: 0
   animation: bulb-idle 1.4s steps(1, end) infinite
 
   &.g1, &.g3
@@ -1141,9 +1189,9 @@ onUnmounted(() => {
   0%
     opacity: 1
   50%
-    opacity: 0.12
+    opacity: 0
 
-// Spinning: theatre chase — one group lit at a time, stepping clockwise.
+// Spinning: chase — one group lit at a time, stepping clockwise.
 .is-spinning .bulb-group
   animation: bulb-chase 0.36s steps(1, end) infinite
   animation-delay: calc((var(--g) - 4) * 0.09s)
@@ -1152,11 +1200,11 @@ onUnmounted(() => {
   0%
     opacity: 1
   25%
-    opacity: 0.12
+    opacity: 0
   100%
-    opacity: 0.12
+    opacity: 0
 
-// Stopped on a result: every bulb flashes together, then back to idle.
+// Stopped on a result: every bolt flashes together, then back to idle.
 .is-won .bulb-group
   animation: bulb-flash 0.24s steps(1, end) 6, bulb-idle 1.4s steps(1, end) 1.44s infinite
 
@@ -1167,7 +1215,7 @@ onUnmounted(() => {
   0%
     opacity: 1
   50%
-    opacity: 0.15
+    opacity: 0
 
 // ─── Hub ────────────────────────────────────────────────────────────────────
 
@@ -1180,20 +1228,36 @@ onUnmounted(() => {
   pointer-events: none
   user-select: none
 
-// Gold bezel (centred) under a sapphire dome whose highlight sits top-left.
+// Flat wooden hub: wood disc, ink outline, stitched cream ring, cream bolt.
 .wheel-hub-fallback
+  position: relative
   width: 100%
   height: 100%
   border-radius: 50%
-  background: radial-gradient(circle at 40% 36%, rgba(219, 234, 254, 0.95) 0 5%, rgba(219, 234, 254, 0) 14%), radial-gradient(circle closest-side, #3b82f6 0 20%, #1d4ed8 38%, #172554 52%, #2b1804 56%, #fff3b8 60%, #f5c542 70%, #c98a1b 82%, #7a4a12 92%, #2b1804 97%, transparent 100%)
+  background: var(--color-wood-500)
+  border: 3px solid var(--color-ink)
+  box-shadow: inset 0 -4px 0 var(--color-wood-700), 0 3px 0 var(--color-ink)
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 16%
+    border-radius: 50%
+    border: 2px dashed var(--color-cream-200)
+
+  &::after
+    content: ''
+    position: absolute
+    inset: 38%
+    border-radius: 50%
+    background: var(--color-cream-100)
+    box-shadow: 0 0 0 2px var(--color-ink)
 
 // ─── Pointer ────────────────────────────────────────────────────────────────
 
-// Box 0.13 × 0.20 of the wheel (the painted pointer is cut to exactly this
-// box), overlapping the rim at 12 o'clock with its tip 0.037 of the wheel into
-// the face. It pivots on its cap — centre at 28.3 % of its height, measured on
-// the painted pointer — so a peg
-// knocks the tip sideways.
+// Box 0.13 × 0.20 of the wheel, overlapping the rim at 12 o'clock with its tip
+// into the face. It pivots on its cap — centre at 28.3 % of its height — so a
+// peg knocks the tip sideways.
 .wheel-pointer
   position: absolute
   left: 43.5%
@@ -1209,7 +1273,7 @@ onUnmounted(() => {
   width: 100%
   height: 100%
   user-select: none
-  filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.55))
+  overflow: visible
 
 // ─── Result burst ───────────────────────────────────────────────────────────
 
@@ -1230,7 +1294,7 @@ onUnmounted(() => {
   height: 120px
   margin: -60px 0 0 -60px
   border-radius: 50%
-  border: 3px solid #fff3b0
+  border: 3px dashed var(--color-cream-50)
   opacity: 0
   animation: burst-ring 0.6s ease-out forwards
 
@@ -1243,7 +1307,7 @@ onUnmounted(() => {
   margin: -9px 0 0 -9px
   opacity: 0
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%)
-  background: radial-gradient(circle, #ffffff 0 22%, #ffe28a 55%, #ffb020 100%)
+  background: var(--color-sun-300)
   animation: burst-spark 0.75s ease-out forwards
 
 @keyframes burst-ring
@@ -1267,24 +1331,23 @@ onUnmounted(() => {
 // ─── Labels + buttons ───────────────────────────────────────────────────────
 
 .spin-label
-  color: #ffd66b
+  font-weight: 900
 
-.respin-btn
-  transition: transform 0.12s ease
-
-  &:hover
-    transform: scale(1.05)
+.skip-btn:focus-visible
+  outline: 3px solid var(--ui-focus)
+  outline-offset: 2px
+  border-radius: 6px
 
 // ─── Low quality tier / reduced motion ──────────────────────────────────────
-// Static marquee (alternate bulbs lit), no turning rays. The spin itself and
-// the pointer are the game, so they stay.
+// Static bolts (alternate lit), no turning rays. The spin itself and the
+// pointer are the game, so they stay.
 
 .is-low
   .wheel-rays, .wheel-halo, .bulb-group, .wheel-win
     animation: none !important
 
   .bulb-group
-    opacity: 0.12
+    opacity: 0
 
   .g1, .g3
     opacity: 1

@@ -4,8 +4,7 @@
 //      equals the encounter table's `BOSS_TROPHY_SKIN_IDS`, and the skins sit
 //      in the classes their bosses fight with.
 //   2. EVERY POOL excludes them — shop (coins + ad unlock), Skin Chest,
-//      roulette wheel, Battle Pass, Daily Rewards, random NPC skins, the daily
-//      challenge — checked by behaviour where a pool is reachable from a test,
+//      roulette wheel, Battle Pass, Daily Rewards, random NPC skins — checked by behaviour where a pool is reachable from a test,
 //      and by a source scan that makes every file reading the skin catalog
 //      declare itself (a NEW pool that forgets the flag fails here).
 //   3. The GRANT API (`grantTrophySkin` / `grantTrophySkins`) is the only way
@@ -122,7 +121,7 @@ describe('trophy skins — excluded from every pool', () => {
     localStorage.setItem(SAVE_KEYS.SKINS, JSON.stringify(ownedKeysExcept(id => TROPHY_SKINS.has(id))))
     const { chest } = await freshImport()
     expect(chest.skinChestHasRewards.value).toBe(false)
-    expect(chest.collectSkinChest()).toBeNull()
+    expect(chest.openSkinChest()).toBeNull()
   })
 
   it('Skin Chest: repeated draws for a fresh player never grant a trophy', async () => {
@@ -130,10 +129,11 @@ describe('trophy skins — excluded from every pool', () => {
     // accumulate in storage, so the pool drains towards the trophies.
     let draws = 0
     for (let i = 0; i < 90; i++) {
-      localStorage.setItem('spinner_skin_chest_ready_at', '0')
-      const { chest } = await freshImport()
-      const got = chest.collectSkinChest()
+      localStorage.setItem('smashers_skin_chest_ready_at', '0')
+      const { chest, models } = await freshImport()
+      const got = chest.openSkinChest()
       if (!got) break
+      models.buySkin(got.topPartId, got.modelId) // the wheel landing the featured skin
       draws++
       expect(isEarnOnlySkin(got.modelId), got.modelId).toBe(false)
     }
@@ -159,18 +159,6 @@ describe('trophy skins — excluded from every pool', () => {
     for (const id of TROPHIES) expect(models.isModelFullyOwned(id), id).toBe(false)
   })
 
-  it('daily challenge enemies never wear a trophy', async () => {
-    const { default: useDailyChallenge } = await import('@/use/useDailyChallenge')
-    const { generateChallenge } = useDailyChallenge()
-    for (let i = 0; i < 200; i++) {
-      for (const e of generateChallenge().enemies) {
-        expect(isEarnOnlySkin(String((e as { modelId?: string }).modelId)), String((e as {
-          modelId?: string
-        }).modelId)).toBe(false)
-      }
-    }
-  })
-
   it('the skin picker\'s "+" does not bounce for an unowned trophy alone', async () => {
     localStorage.setItem(SAVE_KEYS.SKINS, JSON.stringify(ownedKeysExcept(id => TROPHY_SKINS.has(id))))
     const { models } = await freshImport()
@@ -188,19 +176,19 @@ describe('trophy skins — excluded from every pool', () => {
     'src/data/skinCatalog.ts': /if \(isEarnOnlySkin\(modelId\)\) continue/,
     'src/use/useModels.ts': /offerableSkinsForTop\(topPartId\)/,
     'src/use/useSkinChest.ts': /isEarnOnlySkin\(modelId\)/,
-    'src/use/useDailyChallenge.ts': /offerableSkinsForTop\(topPartId\)/,
     'src/use/useBattlePass.ts': /getOfferableSkinPool\(\)/,
     'src/components/organisms/RouletteWheel.vue': /if \(isEarnOnlySkin\(modelId\)\) continue/,
     'src/components/organisms/BattlePass.vue': /getOfferableSkinPool\(\)/,
     'src/components/organisms/DailyRewards.vue': /getOfferableSkinPool\(\)/,
-    'src/components/organisms/SpinnerConfigModal.vue': /v-else-if="isEarnOnlySkin\(modelId\)"/
+    'src/components/organisms/SmasherTeamModal.vue': /v-else-if="isEarnOnlySkin\(modelId\)"/
   }
   const NOT_POOLS: Record<string, string> = {
     'src/use/useAssets.ts': 'preloads every skin image',
     'src/use/loadoutSanitizer.ts': 'validates a PvP peer\'s model ids',
     'src/components/organisms/PvpVsPreview.vue': 'falls back to a class default skin',
     'src/keys.ts': 'comment only',
-    'src/utils/save/SaveMergePolicy.ts': 'comment only (progress score)'
+    'src/utils/save/SaveMergePolicy.ts': 'comment only (progress score)',
+    'src/smashers/smasherSkins.ts': 'reads only the default (signature) skin of a top to pick a palette'
   }
 
   const ROOT = resolve(__dirname, '..')

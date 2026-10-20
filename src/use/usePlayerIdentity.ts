@@ -27,7 +27,7 @@ export interface PlayerIdentity {
 }
 
 /**
- * The id's own localStorage key, deliberately OUTSIDE the `spinner_`-prefixed save
+ * The id's own localStorage key, deliberately OUTSIDE the `smashers_`-prefixed save
  * blob.
  *
  * That prefix is exactly what the cloud save layer allowlists and mirrors, so a
@@ -35,8 +35,8 @@ export interface PlayerIdentity {
  * and the game would mint a second one, and the player would have two rows.
  * This copy exists to be the one thing a cloud round-trip cannot overwrite.
  */
-const DEVICE_UID_KEY = 'chaosarena_uid'
-const DEVICE_NAME_KEY = 'chaosarena_name'
+const DEVICE_UID_KEY = 'treesmashers_uid'
+const DEVICE_NAME_KEY = 'treesmashers_name'
 
 /** The shape the worker validates against. Keep the two in step. */
 const ID_RE = /^[a-zA-Z0-9_-]{8,64}$/

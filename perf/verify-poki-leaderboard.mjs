@@ -80,7 +80,7 @@ const external = []
 const toWorker = []
 page.on('request', (r) => {
   const u = r.url()
-  if (/workers\.dev|leaderboard-chaos-arena/.test(u)) toWorker.push(u)
+  if (/workers\.dev|leaderboard-tree-smashers/.test(u)) toWorker.push(u)
   if (u.startsWith(`http://127.0.0.1:${port}`)) return
   if (u.startsWith('data:') || u.startsWith('blob:') || u.startsWith('about:')) return
   let host = ''
@@ -118,7 +118,7 @@ const scripts = await page.evaluate(async () => {
   const bodies = await Promise.all(srcs.map((s) => fetch(s).then((r) => r.text()).catch(() => '')))
   return bodies.join('')
 })
-const mentionsWorker = /workers\.dev|leaderboard-chaos-arena/.test(html + scripts)
+const mentionsWorker = /workers\.dev|leaderboard-tree-smashers/.test(html + scripts)
 check('bundle never names the Worker origin', !mentionsWorker)
 
 // 3. the retired surfaces are gone

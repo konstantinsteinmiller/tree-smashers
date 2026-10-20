@@ -6,6 +6,8 @@
 // every component they render) shipped in every build. A module-scope ternary
 // on the `import.meta.env`-derived flag does fold: the unused component is
 // never referenced, so its module drops out of the bundle.
+import { rosterPower, teamConfigs } from '@/use/useSmashers'
+import { hashString, layoutForSeed, layoutForStage, TOWERS_FROM_STAGE } from '@/use/arenaTerrain'
 import { HAS_REWARDED_ADS as ADS_BUILD_FLAG } from '@/platforms/rewardedAdsBuild'
 import AdRewardButton from '@/components/organisms/AdRewardButton.vue'
 import RewardedAdButton from '@/components/organisms/RewardedAdButton.vue'
@@ -23,9 +25,6 @@ const SpeedBoostCoinBadge = ADS_BUILD_FLAG ? null : SpeedCoinBadge
 // build, so none can render and no skill component is even bundled; the arena
 // shows exactly what it showed before skills (tests/skillsFlagBoundary.test.ts).
 import {
-  SkillsIntroUi,
-  SkillRevealUi,
-  SkillPickerUi,
   SkillHudChipUi as SkillHudChip,
   PvpVsCardUi as PvpVsCard
 } from '@/skills/skillsGate'
@@ -76,7 +75,7 @@ import { useI18n } from 'vue-i18n'
 import FIconButton from '@/components/atoms/FIconButton.vue'
 import FModal from '@/components/molecules/FModal.vue'
 import FReward from '@/components/atoms/FReward.vue'
-import SpinnerConfigModal from '@/components/organisms/SpinnerConfigModal.vue'
+import SmasherTeamModal from '@/components/organisms/SmasherTeamModal.vue'
 import OptionsModal from '@/components/organisms/OptionsModal.vue'
 import CombatLog from '@/components/organisms/CombatLog.vue'
 import useSounds, { useMusic } from '@/use/useSound'
@@ -109,7 +108,7 @@ import { useFitText } from '@/use/useFitText'
 import { useScreenshake } from '@/use/useScreenshake'
 import { noteRenderFrame, setQualityMonitoring } from '@/use/useQuality'
 import type { SpinnerConfig } from '@/types/spinner'
-import useUser, { isMobileLandscape, isMobilePortrait, isDailyChallengeEnabled } from '@/use/useUser'
+import useUser, { isMobileLandscape, isMobilePortrait, isNative } from '@/use/useUser'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import StatIcon from '@/components/icons/StatIcon.vue'
 import DailyRewards from '@/components/organisms/DailyRewards.vue'
@@ -119,9 +118,7 @@ import TreasureChest from '@/components/organisms/TreasureChest.vue'
 import SkinChestTimer from '@/components/organisms/SkinChestTimer.vue'
 import type { GrantedSkin } from '@/use/useSkinChest'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
-import ChallengeIcon from '@/components/organisms/ChallengeIcon.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
-import useDailyChallenge from '@/use/useDailyChallenge'
 import { prependBaseUrl } from '@/utils/function'
 import FMuteButton from '@/components/atoms/FMuteButton.vue'
 import FButtonSwitch from '@/components/atoms/FButtonSwitch.vue'
@@ -175,9 +172,10 @@ import {
   isSpeedSwitchOffered
 } from '@/use/speedBoostPurchase'
 import useBottomSafe from '@/use/useBottomSafe'
-import { getSelectedSkin, grantTrophySkins, modelImgPath } from '@/use/useModels'
+import { getSelectedSkin, grantTrophySkins, modelImgPath, type SpinnerModelId } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
 import { spawnCoinExplosion, flyDiamondsToBadge, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
+import { revealRewards } from '@/use/useRewardReveal'
 import useCheats from '@/use/useCheats'
 import { cheatRouletteSignal, bossLabSignal, cheatsEnabled } from '@/use/useCheats'
 import RouletteWheel from '@/components/organisms/RouletteWheel.vue'
@@ -198,9 +196,10 @@ import { loadIntroCutscene } from '@/use/introCutsceneLoader'
 // Skills: everything goes through the skills gate — the arena glue, the
 // engine's skill port and the useSkills API are lazy chunks of a skills build
 // and do not exist on a skills-off build.
-import { SKILLS_BUILD, loadArenaSkills, loadSkillEngine, loadSkillsApi } from '@/skills/skillsGate'
+import { SKILLS_BUILD, loadArenaSkills, loadSkillEngine } from '@/skills/skillsGate'
 import type { ArenaSkills } from '@/use/skills/arenaSkills'
 import { isGamePaused } from '@/use/useGamePause'
+import { isForcedDarkBlocking, whenForcedDarkGuardClear } from '@/use/useForcedDarkModeGuard'
 import { isRewardedIntroOpen } from '@/use/useRewardedIntro'
 // Stub-swapped on every non-Poki build (vite.config alias), so this never
 // pulls the SDK into another portal's bundle; a no-op until the SDK is live.
@@ -291,13 +290,6 @@ const {
   markFirstWin
 } = useSpinnerConfig()
 const {
-  hasWonToday: dailyWonToday,
-  canPlayToday: dailyCanPlay,
-  generateChallenge,
-  recordAttempt: recordDailyAttempt,
-  markDailyChallengeWon
-} = useDailyChallenge()
-const {
   currentStage,
   currentStageId,
   isLastStage,
@@ -336,16 +328,10 @@ const {
 const leaderboardModalOpen: Ref<boolean> = ref(false)
 const bestStage = computed(() => Math.max(currentStageId.value, playerMaxStage.value))
 
-/** The board's tie-break column: summed upgrade levels across the whole
+/** The board's tie-break column: summed smasher levels across the whole
  *  roster. Monotonic (upgrades never refund) and it is what actually separates
  *  two players sitting on the same stage. */
-const teamPower = computed(() => {
-  const { tops, bottoms } = playerUpgrades.value
-  let sum = 0
-  for (const level of Object.values(tops)) if (Number.isFinite(level)) sum += level
-  for (const level of Object.values(bottoms)) if (Number.isFinite(level)) sum += level
-  return sum
-})
+const teamPower = computed(() => rosterPower.value)
 
 /**
  * Post the result, fire-and-forget.
@@ -430,10 +416,6 @@ const beginBattle = async () => {
     await bossesReady
     if (phase.value !== 'tap_to_start') return
   }
-  // Skills intro / reveal (WP7, G13): an open surface blocks the battle, and
-  // a pending one whose gate is open takes this tap instead — so it can never
-  // land mid-battle or over the interstitial below.
-  if (sk.value?.takesBattleTap()) return
 
   if (shouldShowMidgameAdNow()) {
     phase.value = 'ad_break'
@@ -482,7 +464,7 @@ const coinsAwarded: Ref<boolean> = ref(false)
 // ─── First-Config Spotlight ──────────────────────────────────────────────
 // After the player's first campaign win (stage 2), we spotlight the team
 // config button so they discover team building. Dismissed on first open.
-const CONFIG_OPENED_KEY = 'spinner_config_opened'
+const CONFIG_OPENED_KEY = 'smashers_config_opened'
 const hasOpenedConfig: Ref<boolean> = ref(localStorage.getItem(CONFIG_OPENED_KEY) === '1')
 
 // ─── Ghost Fight (Leaderboard 1v1) ────────────────────────────────────────
@@ -515,23 +497,15 @@ const playerTeamWithUpgrades = (): SpinnerConfig[] => {
   // A Boss Lab fight at campaign levels fights with the real team (no boost).
   const labUnboosted = bossLabStage !== null && !bossLabBoost && toRaw(cheatStage.value) === bossLabStage
   if (cheatStage.value && !labUnboosted) {
-    const tops = playerUpgrades.value.tops
-    const bots = playerUpgrades.value.bottoms
-    const peakTop = Math.max(0, ...Object.values(tops))
-    const peakBot = Math.max(0, ...Object.values(bots))
-    return playerTeam.value.map((c, i) => ({
+    const configs = teamConfigs(playerTeam.value, (c, i) => getSelectedSkin(c.topPartId, i))
+    const peak = Math.max(0, ...configs.map(c => c.topLevel ?? 0))
+    return configs.map(c => ({
       ...c,
-      topLevel: Math.max(tops[c.topPartId] ?? 0, peakTop) + CHEAT_PLAYER_BONUS_LEVELS,
-      bottomLevel: Math.max(bots[c.bottomPartId] ?? 0, peakBot) + CHEAT_PLAYER_BONUS_LEVELS,
-      modelId: getSelectedSkin(c.topPartId, i)
+      topLevel: peak + CHEAT_PLAYER_BONUS_LEVELS,
+      bottomLevel: peak + CHEAT_PLAYER_BONUS_LEVELS
     }))
   }
-  return playerTeam.value.map((c, i) => ({
-    ...c,
-    topLevel: playerUpgrades.value.tops[c.topPartId],
-    bottomLevel: playerUpgrades.value.bottoms[c.bottomPartId],
-    modelId: getSelectedSkin(c.topPartId, i)
-  }))
+  return teamConfigs(playerTeam.value, (c, i) => getSelectedSkin(c.topPartId, i))
 }
 
 // ─── Hint Timer ───────────────────────────────────────────────────────────
@@ -597,11 +571,8 @@ const bossPeek: Ref<BossPeek | null> = ref(null)
 // ─── Boss Roulette ──────────────────────────────────────────────────────────
 const showRoulette = ref(false)
 
-// Presentation for the diamond payouts this view renders. They keep their
-// diamond-denominated source values (the grant path converts); these only
-// decide what the reward screen SAYS. The roulette jackpot is rendered per
-// grant with `displayDiamondReward` in the template.
-const dailyBonus = displayDiamondReward(1)
+// The roulette jackpot's diamond payouts are rendered per grant with
+// `displayDiamondReward` in the template.
 const pendingBossReward = ref(false)
 // "BOSS DEFEATED" title card between the boss kill and the roulette.
 const showBossDefeated = ref(false)
@@ -625,21 +596,52 @@ const rouletteGrants: Ref<RouletteGrant[]> = ref([])
 // must read this snapshot, never the live `rewardAmount`.
 const rouletteBaseCoins = ref(0)
 
-// ─── Skin Chest (20h) ───────────────────────────────────────────────────────
-const skinChestReward = ref<GrantedSkin | null>(null)
-const showSkinChestReward = computed({
-  get: () => skinChestReward.value !== null,
+// ─── Skin Chest (20h) → Skin roulette ───────────────────────────────────────
+// Tapping a ripe chest opens a skins-only wheel with the chest's previewed
+// skin at 3x the chance of every other skin, plus the boss wheel's
+// rewarded-ad "Spin Again". The wheel grants each landed skin itself
+// (`buySkin`); this view only collects them for the celebration.
+const skinChestFeatured = ref<GrantedSkin | null>(null)
+const showSkinRoulette = computed({
+  get: () => skinChestFeatured.value !== null,
   set: (val: boolean) => {
-    if (!val) skinChestReward.value = null
+    if (!val) skinChestFeatured.value = null
+  }
+})
+const skinChestWins: Ref<{ modelId: SpinnerModelId; isSpecial: boolean }[]> = ref([])
+const showSkinChestReward = computed({
+  get: () => skinChestWins.value.length > 0,
+  set: (val: boolean) => {
+    if (!val) skinChestWins.value = []
   }
 })
 
-const onSkinChestCollected = (granted: GrantedSkin) => {
-  skinChestReward.value = granted
+const onSkinChestOpened = (featured: GrantedSkin) => {
+  preloadRouletteArt()
+  skinChestWinsPending = []
+  skinChestFeatured.value = featured
+}
+
+let skinChestWinsPending: { modelId: SpinnerModelId; isSpecial: boolean }[] = []
+const onSkinRouletteResult = (result: RouletteResult) => {
+  if (result.type === 'skin' && result.skin) {
+    skinChestWinsPending.push({ modelId: result.skin.modelId, isSpecial: !!result.skin.isSpecial })
+  }
+}
+
+const onSkinRouletteDone = () => {
+  if (!showSkinRoulette.value) return
+  skinChestFeatured.value = null
+  skinChestWins.value = skinChestWinsPending
+  skinChestWinsPending = []
+  if (skinChestWins.value.length > 0) {
+    playSound('happy')
+    triggerHappytime()
+  }
 }
 
 const onSkinChestRewardContinue = () => {
-  skinChestReward.value = null
+  skinChestWins.value = []
 }
 
 // ─── Win-screen "3x coins" ad ───────────────────────────────────────────────
@@ -662,7 +664,6 @@ const lastWinWasBoss = ref(false)
 const lastResultWasLab = ref(false)
 const winAdBaseCoins = computed(() => {
   if (pvpMode.value) return PVP_COIN_REWARD
-  if (dailyChallengeMode.value) return dailyCoinReward.value
   return grantedCoins.value
 })
 const showWinCoinsAd = computed(() => !leagueSession.value && showsWinCoinsAd({
@@ -741,8 +742,12 @@ const isGameplayActive = computed(() =>
   && !showReward.value
   && !showRoulette.value
   && !showRouletteReward.value
-  && !showSkinChestReward.value
+  && !showSkinChestReward.value && !showSkinRoulette.value
   && !surrenderModalOpen.value
+  // The forced-dark-mode notice is a blocking menu like the ones above: no
+  // `gameplayStart` may fire under it on the boot path, and one that appears
+  // mid-battle closes the bracket until the player clears it.
+  && !isForcedDarkBlocking.value
 )
 
 // A build that deliberately paints below the auto-downgrade threshold (see
@@ -802,15 +807,10 @@ const onSurrender = () => {
     phase.value = 'game_over'
     return
   }
-  // Surrendering a special mode (ghost / daily challenge) returns to the
-  // campaign — clear those mode flags FIRST so their HUD comes back (the
-  // StageBadge and, for daily, the ChallengeIcon, whose v-if depends on
-  // !dailyChallengeMode). Without this the icon stayed hidden until reload.
+  // Surrendering a ghost fight returns to the campaign — clear the mode
+  // flags FIRST so its HUD (the StageBadge) comes back.
   ghostMode.value = false
   ghostEnemy.value = null
-  dailyChallengeMode.value = false
-  dailyDiamondEarned.value = false
-  dailyCoinReward.value = 0
   // Campaign surrender re-inits the same stage directly (no reward modal →
   // no `onRewardContinue` → no automatic counter bump). Count the surrender
   // as a battle attempt for interstitial cadence — otherwise a player who
@@ -867,7 +867,7 @@ const onRemoteStateCheck = (hash: string, turn: number) => {
 // Players can watch a rewarded video to unlock a temporary 2x speed-up.
 // The boost is purely visual — physics integration runs twice per frame
 // while active, so collisions and damage are unaffected.
-const SPEED_BOOST_KEY = 'spinner_2x_expires_at'
+const SPEED_BOOST_KEY = 'smashers_2x_expires_at'
 const SPEED_BOOST_DURATION_MS = 3 * 60 * 1000
 
 const speedBoostExpiresAt: Ref<number> = ref(parseInt(localStorage.getItem(SPEED_BOOST_KEY) || '0', 10))
@@ -950,6 +950,11 @@ const triggerSpeedBoostAd = async () => {
   const ok = await showRewardedAd({ kind: 'speed' })
   if (!ok) return
   grantSpeedBoost()
+  // Show the payout on the gift screen — but never over a running fight,
+  // where the 2x itself is the feedback and an overlay would cover play.
+  if (phase.value === 'idle' || phase.value === 'tap_to_start') {
+    void revealRewards([{ kind: 'speed', minutes: Math.round(SPEED_BOOST_DURATION_MS / 60000) }])
+  }
 }
 
 // Reference to the CoinBadge component — TreasureChest reads its `rootEl`
@@ -957,8 +962,6 @@ const triggerSpeedBoostAd = async () => {
 const coinBadgeRef = ref<CurrencyBadgeTargets | null>(null)
 const coinBadgeEl = computed(() => coinBadgeRef.value?.rootEl ?? null)
 const rewardCoinRef = ref<HTMLElement | null>(null)
-const rewardDiamondRef = ref<HTMLElement | null>(null)
-const rewardDailyCoinRef = ref<HTMLElement | null>(null)
 // One amount row per granted roulette spin (first spin, then the respin).
 const rouletteRewardRowRefs = ref<HTMLElement[]>([])
 const setRouletteRowRef = (el: unknown, i: number) => {
@@ -990,16 +993,6 @@ const fireDiamondExplosion = (sourceEl: HTMLElement | null, amount: number) => {
   flyDiamondsToBadge(sourceEl, coinBadgeRef.value, amount)
 }
 
-// ─── Daily Challenge mode ──────────────────────────────────────────────────
-// A separate bonus fight (random shape + roster) launched from the menu via
-// ChallengeIcon. Mirrors ghostMode: no coins / no stage advance — the reward
-// is one diamond on the FIRST win each day.
-const dailyChallengeMode = ref(false)
-const dailyDiamondEarned = ref(false)
-// Coins awarded for a daily-challenge WIN (75% of the current stage's win
-// reward, non-boss baseline). 0 on a loss / surrender.
-const dailyCoinReward = ref(0)
-
 let speedBoostIntervalId: number | null = null
 
 // ─── Canvas Sizing ─────────────────────────────────────────────────────────
@@ -1016,14 +1009,23 @@ const updateCanvasSize = () => {
   canvasWidth.value = vv?.width ?? window.innerWidth
   canvasHeight.value = vv?.height ?? window.innerHeight
   canvasSize.value = Math.min(canvasWidth.value, canvasHeight.value)
-  canvas.width = canvasWidth.value
-  canvas.height = canvasHeight.value
+  // Backing store at css × dpr (render-sharpness rule: never draw below the
+  // display's own pixel ratio; capped at 3). The renderer keeps drawing in
+  // CSS px — renderLoop applies the dpr transform.
+  canvasDpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1))
+  canvas.width = Math.round(canvasWidth.value * canvasDpr)
+  canvas.height = Math.round(canvasHeight.value * canvasDpr)
+  canvas.style.width = `${canvasWidth.value}px`
+  canvas.style.height = `${canvasHeight.value}px`
   const jc = joystickCanvasRef.value
   if (jc) {
-    jc.width = canvasWidth.value
-    jc.height = canvasHeight.value
+    jc.width = Math.round(canvasWidth.value * canvasDpr)
+    jc.height = Math.round(canvasHeight.value * canvasDpr)
+    jc.style.width = `${canvasWidth.value}px`
+    jc.style.height = `${canvasHeight.value}px`
   }
 }
+let canvasDpr = 1
 
 // ─── Bottom-Row Visibility Guard ──────────────────────────────────────────
 //
@@ -1194,14 +1196,14 @@ const bossIntroShown = ref(false)
 watch(phase, (p) => {
   bossIntroShown.value = p === 'meteor_intro'
     && bossIntro.value !== null
-    && !pvpMode.value && !ghostMode.value && !dailyChallengeMode.value
+    && !pvpMode.value && !ghostMode.value
 })
 
 // ─── Boss trophies (§3.5) ──────────────────────────────────────────────────
 // Granted on the boss win itself (persisted at once, like the roulette's
 // skin), shown as an extra card on the roulette reward screen. Only a real
 // campaign win of an encounter stage grants (never cheat / Boss Lab, ghost,
-// daily, PvP, league); the grant is idempotent, so a replay shows nothing.
+// PvP, league); the grant is idempotent, so a replay shows nothing.
 const trophyGrants: Ref<BossTrophySkinId[]> = ref([])
 
 // ─── Boss Lab (§11, BW7) — dev cheat ───────────────────────────────────────
@@ -1270,7 +1272,6 @@ watch(isGameOver, (over) => {
       result: gameResult.value,
       mode: battleModeOf({
         pvp: pvpMode.value,
-        daily: dailyChallengeMode.value,
         league: !!leagueSession.value,
         ghost: ghostMode.value,
         cheat: !!cheatStage.value
@@ -1312,32 +1313,6 @@ watch(isGameOver, (over) => {
         lastHonorEarned.value = 0
       }
       addCoins(PVP_COIN_REWARD)
-      coinsAwarded.value = true
-      showReward.value = true
-      stopBattleMusic()
-      return
-    }
-
-    // Daily challenge — no stage advance. A win pays coins (75% of the current
-    // stage's win reward) on EVERY win, plus 1 diamond on the FIRST win of the
-    // day. The coin baseline uses a non-boss stage so a boss stage's reward
-    // spike doesn't inflate the daily payout.
-    if (dailyChallengeMode.value) {
-      if (gameResult.value === 'win') {
-        bpAwardLeaderboardWin()
-        const baseStage = currentStage.value.isBoss
-          ? getStageById(currentStageId.value - 1)
-          : currentStage.value
-        dailyCoinReward.value = Math.max(0, Math.round(baseStage.rewardWin * 0.75))
-        if (dailyCoinReward.value > 0) addCoins(dailyCoinReward.value)
-        if (markDailyChallengeWon()) {
-          addDiamonds(1)
-          dailyDiamondEarned.value = true
-        }
-      } else if (gameResult.value === 'lose') {
-        dailyCoinReward.value = 0
-        bpAwardLoss()
-      }
       coinsAwarded.value = true
       showReward.value = true
       stopBattleMusic()
@@ -1515,10 +1490,6 @@ const onRouletteRewardContinue = async () => {
   incrementAdCounter()
   coinsAwarded.value = false
   initCampaignGame()
-  // Skills intro, new player: the stage-10 boss win finishes HERE (boss card
-  // → roulette → roulette reward → continue), so it is queued after the
-  // reward closed and opens on the tap_to_start that initCampaignGame set.
-  sk.value?.queueIntro('win', battleModeOf({ cheat: !!cheatStage.value }))
   maybeReopenBossLab()
   void armLeagueUnlockAfterWin('win', battleModeOf({ cheat: !!cheatStage.value }))
 }
@@ -1580,15 +1551,7 @@ watch(showReward, async (show) => {
     currentTip.value = null
   }
   await nextTick()
-  // A daily-challenge win bursts coins (the 75% bonus) and, on the first win of
-  // the day, also bursts a diamond toward the HUD badge. Everything else
-  // bursts coins from the standard reward label.
-  if (dailyChallengeMode.value) {
-    if (dailyCoinReward.value > 0) fireCoinExplosion(rewardDailyCoinRef.value)
-    if (dailyDiamondEarned.value) fireDiamondExplosion(rewardDiamondRef.value, dailyBonus.amount)
-  } else {
-    fireCoinExplosion(rewardCoinRef.value)
-  }
+  fireCoinExplosion(rewardCoinRef.value)
 })
 
 // ─── Interstitial cadence ─────────────────────────────────────────────────
@@ -1646,10 +1609,9 @@ const onRewardContinue = async () => {
   // Snapshot mode flags before tearing down state
   const wasPvp = pvpMode.value
   const wasGhost = ghostMode.value
-  const wasDaily = dailyChallengeMode.value
   const wasLeague = LEAGUE_BUILD && leagueSession.value !== null
   const closedResult = gameResult.value
-  const closedMode = battleModeOf({ pvp: wasPvp, daily: wasDaily, league: wasLeague, ghost: wasGhost, cheat: !!cheatStage.value })
+  const closedMode = battleModeOf({ pvp: wasPvp, league: wasLeague, ghost: wasGhost, cheat: !!cheatStage.value })
 
   // Every battle attempt counts toward the cadence — including
   // surrendered ones. A player who quits a tough match still committed
@@ -1671,10 +1633,6 @@ const onRewardContinue = async () => {
     ghostEnemy.value = null
     leagueSession.value = null
     leagueResult.value = null
-  } else if (wasDaily) {
-    dailyChallengeMode.value = false
-    dailyDiamondEarned.value = false
-    dailyCoinReward.value = 0
   }
 
   // Reset the award guard RIGHT BEFORE initGame so the game-over watcher
@@ -1688,10 +1646,6 @@ const onRewardContinue = async () => {
     openLeagueHub()
     return
   }
-  // Skills intro: an existing player's next non-PvP WIN-screen close (a
-  // new player's comes through the boss roulette below). Opens on this
-  // tap_to_start once the gate allows it.
-  sk.value?.queueIntro(closedResult, closedMode)
   maybeReopenBossLab()
   void armLeagueUnlockAfterWin(closedResult, closedMode)
 }
@@ -1714,39 +1668,11 @@ const onGhostFight = (entry: LeaderboardEntry) => {
   const enemies = [toConfig(entry.blade), toConfig(entry.blade2)]
   // The ghost fights with its derived loadout (§9.1) — none on a skills-off build.
   lastBattleInit = () => {
-    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, 'circle', false,
-      battleSkillOptions('ghost', entry))
+    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, 'circle',
+      { ...battleSkillOptions('ghost', entry), terrain: { layout: layoutForSeed(hashString(String(entry.id))), towers: true } })
   }
-  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, 'circle', false,
-    battleSkillOptions('ghost', entry))
-}
-
-// ─── Daily Challenge ────────────────────────────────────────────────────────
-
-const startDailyChallenge = () => {
-  if (!dailyCanPlay.value) return // out of attempts today (icon should be hidden)
-  const myTeam = playerTeamWithUpgrades()
-  if (!myTeam.length) return
-  recordDailyAttempt() // win, lose, or surrender — each click is one of the 3 tries
-  const { enemies, shape } = generateChallenge()
-  ghostMode.value = false
-  pvpMode.value = false
-  dailyChallengeMode.value = true
-  dailyDiamondEarned.value = false
-  dailyCoinReward.value = 0
-  coinsAwarded.value = false
-  // No bouncers, no power-ups, never a boss arena — the variety comes from the
-  // random shape + ability roster. The shape is the 9th initGame arg; the 10th
-  // marks this as a daily match, which is what lets the virtual joystick tell
-  // "against an inscribed wall with room to spare" from "against the screen
-  // edge" (see `isJoystickVisible`).
-  // Re-init (a loadout change on tap_to_start) re-uses this roster + shape and
-  // never records another attempt.
-  lastBattleInit = () => {
-    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, shape, true,
-      battleSkillOptions('daily'))
-  }
-  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, shape, true, battleSkillOptions('daily'))
+  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, 'circle',
+    { ...battleSkillOptions('ghost', entry), terrain: { layout: layoutForSeed(hashString(String(entry.id))), towers: true } })
 }
 
 const onOpenConfig = () => {
@@ -1823,27 +1749,22 @@ const skillsScope = effectScope()
 let skillsLoaded = false
 let skillsUnmounted = false
 const skillsReady: Promise<void> = SKILLS_BUILD
-  ? Promise.all([loadArenaSkills(), loadSkillEngine(), loadSkillsApi()])
-    .then(([mod, port, api]) => {
-      if (skillsUnmounted || !mod || !api) return
+  ? Promise.all([loadArenaSkills(), loadSkillEngine()])
+    .then(([mod, port]) => {
+      if (skillsUnmounted || !mod) return
       installSkillEngine(port)
-      const glue = skillsScope.run(() => mod.useArenaSkills(api, {
-        phase,
-        pvpMode,
+      const glue = skillsScope.run(() => mod.useArenaSkills({
         pvpRole,
         pvpHostSkills,
         pvpGuestSkills,
         skillHud,
-        isBattleActive,
-        gateBlockers: skillGateBlockers,
-        rebuildBoard: () => lastBattleInit?.(),
-        openTeam: onOpenConfig
+        isBattleActive
       }))
       if (!glue) return
       sk.value = reactive(glue) as unknown as ArenaSkills
-      // The board waiting on tap_to_start was built before the glue and the
-      // engine's skill port had loaded — rebuild it with the player's loadout.
-      if (phase.value === 'tap_to_start' && !pvpMode.value && glue.hasEquippedSkill()) lastBattleInit?.()
+      // The board waiting on tap_to_start was built before the engine's skill
+      // port had loaded — rebuild it so every smasher carries its skills.
+      if (phase.value === 'tap_to_start' && !pvpMode.value) lastBattleInit?.()
     })
     .catch((e) => {
       console.error('[skills] failed to load:', e)
@@ -1880,8 +1801,12 @@ function initCampaignGame() {
     undefined,
     null,
     'circle',
-    false,
-    battleSkillOptions(battleModeOf({ cheat: !!cheatStage.value }))
+    {
+      ...battleSkillOptions(battleModeOf({ cheat: !!cheatStage.value })),
+      // Tree Smashers: layouts cycle by stage; towers from stage 2 on
+      // (stages 1–2 are the tutorial and stay pure).
+      terrain: { layout: layoutForStage(currentStageId.value), towers: currentStageId.value >= TOWERS_FROM_STAGE }
+    }
   )
 }
 
@@ -1891,18 +1816,13 @@ watch(phase, (p) => {
   if (p !== 'deciding_turn') pvpVsShow.value = false
 })
 
-/** Boss-drop chip on the StageBadge — outside battle only (§7.5). */
-const showSkillDropChip = computed(() =>
-  SKILLS_BUILD && (phase.value === 'idle' || phase.value === 'tap_to_start' || phase.value === 'game_over')
-)
-
 /** Any FModal on screen (Daily Rewards, Battle Pass, the rewarded-ad intro,
  *  the fake leaderboard, …) — those own their open state internally, but
  *  every one of them renders `.modal-overlay` into <body>. */
 const anyModalOverlayOpen = (): boolean =>
   typeof document !== 'undefined' && document.querySelector('.modal-overlay') !== null
 
-/** The arena-side blockers of the skills reveal gate (G13). */
+/** The arena-side blockers of the league surface gate. */
 const skillGateBlockers = () => ({
   pvp: pvpMode.value || pvpModalOpen.value,
   adActive: phase.value === 'ad_break' || adsInFlight.value > 0 || isGamePaused.value
@@ -1910,7 +1830,7 @@ const skillGateBlockers = () => ({
   // The first-launch cutscene, or the boot loader still up.
   cutscene: introPlaying.value || !introAssetsReady.value,
   modalOpen: showReward.value || showRoulette.value || showRouletteReward.value
-    || showBossDefeated.value || showSkinChestReward.value || showEnemySurrender.value
+    || showBossDefeated.value || showSkinChestReward.value || showSkinRoulette.value || showEnemySurrender.value
     || configModalOpen.value || showOptions.value || leaderboardModalOpen.value
     || surrenderModalOpen.value || anyModalOverlayOpen()
     || leagueSurfaceBlocks()
@@ -2005,11 +1925,11 @@ const initLeagueBoard = () => {
     undefined,
     null,
     'circle',
-    false,
     {
       ...(sk.value?.battleSkillOptions('league', o.enemySkillLoadout) ?? {}),
       seed: o.seed,
-      firstTurn: o.firstTurn
+      firstTurn: o.firstTurn,
+      terrain: { layout: layoutForSeed(o.seed), towers: true }
     }
   )
 }
@@ -2035,7 +1955,6 @@ const onLeagueFight = async (payload: { target: LeagueFightTarget; card: Opponen
     }
     leagueHubOpen.value = false
     leagueResult.value = null
-    dailyChallengeMode.value = false
     ghostEnemy.value = null
     ghostMode.value = true
     coinsAwarded.value = false
@@ -2065,7 +1984,6 @@ if (LEAGUE_BUILD) {
 const LEAGUE_SURFACE_GAP_MS = 1200
 const LEAGUE_SURFACE_SETTLE_MS = 400
 let leagueSurfaceClosedAt = -Infinity
-let skillsSurfaceClosedAt = -Infinity
 let tapToStartAt = -Infinity
 let leagueSurfacePoll: number | null = null
 
@@ -2077,10 +1995,6 @@ function leagueSurfaceBlocks(): boolean {
     || performance.now() - leagueSurfaceClosedAt < LEAGUE_SURFACE_GAP_MS
   )
 }
-
-/** A skills surface (intro / reveal / picker) is up. `sk` is `reactive(glue)`,
- *  so its refs read unwrapped at runtime. */
-const skillsSurfaceOpen = (): boolean => (sk.value?.surfaceOpen as unknown) === true
 
 /**
  * The first-unlock popup is armed only by a closed campaign WIN screen once the
@@ -2096,9 +2010,7 @@ const armLeagueUnlockAfterWin = async (result: unknown, mode: string): Promise<v
   if (!LEAGUE_BUILD || result !== 'win' || (mode !== 'campaign' && mode !== 'cheat')) return
   const st = league.value?.state.value
   if (!st || !st.unlocked || st.unlockSeen || !leagueMounted.value) return
-  // A skills surface already up on this close keeps the ad where it was
-  // (before the next battle) rather than covering the surface.
-  if (phase.value === 'tap_to_start' && !skillsSurfaceOpen() && shouldShowMidgameAdNow()) {
+  if (phase.value === 'tap_to_start' && shouldShowMidgameAdNow()) {
     phase.value = 'ad_break'
     await runMidgameAdBeforeBattle()
     if (phase.value === 'ad_break') phase.value = 'tap_to_start'
@@ -2118,15 +2030,15 @@ const leagueSurfacePending = computed<'unlock' | 'season' | null>(() => {
 
 const leagueSurfaceGateOpen = (): boolean => {
   if (phase.value !== 'tap_to_start' || leagueSession.value !== null) return false
-  if (leagueHubOpen.value || leagueUnlockOpen.value || leagueSeasonOpen.value || skillsSurfaceOpen()) return false
+  if (leagueHubOpen.value || leagueUnlockOpen.value || leagueSeasonOpen.value) return false
   const b = skillGateBlockers()
   if (b.pvp || b.adActive || b.cutscene) return false
   if (showReward.value || showRoulette.value || showRouletteReward.value || showBossDefeated.value
-    || showSkinChestReward.value || showEnemySurrender.value || configModalOpen.value || showOptions.value
+    || showSkinChestReward.value || showSkinRoulette.value || showEnemySurrender.value || configModalOpen.value || showOptions.value
     || leaderboardModalOpen.value || surrenderModalOpen.value || anyModalOverlayOpen()) return false
   const now = performance.now()
   return now - tapToStartAt >= LEAGUE_SURFACE_SETTLE_MS
-    && now - Math.max(skillsSurfaceClosedAt, leagueSurfaceClosedAt) >= LEAGUE_SURFACE_GAP_MS
+    && now - leagueSurfaceClosedAt >= LEAGUE_SURFACE_GAP_MS
 }
 
 const tryOpenLeagueSurface = () => {
@@ -2161,6 +2073,7 @@ const onLeagueSeasonClaim = () => {
   if (r.coins > 0) addCoins(r.coins)
   if (r.diamonds > 0) addDiamonds(r.diamonds)
   measureLeague('season', 'claim')
+  void revealRewards([{ kind: 'coins', amount: r.coins }, { kind: 'diamonds', amount: r.diamonds }], { tone: '#ffc93c' })
 }
 
 /** The hub hosted the claim (and already credited the wallet). */
@@ -2171,9 +2084,6 @@ const onLeagueSeasonClaimed = () => {
 if (LEAGUE_BUILD) {
   watch(phase, (p) => {
     if (p === 'tap_to_start') tapToStartAt = performance.now()
-  })
-  watch(skillsSurfaceOpen, (open, was) => {
-    if (was && !open) skillsSurfaceClosedAt = performance.now()
   })
   watch(leagueUnlockOpen, (open, was) => {
     if (!was || open) return
@@ -2259,6 +2169,7 @@ const renderLoop = (now = 0) => {
     return
   }
 
+  ctx.setTransform(canvasDpr, 0, 0, canvasDpr, 0, 0)
   render(ctx, canvasWidth.value, canvasHeight.value, showHint.value, currentStageId.value)
 
   // Feed the adaptive-quality detector. Placed after the draw and inside the
@@ -2271,13 +2182,16 @@ const renderLoop = (now = 0) => {
   const jc = joystickCanvasRef.value
   if (jc) {
     const jctx = jc.getContext('2d')
-    if (jctx) renderJoystickOverlay(jctx, canvasWidth.value, canvasHeight.value)
+    if (jctx) {
+      jctx.setTransform(canvasDpr, 0, 0, canvasDpr, 0, 0)
+      renderJoystickOverlay(jctx, canvasWidth.value, canvasHeight.value)
+    }
   }
   renderRafId = requestAnimationFrame(renderLoop)
 }
 
 let canvasObserver: IntersectionObserver | null = null
-/** Removes `window.__chaos` on unmount. Always null in a production build —
+/** Removes `window.__smashers` on unmount. Always null in a production build —
  *  the seam that sets it is dev-only (see onMounted). */
 let disposePreviewSeam: (() => void) | null = null
 
@@ -2305,8 +2219,11 @@ onMounted(() => {
 
   // The stage-1 board exists; the moment the loader is gone the intro gate
   // may decide (it waits on an unsettled cloud save — see introGate.ts).
-  watch(introAssetsReady, (ready) => {
-    if (ready) armIntro()
+  watch(introAssetsReady, async (ready) => {
+    if (!ready) return
+    // The cutscene never starts under the forced-dark-mode notice.
+    if (isForcedDarkBlocking.value) await whenForcedDarkGuardClear()
+    armIntro()
   }, { immediate: true })
 
   // Watch the canvas for being fully off-screen or covered. Once visibility
@@ -2325,7 +2242,7 @@ onMounted(() => {
     canvasObserver.observe(canvasRef.value)
   }
 
-  // ── Preview-recorder scripting seam (`window.__chaos`) ──────────────────
+  // ── Preview-recorder scripting seam (`window.__smashers`) ──────────────────
   //
   // DEV ONLY, and dynamically imported so it is not merely unreachable in a
   // portal build but absent from it: Vite replaces `import.meta.env.DEV`
@@ -2431,9 +2348,11 @@ onMounted(() => {
           enabled: true,
           myTurnFirst: isMyTurn,
           role: pvpRole.value ?? undefined
-        }, 'circle', false, {
+        }, 'circle', {
           seed: currentMatchSeed(),
-          ...pvpSkillOptions
+          ...pvpSkillOptions,
+          // Both peers derive the layout from the host's shared seed.
+          terrain: { layout: layoutForSeed(currentMatchSeed()), towers: true }
         })
         // VS card inside the engine's 1200 ms deciding_turn window (no timing change).
         pvpVsShow.value = PvpVsCard !== null
@@ -2500,7 +2419,7 @@ onUnmounted(() => {
     canvasObserver.disconnect()
     canvasObserver = null
   }
-  // Drop `window.__chaos` so a hot-reload remount never leaves the recorder
+  // Drop `window.__smashers` so a hot-reload remount never leaves the recorder
   // holding a seam bound to a torn-down instance's refs.
   if (disposePreviewSeam) {
     disposePreviewSeam()
@@ -2530,7 +2449,7 @@ onUnmounted(() => {
 
 <template lang="pug">
   div.arena.relative.w-screen.overflow-hidden.flex.items-center.justify-center(
-    class="bg-[#0d1117] h-screen h-dvh"
+    class="bg-forest-900 h-screen h-dvh"
   )
     //- Game Canvas
     //- Screen-shake transform lives ONLY on the canvas, not on .arena, so
@@ -2569,15 +2488,14 @@ onUnmounted(() => {
           paddingRight: 'calc(0.5rem + env(safe-area-inset-right, 0px))'\
         }"
       )
-        //- Stage indicator (fancy themed badge) — hidden during ghost fights, PvP, and daily challenge
+        //- Stage indicator (fancy themed badge) — hidden during ghost fights and PvP
         StageBadge(
-          v-if="!ghostMode && !pvpMode && !dailyChallengeMode"
+          v-if="!ghostMode && !pvpMode"
           :stage-id="currentStageId"
           :name="currentStage.name"
           :cycle-suffix="currentStage.cycleSuffix"
           :is-boss="currentStage.isBoss"
           :arena-type="currentStage.arenaType"
-          :show-skill-drop="showSkillDropChip"
           :lab="!!cheatStage"
         )
         //- Spacer to keep coins right-aligned when StageBadge is hidden
@@ -2598,15 +2516,6 @@ onUnmounted(() => {
             //- @click: the dev Boss Lab's 20-tap cheat route (inert otherwise).
             TreasureChest(v-if="!pvpMode" :target-el="coinBadgeEl" @click="onChestDebugTap")
 
-      //- Daily Challenge launcher — menu screen only (campaign, not in a
-      //- PvP/ghost/daily fight). Fixed below the FLogoProgress logo so it
-      //- never overlaps the stage badge, coin badge, or bottom HUD row.
-      ChallengeIcon(
-        v-if="isDailyChallengeEnabled && dailyCanPlay && !pvpMode && !ghostMode && !dailyChallengeMode"
-        :reward-available="!dailyWonToday"
-        @start="startDailyChallenge"
-      )
-
       //- Center overlay messages
       div.absolute.flex.items-center.justify-center(class="inset-0 z-[10]")
 
@@ -2616,11 +2525,11 @@ onUnmounted(() => {
           class="text-center pointer-events-auto cursor-pointer"
           @click="beginBattle"
         )
-          div.tap-start-title.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text.whitespace-nowrap(
+          div.tap-start-title.text-cream-50.font-black.uppercase.animate-pulse.game-text.whitespace-nowrap(
             ref="tapStartTitleRef"
             class="text-3xl sm:text-5xl mb-2"
           ) {{ t('spinner.tapToStart') }}
-          div.text-white.italic.game-text(class="text-sm sm:text-lg opacity-60")
+          div.text-cream-100.game-text(class="text-sm sm:text-lg opacity-80")
             | {{ t('spinner.startHint') }}
 
         //- Every-10th-game countdown — rendered inside the meteor shower ring
@@ -2628,7 +2537,7 @@ onUnmounted(() => {
           v-else-if="phase === 'meteor_intro' && countdownText"
           class="text-center"
         )
-          div.countdown-number.font-black.game-text.text-white(
+          div.countdown-number.font-black.game-text.text-cream-50(
             :key="countdownText"
             class="text-7xl sm:text-9xl"
           ) {{ countdownText }}
@@ -2638,7 +2547,7 @@ onUnmounted(() => {
           v-else-if="phase === 'deciding_turn' && turnAnnouncement && !pvpVsShow"
           class="text-center"
         )
-          div.text-white.font-black.uppercase.tracking-wider.animate-pulse.game-text(
+          div.text-cream-50.font-black.uppercase.animate-pulse.game-text(
             class="text-2xl sm:text-4xl"
           ) {{ turnAnnouncement }}
 
@@ -2648,9 +2557,8 @@ onUnmounted(() => {
           class="absolute text-center top-4 left-0 right-0"
           :style="{ top: `calc(1rem + env(safe-area-inset-top, 0px))` }"
         )
-          span.font-black.uppercase.tracking-wider.animate-pulse.game-text(
-            class="text-lg sm:text-2xl text-yellow-300"
-            style="text-shadow: 2px 2px 0 #000, -1px -1px 0 #000"
+          span.font-black.uppercase.animate-pulse.game-text(
+            class="text-lg sm:text-2xl text-sun-300"
           ) {{ t('pvp.opponentTurn') }}
 
         //- Player turn hint
@@ -2668,13 +2576,13 @@ onUnmounted(() => {
           }"
         )
           //- A tap on a frozen spinner swaps the hint for why (Frost Lock).
-          div.drag-hint-text.drag-hint-frozen.italic.game-text.leading-tight.font-bold(
+          div.drag-hint-text.drag-hint-frozen.game-text.leading-tight.font-bold(
             v-if="frozenHintIdx >= 0"
             class="text-xs sm:text-sm"
             role="status"
             data-frozen-hint
           ) {{ t('bosses.frozenHint') }}
-          div.drag-hint-text.text-white.italic.game-text.leading-tight(v-else class="text-xs sm:text-sm opacity-50")
+          div.drag-hint-text.text-cream-100.game-text.leading-tight(v-else class="text-xs sm:text-sm opacity-80")
             | {{ t('spinner.dragHint') }}
 
         //- PvP VS card — both teams + skill loadouts, inside the engine's
@@ -2753,17 +2661,17 @@ onUnmounted(() => {
           component.blade-stat-ice(v-if="BossTraitGlyphUi && bs.trait.frozen" :is="BossTraitGlyphUi" trait="frost" :size="18" decorative)
           div.blade-stat-grid
             div.blade-stat-row
-              StatIcon.blade-stat-icon.text-green-400(stat="hp")
-              span.text-green-400 {{ bs.hp }}
+              StatIcon.blade-stat-icon.text-leaf-400(stat="hp")
+              span.text-leaf-300 {{ bs.hp }}
             div.blade-stat-row
-              StatIcon.blade-stat-icon.text-red-400(stat="attack")
-              span.text-red-400 {{ statNum(bs.atk) }}
+              StatIcon.blade-stat-icon.text-berry-400(stat="attack")
+              span.text-berry-300 {{ statNum(bs.atk) }}
             div.blade-stat-row
-              StatIcon.blade-stat-icon.text-blue-400(stat="defense")
-              span.text-blue-400 {{ statNum(bs.def) }}
+              StatIcon.blade-stat-icon.text-sky-400(stat="defense")
+              span.text-sky-300 {{ statNum(bs.def) }}
             div.blade-stat-row
-              StatIcon.blade-stat-icon.text-cyan-400(stat="speed")
-              span(:class="bs.trait.chill > 0 ? 'blade-stat-spd-chilled' : 'text-cyan-400'") {{ statNum(bs.spd) }}
+              StatIcon.blade-stat-icon.text-sun-400(stat="speed")
+              span(:class="bs.trait.chill > 0 ? 'blade-stat-spd-chilled' : 'text-sun-300'") {{ statNum(bs.spd) }}
           //- Chilled (Frostbite): one snowflake pip per live stack, under SPD.
           div.blade-chill-pips(v-if="BossTraitGlyphUi && bs.trait.chill > 0" aria-hidden="true")
             component(v-for="n in bs.trait.chill" :key="n" :is="BossTraitGlyphUi" trait="chill" :size="10" decorative)
@@ -2841,7 +2749,7 @@ onUnmounted(() => {
         //- internalised the basic loop and the daily-rewards cycle.
         SkinChestTimer(
           v-if="!pvpMode && !showConfigSpotlight && currentStageId >= 3"
-          @collected="onSkinChestCollected"
+          @opened="onSkinChestOpened"
         )
 
         //- Row 1: speed switch (hidden during spotlight)
@@ -2872,10 +2780,18 @@ onUnmounted(() => {
           //- one): a shiny FREE sticker on the 2x corner instead of the movie
           //- icon while an ad-free boost is unspent. Hidden while a boost runs. Outside the switch — its pill clips overflow — and
           //- right-anchored so long locales grow left across the switch.
-          span.speed-free-badge.absolute.pointer-events-none.whitespace-nowrap.font-black.game-text.leading-none.rounded-full.border.text-white(
+          span.speed-free-badge.ui-chip.ui-chip--leaf.absolute.pointer-events-none.whitespace-nowrap.font-black.game-text.leading-none(
             v-if="simSpeed === 1 && !is2xAvailable && hasAnyFreeSpeedGift"
-            class="right-0 -top-2 px-1.5 py-0.5 text-[8px] sm:text-[9px] border-[#0f1a30] bg-gradient-to-b from-[#6dff8a] to-[#16b84a]"
+            class="right-0 -top-2 px-1.5 py-0.5 text-[8px] sm:text-[9px]"
           ) {{ t('spinner.free') }}
+          //- Ad disclosure (native builds — Families policy): once no free gift
+          //- is left, a tap on 2x opens a rewarded ad, and the 12px film reel
+          //- inside the button is not a label. The word goes in the FREE
+          //- sticker's slot, like the "Ad" on every other rewarded button.
+          span.speed-ad-badge.ui-chip.ui-chip--sky.absolute.pointer-events-none.whitespace-nowrap.font-black.game-text.leading-none(
+            v-if="isNative && !IS_COIN_SPEED_BOOST_BUILD && simSpeed === 1 && !is2xAvailable && !hasAnyFreeSpeedGift"
+            class="right-0 -top-2 px-1.5 py-0.5 text-[9px] sm:text-[10px]"
+          ) {{ t('spinner.ad') }}
           //- Builds without rewarded ads (CG basic launch, itch, GamePix, …):
           //- once no free gift is left the boost costs coins — SpeedCoinBadge in
           //- the FREE badge's slot. Hidden while a boost runs; `null` (and not
@@ -2926,14 +2842,6 @@ onUnmounted(() => {
               :img-src="prependBaseUrl('images/icons/team_128x128.webp')"
               @click="onOpenConfig"
             )
-            //- NEW dot: an unlocked skill not viewed yet / the slot-2
-            //- reveal is pending (§7.1). Decorative — the Team
-            //- modal's SKILLS row carries the labelled NEW badge.
-            span.team-new-dot.absolute.pointer-events-none.rounded-full(
-              v-if="sk?.teamNew"
-              aria-hidden="true"
-              data-testid="team-new-dot"
-            )
 
     //- First-config spotlight — darkens everything except the team button
     Transition(name="fade")
@@ -2946,10 +2854,12 @@ onUnmounted(() => {
     FReward(
       v-model="showReward"
       :show-continue="!winAdBusy"
+      :celebrate="gameResult === 'win'"
+      :ribbon-tone="gameResult === 'lose' ? 'berry' : 'leaf'"
       @continue="onRewardContinue"
     )
       template(#ribbon)
-        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl" :class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : (dailyChallengeMode ? t('challenge.title') : t('spinner.rewards')) }}
+        span(:class="{ 'sm:text-2xl': !isMobileLandscape && !isMobilePortrait }") {{ pvpMode ? t('pvp.title') : t('spinner.rewards') }}
       //- The click-to-continue prompt used to be absolutely positioned at the
       //- overlay's bottom edge, so this column reserved a `mb-20 sm:mb-24`
       //- safety strip to stay out from under it. The prompt is a normal flex
@@ -2957,45 +2867,25 @@ onUnmounted(() => {
       //- short landscape viewport those 96px were pushing the result text off
       //- the top of the scroll area. A small gap is all that's left.
       div.reward-column.flex.flex-col.items-center.gap-4(class="mb-2 sm:mb-3")
-        div.reward-result-text.font-black.uppercase.tracking-wider.game-text(
+        div.reward-result-text.font-black.uppercase.game-text(
           class="text-3xl sm:text-5xl"
-          :class="gameResult === 'win' ? 'text-green-400' : 'text-red-400'"
+          :class="gameResult === 'win' ? 'text-sun-300' : 'text-berry-400'"
         ) {{ resultText }}
         //- PvP rewards: coins + honor points
         template(v-if="pvpMode")
           div.flex.items-center.gap-3(ref="rewardCoinRef")
-            IconCoin(class="w-8 h-8 text-yellow-300")
-            span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ PVP_COIN_REWARD + winAdExtra }}
+            IconCoin(class="w-8 h-8 text-sun-400")
+            span.text-sun-300.font-black.game-text(class="text-2xl sm:text-4xl") +{{ PVP_COIN_REWARD + winAdExtra }}
           div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
-            span.text-purple-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
-            span.text-purple-400.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
-        //- Daily challenge reward: 1 diamond on the first win each day
-        template(v-else-if="dailyChallengeMode")
-          template(v-if="gameResult === 'win'")
-            //- Coin bonus (every win)
-            div.flex.items-center.gap-3(v-if="dailyCoinReward > 0" ref="rewardDailyCoinRef")
-              IconCoin(class="w-8 h-8 text-yellow-300")
-              span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ dailyCoinReward + winAdExtra }}
-            //- Daily bonus, first win of the day only. Diamonds normally;
-            //- coins at the diamond rate on a single-currency build (Poki
-            //- allows exactly one currency) — see useCurrency.
-            div.flex.items-center.gap-3(v-if="dailyDiamondEarned" ref="rewardDiamondRef")
-              IconDiamond(v-if="dailyBonus.currency === 'diamonds'" class="w-8 h-8")
-              IconCoin(v-else class="w-8 h-8 text-yellow-300")
-              span.font-black.game-text(
-                :class="[dailyBonus.currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400', 'text-2xl sm:text-4xl']"
-              ) +{{ dailyBonus.amount }}
-            div.font-bold.game-text.text-cyan-200(
-              v-else
-              class="text-xs sm:text-sm opacity-80"
-            ) {{ t('challenge.alreadyClaimed') }}
+            span.text-plum-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
+            span.text-plum-300.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
         //- League fight: the LP panel (it shows the coins it paid) + honour.
         template(v-else-if="leagueSession")
           div(ref="rewardCoinRef")
             component(v-if="LeagueResultPanelUi && leagueResult" :is="LeagueResultPanelUi" :outcome="leagueResult.outcome")
           div.honor-reward.flex.items-center.gap-2(v-if="lastHonorEarned > 0")
-            span.text-purple-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
-            span.text-purple-400.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
+            span.text-plum-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ lastHonorEarned }}
+            span.text-plum-300.font-bold.game-text.uppercase(class="text-sm sm:text-lg") {{ t('pvp.honor') }}
         //- Campaign / leaderboard rewards
         template(v-else)
           //- `.reward-meta` and `.reward-meta__stack` are `display: contents`
@@ -3005,8 +2895,8 @@ onUnmounted(() => {
           div.reward-meta(:class="{ 'has-peek': bossPeek && gameResult === 'win' }")
             div.reward-meta__stack
               div.flex.items-center.gap-3(ref="rewardCoinRef")
-                IconCoin(class="w-8 h-8 text-yellow-300")
-                span.text-yellow-400.font-black.game-text(class="text-2xl sm:text-4xl") +{{ grantedCoins + winAdExtra }}
+                IconCoin(class="w-8 h-8 text-sun-400")
+                span.text-sun-300.font-black.game-text(class="text-2xl sm:text-4xl") +{{ grantedCoins + winAdExtra }}
               //- "#1130 of 2345" — where this player stands globally. Shown on the
               //- win AND the lose screen: it is the one number on the overlay that
               //- is not about this battle, and after a loss it is the reason to
@@ -3046,17 +2936,18 @@ onUnmounted(() => {
     //- Boss Roulette Overlay (wheel spinning)
     FReward(
       v-model="showRoulette"
+      ribbon-tone="sun"
       :show-continue="false"
     )
       template(#ribbon)
-        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
+        span(class="sm:text-2xl") {{ t('spinner.rewards') }}
       //- Tighter `gap-2` on short viewports so the wheel + spin-again
       //- buttons fit alongside the result text and the ribbon. The
       //- result text caps at text-4xl now (was text-5xl) — prior version
       //- pushed the buttons below the fold on the CG iframe in
       //- landscape. CG QA caught it 2026-05-05.
       div.flex.flex-col.items-center.roulette-overlay-content(class="gap-2 sm:gap-3")
-        div.font-black.uppercase.tracking-wider.game-text.text-green-400.roulette-result-text(
+        div.font-black.uppercase.game-text.text-sun-300.roulette-result-text(
           class="text-2xl sm:text-4xl"
         ) {{ resultText }}
         RouletteWheel(@result="onRouletteResult" @done="onRouletteDone")
@@ -3064,11 +2955,13 @@ onUnmounted(() => {
     //- Roulette Reward Celebration
     FReward(
       v-model="showRouletteReward"
+      ribbon-tone="sun"
       :show-continue="rouletteRewardReady"
+      celebrate
       @continue="onRouletteRewardContinue"
     )
       template(#ribbon)
-        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
+        span(class="sm:text-2xl") {{ t('spinner.rewards') }}
       //- One reward per granted spin. With the "Spin Again" respin there are
       //- TWO — the respin ADDS to the first, it never replaces it — shown side
       //- by side with a "+" between them and the second tagged "Spin Again".
@@ -3093,40 +2986,40 @@ onUnmounted(() => {
             class="gap-3 sm:gap-4"
             :data-roulette-grant="g.type"
           )
-            div.roulette-grant-tag.font-black.uppercase.game-text.text-yellow-200(
+            div.roulette-grant-tag.font-black.uppercase.game-text.text-sun-200(
               v-if="i > 0"
-              class="text-xs sm:text-sm tracking-[0.15em]"
+              class="text-xs sm:text-sm tracking-[0.04em]"
             ) {{ t('spinner.spinAgain') }}
             //- Jackpot (ultra-rare). Denominated in whichever currency the build
             //- actually pays — `addDiamonds` did the conversion already.
             template(v-if="g.type === 'diamonds'")
               div.roulette-reward-glow.flex.flex-col.items-center.gap-2
                 IconDiamond.roulette-grant-icon(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'")
-                IconCoin.roulette-grant-icon.text-yellow-300(v-else)
+                IconCoin.roulette-grant-icon.text-sun-400(v-else)
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
                 IconDiamond(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'" class="w-8 h-8")
-                IconCoin(v-else class="w-8 h-8 text-yellow-300")
+                IconCoin(v-else class="w-8 h-8 text-sun-400")
                 span.roulette-grant-amount.font-black.game-text(
-                  :class="displayDiamondReward(g.diamonds).currency === 'diamonds' ? 'text-cyan-300' : 'text-yellow-400'"
+                  :class="displayDiamondReward(g.diamonds).currency === 'diamonds' ? 'text-plum-300' : 'text-sun-300'"
                 ) +{{ displayDiamondReward(g.diamonds).amount }}
             //- Skin reward (plus the 1x coins that come with it)
             template(v-else-if="g.skin")
               div.roulette-reward-glow.flex.flex-col.items-center.gap-3
-                img.roulette-grant-icon.object-contain.drop-shadow-lg(
+                img.roulette-grant-icon.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
                   :src="modelImgPath(g.skin.modelId)"
                   :alt="t(`skins.${g.skin.modelId}`)"
                 )
-                span.roulette-grant-skin.text-purple-300.font-black.game-text.uppercase {{ t(`skins.${g.skin.modelId}`) }}
+                span.roulette-grant-skin.text-plum-300.font-black.game-text.uppercase {{ t(`skins.${g.skin.modelId}`) }}
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
-                IconCoin(class="w-6 h-6 text-yellow-300")
-                span.text-yellow-400.font-black.game-text(class="text-xl sm:text-2xl") +{{ g.coins }}
+                IconCoin(class="w-6 h-6 text-sun-400")
+                span.text-sun-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ g.coins }}
             //- Coin multiplier reward
             template(v-else)
               div.roulette-reward-glow.flex.flex-col.items-center.gap-2
-                span.roulette-grant-mult.text-yellow-300.font-black.game-text {{ g.multiplier }}x
+                span.roulette-grant-mult.text-sun-400.font-black.game-text {{ g.multiplier }}x
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
-                IconCoin(class="w-8 h-8 text-yellow-300")
-                span.roulette-grant-amount.text-yellow-400.font-black.game-text +{{ g.coins }}
+                IconCoin(class="w-8 h-8 text-sun-400")
+                span.roulette-grant-amount.text-sun-300.font-black.game-text +{{ g.coins }}
         //- Boss trophy (§3.5): the earn-only skin(s) this encounter win just
         //- unlocked — already owned, the card only celebrates it (bosses gate
         //- handle: null on a bosses100-off build, where nothing is granted).
@@ -3154,23 +3047,47 @@ onUnmounted(() => {
       @launch="onBossLabLaunch"
     )
 
-    //- 20h Skin Chest reward
+    //- 20h Skin Chest → skins-only roulette (previewed skin at 3x chance)
+    FReward(
+      v-model="showSkinRoulette"
+      ribbon-tone="sun"
+      :show-continue="false"
+    )
+      template(#ribbon)
+        span(class="sm:text-2xl") {{ t('spinner.rewards') }}
+      div.flex.flex-col.items-center.roulette-overlay-content(class="gap-2 sm:gap-3")
+        RouletteWheel(
+          v-if="skinChestFeatured"
+          mode="skins"
+          :featured-skin="skinChestFeatured"
+          @result="onSkinRouletteResult"
+          @done="onSkinRouletteDone"
+        )
+
+    //- Skin roulette celebration — one card per skin won (two with the respin)
     FReward(
       v-model="showSkinChestReward"
+      ribbon-tone="sun"
       :show-continue="true"
+      celebrate
+      tone="#b67df2"
       @continue="onSkinChestRewardContinue"
     )
       template(#ribbon)
-        span.text-white.font-black.uppercase.italic.game-text(class="sm:text-2xl") {{ t('spinner.rewards') }}
-      div.flex.flex-col.items-center.gap-6.roulette-reward-enter(v-if="skinChestReward")
-        div.roulette-reward-glow.flex.flex-col.items-center.gap-3
-          img.object-contain.drop-shadow-lg(
-            :src="modelImgPath(skinChestReward.modelId)"
-            :class="skinChestReward.isSpecial ? 'w-32 h-32 sm:w-40 sm:h-40' : 'w-24 h-24 sm:w-32 sm:h-32'"
+        span(class="sm:text-2xl") {{ t('spinner.rewards') }}
+      div.flex.flex-wrap.items-center.justify-center.roulette-reward-enter(class="gap-x-6 gap-y-4")
+        div.roulette-reward-glow.flex.flex-col.items-center.gap-3(
+          v-for="w in skinChestWins"
+          :key="w.modelId"
+        )
+          img.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
+            :src="modelImgPath(w.modelId)"
+            :alt="t(`skins.${w.modelId}`)"
+            :class="w.isSpecial ? 'w-32 h-32 sm:w-40 sm:h-40' : 'w-24 h-24 sm:w-32 sm:h-32'"
           )
           span.font-black.game-text.uppercase(
-            :class="skinChestReward.isSpecial ? 'text-yellow-300 text-2xl sm:text-4xl' : 'text-purple-300 text-xl sm:text-3xl'"
-          ) {{ t('skinChest.acquired', { name: t(`skins.${skinChestReward.modelId}`) }) }}
+            :class="w.isSpecial ? 'text-sun-400 text-2xl sm:text-4xl' : 'text-plum-300 text-xl sm:text-3xl'"
+          ) {{ t('skinChest.acquired', { name: t(`skins.${w.modelId}`) }) }}
 
     //- Options Modal
     //- Fetches on OPEN, not on mount — most sessions never open it, and
@@ -3187,9 +3104,10 @@ onUnmounted(() => {
     )
 
     //- Config Modal
-    SpinnerConfigModal(
+    SmasherTeamModal(
       v-model="configModalOpen"
       :initial-team="playerTeam"
+      :best-stage="bestStage"
       @save="onConfigSave"
     )
 
@@ -3207,9 +3125,9 @@ onUnmounted(() => {
       :title="t('pvp.title')"
     )
       div.flex.flex-col.items-center.gap-4.py-4
-        div.text-white.font-black.uppercase.tracking-wider.game-text(class="text-xl sm:text-3xl") {{ t('pvp.enemySurrendered') }}
-        button.rounded-xl.font-black.uppercase.tracking-wider.game-text.cursor-pointer.transition-all(
-          class="px-8 py-3 text-lg sm:text-xl bg-gradient-to-b from-green-500 to-green-700 border-2 border-green-300 text-white hover:from-green-400 hover:to-green-600 active:scale-95"
+        div.text-ink.font-black.uppercase.text-center(class="text-xl sm:text-3xl") {{ t('pvp.enemySurrendered') }}
+        button.ui-btn.ui-btn--primary.font-black.uppercase.cursor-pointer(
+          class="px-8 py-3 text-lg sm:text-xl"
           @click="showEnemySurrender = false"
         ) {{ t('pvp.okay') }}
 
@@ -3243,39 +3161,6 @@ onUnmounted(() => {
       @claim="onLeagueSeasonClaim"
     )
 
-    //- ── Skills surfaces (WP7) — opened only through the reveal gate ──────
-    //- Intro: first unlock (drum roll → panel → "Pick your skill").
-    component(
-      v-if="SkillsIntroUi && sk?.introOpen"
-      :is="SkillsIntroUi"
-      :model-value="sk.introOpen"
-      :skill-ids="sk.introIds"
-      :build-up-ms="sk.introBuildUpMs"
-      @drumroll="sk.onIntroDrumroll"
-      @open-picker="sk.onIntroPicker"
-      @close="sk.onIntroClose"
-    )
-    //- Later unlocks / slot 2 / catch-up: the light reveal.
-    component(
-      v-if="SkillRevealUi && sk?.reveal"
-      :is="SkillRevealUi"
-      :model-value="true"
-      :variant="sk.revealVariant"
-      :skill-ids="sk.reveal.ids"
-      :auto-equipped-slot="sk.revealAutoSlot"
-      @continue="sk.onRevealContinue"
-      @open-team="sk.onRevealOpenTeam"
-      @coins-awarded="fireCoinExplosion"
-    )
-    //- Picker straight from the intro's CTA (learn + equip into a slot).
-    component(
-      v-if="SkillPickerUi && sk"
-      :is="SkillPickerUi"
-      v-model="sk.pickerOpen"
-      :slot-index="sk.pickerSlot"
-      @coins-awarded="fireCoinExplosion"
-    )
-
     //- First-launch intro cutscene — above every HUD element, lazily loaded.
     IntroCutscene(v-if="introPlaying" @done="onIntroDone")
 
@@ -3292,8 +3177,8 @@ onUnmounted(() => {
   position: absolute
   inset: -4px
   border-radius: 12px
-  border: 3px solid #ffd54a
-  box-shadow: 0 0 0 2px #0f1a30, inset 0 0 0 2px rgba(255, 245, 190, 0.6)
+  border: 3px solid var(--color-sun-400)
+  box-shadow: 0 0 0 2px var(--color-ink), inset 0 0 0 2px var(--color-sun-200)
   pointer-events: none
   z-index: 1
 
@@ -3302,7 +3187,7 @@ onUnmounted(() => {
   position: fixed
   inset: 0
   z-index: 55
-  background: rgba(0, 0, 0, 0.65)
+  background: color-mix(in srgb, var(--color-wood-900) 70%, transparent)
   pointer-events: auto
 
 .fade-enter-active, .fade-leave-active
@@ -3317,7 +3202,6 @@ onUnmounted(() => {
 
 .roulette-reward-glow
   animation: roulette-glow 2s ease-in-out infinite
-  filter: drop-shadow(0 0 16px rgba(255, 200, 50, 0.6))
 
 // Per-grant sizes. One grant keeps the original large celebration; two
 // (first spin + "Spin Again") sit side by side, so each is scaled down to fit
@@ -3378,9 +3262,9 @@ onUnmounted(() => {
 
 @keyframes roulette-glow
   0%, 100%
-    filter: drop-shadow(0 0 16px rgba(255, 200, 50, 0.6))
+    filter: brightness(1)
   50%
-    filter: drop-shadow(0 0 32px rgba(255, 180, 50, 0.9))
+    filter: brightness(1.18)
 
 .speedup-switch
   :deep(.button-wrap:last-of-type button)
@@ -3392,7 +3276,6 @@ onUnmounted(() => {
   z-index: 1
   overflow: hidden
   transform-origin: right center
-  box-shadow: 0 0 6px rgba(109, 255, 138, 0.8)
   animation: speed-free-pulse 1.4s ease-in-out infinite
 
   &::after
@@ -3431,7 +3314,8 @@ onUnmounted(() => {
 
 .countdown-number
   display: inline-block
-  text-shadow: 0 0 24px rgba(255, 200, 0, 0.85), 0 0 6px rgba(255, 255, 255, 0.6), 0 4px 0 #000
+  color: var(--color-sun-300)
+  text-shadow: 3px 0 0 var(--color-ink), -3px 0 0 var(--color-ink), 0 3px 0 var(--color-ink), 0 -3px 0 var(--color-ink), 2px 2px 0 var(--color-ink), -2px 2px 0 var(--color-ink), 2px -2px 0 var(--color-ink), -2px -2px 0 var(--color-ink), 0 6px 0 var(--color-ink)
   animation: countdown-pop 375ms ease-out forwards
   will-change: transform, opacity
 
@@ -3451,8 +3335,9 @@ onUnmounted(() => {
   position: relative
   overflow: hidden
   padding: 0.25rem 0.75rem
-  border-radius: 8px
-  background: rgba(168, 85, 247, 0.12)
+  border-radius: var(--radius-ui-sm)
+  border: 2px solid var(--color-plum-500)
+  background: color-mix(in srgb, var(--color-plum-700) 55%, transparent)
 
   &::after
     content: ''
@@ -3461,7 +3346,7 @@ onUnmounted(() => {
     left: -100%
     width: 60%
     height: 100%
-    background: linear-gradient(105deg, transparent 30%, rgba(216, 180, 254, 0.35) 50%, transparent 70%)
+    background: linear-gradient(105deg, transparent 30%, rgba(215, 176, 255, 0.35) 50%, transparent 70%)
     animation: honor-shine 2.4s ease-in-out infinite
 
 @keyframes honor-shine
@@ -3487,26 +3372,8 @@ onUnmounted(() => {
   text-wrap: balance
   overflow-wrap: anywhere
 
-// ── Team button NEW dot (skills) ─────────────────────────────────────────
-.team-new-dot
-  top: 0.1rem
-  right: 0.1rem
-  width: 0.7rem
-  height: 0.7rem
-  background: #ff3b3b
-  border: 2px solid #0f1a30
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6)
-  animation: team-new-pulse 1.4s ease-in-out infinite
-
-@keyframes team-new-pulse
-  0%, 100%
-    transform: scale(1)
-  50%
-    transform: scale(1.2)
-
-@media (prefers-reduced-motion: reduce)
-  .team-new-dot
-    animation: none
+.roulette-grant-plus
+  color: var(--color-cream-50)
 
 // ── Blade skill chips (skills §8.1) ──────────────────────────────────────
 .blade-skill-row
@@ -3517,11 +3384,11 @@ onUnmounted(() => {
 
 // ── Blade Stats HUD ──────────────────────────────────────────────────────
 .blade-stat-card
-  background: rgba(0, 0, 0, 0.55)
-  border: 1px solid rgba(255, 255, 255, 0.15)
-  border-radius: 6px
+  background: color-mix(in srgb, var(--color-wood-800) 88%, transparent)
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm)
+  box-shadow: inset 0 2px 0 var(--color-wood-600), 0 2px 0 var(--color-ink)
   padding: 0.2rem 0.4rem
-  backdrop-filter: blur(4px)
   transition: opacity 0.3s ease
 
 .blade-stat-dead
@@ -3530,9 +3397,9 @@ onUnmounted(() => {
 // ── Boss traits on the stat card (bosses-100-feature.md §7.3) ─────────────
 // Frozen: ice-blue tint + frosted rim; an ice-block glyph on the corner.
 .blade-stat-card.blade-stat-frozen
-  background: linear-gradient(to bottom, rgba(120, 200, 255, 0.55), rgba(40, 110, 180, 0.6))
-  border-color: rgba(210, 240, 255, 0.95)
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35)
+  background: var(--color-sky-600)
+  border-color: var(--color-sky-200)
+  box-shadow: inset 0 2px 0 var(--color-sky-400), 0 2px 0 var(--color-ink)
 
 .blade-stat-ice
   position: absolute
@@ -3541,10 +3408,10 @@ onUnmounted(() => {
 
 // Chilled: the SPD value in ice-blue and one snowflake pip per stack.
 .blade-stat-card.blade-stat-chilled
-  border-color: rgba(174, 230, 255, 0.7)
+  border-color: var(--color-sky-300)
 
 .blade-stat-spd-chilled
-  color: #aee6ff
+  color: var(--color-sky-200)
 
 .blade-chill-pips
   display: flex
@@ -3573,7 +3440,7 @@ onUnmounted(() => {
 
 // Frozen-tap hint (replaces the drag hint for a moment).
 .drag-hint-frozen
-  color: #bfeaff
+  color: var(--color-sky-200)
 
 // The boss trophy card's own sizes live in BossTrophyCard.vue (bosses gate).
 
@@ -3582,11 +3449,11 @@ onUnmounted(() => {
   font-weight: 800
   text-transform: uppercase
   letter-spacing: 0.04em
-  color: rgba(255, 255, 255, 0.7)
+  color: var(--color-cream-200)
   text-align: center
   line-height: 1
   margin-bottom: 0.15rem
-  text-shadow: 1px 1px 0 #000
+  text-shadow: 1px 1px 0 var(--color-ink)
 
 .blade-stat-grid
   display: grid
@@ -3598,8 +3465,9 @@ onUnmounted(() => {
   align-items: center
   gap: 0.15rem
   font-size: 0.65rem
-  font-weight: 700
+  font-weight: 800
   line-height: 1.3
+  text-shadow: 1px 1px 0 var(--color-ink)
 
 .blade-stat-icon
   width: 0.91rem

@@ -1,6 +1,6 @@
 // ─── The game's calendar day ────────────────────────────────────────────────
 //
-// Every once-a-day mechanic (daily challenge, daily rewards, the daily free
+// Every once-a-day mechanic (daily rewards, the daily free
 // 2x speed-up) rolls over at 00:00 UTC — the same instant for every player,
 // whatever their timezone, so two devices of one player always agree on
 // "today". 'YYYY-MM-DD' strings compare correctly with plain `<` / `>`.

@@ -29,12 +29,12 @@ export interface LeaderboardEntry {
 
 // ─── Tunables ───────────────────────────────────────────────────────────────
 
-const LEADERBOARD_KEY = 'spinner_leaderboard'
-const LEADERBOARD_UPDATED_KEY = 'spinner_leaderboard_updated_at'
-const PLAYER_MAX_STAGE_KEY = 'spinner_player_max_stage'
+const LEADERBOARD_KEY = 'smashers_leaderboard'
+const LEADERBOARD_UPDATED_KEY = 'smashers_leaderboard_updated_at'
+const PLAYER_MAX_STAGE_KEY = 'smashers_player_max_stage'
 /** Highest stage we've already pushed to the CrazyGames leaderboard. The
  *  anti-cheat ramp (see below) only ever submits one stage above this. */
-const CG_SUBMITTED_STAGE_KEY = 'spinner_cg_submitted_stage'
+const CG_SUBMITTED_STAGE_KEY = 'smashers_cg_submitted_stage'
 
 /** "Every 1 in-game hour" — refresh fake NPC progression once per real hour. */
 export const LEADERBOARD_UPDATE_INTERVAL_MS = 60 * 60 * 1000
@@ -62,8 +62,8 @@ const PROXIMITY_PROTECTION = 2
 const MAX_NEWCOMERS_PER_DAY = 5
 /** Average newcomer chance per hourly tick → 5 / 24 ≈ 0.208 */
 const NEWCOMER_CHANCE_PER_TICK = MAX_NEWCOMERS_PER_DAY / 24
-const NEWCOMERS_KEY = 'spinner_leaderboard_newcomers'
-const GHOST_FIGHTS_KEY = 'spinner_ghost_fights_today'
+const NEWCOMERS_KEY = 'smashers_leaderboard_newcomers'
+const GHOST_FIGHTS_KEY = 'smashers_ghost_fights_today'
 
 const TOP_IDS: TopPartId[] = ['star', 'triangle', 'round', 'quadratic', 'cushioned', 'piercer']
 const BOTTOM_IDS: BottomPartId[] = ['speedy', 'tanky', 'balanced']
@@ -192,7 +192,7 @@ const saveCgSubmittedStage = (stage: number) => {
   // a new device hydrates the already-submitted value and resumes the climb
   // instead of re-ramping from zero. Same remote-only treatment as
   // savePlayerMaxStage (keeps it out of the localStorage panel CG QA audits);
-  // the `spinner_` prefix opts it into the SaveMergePolicy cloud payload.
+  // the `smashers_` prefix opts it into the SaveMergePolicy cloud payload.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sm: any = (typeof window !== 'undefined' ? (window as any).__saveManager : null)
   if (sm?.setRemoteOnly) {
@@ -486,7 +486,7 @@ const forceLeaderboardTick = (playerStage: number) => {
 // ─── CrazyGames leaderboard submission (anti-cheat ramp) ────────────────────
 //
 // The CG leaderboard score IS the campaign stage. A manipulated save (e.g.
-// `spinner_campaign_stage` edited to 94, then one win → 95) would otherwise
+// `smashers_campaign_stage` edited to 94, then one win → 95) would otherwise
 // submit a single huge jump that CG's backend rejects as a hack — and even a
 // legit big gap (this feature's first rollout on an existing high save, or a
 // fresh device before its `cgSubmittedStage` hydrates) looks the same to them.

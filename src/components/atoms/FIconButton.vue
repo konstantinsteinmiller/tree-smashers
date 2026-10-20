@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+/**
+ * Square icon button (HUD corners, close X, arrows) — same shape and colour
+ * set as FButton, see src/assets/css/DESIGN.md.
+ *   danger → berry (close) · primary → leaf · secondary → wood plank (HUD)
+ *   · premium → sun · ad → sky
+ */
 interface Props {
   icon?: 'close' | 'left' | 'right'
   imgSrc?: string
-  type?: 'danger' | 'primary' | 'secondary'
+  type?: 'danger' | 'primary' | 'secondary' | 'premium' | 'ad'
   size?: 'sm' | 'md' | 'lg'
+  /** Accessible name when the button shows only an image. */
+  ariaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -28,36 +36,12 @@ const selectedIcon = computed(() => {
   }
 })
 
-const theme = computed(() => {
-  switch (props.type) {
-    case 'secondary':
-      return {
-        bg: 'bg-gradient-to-b from-[#50aaff] to-[#2266ff]',
-        shadow: 'bg-[#102e7a]',
-        border: 'border-[#0f1a30]'
-      }
-    case 'primary':
-      return {
-        bg: 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000]',
-        shadow: 'bg-[#1a2b4b]',
-        border: 'border-[#0f1a30]'
-      }
-    case 'danger':
-    default:
-      return {
-        bg: 'bg-[#ff3e3e]',
-        shadow: 'bg-[#6b1212]',
-        border: 'border-[#0f1a30]'
-      }
-  }
-})
+// HUD secondary buttons are wooden planks (the cream secondary would glare
+// over the dark forest arena); everything else maps 1:1 onto FButton tones.
+const toneClass = computed(() => (props.type === 'secondary' ? 'ui-btn--wood' : `ui-btn--${props.type}`))
 
-// These multipliers are shared by the ARENA HUD (the options and team-config
-// buttons in the bottom corners) and by in-modal controls. The HUD sizing was
-// already tuned for touch, so it is deliberately left alone here — a pass that
-// raised these to fix the Playgama "too small" report made the menu cramped
-// and was reverted. In-modal controls that genuinely were too small are sized
-// at their own call sites.
+// These multipliers are shared by the ARENA HUD and by in-modal controls; the
+// HUD sizing is tuned for touch — size in-modal controls at their call site.
 const sizeClasses = computed(() => {
   switch (props.size) {
     case 'sm':
@@ -72,41 +56,32 @@ const sizeClasses = computed(() => {
 </script>
 
 <template lang="pug">
-  button(
+  button.ui-btn.ui-btn--icon.f-icon-button(
+    type="button"
     @click="emit('click')"
-    :class="[\
-      'group cursor-pointer z-10 hover:scale-[103%] transition-transform active:scale-90',\
-      sizeClasses.scale\
-    ]"
+    :aria-label="ariaLabel"
+    :class="[toneClass, sizeClasses.btn, sizeClasses.scale, 'z-10']"
   )
-    div.relative
-      div.f-icon-button-shadow.absolute.inset-0.translate-y-1.rounded-lg(
-        class=""
-        :class="theme.shadow"
+    img(
+      v-if="imgSrc"
+      :src="imgSrc"
+      alt=""
+      :class="sizeClasses.img"
+      class="object-contain"
+    )
+    svg(
+      v-else
+      xmlns="http://www.w3.org/2000/svg"
+      :class="sizeClasses.icon"
+      fill="none"
+      :viewBox="selectedIcon.viewBox"
+      stroke="currentColor"
+      aria-hidden="true"
+    )
+      path(
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="4"
+        :d="selectedIcon.path"
       )
-      div.relative.rounded-lg.border-2.text-white.font-bold(
-        :class="[theme.bg, theme.border, sizeClasses.btn]"
-      )
-        //- Image icon
-        img(
-          v-if="imgSrc"
-          :src="imgSrc"
-          :class="sizeClasses.img"
-          class="object-contain"
-        )
-        //- SVG icon
-        svg(
-          v-else
-          xmlns="http://www.w3.org/2000/svg"
-          :class="sizeClasses.icon"
-          fill="none"
-          :viewBox="selectedIcon.viewBox"
-          stroke="currentColor"
-        )
-          path(
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="4"
-            :d="selectedIcon.path"
-          )
 </template>

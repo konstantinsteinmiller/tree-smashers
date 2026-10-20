@@ -41,15 +41,9 @@ describe('T3 — locale-aware stat multipliers', () => {
   })
 
   it('the Team modal and the arena stat cards format through it, never toFixed', () => {
-    const modal = read('src/components/organisms/SpinnerConfigModal.vue')
-    expect(modal).toContain('const statNum = (n: number, digits: number): string => fmtFixed(n, digits, locale.value)')
-    for (const fn of ['topDamage', 'topDefense', 'bottomSpeed']) {
-      expect(modal).toMatch(new RegExp(`const ${fn} = \\([^)]*\\) =>\\n\\s+statNum\\(`))
-    }
-    for (const s of ['damageMultiplier', 'defenseMultiplier', 'speedMultiplier']) {
-      expect(modal).toContain(`{{ statNum(stats.${s}, 1) }}x`)
-    }
-    expect(modal).not.toMatch(/Multiplier[^\n]*\.toFixed\(/)
+    const modal = read('src/components/organisms/SmasherTeamModal.vue')
+    expect(modal).toContain('fmtFixed(v, 2, locale.value)')
+    expect(modal).not.toMatch(/\.toFixed\(/)
     const arena = read('src/views/SpinnerArena.vue')
     expect(arena).toContain('const statNum = (n: number): string => fmtFixed(n, 1, locale.value)')
     for (const s of ['atk', 'def', 'spd']) expect(arena).toContain(`statNum(bs.${s})`)

@@ -1,4 +1,5 @@
-import { prependBaseUrl } from '@/utils/function'
+import { smasherPortraitUrl } from '@/smashers/smasherAtlas'
+import type { SmasherId } from '@/data/smasherCatalog'
 import { type Element, ELEMENTS } from '@/utils/enums'
 import { isCampaignTest, isDbInitialized, isDebug } from '@/use/useMatch'
 import useUser from '@/use/useUser'
@@ -27,9 +28,12 @@ import {
   type SpinnerModelId
 } from '@/data/skinCatalog'
 
-export const modelImgPath = (id: string) => {
-  return prependBaseUrl(`images/models/${id}_256x256.webp`)
-}
+/** Portrait (data URL) of a skin: the smasher wearing that colourway. The
+ *  smasher defaults to one of the skin's top part (`smasherForSkin`); pass
+ *  `smasherId` when the caller knows it. The spinner artwork files are gone —
+ *  every portrait is drawn by the smasher rig (src/smashers). */
+export const modelImgPath = (id: string, smasherId?: SmasherId, boss = false): string =>
+  smasherPortraitUrl(smasherId, id, boss)
 
 // Re-export the pure data + types from the catalog so existing imports
 // (`@/use/useModels`) keep compiling. The catalog has zero composable
@@ -62,8 +66,8 @@ export const getRandomSkinForTop = (topPartId: TopPartId): SpinnerModelId => {
 // ─── Skin Persistence (singleton) ───────────────────────────────────────────
 
 // SKINS_KEY imported from `@/keys` at the top of this file (single source of truth shared with SaveMergePolicy).
-const SELECTED_SKINS_KEY = 'spinner_selected_skins'
-const PICKER_OPENED_KEY = 'spinner_skin_picker_opened'
+const SELECTED_SKINS_KEY = 'smashers_selected_skins'
+const PICKER_OPENED_KEY = 'smashers_skin_picker_opened'
 
 const loadOwnedSkins = (): Set<string> => {
   try {
@@ -187,7 +191,7 @@ export const buySkin = (topPartId: TopPartId, modelId: SpinnerModelId): boolean 
  *
  * Idempotent: returns true only when this call unlocked the skin, false when
  * it was already owned or is not a trophy skin (nothing is written then).
- * Persists through `buySkin` → `spinner_owned_skins` (SKINS_KEY), the key the
+ * Persists through `buySkin` → `smashers_owned_skins` (SKINS_KEY), the key the
  * save system syncs to the cloud and merges (SaveMergePolicy).
  */
 export const grantTrophySkin = (modelId: SpinnerModelId): boolean => {

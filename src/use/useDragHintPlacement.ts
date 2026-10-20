@@ -98,7 +98,7 @@ export const useDragHintPlacement = (hintEl: Ref<HTMLElement | null>, active: Re
     if (!ro && typeof ResizeObserver !== 'undefined') ro = new ResizeObserver(schedule)
     window.addEventListener('resize', schedule)
     window.addEventListener('orientationchange', schedule)
-    // A webfont swapping in (Playpen Sans for latin-ext/greek/cyrillic)
+    // A webfont swapping in (Nunito, or Playpen Sans for Greek)
     // changes the hint's and the log pill's widths.
     document.fonts?.ready?.then(schedule).catch(() => {
     })

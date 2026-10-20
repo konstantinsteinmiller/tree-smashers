@@ -128,8 +128,8 @@ router.beforeEach((to, from) => {
 
   // Only apply restrictions if it's the Web version
   if (isWeb) {
-    const isFullVersion = url.includes(remoteURL + '/chaos-arena/') && !url.includes('/chaos-arena/demo/') && !url.includes('/chaos-arena/develop/')
-    const isDevelopVersion = url.includes(remoteURL + '/chaos-arena/develop/')
+    const isFullVersion = url.includes(remoteURL + '/tree-smashers/') && !url.includes('/tree-smashers/demo/') && !url.includes('/tree-smashers/develop/')
+    const isDevelopVersion = url.includes(remoteURL + '/tree-smashers/develop/')
     const isDev = url.includes('localhost:5173/')
 
     if (isDev) {
@@ -138,7 +138,7 @@ router.beforeEach((to, from) => {
 
     // If user is on Full or Develop without the unlock param, boot them to Demo
     if ((isFullVersion || isDevelopVersion) && !isUnlocked) {
-      window.location.href = remoteURL + '/chaos-arena/demo/'
+      window.location.href = remoteURL + '/tree-smashers/demo/'
       return false// Stop execution
     } else if (isUnlocked && (isFullVersion || isDevelopVersion)) {
       localStorage.setItem('full_unlocked', 'true')

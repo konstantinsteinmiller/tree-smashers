@@ -15,8 +15,8 @@ type Gate = typeof import('@/league/leagueGate')
 
 /** Wednesday of season 0, 12:00 UTC. */
 const T0 = LEAGUE_EPOCH_MS + 2 * DAY_MS + 12 * 3_600_000
-const STAGE = 'spinner_campaign_stage'
-const KEY = 'spinner_league'
+const STAGE = 'smashers_campaign_stage'
+const KEY = 'smashers_league'
 
 const AD_BUILD_FLAGS = ['VITE_APP_CRAZY_WEB', 'VITE_APP_GAME_DISTRIBUTION', 'VITE_APP_PLAYGAMA', 'VITE_APP_POKI', 'VITE_APP_NATIVE']
 
@@ -399,12 +399,12 @@ describe('DT1 — neutral, seed-derived first turn', () => {
   })
 
   it('the session carries it, from the server seed when there is one, whatever the last campaign result', async () => {
-    localStorage.setItem('spinner_last_result', 'lose')
+    localStorage.setItem('smashers_last_result', 'lose')
     const { api, mod } = await load({}, 13)
     const a = api.beginLocalBattle(card(), 20, { seed: 777, token: 't' })!
     expect(a).toMatchObject({ seed: 777, token: 't', firstTurn: mod.leagueFirstTurn(777) })
     api.applyLocalResult(a, 'win', 30_000)
-    localStorage.setItem('spinner_last_result', 'win')
+    localStorage.setItem('smashers_last_result', 'win')
     const b = api.beginLocalBattle(card(), 20, { seed: 777 })!
     expect(b.firstTurn).toBe(a.firstTurn)
     const c = api.beginLocalBattle(card(), 20)!

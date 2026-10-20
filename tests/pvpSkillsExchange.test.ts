@@ -60,12 +60,13 @@ describe('sanitizeSkillLoadout', () => {
     ])).toEqual([{ id: 'momentum', level: 2 }])
   })
 
-  it('keeps at most 2 entries (3 sent)', () => {
+  it('keeps at most 3 entries (SKILL_BLADE_SLOTS; 4 sent)', () => {
     expect(sanitizeSkillLoadout([
       { id: 'momentum', level: 2 },
       { id: 'lucky_edge', level: 3 },
-      { id: 'second_wind', level: 4 }
-    ])).toEqual([{ id: 'momentum', level: 2 }, { id: 'lucky_edge', level: 3 }])
+      { id: 'second_wind', level: 4 },
+      { id: 'guard_shell', level: 5 }
+    ])).toEqual([{ id: 'momentum', level: 2 }, { id: 'lucky_edge', level: 3 }, { id: 'second_wind', level: 4 }])
   })
 
   it('an invalid entry does not use up a slot', () => {
@@ -193,12 +194,15 @@ describe('PvP player-ready skills exchange', () => {
         { id: 'guard_shell', level: 11 },
         { id: 'guard_shell', level: 3 },
         { id: 'lucky_edge', level: 4 },
-        { id: 'second_wind', level: 9 }
+        { id: 'second_wind', level: 9 },
+        { id: 'momentum', level: 2 }
       ] as never,
       proto: PVP_PROTOCOL_VERSION
     })
     expect(pvp.hostReady.value).toBe(true)
-    expect(pvp.hostSkills.value).toEqual([{ id: 'guard_shell', level: 10 }, { id: 'lucky_edge', level: 4 }])
+    expect(pvp.hostSkills.value).toEqual([
+      { id: 'guard_shell', level: 10 }, { id: 'lucky_edge', level: 4 }, { id: 'second_wind', level: 9 }
+    ])
     expect(pvp.hostTeam.value).toEqual(team)
   })
 

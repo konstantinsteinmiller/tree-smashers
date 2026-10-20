@@ -120,9 +120,9 @@ const DAY2 = Date.UTC(2026, 9, 1, 0, 0, 5)
 
 /** An existing player: progress in the save, no first-time gift key. */
 const seedExistingPlayer = () => {
-  localStorage.setItem('spinner_campaign_stage', '7')
-  localStorage.setItem('spinner_coins', '300')
-  localStorage.setItem('spinner_last_result', 'win')
+  localStorage.setItem('smashers_campaign_stage', '7')
+  localStorage.setItem('smashers_coins', '300')
+  localStorage.setItem('smashers_last_result', 'win')
 }
 
 describe('daily free speed-up (live)', () => {

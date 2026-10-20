@@ -119,7 +119,7 @@ describe('battle-pass season clock', () => {
     expect(bp.state.value.xp).toBe(0)
     expect(bp.daysUntilReset.value).toBeNull()
     expect(resetHonorTrack).toHaveBeenCalledTimes(1)
-    const saved = JSON.parse(localStorage.getItem('spinner_battle_pass')!)
+    const saved = JSON.parse(localStorage.getItem('smashers_battle_pass')!)
     expect(saved.seasonStartedAt).toBeNull()
     expect(saved.unlockedStages).toBe(0)
   })

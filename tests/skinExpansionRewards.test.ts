@@ -72,17 +72,18 @@ describe('skin expansion — battle pass claim', () => {
 describe('skin expansion — skin chest', () => {
   it('a brand-new player still gets the D1 starter tease on the first chest', async () => {
     const { chest } = await freshImport()
-    const granted = chest.collectSkinChest()
+    const granted = chest.openSkinChest()
     expect(granted).not.toBeNull()
     expect(['snake', 'ice', 'mysticaleye', 'shield']).toContain(granted!.modelId)
   })
 
   it('a player who owns every legacy skin gets a NEW regular skin, not an empty chest', async () => {
-    localStorage.setItem('spinner_owned_skins', JSON.stringify(legacyOwnedKeys()))
+    localStorage.setItem('smashers_owned_skins', JSON.stringify(legacyOwnedKeys()))
     const { models, chest } = await freshImport()
     expect(chest.skinChestHasRewards.value).toBe(true)
-    const granted = chest.collectSkinChest()
+    const granted = chest.openSkinChest() // featured on the roulette…
     expect(granted).not.toBeNull()
+    models.buySkin(granted!.topPartId, granted!.modelId) // …and landed
     const fresh = newSkins()
     expect(fresh.map(s => s.id)).toContain(granted!.modelId)
     expect(SPECIAL_SKINS.has(granted!.modelId)).toBe(false)
@@ -98,32 +99,10 @@ describe('skin expansion — background preload list', () => {
     globalThis.Image = RealImage
   })
 
-  it('preloadRemainingSkins requests every catalog skin image, new ones included', async () => {
-    const requested: string[] = []
-
-    class FakeImage {
-      onload: (() => void) | null = null
-      onerror: (() => void) | null = null
-      private _src = ''
-      set src(v: string) {
-        this._src = v
-        requested.push(v)
-        queueMicrotask(() => this.onload?.())
-      }
-
-      get src() {
-        return this._src
-      }
-    }
-
-    globalThis.Image = FakeImage as unknown as typeof Image
-    vi.resetModules()
-    await import('@/use/useUser')
+  it('every catalog skin has a portrait (drawn by the smasher rig, no file to preload)', async () => {
     const { modelImgPath } = await import('@/use/useModels')
-    const { default: useAssets } = await import('@/use/useAssets')
-    await useAssets().preloadRemainingSkins()
     for (const ids of Object.values(SKINS_PER_TOP)) {
-      for (const id of ids) expect(requested, `${id} not preloaded`).toContain(modelImgPath(id))
+      for (const id of ids) expect(modelImgPath(id), `${id} has no portrait`).toMatch(/^data:image\//)
     }
   })
 })

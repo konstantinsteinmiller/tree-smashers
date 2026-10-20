@@ -23,20 +23,20 @@ export const seedScript = (stage) => {
   // Stringified so it can be passed through addInitScript as one argument.
   return `(() => {
     try {
-      localStorage.setItem('spinner_campaign_stage', '${stage}')
-      localStorage.setItem('spinner_upgrades', ${JSON.stringify(upgrades)})
-      localStorage.setItem('spinner_coins', '99999')
+      localStorage.setItem('smashers_campaign_stage', '${stage}')
+      localStorage.setItem('smashers_upgrades', ${JSON.stringify(upgrades)})
+      localStorage.setItem('smashers_coins', '99999')
       // Suppress the first-play boost + intro so every rep opens on the same
       // steady-state fight rather than a one-off tutorial sequence.
-      localStorage.setItem('spinner_first_win', 'true')
-      localStorage.setItem('spinner_intro_seen', '1')
+      localStorage.setItem('smashers_first_win', 'true')
+      localStorage.setItem('smashers_intro_seen', '1')
       // Past the league unlock stage (13) a "League unlocked!" popup — and the
       // skills intro / slot-2 reveal — open over the arena, and a rep then
       // measures a static dialog instead of the fight. Mark them all as seen.
-      localStorage.setItem('spinner_league', JSON.stringify({
+      localStorage.setItem('smashers_league', JSON.stringify({
         v: 1, unlocked: true, unlockSeen: true, claimedSeason: -1, unclaimed: null
       }))
-      localStorage.setItem('spinner_skill_ui', JSON.stringify({
+      localStorage.setItem('smashers_skill_ui', JSON.stringify({
         v: 1, seen: ${JSON.stringify(SKILL_IDS)}, intro: true, slot2Seen: true, filled: 2
       }))
     } catch (e) { console.warn('[perf seed]', e) }
@@ -57,8 +57,8 @@ export const qualityScript = (tier) => {
   if (tier !== 'high' && tier !== 'low') return null
   return `(() => {
     try {
-      localStorage.setItem('chaosarena_quality_pref', '${tier}')
-      localStorage.setItem('chaosarena_quality_verdict', '${tier}')
+      localStorage.setItem('treesmashers_quality_pref', '${tier}')
+      localStorage.setItem('treesmashers_quality_verdict', '${tier}')
     } catch (e) { console.warn('[perf quality]', e) }
   })()`
 }

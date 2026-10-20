@@ -2,24 +2,25 @@
   FReward(
     :modelValue="modelValue"
     :showContinue="canContinue"
+    celebrate
     @continue="handleClose"
   )
     template(#ribbon)
-      h2.text-2xl.font-black.text-white.uppercase.italic.brawl-text(
+      h2.text-2xl.font-black.uppercase.ui-outline(
         class="md:text-4xl"
       ) {{ t('congratulations') }}
       span.text-4xl.mb-2(class="md:text-6xl") 🏆
-    div.flex.flex-col.items-center.justify-center.max-w-2xl.text-center.p-8.text-shadow(
+    div.flex.flex-col.items-center.justify-center.max-w-2xl.text-center.p-8(
       class="gap-6 mx-4"
     )
 
-      p.text-white.font-bold.leading-relaxed(
+      p.ui-outline.font-black.leading-relaxed(
         class="text-lg md:text-2xl"
       ) {{ message }}
 
       //- Visual timer indicator
-      div.w-full.h-1.rounded-full.overflow-hidden(v-if="!canContinue" class="bg-white/10")
-        div.h-full.bg-yellow-500.transition-all.duration-100(
+      div.ui-bar.w-full(v-if="!canContinue")
+        div.ui-bar__fill.transition-all.duration-100(
           :style="{ width: `${progress}%` }"
         )
 </template>
@@ -83,7 +84,3 @@ const handleClose = () => {
 }
 </script>
 
-<style scoped lang="sass">
-.brawl-text
-  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
-</style>

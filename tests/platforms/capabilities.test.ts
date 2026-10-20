@@ -20,8 +20,36 @@ const allFlagsOff = {
   isY8: false,
   isGamePix: false,
   isPlaygama: false,
-  isPoki: false
+  isPoki: false,
+  isGameMonetize: false
 }
+
+describe('GameMonetize — flag-only, no site lock', () => {
+  // GameMonetize is an ad DISTRIBUTION network: one upload is embedded across
+  // many partner domains, so no hostname is special and a gate would block
+  // legitimate embeds.
+  for (const hostname of ['html5.gamemonetize.co', 'gamemonetize.com', 'some-partner-portal.example']) {
+    it(`allowedToShowOnGameMonetize is true on ${hostname}`, () => {
+      const c = resolveCapabilities({
+        flags: { ...allFlagsOff, isGameMonetize: true },
+        hostname,
+        glitchLicenseStatus: 'ok'
+      })
+      expect(c.allowedToShowOnGameMonetize).toBe(true)
+      expect(c.isNotPlatformBuild).toBe(false)
+      expect(c.plattformText).toBe('gamemonetize.com')
+    })
+  }
+
+  it('a non-GameMonetize build does not get the gate for free', () => {
+    const c = resolveCapabilities({
+      flags: { ...allFlagsOff, isCrazyWeb: true },
+      hostname: 'gamemonetize.com',
+      glitchLicenseStatus: 'ok'
+    })
+    expect(c.allowedToShowOnGameMonetize).toBe(false)
+  })
+})
 
 describe('Poki — flag-only, and deliberately ungated by hostname', () => {
   // The Poki build has to run in the Inspector (inspector.poki.dev), in P4D

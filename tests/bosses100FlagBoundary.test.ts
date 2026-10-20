@@ -170,7 +170,7 @@ describe('campaign, peek, shop and arena: every runtime use folds on BOSSES100_B
   })
 
   it('the skin shop hides unowned trophy cards on an off build', () => {
-    const modal = src('src/components/organisms/SpinnerConfigModal.vue')
+    const modal = src('src/components/organisms/SmasherTeamModal.vue')
     expect(modal).toMatch(/return BOSSES100_BUILD \? all : all\.filter\(id => !isEarnOnlySkin\(id\) \|\| isSkinOwned\(topId, id\)\)/)
     expect(modal).toContain('v-for="modelId in pickerSkins"')
     expect(modal).toMatch(/const n = BOSSES100_BUILD \? trophySkinFirstStage\(modelId\) : null/)

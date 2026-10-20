@@ -158,9 +158,9 @@ describe('CrazyGames build — bundle purity', () => {
     // bundled. The package writes/reads these on the global window.
     // (Plain `"@tauri-apps/api"` strings appear in error messages we
     // wrote and are OK.)
-    // `plugin:admob|` is the invoke-name prefix AdMobProvider builds its
-    // commands from; it appears in a web bundle only if that provider
-    // survived tree-shaking.
+    // `plugin:levelplay|` / `plugin:admob|` are the invoke-name prefixes the
+    // native ad providers build their commands from; either appears in a web
+    // bundle only if that provider survived tree-shaking.
     const leaks = findInHotPath(/__TAURI_INTERNALS__|__TAURI_INVOKE_KEY__|__TAURI_TO_IPC_KEY__|plugin:admob\||plugin:levelplay\|/)
     expect(leaks, `Tauri/native-ads code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
   })
@@ -173,6 +173,18 @@ describe('CrazyGames build — bundle purity', () => {
     // expected to remain.)
     const leaks = findInHotPath(/RTCPeerConnection|RTCDataChannel|RTCSessionDescription|RTCIceCandidate/)
     expect(leaks, `PeerJS leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
+  })
+
+  it('does NOT ship the PvP module at all (stubbed on a PvP-disabled build)', () => {
+    // Stronger than the hot-path check above, and about our OWN code rather
+    // than the PeerJS library: `usePVP.ts` and the lobby modal are statically
+    // imported by the arena, so before the `resolve.alias` stubs they shipped
+    // in full on every portal build — the WhatsApp invite link and the
+    // STUN / TURN relay hosts included. Every chunk, not just the hot path.
+    const leaks = [...chunkContents.entries()]
+      .filter(([, content]) => /wa\.me\/|relay\.metered\.ca|stun\.l\.google\.com/.test(content))
+      .map(([name]) => name)
+    expect(leaks, `PvP module code shipped in: ${leaks.join(', ')}`).toEqual([])
   })
 
   it('does NOT emit a vConsole chunk on a web (non-native) build', () => {
@@ -266,6 +278,37 @@ describe('CrazyGames build — bundle purity', () => {
       leaks,
       `Poki SDK identifiers leaked into the CrazyGames build: ${leaks.join(', ')}`
     ).toEqual([])
+  })
+
+  it('does NOT contain the GameMonetize SDK host ANYWHERE', () => {
+    // Same mechanism as Poki above: `resolveAdProvider` and `App.vue` import
+    // the GameMonetize provider / plugin statically, so a `resolve.alias` stub
+    // swap is what keeps another ad network's SDK URL out of this bundle.
+    //
+    // Matched on the SDK's host and its event / options names. The bare
+    // "gamemonetize.com" is NOT a leak: `capabilities.ts` carries one portal
+    // domain per platform for the "only available on …" copy.
+    const leaks = [...chunkContents.entries()]
+      .filter(([, content]) => /api\.gamemonetize|SDK_GAME_PAUSE|SDK_OPTIONS/.test(content))
+      .map(([name]) => name)
+    expect(
+      leaks,
+      `GameMonetize SDK code leaked into the CrazyGames build: ${leaks.join(', ')}`
+    ).toEqual([])
+  })
+
+  it('the GameMonetize stubs export every name the real modules do', () => {
+    const exportsOf = (f: string) => [...fs.readFileSync(path.join(PROJECT_ROOT, f), 'utf8')
+      .matchAll(/^export (?:const|let|function|async function) (\w+)/gm)].map(m => m[1]).sort()
+    expect(exportsOf('src/utils/gameMonetizePlugin.stub.ts')).toEqual(exportsOf('src/utils/gameMonetizePlugin.ts'))
+    expect(exportsOf('src/use/ads/GameMonetizeProvider.stub.ts')).toEqual(exportsOf('src/use/ads/GameMonetizeProvider.ts'))
+  })
+
+  it('does NOT ship the real-money diamond shop (stubbed out of every build)', () => {
+    const leaks = [...chunkContents.entries()]
+      .filter(([, content]) => /\$1\.29|\$9\.99/.test(content))
+      .map(([name]) => name)
+    expect(leaks, `IAP price strings shipped in: ${leaks.join(', ')}`).toEqual([])
   })
 
   it('does NOT bundle Wavedash SDK code in any hot-path chunk', () => {

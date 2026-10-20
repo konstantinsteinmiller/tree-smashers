@@ -3,17 +3,19 @@
 // Two policies converge on the same UI, and this module is the single seam
 // that satisfies both:
 //
-//   1. **AdMob rewarded interstitial.** Google's integration guide is
-//      explicit: "Before displaying a rewarded interstitial ad to users, you
-//      must present the user with an intro screen that provides clear reward
-//      messaging and an option to skip the ad before it starts." Rewarded
-//      interstitial is the only ad format the native build ships, because it
-//      is the only AdMob format that serves skippable creatives exclusively —
-//      which is what makes the ad closeable inside the 5 seconds that Google
-//      Play's Families Ad Format Requirements demand.
+//   1. **AdMob rewarded formats.** A rewarded ad needs an opt-in, and for a
+//      rewarded interstitial Google's integration guide is explicit: "Before
+//      displaying a rewarded interstitial ad to users, you must present the
+//      user with an intro screen that provides clear reward messaging and an
+//      option to skip the ad before it starts." This modal is that screen for
+//      whichever of the two formats the native build is configured with.
+//
+//      It does NOT make the ad itself closeable after 5 seconds — that is
+//      Google's per-impression template choice, and it is measured, not
+//      assumed (ADS_STATE.md).
 //
 //   2. **Families "unclear ads/offers".** The 2026-09 Play rejection of
-//      com.chaos.arena also cited ads that are not clearly distinguishable
+//      com.tree.smashers also cited ads that are not clearly distinguishable
 //      from app content. A modal that says the word "Advertisement" before
 //      anything full-screen appears is the cleanest possible answer to that.
 //
@@ -34,13 +36,18 @@
 // Web portals (CrazyGames, GameDistribution, Playgama, GamePix, …) run their
 // own compliant rewarded flow and several of them show their own pre-ad
 // prompt; stacking a second modal on top is worse UX and is not required by
-// any of their QA checklists. The gate is therefore `isNative`.
+// any of their QA checklists. The gate is therefore `isNative` — and only
+// while the native build is child-directed (see `requiresRewardedIntro`).
 import { ref } from 'vue'
 import { isNative } from '@/use/useUser'
 
-/** True on builds whose ad provider requires a developer-supplied intro
- *  screen before the ad is requested (native / AdMob rewarded interstitial). */
-export const requiresRewardedIntro = isNative
+/** True on builds whose ads run under Google Play's Families rules: native
+ *  and child-directed. The 18+ Android build (`VITE_APP_ADS_CHILD_DIRECTED=
+ *  false`, LevelPlay rewarded video behind buttons labelled "Ad") goes
+ *  straight to the ad — and its videos are not closeable early, so the
+ *  modal's "you can close the ad after a few seconds" would not be true there. */
+export const requiresRewardedIntro =
+  isNative && import.meta.env.VITE_APP_ADS_CHILD_DIRECTED !== 'false'
 
 /** Reactive: the modal is on screen and waiting for a choice. */
 export const isRewardedIntroOpen = ref(false)

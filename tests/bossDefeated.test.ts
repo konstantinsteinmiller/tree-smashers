@@ -30,7 +30,7 @@ describe('shouldShowBossDefeated', () => {
     expect(shouldShowBossDefeated({ result: 'win', isBossStage: false, mode: 'campaign' })).toBe(false)
     expect(shouldShowBossDefeated({ result: 'lose', isBossStage: true, mode: 'campaign' })).toBe(false)
     expect(shouldShowBossDefeated({ result: null, isBossStage: true, mode: 'campaign' })).toBe(false)
-    for (const mode of ['pvp', 'daily', 'ghost'] as const) {
+    for (const mode of ['pvp', 'ghost'] as const) {
       expect(shouldShowBossDefeated({ result: 'win', isBossStage: true, mode })).toBe(false)
     }
   })

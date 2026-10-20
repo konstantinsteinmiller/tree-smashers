@@ -1,6 +1,14 @@
 # Casual Game Feature Playbook
 
-> A reusable reference for recreating the proven features of Chaos Arena in a new casual game project using **Vue 3 +
+> **Concept update (Tree Smashers):** the game formerly known as Chaos Arena (spinning tops built from top + bottom
+> parts) is now **Tree Smashers**. Units are *smashers* — cute but angry stuffed animals (hedgehog, rabbit, bear cub,
+> beaver, ram, fox, turtle, woodpecker, sloth, squirrel, owl, boar; see `src/data/smasherCatalog.ts`) riding turning
+> discs. Each smasher levels up with coins and has 3 unique skills (slot 2 at level 10, slot 3 at level 20). Each team
+> has a Team Tower (a little tree); destroying the enemy tower wins the battle. Arenas are forest clearings with
+> islands, speed boosters and pot holes. Sections below that talk about blades/parts describe the old build and remain
+> as implementation reference.
+
+> A reusable reference for recreating the proven features of Tree Smashers in a new casual game project using **Vue 3 +
 Pug + Tailwind CSS v4 + TypeScript + Vite**.
 
 ---
@@ -300,7 +308,7 @@ div(class="p-1.5 sm:p-2")
 **TreasureChest.vue:**
 
 - Props: `targetEl` (HTMLElement for coin fly-to destination).
-- 10-minute cooldown stored in localStorage (`spinner_chest_ready_at` timestamp).
+- 10-minute cooldown stored in localStorage (`smashers_chest_ready_at` timestamp).
 - Cooldown overlay: SVG circle with `stroke-dasharray/dashoffset` animated by cooldown percentage, rotated -90deg and
   flipped.
 - Timer display: `MM:SS` format, updated every second via `setInterval`.
@@ -703,7 +711,7 @@ canvas(:style="shakeStyle")
 **usePVP.ts composable:**
 
 - Feature-gated: `VITE_APP_PVP_ENABLED=true`.
-- Peer ID format: `chaos-arena-{random8chars}`.
+- Peer ID format: `tree-smashers-{random8chars}`.
 - Invite link: `{baseUrl}#/battle?pvp={encodedPeerId}`.
 - Invite expiry: 2 minutes with countdown timer.
 - Message protocol (typed union):

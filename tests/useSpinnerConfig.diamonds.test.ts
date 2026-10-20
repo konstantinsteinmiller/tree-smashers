@@ -14,8 +14,8 @@ describe('diamonds currency', () => {
     addDiamonds(-9999)
   })
 
-  it('DIAMONDS_KEY is the stable literal "spinner_diamonds"', () => {
-    expect(DIAMONDS_KEY).toBe('spinner_diamonds')
+  it('DIAMONDS_KEY is the stable literal "smashers_diamonds"', () => {
+    expect(DIAMONDS_KEY).toBe('smashers_diamonds')
   })
 
   it('addDiamonds increments the balance and mirrors it to localStorage', () => {

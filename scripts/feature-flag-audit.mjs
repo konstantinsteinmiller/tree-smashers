@@ -54,7 +54,7 @@ export const FLAGS = {
     env: 'VITE_APP_FEATURE_SKILLS',
     markers: [
       // storage keys (src/skills/skillKeys.ts)
-      'spinner_skills', 'spinner_skill_loadout', 'spinner_skill_ui',
+      'smashers_skills', 'smashers_skill_loadout', 'smashers_skill_ui',
       // synthesised SFX (src/use/skills/skillSfx.ts)
       'skill-shield', 'skill-rocket', 'skill-zap', 'skill-drumroll',
       // component names (Vue keeps `__name` in production)
@@ -70,14 +70,16 @@ export const FLAGS = {
       'createSkillVfx', 'resetSkillVfx', 'tickSkillVfx', 'skillVfxEvent', 'renderSkillLayer', 'renderBladeSkillFx',
       'skillBladeAlpha', 'drawSkillGlyph',
       // pokiMeasure category + dev globals
-      /['"]skills['"],\s*['"](?:intro|reveal)['"]/, '__skillVfx'
+      /['"]skills['"],\s*['"](?:intro|reveal)['"]/, '__skillVfx',
+      // per-smasher skill text (use/skills/smasherSkillText.ts, read by the team modal)
+      'smasherSkillDescParams'
     ],
     // Chunk stems (file name minus hash). `skillCore` is deliberately absent:
     // it is the string-free HP-loss core the engine and the boss traits use
     // on every build (allowed residue, reported by size in the hot path).
     chunks: [
       /^Skills?[A-Z]/, /^PvpVsPreview$/, /^PvpReadySkills$/, /^TeamSkillsSection$/, /^useSkills$/,
-      /^skill(Runtime|Vfx|Sfx|Engine|Text|RevealGate|Catalog|LoadoutSanitizer)$/, /^arenaSkills$/, /^ghostSkills$/
+      /^skill(Runtime|Vfx|Sfx|Engine|Text|RevealGate|Catalog|LoadoutSanitizer)$/, /^smasherSkillText$/, /^arenaSkills$/, /^ghostSkills$/
     ],
     publicFiles: [/(^|\/)audio\/sfx\/skill-[^/]+$/]
   },
@@ -105,7 +107,7 @@ export const FLAGS = {
     env: 'VITE_APP_FEATURE_LEAGUE',
     markers: [
       // storage keys (src/league/leagueKeys.ts) + the Worker routes (LG3/LG4)
-      'spinner_league', 'chaosarena_league_pool', '/league/',
+      'smashers_league', 'treesmashers_league_pool', '/league/',
       // component names (Vue keeps `__name` in production) + their DOM hook
       'LeagueHub', 'LeagueHudButton', 'LeagueResultPanel', 'LeagueUnlockPopup', 'LeagueLpBar',
       'LeagueDeltaChip', 'LeagueOpponentCard', 'LeagueSeasonRewardModal', 'LeagueRankBadge', 'LeagueTierIcon',

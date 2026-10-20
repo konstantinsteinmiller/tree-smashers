@@ -69,7 +69,7 @@ const pipList = computed(() => {
       //- Shield ring (Guard Shell)
       svg.skill-hud__overlay(v-if="state.ring != null" viewBox="0 0 24 24" aria-hidden="true")
         circle(
-          cx="12" cy="12" r="11" fill="none" stroke="#67e8f9" stroke-width="2.2" stroke-linecap="round"
+          cx="12" cy="12" r="11" fill="none" stroke="#8fd6fb" stroke-width="2.2" stroke-linecap="round"
           :stroke-dasharray="CIRC" :stroke-dashoffset="ringOffset"
           transform="rotate(-90 12 12)"
         )
@@ -81,7 +81,7 @@ const pipList = computed(() => {
         aria-hidden="true"
       )
         circle.skill-hud__cd(
-          cx="12" cy="12" r="6" fill="none" stroke="rgba(2,6,23,0.72)" stroke-width="12"
+          cx="12" cy="12" r="6" fill="none" stroke="rgba(58,35,20,0.7)" stroke-width="12"
           :style="{ animationDuration: `${state.cooldownMs}ms`, strokeDasharray: 37.7, strokeDashoffset: 0 }"
           transform="rotate(-90 12 12)"
         )
@@ -127,7 +127,7 @@ const pipList = computed(() => {
   position: absolute
   inset: -3px
   border-radius: 9999px
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%)
+  background: rgba(255, 250, 240, 0.7)
   opacity: 0
   pointer-events: none
   animation: skill-hud-flash 0.45s ease-out
@@ -140,10 +140,10 @@ const pipList = computed(() => {
   width: 3px
   height: 3px
   border-radius: 9999px
-  background: rgba(148, 163, 184, 0.45)
+  background: rgba(58, 35, 20, 0.45)
 
   &.is-on
-    background: #facc15
+    background: var(--color-sun-400)
 
 @keyframes skill-hud-cd
   from

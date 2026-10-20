@@ -84,7 +84,7 @@ async function runOne(port, throttle) {
   await page.goto(`http://127.0.0.1:${port}/index.html?quality=auto&seed=7`, {
     waitUntil: 'domcontentloaded'
   })
-  if (!/chaos/i.test(await page.title())) throw new Error('wrong app served')
+  if (!/tree smashers/i.test(await page.title())) throw new Error('wrong app served')
   await page.waitForSelector('canvas')
   await page.waitForTimeout(Math.max(9000, 6000 + throttle * 400))
 

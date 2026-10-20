@@ -1,6 +1,6 @@
 // ─── Currency model ─────────────────────────────────────────────────────────
 //
-// chaos-arena normally runs a two-currency economy: coins (soft, earned from
+// tree-smashers normally runs a two-currency economy: coins (soft, earned from
 // battles) and diamonds (premium, earned rarely and sold for real money in
 // `InAppPurchaseShop.vue`).
 //
@@ -30,7 +30,6 @@
 //
 // For scale, campaign stages pay 100–3 500 coins (median ~660), so on Poki:
 //
-//     daily-challenge diamond   →   3 000 coins  (~4–5 stage wins)
 //     battle-pass diamond stage →   3 000 coins
 //     roulette 5-diamond jackpot→  15 000 coins  (~23 stage wins)
 //

@@ -31,17 +31,17 @@ import { mountArena } from './helpers/arenaHarness'
 // bosses100 build), owning ONE trophy skin (frost-vault) but not the others.
 const SEED: Record<string, string> = vi.hoisted(() => {
   const seed: Record<string, string> = {
-    spinner_campaign_stage: '110',
-    spinner_player_max_stage: '110',
-    spinner_coins: '5000',
-    spinner_first_win: '1',
-    spinner_intro_seen: '1',
-    spinner_config_opened: '1',
-    spinner_player_team: JSON.stringify([
+    smashers_campaign_stage: '110',
+    smashers_player_max_stage: '110',
+    smashers_coins: '5000',
+    smashers_first_win: '1',
+    smashers_intro_seen: '1',
+    smashers_config_opened: '1',
+    smashers_player_team: JSON.stringify([
       { topPartId: 'round', bottomPartId: 'balanced' },
       { topPartId: 'quadratic', bottomPartId: 'balanced' }
     ]),
-    spinner_owned_skins: JSON.stringify(['quadratic:frost-vault'])
+    smashers_owned_skins: JSON.stringify(['quadratic:frost-vault'])
   }
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
   return seed
@@ -90,7 +90,6 @@ vi.mock('@/components/organisms/BossLabModal.vue', () => {
   return {}
 })
 
-vi.mock('/images/bg/parchment-ribbon_553x188.webp', () => ({ default: '/images/bg/parchment-ribbon_553x188.webp' }))
 vi.mock('/images/icons/movie_128x96.webp', () => ({ default: '/images/icons/movie_128x96.webp' }))
 vi.mock('/images/logo/logo_256x256.webp', () => ({ default: '/images/logo/logo_256x256.webp' }))
 vi.mock('/images/icons/chest_128x128.webp', () => ({ default: '/images/icons/chest_128x128.webp' }))
@@ -175,7 +174,7 @@ describe('engine, flag off', () => {
         bossTrait: 'frost',
         shardTrait: 'chill'
       }
-    ], false, 'boss', 0, false, undefined, null, 'circle', false, { seed: 5 })
+    ], false, 'boss', 0, false, undefined, null, 'circle', { seed: 5 })
     expect(hasBossTraits).not.toHaveBeenCalled()
     expect(e.traitsActive()).toBe(false)
     expect(e.bossTraitHud.value).toEqual([])
@@ -210,15 +209,18 @@ describe('SpinnerArena at stage 110, flag off', () => {
       expect(badge).not.toContain(en.stages.boss_cinder_tyrant)
       for (const sel of BOSS_DOM) expect(document.querySelector(sel), sel).toBeNull()
 
-      // Team modal → every top's skin shop: the unowned trophies (cinder,
+      // Team modal → every team smasher's colourway picker: the unowned trophies (cinder,
       // yeti) are hidden, the owned one (frost-vault) stays listed.
       await arena.openTeam()
       await arena.settle(200)
       const seen = new Set<string>()
-      const hitboxes = [...document.querySelectorAll('.skin-plus-hitbox')] as HTMLElement[]
-      expect(hitboxes.length).toBeGreaterThan(0)
-      for (const hb of hitboxes) {
-        hb.click()
+      // Team modal: select each team slot's smasher, then open its colourway picker.
+      const slots = [...document.querySelectorAll('.team-slot')] as HTMLElement[]
+      expect(slots.length).toBeGreaterThan(0)
+      for (const slot of slots) {
+        slot.click()
+        await arena.settle(30)
+        ;(document.querySelector('.skin-plus-btn') as HTMLElement | null)?.click()
         await arena.settle(60)
         for (const img of document.querySelectorAll('.skin-card img')) seen.add(img.getAttribute('alt') ?? '')
       }
@@ -233,7 +235,7 @@ describe('SpinnerArena at stage 110, flag off', () => {
       arena.unmount()
     }
     expect(arena.requested.filter(u => /boss-(ember|freeze|crack|chill)/.test(u))).toEqual([])
-    expect(JSON.parse(localStorage.getItem('spinner_owned_skins') ?? '[]')).toEqual(['quadratic:frost-vault'])
+    expect(JSON.parse(localStorage.getItem('smashers_owned_skins') ?? '[]')).toEqual(['quadratic:frost-vault'])
     expect(loaded).toEqual([])
   }, 60_000)
 })

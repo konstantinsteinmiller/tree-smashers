@@ -146,7 +146,7 @@ const storedUnlocked = (): boolean => {
  * Is this player's ACCOUNT allowed into the league at all? False on a
  * league-off build and for a CrazyGames guest (the leaderboard account gate —
  * LD4). The league state module gates every write on it: a player who is not
- * allowed in gets no `spinner_league` key at all (no unlock catch-up, no
+ * allowed in gets no `smashers_league` key at all (no unlock catch-up, no
  * rollover write, nothing kept across a reset); signing in later computes the
  * unlock from the stage as normal. Reactive in the account gate (reads
  * `leaderboardAuthorized.value`), so it can be watched.

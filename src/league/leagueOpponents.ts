@@ -7,7 +7,7 @@
  *   1. live pool     `LeaguePoolFetcher.fetchPool` (LG3's leagueApi; only when
  *                    `ctx.online` and a fetcher is injected). A non-empty
  *                    answer is also written to …
- *   2. device cache  `chaosarena_league_pool` — DEVICE-ONLY (not `spinner_`-
+ *   2. device cache  `treesmashers_league_pool` — DEVICE-ONLY (not `smashers_`-
  *                    prefixed, so it never reaches a cloud payload).
  *   3. baked pool    `virtual:league-pool` (vite.config.ts; null on a build
  *                    that baked nothing, and on every league-off build).
@@ -22,7 +22,7 @@
  * Cards are stable per (day, fightIndex): picks come from a seeded stream of
  * (day, fightIndex, ownId, tier), so reopening the hub with the same pool
  * shows the same three opponents — and the chosen three are PERSISTED
- * (device-only, `chaosarena_league_pool_picks`, today only), so a live pool
+ * (device-only, `treesmashers_league_pool_picks`, today only), so a live pool
  * that changes during the day cannot reroll them either (LG3). Online builds
  * only persist a deck the live pool answered for (a cache / baked fallback
  * may hold unrankable ids). Kids builds never show a pool name.
@@ -260,7 +260,7 @@ const sanitizeBuild = (
   sanitizeSkills: SkillSanitizer | null | undefined
 ): { team: SpinnerConfig[]; skills: SkillLoadout; power: number } | null => {
   const team = sanitizePvpTeam(
-    build.team.map((s) => ({ topPartId: s.t, bottomPartId: s.b, topLevel: s.tl, bottomLevel: s.bl, modelId: s.m })),
+    build.team.map((s) => ({ topPartId: s.t, bottomPartId: s.b, topLevel: s.tl, bottomLevel: s.bl, modelId: s.m, smasherId: s.s, level: s.lv })),
     { teamSize: 2 }
   )
   if (team.length < 2) return null
@@ -283,7 +283,8 @@ const toBuild = (team: SpinnerConfig[], skills: SkillLoadout): PlayerBuildV1 => 
     b: s.bottomPartId,
     tl: s.topLevel ?? 0,
     bl: s.bottomLevel ?? 0,
-    m: s.modelId ?? ''
+    m: s.modelId ?? '',
+    ...(s.smasherId ? { s: s.smasherId, lv: s.level ?? 1 } : {})
   })),
   sk: skills.map((k) => ({ id: k.id, lv: k.level }))
 })

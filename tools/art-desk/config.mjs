@@ -1,16 +1,16 @@
 /**
  * Where things are. Adapted from the art-generation-pipeline skill's Art Desk
- * template for chaos-arena. Anything that differs goes in
+ * template for tree-smashers. Anything that differs goes in
  * `art-desk.config.json` at the project root, e.g.
  *
  *   {
  *     "gemini": { "gapSeconds": 30, "jitterSeconds": 20 }
  *   }
  *
- * chaos-arena differences from the template defaults:
+ * tree-smashers differences from the template defaults:
  *
  *   · gemini.profileDir is THIS project's own Chrome profile
- *     (~/.art-desk/profiles/chaos-arena), not the shared
+ *     (~/.art-desk/profiles/tree-smashers), not the shared
  *     ~/.art-desk/gemini-chrome. Other projects' desks and sessions keep using
  *     theirs; nothing here ever opens, closes or writes into another profile.
  *   · port 5183 — 5178 and 5179 are held by other projects' desks.
@@ -44,9 +44,9 @@ const DEFAULTS = {
   port: 5183,
   gemini: {
     url: 'https://gemini.google.com/app',
-    // chaos-arena's OWN profile (see the header). Sign in to Google once, in
+    // tree-smashers's OWN profile (see the header). Sign in to Google once, in
     // the plain window `node tools/art-desk/paint.mjs --sign-in` opens.
-    profileDir: join(homedir(), '.art-desk', 'profiles', 'chaos-arena'),
+    profileDir: join(homedir(), '.art-desk', 'profiles', 'tree-smashers'),
     chrome: null,
     // Extra Chrome switches for that window, e.g. ["--window-position=2000,0"].
     chromeArgs: [],

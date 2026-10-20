@@ -31,11 +31,16 @@ export const registerPauseSyncer = (sync: () => void): (() => void) => {
   }
 }
 
-/**
- * Suspend / resume every registered loop. Idempotent, so overlapping pause
- * sources (platform pause + visibility change arriving together) can't fight.
- */
-export const setGamePaused = (paused: boolean): void => {
+// Two independent inputs. The platform's pause is one boolean owned by whoever
+// relays the portal signal (`App.vue`); a hold is a named, game-side reason to
+// stay paused (the forced-dark-mode notice). They are tracked apart so a
+// platform RESUME can never release a hold, and releasing a hold can never
+// resume a game the platform still has suspended.
+let platformPaused = false
+const holds = new Set<string>()
+
+const publish = (): void => {
+  const paused = platformPaused || holds.size > 0
   if (paused === isGamePaused.value) return
   isGamePaused.value = paused
   for (const sync of [...syncers]) {
@@ -46,4 +51,20 @@ export const setGamePaused = (paused: boolean): void => {
       syncers.delete(sync)
     }
   }
+}
+
+/**
+ * Suspend / resume every registered loop. Idempotent, so overlapping pause
+ * sources (platform pause + visibility change arriving together) can't fight.
+ */
+export const setGamePaused = (paused: boolean): void => {
+  platformPaused = paused
+  publish()
+}
+
+/** Hold the game paused for `source` until it lets go. Idempotent per source. */
+export const setPauseHold = (source: string, held: boolean): void => {
+  if (held) holds.add(source)
+  else holds.delete(source)
+  publish()
 }

@@ -76,13 +76,13 @@ platform :ios do
   # API key set up by `app_store_connect_api_key`.
   def register_app_id_if_missing(api_key)
     Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
-    bundle_id = "com.chaos.arena"
+    bundle_id = "com.tree.smashers"
     existing = Spaceship::ConnectAPI::BundleId.all.find { |b| b.identifier == bundle_id }
     if existing
       UI.message("App ID '#{bundle_id}' already exists, skipping registration.")
     else
       Spaceship::ConnectAPI::BundleId.create(
-        name: "Chaos Arena",
+        name: "Tree Smashers",
         identifier: bundle_id,
         platform: "IOS"
       )
@@ -96,16 +96,16 @@ platform :ios do
   # accept an api_key, so use Spaceship directly.
   def register_app_in_app_store_connect_if_missing(api_key)
     Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
-    bundle_id = "com.chaos.arena"
+    bundle_id = "com.tree.smashers"
     existing = Spaceship::ConnectAPI::App.find(bundle_id)
     if existing
       UI.message("App '#{bundle_id}' already exists in App Store Connect, skipping.")
     else
       Spaceship::ConnectAPI::App.create(
-        name: "Chaos Arena",
+        name: "Tree Smashers",
         primary_locale: "en-US",
         bundle_id: bundle_id,
-        sku: "chaos-arena",
+        sku: "tree-smashers",
         platforms: ["IOS"]
       )
       UI.success("Created app '#{bundle_id}' in App Store Connect.")

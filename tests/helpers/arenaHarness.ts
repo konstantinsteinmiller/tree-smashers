@@ -28,6 +28,12 @@ export interface ArenaHarness {
 
 export async function mountArena(seed: Record<string, string>): Promise<ArenaHarness> {
   for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v)
+  // The setup file swaps in a fresh storage before every test, so a composable
+  // imported earlier read an EMPTY storage. Re-read the seed the way a
+  // cloud-save hydrate does (the team modal then shows the seeded smashers,
+  // not the default pair).
+  const { refreshSaveBackedState } = await import('@/use/useSaveStatus')
+  refreshSaveBackedState()
   const written: string[] = []
   const requested: string[] = []
   const proto = Object.getPrototypeOf(localStorage) as Storage
@@ -95,6 +101,5 @@ export async function mountArena(seed: Record<string, string>): Promise<ArenaHar
 
 /** Selectors of every skill surface the arena / Team modal can show. */
 export const SKILL_DOM = [
-  '[data-testid="config-skills"]', '[data-testid="team-new-dot"]', '.blade-skill-row',
-  '.stage-badge__drop', '.boss-peek__drop', '.skills-intro', '[data-action="skill-list"]'
+  '[data-testid="smasher-skills"]', '.blade-skill-row'
 ] as const

@@ -127,7 +127,7 @@ describe('persisted picks', () => {
   })
 
   it('the picks key is device-only and named after the pool cache', () => {
-    expect(LEAGUE_PICKS_KEY.startsWith('spinner_')).toBe(false)
+    expect(LEAGUE_PICKS_KEY.startsWith('smashers_')).toBe(false)
     expect(LEAGUE_PICKS_KEY.startsWith(LEAGUE_POOL_KEY)).toBe(true)
   })
 })

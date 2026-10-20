@@ -189,6 +189,30 @@ describe('buildCsp', () => {
     })
   })
 
+  describe('GameMonetize build (VITE_APP_GAME_MONETIZE=true) — ad-waterfall opens', () => {
+    const env = (): Record<string, string> => ({ VITE_APP_GAME_MONETIZE: 'true' })
+
+    it('whitelists the GameMonetize hosts (SDK script + hosted frame)', () => {
+      const csp = buildCsp(env())
+      expect(csp).toContain('https://*.gamemonetize.com')
+      expect(csp).toContain('https://*.gamemonetize.co')
+    })
+
+    it('opens script / img / frame / media / font / connect to https: for the IMA bidder chain', () => {
+      const csp = buildCsp(env())
+      for (const dir of ['script-src', 'img-src', 'frame-src', 'media-src', 'font-src', 'connect-src']) {
+        const m = csp.match(new RegExp(`${dir} ([^;]+)`))![1]!
+        expect(m.split(/\s+/), dir).toContain('https:')
+      }
+    })
+
+    it('keeps the GameMonetize hosts out of every other build', () => {
+      for (const other of [{}, { VITE_APP_CRAZY_WEB: 'true' }, { VITE_APP_PLAYGAMA: 'true' }]) {
+        expect(buildCsp(other)).not.toContain('gamemonetize')
+      }
+    })
+  })
+
   describe('Glitch build (VITE_APP_GLITCH=true)', () => {
     it('adds unsafe-inline to script-src for the iframe bootstrap', () => {
       const csp = buildCsp({ VITE_APP_GLITCH: 'true' })

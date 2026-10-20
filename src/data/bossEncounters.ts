@@ -53,7 +53,7 @@ export type BossEncounterSlot = (typeof BOSS_ENCOUNTER_SLOTS)[number]
 /**
  * Trophy skins worn by the new bosses (§3.5, §7.1) — earn-only. The ids are
  * the contract with the skin catalog / art pipeline (BW5): model ids in
- * `SPINNER_MODEL_IDS`, images `public/images/models/<id>_256x256.webp`,
+ * `SPINNER_MODEL_IDS`, drawn as boss colourways (src/smashers/smasherSkins.ts),
  * names under `skins.<id>`.
  */
 export const BOSS_TROPHY_SKIN_IDS = ['cinder', 'frost-vault', 'yeti'] as const

@@ -70,9 +70,9 @@ const labels = (): IntroLabels => ({
 const fontFamily = (): string => {
   try {
     const v = getComputedStyle(document.documentElement).getPropertyValue('--font-game').trim()
-    return v || '\'Angry\', system-ui, sans-serif'
+    return v || '\'Nunito\', system-ui, sans-serif'
   } catch {
-    return '\'Angry\', system-ui, sans-serif'
+    return '\'Nunito\', system-ui, sans-serif'
   }
 }
 
@@ -227,7 +227,7 @@ onMounted(async () => {
       : img.decode().catch(() => {
       }))
   const fonts = (document as Document & { fonts?: FontFaceSet }).fonts
-  const fontReady = fonts ? fonts.load('100px Angry').then(() => {
+  const fontReady = fonts ? fonts.load('900 100px Nunito').then(() => {
   }).catch(() => {
   }) : Promise.resolve()
   // The loader's splash backdrop (FLogoProgress, z-150) is still fading out

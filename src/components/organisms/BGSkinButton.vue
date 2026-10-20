@@ -34,9 +34,7 @@ const swatchStyle = computed(() => {
     :aria-label="t('bgButton.title')"
     @click="open = true"
   )
-    span.bg-skin-button__frame.relative.flex.items-center.justify-center.rounded-md.border-2(
-      class="border-cyan-300/80"
-    )
+    span.bg-skin-button__frame.relative.flex.items-center.justify-center
       //- Current bg preview swatch
       span.bg-skin-button__swatch.rounded(:style="swatchStyle")
       //- Tiny "picture" glyph so the button reads as 'change background'
@@ -57,24 +55,31 @@ const swatchStyle = computed(() => {
   background: none
   border: none
 
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: -2px
+    border-radius: var(--radius-ui)
+
 // The visible frame. Slightly larger than the pre-2026-08 2.1 x 1.6rem so it
 // reads clearly, but small enough to clear the skin-plus bubbles below it.
 .bg-skin-button__frame
   width: 2.35rem
   height: 1.8rem
   padding: 2px
-  background: #0f1a30
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5)
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm, 0.4rem)
+  background: var(--color-wood-600)
+  box-shadow: inset 0 2px 0 var(--color-wood-400), 0 2px 0 var(--color-ink)
 
 .bg-skin-button__swatch
   position: absolute
   inset: 2px
-  border-radius: 3px
+  border-radius: 2px
 
 .bg-skin-button__glyph
   position: relative
   width: 1.05rem
   height: 1.05rem
-  color: rgba(255, 255, 255, 0.92)
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9))
+  color: var(--color-cream-50)
+  filter: drop-shadow(0 1px 0 var(--color-ink))
 </style>

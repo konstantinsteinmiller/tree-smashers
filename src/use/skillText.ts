@@ -6,7 +6,7 @@
 // files; this only supplies numbers, so the UI never concatenates translated
 // fragments.
 
-import { SKILLS, SKILL_AUTOFILL_ORDER, SKILL_MAX_LEVEL, skillParams } from '@/data/skillCatalog'
+import { SKILL_MAX_LEVEL, skillParams } from '@/data/skillCatalog'
 import { fmtNum } from '@/utils/localeNumber'
 import type { SkillId } from '@/types/skills'
 
@@ -114,67 +114,3 @@ export function skillValuesText(
 export const skillLevelFraction = (level: number): number =>
   Math.max(0, Math.min(1, level / SKILL_MAX_LEVEL))
 
-/** The skill a boss stage drops, or null (non-boss stage / beyond the drop table). */
-export const skillDroppedAt = (stageId: number): SkillId | null =>
-  SKILL_AUTOFILL_ORDER.find(id => SKILLS[id].unlockStage === stageId) ?? null
-
-export interface BossDropChip {
-  id: SkillId
-  /** Before the first skill unlock the drop is teased as "?" (§7.1, §7.5). */
-  mystery: boolean
-}
-
-/**
- * The boss-drop chip for `bossStageId` (§7.5): shown while that boss's skill
- * is still locked, from the teaser stage on. Stages 1–7 see nothing, the
- * stage-10 boss is a "?" until skills exist, later bosses show their glyph.
- */
-export function bossDropChip(
-  bossStageId: number,
-  highestCleared: number,
-  enabled: boolean,
-  teaserStage: number
-): BossDropChip | null {
-  if (!enabled) return null
-  const id = skillDroppedAt(bossStageId)
-  if (!id) return null
-  if (highestCleared >= SKILLS[id].unlockStage) return null
-  if (highestCleared + 1 < teaserStage) return null
-  const first = SKILL_AUTOFILL_ORDER[0]!
-  return { id, mystery: highestCleared < SKILLS[first].unlockStage && id === first }
-}
-
-// ─── Skill picker order (§7.3) ──────────────────────────────────────────────
-
-export type PickerCardKind = 'here' | 'free' | 'other' | 'unlearned' | 'locked'
-
-export interface PickerCard {
-  id: SkillId
-  kind: PickerCardKind
-}
-
-/**
- * Card order for the picker opened on `slot` (null = no slot context):
- * equipped in this slot → learned & unequipped → equipped in the other slot →
- * unlocked but not learned → locked. Inside each group: unlock (boss) order.
- */
-export function pickerCards(
-  slot: number | null,
-  slots: readonly (SkillId | null)[],
-  isUnlocked: (id: SkillId) => boolean,
-  isLearned: (id: SkillId) => boolean
-): PickerCard[] {
-  const rank: Record<PickerCardKind, number> = { here: 0, free: 1, other: 2, unlearned: 3, locked: 4 }
-  const kindOf = (id: SkillId): PickerCardKind => {
-    if (!isUnlocked(id)) return 'locked'
-    if (!isLearned(id)) return 'unlearned'
-    const at = slots.indexOf(id)
-    if (at === -1) return 'free'
-    if (slot == null) return 'here'
-    return at === slot ? 'here' : 'other'
-  }
-  return SKILL_AUTOFILL_ORDER
-    .map((id, order) => ({ id, kind: kindOf(id), order }))
-    .sort((a, b) => rank[a.kind] - rank[b.kind] || a.order - b.order)
-    .map(({ id, kind }) => ({ id, kind }))
-}

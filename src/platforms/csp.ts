@@ -112,6 +112,17 @@ const CG_PARTNER_HOSTS: ReadonlyArray<string> = [
   'https://*.rubiconproject.com'
 ]
 
+/** GameMonetize's own hosts: the SDK script (`api.`), its ad config and the
+ *  hosted game frame. Only on the GameMonetize build — an entry in BASE_HOSTS
+ *  would put another ad network's hostname into every other platform's
+ *  index.html. The ad creatives themselves come from the open ad-waterfall
+ *  directives below. */
+const GAMEMONETIZE_HOSTS: ReadonlyArray<string> = [
+  'https://gamemonetize.com',
+  'https://*.gamemonetize.com',
+  'https://*.gamemonetize.co'
+]
+
 const CONNECT_BASE_EXTRA: ReadonlyArray<string> = [
   'https://*.sentry.io',
   'wss://*.wavedash.com',
@@ -193,17 +204,22 @@ export const buildCsp = (env: Record<string, string>): string => {
   const isGlitch = env.VITE_APP_GLITCH === 'true'
   const isCrazyWeb = env.VITE_APP_CRAZY_WEB === 'true'
   const isPlaygama = env.VITE_APP_PLAYGAMA === 'true'
+  const isGameMonetize = env.VITE_APP_GAME_MONETIZE === 'true'
 
   // Playgama's Bridge waterfall pulls in partner ad CDNs at runtime
   // (similar to GD). The Bridge wiki doesn't publish a fixed allowlist —
   // mirroring the GD ad-waterfall openings (open script/style/img/connect/
   // frame/media/font to https:) is what passes their QA Tool in practice.
-  const isAdWaterfall = isGameDistribution || isPlaygama
+  //
+  // GameMonetize is the same case: its SDK serves Google IMA plus a bidder
+  // chain from arbitrary CDNs, behind a TCF consent wall.
+  const isAdWaterfall = isGameDistribution || isPlaygama || isGameMonetize
 
   const hosts: string[] = [
     ...BASE_HOSTS,
     ...(isGameDistribution ? GD_PARTNER_HOSTS : []),
-    ...(isCrazyWeb ? CG_PARTNER_HOSTS : [])
+    ...(isCrazyWeb ? CG_PARTNER_HOSTS : []),
+    ...(isGameMonetize ? GAMEMONETIZE_HOSTS : [])
   ]
 
   // Per-directive extras — mode-driven openings beyond `'self'` + hosts.

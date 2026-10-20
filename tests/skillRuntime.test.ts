@@ -119,7 +119,7 @@ describe('createBladeSkills', () => {
     expect(createBladeSkills([{ id: 'nope' as SkillId, level: 3 }], 100, 0, 1)).toBeUndefined()
   })
 
-  it('sanitises: drops unknown + duplicate ids, caps at 2 slots, clamps levels', () => {
+  it('sanitises: drops unknown + duplicate ids, caps at 3 slots (SKILL_BLADE_SLOTS), clamps levels', () => {
     const s = createBladeSkills([
       { id: 'bogus' as SkillId, level: 5 },
       { id: 'lucky_edge', level: 99 },
@@ -127,11 +127,11 @@ describe('createBladeSkills', () => {
       { id: 'momentum', level: -4 },
       { id: 'mirror_plate', level: 5 }
     ], 100, 0, 1)!
-    expect(s.ids).toEqual(['lucky_edge', 'momentum'])
-    expect(s.lv).toEqual({ lucky_edge: 10, momentum: 1 })
+    expect(s.ids).toEqual(['lucky_edge', 'momentum', 'mirror_plate'])
+    expect(s.lv).toEqual({ lucky_edge: 10, momentum: 1, mirror_plate: 5 })
     expect(s.luckyChance).toBe(skillParams('lucky_edge', 10).chance)
     expect(s.momentumPerStack).toBe(skillParams('momentum', 1).perStack)
-    expect(s.mirrorChance).toBe(0)
+    expect(s.mirrorChance).toBe(skillParams('mirror_plate', 5).chance)
     const nan = createBladeSkills([{ id: 'static_charge', level: Number.NaN }], 100, 0, 1)!
     expect(nan.lv.static_charge).toBe(1)
   })

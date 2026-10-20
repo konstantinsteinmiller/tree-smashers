@@ -19,6 +19,10 @@ out
 dist-purity-cg
 dist-purity-check
 dist-youtube-e2e
+# The native (Tauri) build's own web output. NOT `dist`: every portal build
+# writes there, and a portal build running while the Android bundle compiles
+# would swap the web app that gets embedded in it.
+dist-tauri
 
 node_modules
 .DS_Store

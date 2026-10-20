@@ -1,5 +1,5 @@
 /**
- * ─── Chaos Arena: everything the preview recorder knows about THIS game ─────
+ * ─── Tree Smashers: everything the preview recorder knows about THIS game ─────
  *
  * The scenario modules are pure beat sheets. How to boot the game, how to
  * freeze it, how to stage a stage, how to aim a slingshot and how to author a
@@ -8,7 +8,7 @@
  *
  * ── The seam ──
  *
- *   window.__chaos   src/utils/previewSeam.ts, installed by SpinnerArena.vue
+ *   window.__smashers   src/utils/previewSeam.ts, installed by SpinnerArena.vue
  *
  * `import.meta.env.DEV` ONLY, and dynamically imported inside that guard, so
  * it is absent from every portal build. That is why the pipeline records
@@ -32,7 +32,7 @@
  *
  * 3. WHO MOVES FIRST IS A COIN FLIP, and it is weighted by the PREVIOUS
  *    match's result: `matchRng() < (lastResult === 'lose' ? 0.80 : 0.30)`.
- *    The fixture pins `spinner_last_result` to 'lose' so the odds are 80/20
+ *    The fixture pins `smashers_last_result` to 'lose' so the odds are 80/20
  *    our way, and `boot()` then simply waits for `player_turn` however it
  *    arrives — if the NPC wins the flip, its opening shot resolves during
  *    setup and the clip opens on a board that is already scattered, which is
@@ -69,7 +69,7 @@ export const TIMING = {
 
 // ─── The save fixture ───────────────────────────────────────────────────────
 //
-// chaos-arena keeps progress as many FLAT localStorage keys rather than one
+// tree-smashers keeps progress as many FLAT localStorage keys rather than one
 // blob (see src/keys.ts), so the fixture is a key→value map and every value
 // is a string, exactly as the game writes it.
 //
@@ -150,8 +150,8 @@ export const saveFixture = (over = {}) => {
     // whole of setup() runs in real time while this machine is also starting
     // Chrome and a Vite dev server, so on 'auto' one take in five records at
     // half the particle density. 'high' removes the question.
-    chaosarena_quality_pref: 'high',
-    chaosarena_quality_verdict: 'high',
+    treesmashers_quality_pref: 'high',
+    treesmashers_quality_verdict: 'high',
 
     // Never let a stray cheat binding fire from a synthesised key event.
     cheat: 'false',
@@ -183,7 +183,7 @@ export const seedSaveScript = (save) => {
 export const waitForSeam = (ctx) =>
   ctx.page.waitForFunction(
     () => {
-      const c = window.__chaos
+      const c = window.__smashers
       return !!c && c.snapshot().player.length > 0
     },
     null,
@@ -191,7 +191,7 @@ export const waitForSeam = (ctx) =>
   )
 
 /** Read the game state. Safe in either phase. */
-export const snapshot = (ctx) => ctx.evaluate(() => window.__chaos.snapshot())
+export const snapshot = (ctx) => ctx.evaluate(() => window.__smashers.snapshot())
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
 
@@ -237,20 +237,20 @@ export const boot = async (ctx, { save = saveFixture(), seed = 1337, stage = nul
   await ctx.page.waitForFunction(() => !document.getElementById('static-splash'), null, { timeout: 30_000 })
 
   if (stage !== null) {
-    await ctx.evaluate((s) => window.__chaos.setStage(s), stage)
+    await ctx.evaluate((s) => window.__smashers.setStage(s), stage)
     // The stage change rebuilds the match through SpinnerArena's watcher on
     // the next tick; wait for the roster it implies rather than a fixed sleep.
-    await ctx.page.waitForFunction((s) => window.__chaos.snapshot().stage === s, stage, { timeout: 10_000 })
+    await ctx.page.waitForFunction((s) => window.__smashers.snapshot().stage === s, stage, { timeout: 10_000 })
   }
 
   // Seed AFTER the match exists — `initGame` reseeds randomly, so a seed set
   // any earlier is discarded (see the header).
-  await ctx.evaluate((s) => window.__chaos.seed(s), seed)
+  await ctx.evaluate((s) => window.__smashers.seed(s), seed)
 
   // Start the fight and wait out the 2.1 s curtain in real, unrecorded time.
-  await ctx.evaluate(() => window.__chaos.begin())
+  await ctx.evaluate(() => window.__smashers.begin())
   await ctx.page.waitForFunction(
-    () => window.__chaos.snapshot().phase === 'player_turn',
+    () => window.__smashers.snapshot().phase === 'player_turn',
     null,
     { timeout: 20_000 }
   )
@@ -273,8 +273,8 @@ export const boot = async (ctx, { save = saveFixture(), seed = 1337, stage = nul
 }
 
 /** Stop / restart the physics tick. Rendering continues either way. */
-export const freeze = (ctx) => ctx.evaluate(() => window.__chaos.freeze())
-export const unfreeze = (ctx) => ctx.evaluate(() => window.__chaos.unfreeze())
+export const freeze = (ctx) => ctx.evaluate(() => window.__smashers.freeze())
+export const unfreeze = (ctx) => ctx.evaluate(() => window.__smashers.unfreeze())
 
 // ─── Staging a verdict ──────────────────────────────────────────────────────
 
@@ -305,7 +305,7 @@ export const unfreeze = (ctx) => ctx.evaluate(() => window.__chaos.unfreeze())
  */
 export const stageHp = async (ctx, hp) => {
   return ctx.evaluate((h) => {
-    const c = window.__chaos
+    const c = window.__smashers
     for (const side of ['player', 'npc']) {
       const list = h[side]
       if (!list) continue
@@ -380,7 +380,7 @@ export const shoot = async (ctx, t, shot = {}) => {
     // silently. Give the previous resolution a moment to finish arriving.
     // 6 s, not 3: the enemy takes one turn PER LIVING BLADE, so a 1-v-2 board
     // runs roughly twice the cycle of a 1-v-1 and a 4 s wait gave up on it.
-    const ready = await ctx.stepUntil(() => window.__chaos.snapshot().phase === 'player_turn', {
+    const ready = await ctx.stepUntil(() => window.__smashers.snapshot().phase === 'player_turn', {
       timeoutMs: waitMs,
       label: 'player_turn'
     })
@@ -405,8 +405,8 @@ export const shoot = async (ctx, t, shot = {}) => {
     const aimed = await ctx.evaluate(
       (a) =>
         a.target === null
-          ? window.__chaos.aim(a.blade, a.angle, a.power)
-          : window.__chaos.aimAtBlade(a.blade, 'npc', a.target, a.power),
+          ? window.__smashers.aim(a.blade, a.angle, a.power)
+          : window.__smashers.aimAtBlade(a.blade, 'npc', a.target, a.power),
       { blade, target, angle: angle ?? -Math.PI / 2, power }
     )
     if (!aimed) {
@@ -418,7 +418,7 @@ export const shoot = async (ctx, t, shot = {}) => {
   if (beat) ctx.beat(`${beat}-aim`)
   if (!(await t.wait(aimMs))) return false
 
-  await ctx.evaluate(() => window.__chaos.fire())
+  await ctx.evaluate(() => window.__smashers.fire())
   if (beat) ctx.beat(beat)
 
   // Say what the exchange actually did. A beat sheet's authored HP is a
@@ -523,9 +523,9 @@ export const awaitVerdict = async (ctx, t, { maxMs = 3000, stepMs = 100 } = {}) 
  * fail clip it is also the retry the viewer is being invited to want.
  */
 export const playAgain = async (ctx, { seed = 1337 } = {}) => {
-  await ctx.evaluate(() => window.__chaos.reinit())
-  await ctx.evaluate((s) => window.__chaos.seed(s), seed)
-  await ctx.evaluate(() => window.__chaos.begin())
+  await ctx.evaluate(() => window.__smashers.reinit())
+  await ctx.evaluate((s) => window.__smashers.seed(s), seed)
+  await ctx.evaluate(() => window.__smashers.begin())
 }
 
 // DELIBERATELY NOT EXPORTED: an `authorNextExchange` alias for `stageHp` used

@@ -27,6 +27,11 @@ export interface PlayerBuildSpinner {
   bl: number
   /** Model / skin id. */
   m: string
+  /** Smasher id (optional; absent on pre-smasher builds). The client that
+   *  fights the build checks it against its own catalogue. */
+  s?: string
+  /** Smasher level 1…BUILD_MAX_SMASHER_LEVEL (only with `s`). */
+  lv?: number
 }
 
 /** One equipped skill. */
@@ -51,6 +56,8 @@ export interface BuildSpinnerInput {
   topLevel?: number
   bottomLevel?: number
   modelId?: string
+  smasherId?: string
+  level?: number
 }
 
 /** Structural input — a `SkillLoadout` entry is assignable. */
@@ -62,6 +69,8 @@ export interface BuildSkillInput {
 export const BUILD_TEAM_SIZE = 2
 export const BUILD_MAX_SKILLS = 2
 export const BUILD_MAX_PART_LEVEL = 200
+export const BUILD_MAX_SMASHER_LEVEL = 30
+export const BUILD_SMASHER_ID_MAX = 16
 export const BUILD_MIN_SKILL_LEVEL = 1
 export const BUILD_MAX_SKILL_LEVEL = 10
 /**
@@ -110,7 +119,14 @@ export const validatePlayerBuildShape = (raw: unknown): PlayerBuildV1 | null => 
       if (!isRecord(s)) return null
       if (!isId(s.t) || !isId(s.b) || !isId(s.m)) return null
       if (!intIn(s.tl, 0, BUILD_MAX_PART_LEVEL) || !intIn(s.bl, 0, BUILD_MAX_PART_LEVEL)) return null
-      outTeam.push({ t: s.t, b: s.b, tl: s.tl, bl: s.bl, m: s.m })
+      const out: PlayerBuildSpinner = { t: s.t, b: s.b, tl: s.tl, bl: s.bl, m: s.m }
+      if (s.s !== undefined || s.lv !== undefined) {
+        if (!isId(s.s) || s.s.length > BUILD_SMASHER_ID_MAX) return null
+        if (!intIn(s.lv, 1, BUILD_MAX_SMASHER_LEVEL)) return null
+        out.s = s.s
+        out.lv = s.lv
+      }
+      outTeam.push(out)
     }
     if (!Array.isArray(sk) || sk.length > BUILD_MAX_SKILLS) return null
     const outSk: PlayerBuildSkill[] = []
@@ -148,7 +164,8 @@ export const encodePlayerBuild = (
         b: c.bottomPartId,
         tl: level(c.topLevel),
         bl: level(c.bottomLevel),
-        m: c.modelId ?? ''
+        m: c.modelId ?? '',
+        ...(c.smasherId ? { s: c.smasherId, lv: Math.max(1, level(c.level ?? 1)) } : {})
       })),
       sk: (Array.isArray(skills) ? skills : []).map((s) => ({ id: s.id, lv: level(s.level) }))
     })
@@ -165,7 +182,7 @@ export const encodePlayerBuild = (
  */
 export const buildDigest = (build: PlayerBuildV1): string =>
   'v1|' +
-  build.team.map((s) => `${s.t},${s.b},${s.tl},${s.bl},${s.m}`).join('|') +
+  build.team.map((s) => `${s.t},${s.b},${s.tl},${s.bl},${s.m}` + (s.s ? `,${s.s}.${s.lv}` : '')).join('|') +
   '|sk:' +
   build.sk.map((k) => `${k.id}.${k.lv}`).join(',')
 

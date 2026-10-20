@@ -151,7 +151,7 @@ const runBattle = async (b: Battle, env: Env, maxFrames = 60 * 60 * 5): Promise<
   const enc = await import('@/data/bossEncounters')
   const enemy = typeof b.enemy === 'string' ? enc.buildBossEncounterStage(b.enemy).enemyTeam.map(toCfg) : b.enemy
   const e = game.useSpinnerGame()
-  e.initGame(b.player, enemy, false, b.arena, b.bouncers, false, undefined, null, 'circle', false,
+  e.initGame(b.player, enemy, false, b.arena, b.bouncers, false, undefined, null, 'circle',
     { ...(env.seed !== undefined ? { seed: env.seed } : {}), skillLoadout: b.mine, enemySkillLoadout: b.theirs })
   const spawn = e.allBlades.value.map(x => `${x.syncKey}:${x.x.toFixed(6)},${x.y.toFixed(6)}`).join('|')
   const bouncers = e.bouncers().map(x => `${x.x.toFixed(6)},${x.y.toFixed(6)}`).join('|')
@@ -278,7 +278,7 @@ describe('league determinism — a seeded battle is a function of its seed', () 
       const e = game.useSpinnerGame()
       if (seed === undefined) rng.seedMatchRng(0xabc) // unseeded: pin the random reseed below
       vi.spyOn(Math, 'random').mockImplementation(() => 0.5)
-      e.initGame(PLAYER, enemy, false, 'shock', bouncers, false, undefined, null, 'circle', false,
+      e.initGame(PLAYER, enemy, false, 'shock', bouncers, false, undefined, null, 'circle',
         seed !== undefined ? { seed } : {})
       const next = rng.matchRng()
       e.disposePhysics()

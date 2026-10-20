@@ -3,11 +3,15 @@
 //
 // ## The one format
 //
-// Rewarded INTERSTITIAL ad units only. Google serves skippable creatives
-// exclusively into those units, which is what satisfies Google Play's Families
-// "closeable after 5 seconds" rule — the rule that rejected com.chaos.arena in
-// 2026-09. There is no interstitial / banner / app-open / native-ad code path
-// in this file, so no build can accidentally ship a format that fails review.
+// Rewarded INTERSTITIAL ad units only (the Android plugin can also load a
+// plain rewarded unit; this one ignores `adFormat`). There is no interstitial /
+// banner / app-open / native-ad code path in this file, so no build can show
+// an ad the player did not opt into.
+//
+// The format does NOT make an ad closeable after 5 seconds — Google's server
+// picks the creative template per impression, and on Android this unit type
+// was measured serving two-ad pods with no close button for 17–36 s. See
+// ADS_STATE.md at the repo root before relying on it anywhere.
 //
 // The caller (JS) owns the other half of the rewarded-interstitial contract:
 // an intro screen naming the reward, with a visible decline option, shown

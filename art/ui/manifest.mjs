@@ -101,7 +101,7 @@ WHAT THE ATTACHMENTS ARE — read this before anything else.
 · The LAST attachment is the LAYOUT REFERENCE: six flat grey silhouettes on magenta. They are NOTATION: they fix each icon's SUBJECT, POSITION and SIZE. Take nothing else from them — not their grey, not their flat fills, not their exact outline. A result that comes back as the same grey shapes neatly shaded is a trace of the placeholder, and it is unusable.
 · The FIRST attachment is a FINISH REFERENCE: the game's gold coin. Copy its finish — the bold dark outline, the glossy cel shading, the warm highlight, the level of detail — and NEVER its subject: no coin, no star.
 
-WHAT IT IS — the stat icons of "Chaos Arena", a spinning-top battle game. They stand next to numbers on the team-upgrade screen and the in-battle stat cards, at 16 to 60 pixels across, and the same icons are stamped on the power-up boxes the blades collect in the arena. Each must say its stat at a glance.
+WHAT IT IS — the stat icons of "Tree Smashers", a spinning-top battle game. They stand next to numbers on the team-upgrade screen and the in-battle stat cards, at 16 to 60 pixels across, and the same icons are stamped on the power-up boxes the blades collect in the arena. Each must say its stat at a glance.
 
 READ THE PANELS — left to right, top row first:
 ${panels}
@@ -139,7 +139,7 @@ WHAT THE ATTACHMENTS ARE — read this before anything else.
 · The LAST attachment is the LAYOUT REFERENCE: three flat grey boxes on magenta, each with a dark round plate on its front. They are NOTATION: they fix each box's POSITION, SIZE and the ROUND FACE PLATE. Take nothing else from them — not their grey, not their flat fills. A result that comes back as the same grey shapes neatly shaded is a trace of the placeholder, and it is unusable.
 · The FIRST attachment is the game's own STAT ICON sheet, and the second is the game's gold coin: copy their finish — the bold dark outline, the glossy cel shading, the level of detail — and NEVER their subjects. No sword, shield, bolt, heart, arrow, coin or star on the boxes.
 
-WHAT IT IS — the power-up boxes of "Chaos Arena", a spinning-top battle game. A box drops into the arena; a spinning blade that rolls over it gets +25% of one stat for the rest of the match. Seen from above at 40 to 90 pixels across, each box must read instantly as a TEMPORARY POWER-UP — a glowing, charged loot capsule — and its colour must say which stat it boosts.
+WHAT IT IS — the power-up boxes of "Tree Smashers", a spinning-top battle game. A box drops into the arena; a spinning blade that rolls over it gets +25% of one stat for the rest of the match. Seen from above at 40 to 90 pixels across, each box must read instantly as a TEMPORARY POWER-UP — a glowing, charged loot capsule — and its colour must say which stat it boosts.
 · The box: a chunky, rounded, cube-shaped power-up crate seen almost straight from the front and a little from above (a thin sliver of the top face shows). Heavy dark-steel corner brackets with bolts; the side panels are glowing translucent-looking energy glass in the box's colour (painted opaque — just bright and luminous), with light energy streaks.
 · The FRONT FACE carries ONE big round recessed plate, dark navy (#0f1a30) with a thin gold (#facc15) rim, taking about 55% of the front face's width. THE PLATE IS EMPTY — a plain dark disc with a soft inner shade. The game stamps the stat symbol onto it.
 · A thin warm-gold outline glow hugs the whole box's silhouette (inside its outline), so it pops off any arena floor.

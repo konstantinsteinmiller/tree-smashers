@@ -7,7 +7,7 @@
 //
 // The base is never a hardcoded number — it is whatever that win screen
 // granted: the fought stage's `rewardWin` (campaign), the ghost formula
-// (leaderboard), the daily challenge's coin bonus, or the PvP purse. So the ad
+// (leaderboard) or the PvP purse. So the ad
 // scales with the campaign exactly as the win reward does.
 //
 // Boss wins never offer it: they end on the boss roulette, which already has
@@ -17,7 +17,7 @@
 // Cheat-stage and Boss Lab wins never offer it either (batch 3, G5): those
 // test fights pay their own fixed coins (labBattle.ts, G1 settlement) and a
 // 3x on top would turn a dev cheat into a coin farm.
-// It stays on campaign, ghost/leaderboard and daily-challenge non-boss wins.
+// It stays on campaign and ghost/leaderboard non-boss wins.
 
 /** The total multiple a completed ad leaves the player with. */
 export const WIN_AD_MULTIPLIER = 3

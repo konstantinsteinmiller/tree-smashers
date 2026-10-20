@@ -106,12 +106,20 @@ export interface SkillDef<K extends SkillId = SkillId> {
 
 // ─── Loadouts ──────────────────────────────────────────────────────────────
 
-/** The team's persisted slots (`spinner_skill_loadout`), `null` = empty. */
+/** The team's persisted slots (`smashers_skill_loadout`), `null` = empty. */
 export type SkillSlots = [SkillId | null, SkillId | null]
 
 /** What a battle receives (initGame opts, PvP `player-ready`): the equipped
  *  skills with their levels, ≤ 2 entries. */
-export type SkillLoadout = { id: SkillId; level: number }[]
+export type SkillLoadout = {
+  id: SkillId
+  level: number
+  /** Per-field multipliers over the level table — a smasher skill is one
+   *  effect plus mods (src/data/smasherCatalog.ts). Absent = the plain table. */
+  mods?: Partial<Record<string, number>>
+  /** The smasher skill id this entry came from (HUD / i18n only). */
+  key?: string
+}[]
 
 /** Per-blade runtime skill state (one per bearer; created by the runtime). */
 export interface BladeSkills {

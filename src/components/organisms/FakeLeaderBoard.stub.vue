@@ -8,7 +8,7 @@ import type { LeaderboardEntry } from '@/use/useLeaderboard'
 // build package at all.
 //
 // WHY: the game now has a real global leaderboard (`useLiveLeaderboard` + the
-// `leaderboard-chaos-arena` Worker), and two boards on one HUD is one board too
+// `leaderboard-tree-smashers` Worker), and two boards on one HUD is one board too
 // many — the fake one would sit next to the real one showing invented players
 // and a different rank for the same player.
 //

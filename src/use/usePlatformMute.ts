@@ -14,7 +14,7 @@
 //   • `useCrazyMuteSync()`      — CrazyGames settings-change listener
 //   • `usePlaygamaMuteSync()`   — Bridge `AUDIO_STATE_CHANGED` (in App.vue)
 //
-// Mechanism: chaos-arena has no separate master-gain node — every SFX gain and
+// Mechanism: tree-smashers has no separate master-gain node — every SFX gain and
 // the bg-music element volume are derived from `userSoundVolume` /
 // `userMusicVolume`. Driving both to 0 is therefore a true global mute (and on
 // mobile it additionally short-circuits `playSound` / music playback via

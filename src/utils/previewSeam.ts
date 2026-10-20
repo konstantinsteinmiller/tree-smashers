@@ -1,4 +1,4 @@
-// ─── window.__chaos — the preview recorder's scripting seam ─────────────────
+// ─── window.__smashers — the preview recorder's scripting seam ─────────────────
 //
 // `tools/preview-video/` drives a real match from Node to produce portal
 // preview clips. It needs to put the game in an exact state, fire exact
@@ -285,8 +285,8 @@ export const installPreviewSeam = (deps: PreviewSeamDeps): (() => void) => {
       }
     }
 
-  ;(window as unknown as { __chaos?: typeof api }).__chaos = api
+  ;(window as unknown as { __smashers?: typeof api }).__smashers = api
   return () => {
-    delete (window as unknown as { __chaos?: typeof api }).__chaos
+    delete (window as unknown as { __smashers?: typeof api }).__smashers
   }
 }

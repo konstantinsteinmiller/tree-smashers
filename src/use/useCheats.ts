@@ -7,8 +7,8 @@ import { arenaType, resetGameStartCount } from '@/use/useSpinnerGame'
 import type { BossAbility } from '@/types/spinner'
 import useSpinnerConfig from '@/use/useSpinnerConfig.ts'
 import { STAGE_KEY } from '@/keys'
-// Skill cheats go through the skills gate (lazy useSkills; inert when off).
-import { SKILLS_BUILD, withSkillsApi } from '@/skills/skillsGate'
+import { SMASHER_IDS } from '@/data/smasherCatalog'
+import { levelUpSmasher, resetRoster } from '@/use/useSmashers'
 
 const storedCheat = localStorage.getItem('cheat') || 'false'
 const isCheat = ref<boolean>(JSON.parse(storedCheat))
@@ -53,8 +53,9 @@ const useCheats = () => {
   }
 
   const resetChestCooldown = () => {
-    localStorage.setItem('spinner_chest_ready_at', '0')
-    localStorage.setItem('spinner_mini_chest_ready_at', '0')
+    localStorage.setItem('smashers_chest_ready_at', '0')
+    localStorage.setItem('smashers_mini_chest_ready_at', '0')
+    localStorage.setItem('smashers_skin_chest_ready_at', '0')
     console.warn('[CHEAT] All chest cooldowns reset to 00:00.')
   }
 
@@ -107,14 +108,6 @@ const useCheats = () => {
     console.warn('[CHEAT] Campaign progress reset.')
   }
   const { addCoins, addDiamonds } = useSpinnerConfig()
-
-  /**
-   * The skill cheats load useSkills on demand through the skills gate (W1):
-   * a static import would pull the skill catalog into every build through
-   * this composable. On a skills-off build the shortcuts are not registered
-   * at all (the spread below folds away).
-   */
-  const withSkills = withSkillsApi
 
   /**
    * CHEAT MAPPING
@@ -175,23 +168,16 @@ const useCheats = () => {
       addDiamonds(10)
       console.warn('[CHEAT] Granted 10 diamonds.')
     },
-    // Skills (skills-feature.md §10.2): a = toggle "own every skill" (not
-    // persisted), y = every unlocked skill to L10 (persisted), o = wipe the
-    // three skill keys.
-    ...(SKILLS_BUILD ? {
-      'ctrl+shift+alt+a': () => withSkills((skills) => {
-        skills.setDevOwnAllSkills(!skills.devOwnAllSkills.value)
-        console.warn(`[CHEAT] Own all skills: ${skills.devOwnAllSkills.value ? 'ON' : 'OFF'}.`)
-      }),
-      'ctrl+shift+alt+y': () => withSkills((skills) => {
-        skills.devMaxAllSkills()
-        console.warn('[CHEAT] Every unlocked skill set to L10.')
-      }),
-      'ctrl+shift+alt+o': () => withSkills((skills) => {
-        skills.devWipeSkills()
-        console.warn('[CHEAT] Skill save wiped.')
-      })
-    } : {}),
+    // Smashers: y = every smasher to max level (all skills open), o = wipe
+    // the roster back to level 1.
+    'ctrl+shift+alt+y': () => {
+      for (const id of SMASHER_IDS) while (levelUpSmasher(id) !== null) { /* to max */ }
+      console.warn('[CHEAT] Every smasher set to max level.')
+    },
+    'ctrl+shift+alt+o': () => {
+      resetRoster()
+      console.warn('[CHEAT] Smasher roster wiped.')
+    },
     'ctrl+shift+alt+c': clearCheatStage,
     'ctrl+shift+alt+p': () => {
       cheatRouletteSignal.value++

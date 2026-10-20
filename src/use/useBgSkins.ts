@@ -83,8 +83,8 @@ export const BG_SKINS: BgSkinDef[] = [
   }
 ]
 
-const OWNED_KEY = 'spinner_bg_skins_owned'
-const SELECTED_KEY = 'spinner_bg_skin_selected'
+const OWNED_KEY = 'smashers_bg_skins_owned'
+const SELECTED_KEY = 'smashers_bg_skin_selected'
 
 const loadOwned = (): Set<string> => {
   const owned = new Set<string>([DEFAULT_BG_SKIN_ID]) // default always owned

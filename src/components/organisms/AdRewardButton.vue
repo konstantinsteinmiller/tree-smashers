@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { revealRewards } from '@/use/useRewardReveal'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IconCoin from '@/components/icons/IconCoin.vue'
@@ -93,12 +94,21 @@ const triggerAdReward = async () => {
 }
 
 const grantReward = () => {
+  // Grant first (the wallet never waits on an animation), then show the
+  // payout on the gift screen; the fly-to-badge VFX follows its dismissal.
+  // `rootEl` is captured now — the button hides itself for the cooldown.
+  const el = rootEl.value
   if (props.reward === 'diamond') {
     addDiamonds(props.diamonds)
-    if (rootEl.value) emit('diamonds-awarded', rootEl.value)
+    void revealRewards([{ kind: 'diamonds', amount: props.diamonds }]).then(() => {
+      if (el) emit('diamonds-awarded', el)
+    })
   } else {
-    addCoins(coinPayout.value)
-    if (rootEl.value) emit('coins-awarded', rootEl.value)
+    const amount = coinPayout.value
+    addCoins(amount)
+    void revealRewards([{ kind: 'coins', amount }]).then(() => {
+      if (el) emit('coins-awarded', el)
+    })
   }
 }
 </script>
@@ -111,10 +121,7 @@ const grantReward = () => {
     @click="triggerAdReward"
   )
     div.relative
-      div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-      div.relative.rounded-lg.border-2.text-white.font-bold.flex.flex-col.items-center.px-1.py-1(
-        class="bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30]"
-      )
+      div.ad-plate.relative.font-bold.flex.flex-col.items-center.px-1.py-1
         div.flex.items-center.gap-1
           template(v-if="reward === 'diamond'")
             span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ diamondPayout.amount }}
@@ -122,7 +129,7 @@ const grantReward = () => {
             IconCoin.inline(v-else class="w-4 h-4")
           template(v-else)
             span.font-black.game-text.leading-tight(class="text-[10px] sm:text-xs") +{{ coinPayout }}
-            IconCoin.inline(class="w-4 h-4 text-yellow-300")
+            IconCoin.inline(class="w-4 h-4 text-sun-300")
         //- Ad disclosure. Google Play's Families policy rejects ads and ad
         //- offers that "aren't clearly distinguishable from your app's
         //- content", so the native build labels the button in words, not just
@@ -135,3 +142,14 @@ const grantReward = () => {
             :alt="t('spinner.ad')"
           )
 </template>
+
+<style scoped lang="sass">
+// Sky plate: every rewarded-video CTA is sky (DESIGN.md), ink outline,
+// hard 0-blur drop.
+.ad-plate
+  background-color: var(--color-sky-500)
+  color: var(--color-cream-50)
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  box-shadow: inset 0 3px 0 var(--color-sky-300), inset 0 -3px 0 var(--color-sky-700), 0 4px 0 var(--color-ink)
+</style>

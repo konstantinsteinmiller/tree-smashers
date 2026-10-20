@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="color-scheme" content="dark only">
+  <meta name="darkreader-lock">
   <link rel="icon" href="/favicon.ico">
   <!--
     YouTube Playables SDK. Stripped from every non-YouTube build by
@@ -31,32 +32,38 @@
   <!-- CSP meta tag injected by vite.config.ts at build time -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0d1117">
+  <meta name="theme-color" content="#16261b">
+  <meta name="description" content="Flick cute but angry stuffed-animal smashers across forest clearings, level them up, unlock their skills and smash the enemy Team Tower to win!">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Tree Smashers">
+  <meta property="og:description" content="Flick cute but angry stuffed-animal smashers across forest clearings, level them up, unlock their skills and smash the enemy Team Tower to win!">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Tree Smashers">
+  <meta name="twitter:description" content="Flick cute but angry stuffed-animal smashers across forest clearings, level them up, unlock their skills and smash the enemy Team Tower to win!">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Chaos Arena">
+  <meta name="apple-mobile-web-app-title" content="Tree Smashers">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/images/icons/icon_192x192.png">
-  <title>Chaos Arena</title>
+  <title>Tree Smashers</title>
   <style>
       /* Static splash — renders instantly before any JS loads */
       body {
           margin: 0;
-          background: #0d1117;
+          background: #1a351d;
       }
 
+      /* Mirrors FLogoProgress.vue rule for rule (flat, transform-only pan). */
       #static-splash {
           position: fixed;
           inset: 0;
           z-index: 9999;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: #0d1117;
-          background-image: url('/images/bg/bg-tile_400x400.webp');
-          background-repeat: repeat;
-          background-size: 400px 400px;
+          background-color: #2f5f35;
           transition: opacity 0.4s ease-out;
       }
 
@@ -65,30 +72,86 @@
           pointer-events: none;
       }
 
-      #static-splash img {
-          width: 40vmin;
-          height: 40vmin;
-          max-width: 256px;
-          max-height: 256px;
-          object-fit: contain;
-          animation: splash-pulse 1.5s ease-in-out infinite;
+      #static-splash .s-pan {
+          position: absolute;
+          inset: -240px 0 0 -240px;
+          background-image: url('/images/bg/forest-tile.svg');
+          background-size: 240px 240px;
+          animation: forest-pan 90s linear infinite;
+          will-change: transform;
       }
 
-      @keyframes splash-pulse {
-          0%, 100% {
-              opacity: 0.3;
-          }
-          50% {
-              opacity: 0.7;
-          }
+      @keyframes forest-pan {
+          to { transform: translate3d(240px, 240px, 0); }
+      }
+
+      #static-splash .s-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: clamp(14px, 4vmin, 28px);
+          width: min(86vw, 120vh, 560px);
+          user-select: none;
+          -webkit-user-select: none;
+      }
+
+      #static-splash .s-logo {
+          margin: 0;
+          width: 100%;
+          text-align: center;
+          display: block;
+          font-family: 'Nunito', system-ui, sans-serif;
+          font-weight: 900;
+          font-size: clamp(2.6rem, min(13vw, 17vh), 5.6rem);
+          line-height: 0.95;
+          letter-spacing: 0.02em;
+          color: #ffd45e;
+          -webkit-text-stroke: 0.14em #1e3a21;
+          paint-order: stroke fill;
+          text-shadow: 0 0.09em 0 #1e3a21;
+          transform: rotate(-3deg);
+      }
+
+      #static-splash .s-bar {
+          position: relative;
+          width: 72%;
+          height: clamp(14px, 3vmin, 20px);
+          border: 3px solid #1e3a21;
+          border-radius: 999px;
+          background: #24472a;
+          box-shadow: 0 4px 0 #1e3a21;
+          overflow: hidden;
+      }
+
+      #static-splash .s-fill {
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(#fff2b8 0 28%, #ffc93e 28% 100%);
+          transform-origin: left center;
+          transform: scaleX(0);
+          animation: s-creep 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+      }
+
+      @keyframes s-creep {
+          to { transform: scaleX(0.14); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+          #static-splash .s-pan { animation: none; }
       }
   </style>
 </head>
 <body>
 <!-- Static splash screen — visible before JS loads -->
-<link rel="preload" href="/images/bg/bg-tile_400x400.webp" as="image" type="image/webp">
-<div id="static-splash">
-  <img src="/images/logo/logo_256x256.webp" alt="Loading...">
+<link rel="preload" href="/images/bg/forest-tile.svg" as="image" type="image/svg+xml">
+<div id="static-splash" aria-hidden="true">
+  <div class="s-pan"></div>
+  <div class="s-card">
+    <!-- Brand wordmark; swap for the painted logo <img> together with LOGO_SRC in FLogoProgress.vue -->
+    <div class="s-logo">Tree Smashers</div>
+    <div class="s-bar"><div class="s-fill"></div></div>
+  </div>
 </div>
 <!-- Load the SDK before your game code -->
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>

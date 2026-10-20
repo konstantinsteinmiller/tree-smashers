@@ -38,7 +38,7 @@ export interface BossDefeatedInput {
 /**
  * True exactly when the battle that just ended was a boss killed on the
  * roulette path: a won boss stage in the campaign (or on a cheat stage, which
- * takes the same roulette branch). PvP, the daily challenge and leaderboard
+ * takes the same roulette branch). PvP and leaderboard
  * ghosts never show it — their boss-flagged stages are borrowed tables, not a
  * boss the player climbed to.
  */

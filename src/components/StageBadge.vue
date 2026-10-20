@@ -3,8 +3,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
 import { registerChordTap } from '@/use/useVConsole'
-// Lazy, null on a skills-off build (skills gate).
-import { SkillDropChipUi } from '@/skills/skillsGate'
 
 const { t } = useI18n()
 
@@ -14,9 +12,6 @@ interface Props {
   cycleSuffix?: string
   isBoss?: boolean
   arenaType?: ArenaType
-  /** Show the boss-drop skill chip (§7.5). The arena passes it outside
-   *  battle only; the chip hides itself on stages that drop nothing. */
-  showSkillDrop?: boolean
   /** A cheat / Boss Lab test fight (G2): the chip reads "LAB" instead of the
    *  campaign stage number, which such a fight neither uses nor advances. */
   lab?: boolean
@@ -26,7 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
   cycleSuffix: '',
   isBoss: false,
   arenaType: 'default',
-  showSkillDrop: false,
   lab: false
 })
 
@@ -41,99 +35,17 @@ const displayName = computed(() => {
   return props.cycleSuffix ? `${translated} ${props.cycleSuffix}` : translated
 })
 
-// Per-arena gradient + accent palette. Boss stages always use the red palette
-// regardless of arenaType.
-interface StageTheme {
-  from: string
-  to: string
-  border: string
-  shadowBase: string
-  number: string
-  numberShadow: string
-  accent: string
-  glow: string
-}
-
-const stageTheme = computed<StageTheme>(() => {
-  if (props.isBoss) {
-    return {
-      from: 'from-red-600',
-      to: 'to-red-900',
-      border: 'border-red-300',
-      shadowBase: 'bg-red-950',
-      number: 'text-red-100',
-      numberShadow: 'bg-red-950/70',
-      accent: 'text-red-200',
-      glow: 'shadow-red-500/60'
-    }
-  }
+// Per-arena tint for the number chip on the wood plank (design tokens only).
+// Boss stages always use the berry chip regardless of arenaType.
+const stageChip = computed<string>(() => {
+  if (props.isBoss) return 'stage-chip--berry'
   switch (props.arenaType) {
-    case 'lava':
-      return {
-        from: 'from-orange-500',
-        to: 'to-orange-800',
-        border: 'border-orange-300',
-        shadowBase: 'bg-orange-950',
-        number: 'text-orange-100',
-        numberShadow: 'bg-orange-950/70',
-        accent: 'text-orange-200',
-        glow: 'shadow-orange-500/60'
-      }
-    case 'ice':
-      return {
-        from: 'from-cyan-400',
-        to: 'to-cyan-800',
-        border: 'border-cyan-200',
-        shadowBase: 'bg-cyan-950',
-        number: 'text-cyan-50',
-        numberShadow: 'bg-cyan-950/70',
-        accent: 'text-cyan-100',
-        glow: 'shadow-cyan-400/60'
-      }
-    case 'forest':
-      return {
-        from: 'from-green-500',
-        to: 'to-green-800',
-        border: 'border-green-300',
-        shadowBase: 'bg-green-950',
-        number: 'text-green-100',
-        numberShadow: 'bg-green-950/70',
-        accent: 'text-green-200',
-        glow: 'shadow-green-500/60'
-      }
-    case 'thunder':
-      return {
-        from: 'from-yellow-400',
-        to: 'to-yellow-700',
-        border: 'border-yellow-200',
-        shadowBase: 'bg-yellow-950',
-        number: 'text-yellow-50',
-        numberShadow: 'bg-yellow-950/70',
-        accent: 'text-yellow-100',
-        glow: 'shadow-yellow-400/60'
-      }
-    case 'shock':
-      return {
-        from: 'from-fuchsia-500',
-        to: 'to-fuchsia-900',
-        border: 'border-fuchsia-300',
-        shadowBase: 'bg-fuchsia-950',
-        number: 'text-fuchsia-100',
-        numberShadow: 'bg-fuchsia-950/70',
-        accent: 'text-fuchsia-200',
-        glow: 'shadow-fuchsia-500/60'
-      }
-    default:
-      return {
-        from: 'from-slate-500',
-        to: 'to-slate-800',
-        border: 'border-slate-300',
-        shadowBase: 'bg-slate-950',
-        number: 'text-slate-50',
-        numberShadow: 'bg-slate-950/70',
-        accent: 'text-slate-200',
-        glow: 'shadow-slate-500/50'
-      }
+    case 'lava': return 'stage-chip--sun-deep'
+    case 'ice': return 'stage-chip--sky'
+    case 'forest': return 'stage-chip--leaf'
+    case 'thunder': return 'stage-chip--sun'
+    case 'shock': return 'stage-chip--plum'
+    default: return 'stage-chip--wood'
   }
 })
 </script>
@@ -159,49 +71,53 @@ const stageTheme = computed<StageTheme>(() => {
     class="cursor-pointer"
     style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
   )
-    //- 3D drop-shadow base, tinted to the arena palette
-    //- `pointer-events-none` so the absolute-positioned base never steals
-    //- the pointerdown from the root — taps anywhere inside the badge
-    //- bubble through to the root listener.
-    div.absolute.inset-0.translate-y-1.rounded-xl.opacity-80(
-      :class="stageTheme.shadowBase"
-      class="pointer-events-none"
-    )
-    //- Body
-    div.relative.flex.items-center.gap-2.rounded-xl.border-2.shadow-lg.overflow-hidden(
-      :class="['bg-gradient-to-b', stageTheme.from, stageTheme.to, stageTheme.border, stageTheme.glow]"
+    //- Body: a wood plank (design.sass .ui-wood).
+    div.stage-plank.ui-wood.relative.flex.items-center.gap-2(
       class="pl-1.5 pr-3 py-1"
     )
-      //- Stage number chip
-      div.relative.flex.items-center.justify-center.rounded-lg.border(
-        :class="[stageTheme.numberShadow, stageTheme.border]"
+      //- Stage number chip, tinted to the arena
+      div.stage-chip.relative.flex.items-center.justify-center(
+        :class="stageChip"
         class="min-w-7 h-7 sm:min-w-8 sm:h-8 px-1"
       )
         span.font-black.game-text.leading-none(
-          :class="stageTheme.number"
           class="text-sm sm:text-base"
         ) {{ chipText }}
       //- Label + name stack
       div.flex.flex-col.leading-tight
-        span.font-black.uppercase.tracking-wider.game-text.text-white(
-          class="text-[0.7rem] sm:text-[0.85rem] opacity-90"
+        span.font-black.uppercase.game-text.text-cream-50(
+          class="text-[0.7rem] sm:text-[0.85rem]"
         ) {{ isBoss ? t('bossStage') : t('stageN', { n: stageId }) }}
-        span.font-bold.italic.game-text(
-          :class="stageTheme.accent"
+        span.stage-name.font-bold.game-text(
           class="text-[0.75rem] sm:text-xs"
         ) {{ displayName }}
-    //- Boss-drop skill chip at the badge's right edge (menu only).
-    component.stage-badge__drop.absolute(
-      v-if="SkillDropChipUi && isBoss && showSkillDrop && !lab"
-      :is="SkillDropChipUi"
-      :boss-stage-id="stageId"
-      :size="22"
-    )
 </template>
 
 <style scoped lang="sass">
-.stage-badge__drop
-  right: -0.7rem
-  top: -0.55rem
-  z-index: 2
+.stage-plank
+  border-radius: var(--radius-ui)
+
+.stage-chip
+  border: 2px solid var(--color-ink)
+  border-radius: var(--radius-ui-sm)
+  color: var(--color-cream-50)
+  box-shadow: inset 0 2px 0 rgba(255, 250, 240, 0.35), 0 2px 0 var(--color-ink)
+
+.stage-chip--wood
+  background-color: var(--color-wood-400)
+.stage-chip--berry
+  background-color: var(--color-berry-500)
+.stage-chip--sun-deep
+  background-color: var(--color-sun-600)
+.stage-chip--sky
+  background-color: var(--color-sky-500)
+.stage-chip--leaf
+  background-color: var(--color-leaf-500)
+.stage-chip--sun
+  background-color: var(--color-sun-500)
+.stage-chip--plum
+  background-color: var(--color-plum-500)
+
+.stage-name
+  color: var(--color-cream-200)
 </style>

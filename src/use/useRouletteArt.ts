@@ -25,13 +25,15 @@ export type RouletteArtKey = 'rim' | 'pointer' | 'hub' | 'bulbOff' | 'bulbOn'
 
 /** Shipped paintings, by part. Leave a part out until its file exists.
  *  Sizes are ~2x the largest display size (the wheel caps at 300 CSS px). */
-const PAINTED: Partial<Record<RouletteArtKey, string>> = {
-  rim: 'images/roulette/rim_560x560.webp',
-  pointer: 'images/roulette/pointer_78x120.webp',
-  hub: 'images/roulette/hub_128x128.webp',
-  bulbOff: 'images/roulette/bulb-off_40x40.webp',
-  bulbOn: 'images/roulette/bulb-on_40x40.webp'
-}
+//
+// COZY RESTYLE (Tree Smashers): the shipped paintings in public/images/roulette/
+// (rim_560x560, pointer_78x120, hub_128x128, bulb-off/on_40x40) are the old
+// Chaos Arena gold-filigree / ruby / sapphire / marquee-bulb set. They are
+// delisted, so the component draws its flat wooden rim, cream bolts, wooden
+// pointer and hub instead and no request is made for them. Re-list a part
+// here once art/roulette/ has re-painted it in the cozy wood/cream style (and
+// re-measure GEO in RouletteWheel.vue against the new rim's opening).
+const PAINTED: Partial<Record<RouletteArtKey, string>> = {}
 
 export const rouletteArtSrc: Partial<Record<RouletteArtKey, string>> = Object.fromEntries(
   Object.entries(PAINTED).map(([k, path]) => [k, prependBaseUrl(path as string)])

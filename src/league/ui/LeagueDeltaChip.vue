@@ -6,7 +6,7 @@ import { isLowQuality } from '@/use/useQuality'
 /**
  * ─── League LP delta chip (LG5a) ────────────────────────────────────────────
  *
- * "+24 LP" in green, "−12 LP" in red, "±0 LP" in slate. With `animate` the
+ * "+24 LP" in green, "−12 LP" in red, "±0 LP" in wood brown. With `animate` the
  * number counts up from 0 and the chip pops in; low render quality and
  * prefers-reduced-motion show the final value at once. Screen readers get
  * the final value only (the ticking text is aria-hidden).
@@ -81,23 +81,26 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
   gap: 0.25rem
   padding: 0.2rem 0.6rem 0.2rem 0.45rem
   border-radius: 999px
-  border: 2px solid #0f1a30
-  box-shadow: 0 3px 0 #0f1a30
+  border: 2px solid var(--color-ink)
+  box-shadow: 0 3px 0 var(--color-ink)
   font-weight: 900
   line-height: 1
   white-space: nowrap
   font-variant-numeric: tabular-nums
-  color: #fff
+  color: var(--color-cream-50)
 
 .ldc__text
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000
+  text-shadow: -1px -1px 0 var(--color-ink), 1px -1px 0 var(--color-ink), -1px 1px 0 var(--color-ink), 1px 1px 0 var(--color-ink)
 
 .ldc--up
-  background: linear-gradient(to bottom, #5fe08a, #1f9c55)
+  background-color: var(--color-leaf-500)
+  box-shadow: inset 0 2px 0 var(--color-leaf-300), 0 3px 0 var(--color-ink)
 .ldc--down
-  background: linear-gradient(to bottom, #ff7a6b, #c9283a)
+  background-color: var(--color-berry-500)
+  box-shadow: inset 0 2px 0 var(--color-berry-300), 0 3px 0 var(--color-ink)
 .ldc--flat
-  background: linear-gradient(to bottom, #8193ad, #4d5d78)
+  background-color: var(--color-wood-500)
+  box-shadow: inset 0 2px 0 var(--color-wood-300), 0 3px 0 var(--color-ink)
 
 .ldc--sm
   font-size: 0.75rem
@@ -111,7 +114,7 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
   display: inline-block
   width: 0.8em
   height: 0.8em
-  filter: drop-shadow(0 1px 0 #000)
+  filter: drop-shadow(0 1px 0 var(--color-ink))
 
 .ldc--pop
   animation: ldc-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both

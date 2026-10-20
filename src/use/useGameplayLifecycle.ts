@@ -13,7 +13,7 @@
 // ─── Why this file is not allowed to grow a Poki-shaped condition ───────────
 //
 // Poki forbids a `gameplayStart()` that no player asked for: the bracket may
-// only open off a real interaction, and chaos-arena boots straight into a live
+// only open off a real interaction, and tree-smashers boots straight into a live
 // battle, so `isGameplayActive` goes true during mount. The fix for that lives
 // INSIDE `pokiPlugin` (it holds the start behind a trusted-gesture gate and
 // releases it on the first real pointer/key event), not here — because this

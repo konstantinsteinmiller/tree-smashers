@@ -102,13 +102,13 @@ const ariaText = computed(() =>
       //- Promotion gate: the division's last LP opens the gatekeeper fight.
       span.llb__gate(v-if="atGate" aria-hidden="true")
         svg(viewBox="0 0 24 24" width="100%" height="100%")
-          path(d="M5 21V4h2v1.2l10.6.1-2.6 3.9 2.6 3.9H7V21z" fill="#fff" stroke="#0f1a30" stroke-width="1.6" stroke-linejoin="round")
+          path(d="M5 21V4h2v1.2l10.6.1-2.6 3.9 2.6 3.9H7V21z" fill="#fdf2d8" stroke="#3a2314" stroke-width="1.6" stroke-linejoin="round")
     div.llb__label(aria-hidden="true") {{ label }}
 </template>
 
 <style scoped lang="sass">
 .llb
-  --llb-accent: #ffc93c
+  --llb-accent: var(--color-sun-400)
   display: flex
   flex-direction: column
   gap: 0.2rem
@@ -119,9 +119,9 @@ const ariaText = computed(() =>
   position: relative
   height: 0.95rem
   border-radius: 999px
-  background: #0a1425
-  border: 2px solid #0f1a30
-  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.45)
+  background: var(--color-wood-800)
+  border: 2px solid var(--color-ink)
+  box-shadow: inset 0 2px 0 rgba(58, 35, 20, 0.5)
   overflow: visible
 
 .llb--compact .llb__track
@@ -131,7 +131,8 @@ const ariaText = computed(() =>
   position: absolute
   inset: 0 auto 0 0
   border-radius: 999px
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--llb-accent) 70%, #fff), var(--llb-accent) 55%, color-mix(in srgb, var(--llb-accent) 70%, #000))
+  background-color: var(--llb-accent)
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--llb-accent) 70%, var(--color-ink))
   min-width: 0.6rem
   overflow: hidden
 
@@ -141,18 +142,19 @@ const ariaText = computed(() =>
 .llb__shine
   position: absolute
   inset: 1px 0.3rem auto
-  height: 35%
+  height: 30%
   border-radius: 999px
-  background: rgba(255, 255, 255, 0.45)
+  background: rgba(255, 250, 240, 0.45)
 
+// Champion: flat four-colour patchwork stripes that slowly slide.
 .llb--champion .llb__fill
-  background: linear-gradient(90deg, #ff4f7b, #ffc93c, #9fe6ff, #ff4f7b)
-  background-size: 200% 100%
+  background: repeating-linear-gradient(90deg, var(--color-berry-400) 0 1rem, var(--color-sun-400) 1rem 2rem, var(--color-leaf-400) 2rem 3rem, var(--color-sky-400) 3rem 4rem)
+  background-size: 4rem 100%
   animation: llb-champ 4s linear infinite
 
 @keyframes llb-champ
   to
-    background-position: -200% 0
+    background-position: 4rem 0
 
 .llb__gate
   position: absolute
@@ -161,7 +163,7 @@ const ariaText = computed(() =>
   width: 1.35rem
   height: 1.35rem
   transform: translateY(-50%)
-  filter: drop-shadow(0 2px 0 #0f1a30)
+  filter: drop-shadow(0 2px 0 var(--color-ink))
   animation: llb-gate 1.4s ease-in-out infinite
 
 @keyframes llb-gate
@@ -172,10 +174,10 @@ const ariaText = computed(() =>
   font-size: 0.72rem
   font-weight: 900
   line-height: 1
-  color: #dce6f5
+  color: var(--color-cream-50)
   text-align: right
   font-variant-numeric: tabular-nums
-  text-shadow: 0 1px 0 #000
+  text-shadow: 0 1px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
   white-space: nowrap
 
 .llb--static .llb__fill,

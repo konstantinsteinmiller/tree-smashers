@@ -2,6 +2,6 @@
 # Replace with your own — create an empty private repo first, then run
 #   bundle exec fastlane match appstore
 # locally once to populate it.
-git_url "https://github.com/konstantinsteinmiller/chaos-arena-signing"
+git_url "https://github.com/konstantinsteinmiller/tree-smashers-signing"
 storage_mode "git"
 type "appstore"

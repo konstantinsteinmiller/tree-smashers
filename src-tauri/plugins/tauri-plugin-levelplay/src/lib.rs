@@ -6,15 +6,17 @@
 //   • Mobile builds register a native plugin implementation:
 //         Android → com.plugin.levelplay.LevelPlayPlugin (Kotlin)
 //         iOS     → init_plugin_levelplay (Swift)
-//     Both set a fixed set of COPPA/Families-Policy metadata flags BEFORE
-//     `IronSource.init(...)` so the flags propagate into every adapter
-//     that joins the bidding / waterfall. See `models::InitRequest`.
+//     Both set the privacy flags (COPPA, the AdMob child tags) BEFORE
+//     `LevelPlay.init(...)` so they propagate into every adapter that joins
+//     the bidding / waterfall; Android also runs Google UMP's consent form
+//     first where GDPR needs it. See `models::InitRequest`.
 //
 // Commands (JS invoke names use `snake_case`, native methods use
 // `camelCase` to match Kotlin `@Command` + Swift `@objc` conventions):
 //   • plugin:levelplay|init                → init the SDK
 //   • plugin:levelplay|show_rewarded       → show a rewarded video
 //   • plugin:levelplay|show_interstitial   → show an interstitial
+//   • plugin:levelplay|show_privacy_options → re-open the consent form
 //   • plugin:levelplay|launch_test_suite   → open LevelPlay's debug overlay
 
 use tauri::{
@@ -56,6 +58,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::init,
             commands::show_rewarded,
             commands::show_interstitial,
+            commands::show_privacy_options,
             commands::launch_test_suite,
         ])
         .setup(|app, api| {

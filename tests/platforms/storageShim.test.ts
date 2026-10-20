@@ -48,11 +48,11 @@ describe('storage-shim', () => {
     runShim()
 
     // The exact call that crashed on YouTube (useSpinnerConfig.ts, module scope).
-    expect(() => window.localStorage.getItem('spinner_first_win')).not.toThrow()
-    expect(window.localStorage.getItem('spinner_first_win')).toBeNull()
+    expect(() => window.localStorage.getItem('smashers_first_win')).not.toThrow()
+    expect(window.localStorage.getItem('smashers_first_win')).toBeNull()
 
-    window.localStorage.setItem('spinner_coins', '120')
-    expect(window.localStorage.getItem('spinner_coins')).toBe('120')
+    window.localStorage.setItem('smashers_coins', '120')
+    expect(window.localStorage.getItem('smashers_coins')).toBe('120')
   })
 
   it('replaces a null sessionStorage too', () => {
@@ -80,10 +80,10 @@ describe('storage-shim', () => {
 
   it('leaves a working native storage completely alone', () => {
     const native = window.localStorage
-    native.setItem('spinner_stage', '7')
+    native.setItem('smashers_stage', '7')
     runShim()
     expect(window.localStorage).toBe(native)
-    expect(window.localStorage.getItem('spinner_stage')).toBe('7')
+    expect(window.localStorage.getItem('smashers_stage')).toBe('7')
     expect((window as any).__storageShim.localStorage).toBeNull()
   })
 
@@ -92,13 +92,13 @@ describe('storage-shim', () => {
     // away a real, populated save — strictly worse than the quota error, which
     // is why the usability probe is read-only.
     const native = window.localStorage
-    native.setItem('spinner_coins', '999')
+    native.setItem('smashers_coins', '999')
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError')
     })
     runShim()
     expect(window.localStorage).toBe(native)
-    expect(window.localStorage.getItem('spinner_coins')).toBe('999')
+    expect(window.localStorage.getItem('smashers_coins')).toBe('999')
   })
 
   describe('the in-memory Storage behaves like the real one', () => {

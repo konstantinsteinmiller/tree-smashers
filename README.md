@@ -1,80 +1,40 @@
-# Chaos Arena
+# Tree Smashers
 
-Chaos Arena is a launchable blade spinner game in a 2d arena, with emphasis on action based gameplay.
+Tree Smashers is a turn-based 2D flick-and-smash battler: launch cute but angry stuffed-animal **smashers** riding
+turning discs across cozy forest arenas, knock out the enemy team or destroy their **Team Tower** (a little tree) to win.
+(Formerly "Chaos Arena", a spinning-top game — the campaign, bosses, league and PvP mechanics carry over unchanged.)
 
-It features a github pages deployed CI cd pipeline and a windows build + demo build.
+- Store texts, how-to-play and controls: [description.md](description.md)
+- Outstanding work (art desk, branding, registrations, balance): [roadmap.md](roadmap.md)
 
-WIP: [playable demo](https://konstantinsteinmiller.github.io/chaos-arena/)
+WIP: [playable demo](https://konstantinsteinmiller.github.io/tree-smashers/)
 
-![Chaos Arena Gameplay](https://github.com/konstantinsteinmiller/chaos-arena/blob/main/src/assets/documentation/gameplay.webp)
+## Game overview
 
-# Todo
+- **Smashers** — 12 unique plush animals (`src/data/smasherCatalog.ts`): hedgehog, rabbit, bear cub, beaver, ram, fox,
+  turtle, woodpecker, sloth, squirrel, owl and boar. Each has its own stat profile and 3 unique skills; levels 1–30 are
+  bought with coins, skill 2 unlocks at level 10, skill 3 at level 20. Roster state: `src/use/useSmashers.ts`.
+- **Skills** — every smasher skill runs on one of the 10 skill-engine effects (`src/use/skills/*`) with its own
+  multipliers (`mods`), so similar skills have different strengths and weaknesses.
+- **Arenas** — 3 layouts repeating by stage (Mossy Glade, Mud Hollow, Twin Islands) with islands, speed boosters and
+  pot holes, on top of the arena types (lava, ice, thunder, shock, forest, boss).
+- **Team Towers** — from stage 3 on (and in PvP / league), destroying the enemy tower wins the battle instantly.
+- **Art** — smashers are drawn procedurally from a 3D rig (`src/smashers/*`) in 16 consistent angles;
+  `pnpm art:smashers` exports the reference sheets for the art desk (`art-sheets/smashers/`).
+- **Save state** — all player progress lives in `smashers_*` localStorage keys (`src/keys.ts`) and rides the cloud save.
 
-- [x] Main Menu
-    - [x] start game button
-  - [x] create Logo
-    - [x] settings button
-    - [x] version
-    - [x] mute music and sound
+## Development
 
-- [x] basic gameplay
-    - [x] basic attack on collision
-    - [x] show sparks on collision
-    - [x] life bar and counter
-    - [x] bounce off arena boundaries
-    - [x] add icons for team composition modal
-    - [x] fix bounce bug after kill
-    - [x] start hint timer with placeholder arrow for pull back cta.
+```sh
+pnpm install
+pnpm dev                 # dev server
+pnpm test                # vitest
+pnpm type-check          # vue-tsc
+pnpm build:crazy-web     # portal builds: crazy-web, poki, playgama, gamepix, y8, itch, glitch, gamemonetize, youtube …
+pnpm art:smashers        # export 32-angle smasher sheets
+```
 
-- [x] Reward system
-    - [x] wheel spinner for 3x, 2x, 1x and 0.75x rewards after rewarded videos
-
-- [x] OptionsModal
-    - [x] music
-    - [x] do not ask rules again
-    - [x] language options
-    - [x] Volume slider for music and sound effects
-    - [x] remove sound options on mobile
-  - [x] reset progress button
-
-- [x] Sound and bg music
-
-- Build-Toolchain
-    - [ ] create Demo version
-        - [ ] create Demo build
-  - [x] build for windows
-      - [x] exit button for native games
-    - [x] build for android
-    - [x] build for ios
-    - [ ] Poki.io launch
-    - [ ] Game Distribution launch
-    - [ ] Explore Amazon Games launch
-    - [ ] Itch launch
-    - [ ] wavedash launch
-    - [ ] Glitch launch
-    - [x] Crazy Web games SDK
-        - [x] pass QA of Crazy Web Games Basic Launch
-        - [x] add obfuscation for native and crazy build
-        - [x] sitelock for crazywebgames domains
-        - [x] make game launchable
-        - [x] ads
-
-- [x] complete Translations
-- [x] full-version protection for web
-- [x] asset loader step for web build to avoid poping images FLogoProgress
-- [ ] search for marketing person
-
-## Refactorings
-
-- [ ] 
-
-## Bugs
-
-- [ ] 
-
-## Nice-to-have
-
-- [ ] 
+Leaderboard backend: Cloudflare Worker + D1 in `worker/` (`leaderboard-tree-smashers`, see `worker/SETUP.md`).
 
 ## Future Features Roadmap
 
@@ -98,7 +58,7 @@ Features rated on impact to three KPIs (1–5 scale each, 5 = highest impact):
 
 | Feature                                                                               | Conversion | Play Time | Retention | Overall | Notes                                                       |
 |---------------------------------------------------------------------------------------|:----------:|:---------:|:---------:|:-------:|-------------------------------------------------------------|
-| Special abilities per top part (e.g., Star = piercing hit, Round Guard = shield bash) |     2      |     5     |     5     | **4.1** | Deepens strategy, gives reason to experiment with builds    |
+| Smasher signature moves (active abilities on top of the 3 passive skills)             |     2      |     5     |     5     | **4.1** | Deepens strategy, gives reason to experiment with builds    |
 | Boss stages every 5 levels (unique mechanics, large blade, special arena)             |     2      |     5     |     4     | **3.7** | Memorable moments that players talk about and come back for |
 | Blade element system (fire > nature > water > fire) with arena hazards                |     2      |     4     |     4     | **3.4** | Adds team-building strategy and counter-play                |
 | Arena modifiers (ice = low friction, lava ring = damage zone, shrinking arena)        |     2      |     4     |     4     | **3.4** | Variety prevents repetitive sessions                        |
@@ -113,10 +73,10 @@ Features rated on impact to three KPIs (1–5 scale each, 5 = highest impact):
 |-------------------------------------------------------------------------------|:----------:|:---------:|:---------:|:-------:|--------------------------------------------------------|
 | Daily login rewards (escalating over 7 days, reset on miss)                   |     1      |     2     |     5     | **2.9** | Proven D1→D7 retention driver in casual games          |
 | Achievement system with badges (first win, 10-win streak, all parts upgraded) |     1      |     4     |     5     | **3.5** | Long-term goals keep players invested                  |
-| Blade collection book ("Pokédex" style — collect all 17 skins + unlock lore)  |     2      |     3     |     5     | **3.5** | Completionism is a strong retention motivator          |
+| Smasher collection book ("Pokédex" style — all smashers + colourways + lore)  |     2      |     3     |     5     | **3.5** | Completionism is a strong retention motivator          |
 | Prestige/rebirth system (reset campaign for permanent stat multipliers)       |     1      |     5     |     5     | **3.8** | Extends endgame massively for committed players        |
 | Star rating per stage (1-3 stars based on HP remaining)                       |     2      |     4     |     4     | **3.4** | Replayability — perfectionist players redo stages      |
-| Unlock new blade parts from stage rewards (not just coins)                    |     2      |     3     |     4     | **3.1** | Surprise rewards > predictable coins for dopamine      |
+| Unlock new smashers from stage rewards (not just coins)                        |     2      |     3     |     4     | **3.1** | Surprise rewards > predictable coins for dopamine      |
 | Seasonal limited-edition blade skins (holiday themes, monthly rotation)       |     1      |     2     |     5     | **2.9** | FOMO drives return visits                              |
 | Weekly challenge stages (unique rules, leaderboard, exclusive reward)         |     1      |     4     |     5     | **3.5** | Recurring fresh content without dev cost of new stages |
 

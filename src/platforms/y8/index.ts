@@ -3,7 +3,7 @@
 // Y8 (y8.com) is a casual-games portal that hosts the game in an iframe
 // from one of their CDNs (`y8.com`, `cdn.y8.com`, `*.y8.com`). They
 // publish an ad/leaderboard SDK (`idplaysdk.js`) but consuming it is
-// opt-in — for chaos-arena we ship the same minimal shape as itch.io:
+// opt-in — for tree-smashers we ship the same minimal shape as itch.io:
 // no cloud-save API, no in-frame ads, no parent-origin handshake.
 // The platform module exists so App.vue's hostname gate, the resolver
 // chain, and the registry treat Y8 uniformly with the others.

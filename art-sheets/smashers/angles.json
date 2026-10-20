@@ -1,0 +1,234 @@
+{
+  "grid": {
+    "cols": 8,
+    "rows": 4
+  },
+  "cell": 384,
+  "key": "#FF00FF",
+  "angles": [
+    {
+      "frame": 0,
+      "row": 0,
+      "col": 0,
+      "yawDeg": 0,
+      "label": "front"
+    },
+    {
+      "frame": 1,
+      "row": 0,
+      "col": 1,
+      "yawDeg": 11.25,
+      "label": "11.25°"
+    },
+    {
+      "frame": 2,
+      "row": 0,
+      "col": 2,
+      "yawDeg": 22.5,
+      "label": "22.5°"
+    },
+    {
+      "frame": 3,
+      "row": 0,
+      "col": 3,
+      "yawDeg": 33.75,
+      "label": "33.75°"
+    },
+    {
+      "frame": 4,
+      "row": 0,
+      "col": 4,
+      "yawDeg": 45,
+      "label": "45°"
+    },
+    {
+      "frame": 5,
+      "row": 0,
+      "col": 5,
+      "yawDeg": 56.25,
+      "label": "56.25°"
+    },
+    {
+      "frame": 6,
+      "row": 0,
+      "col": 6,
+      "yawDeg": 67.5,
+      "label": "67.5°"
+    },
+    {
+      "frame": 7,
+      "row": 0,
+      "col": 7,
+      "yawDeg": 78.75,
+      "label": "78.75°"
+    },
+    {
+      "frame": 8,
+      "row": 1,
+      "col": 0,
+      "yawDeg": 90,
+      "label": "side (character faces screen-right)"
+    },
+    {
+      "frame": 9,
+      "row": 1,
+      "col": 1,
+      "yawDeg": 101.25,
+      "label": "101.25°"
+    },
+    {
+      "frame": 10,
+      "row": 1,
+      "col": 2,
+      "yawDeg": 112.5,
+      "label": "112.5°"
+    },
+    {
+      "frame": 11,
+      "row": 1,
+      "col": 3,
+      "yawDeg": 123.75,
+      "label": "123.75°"
+    },
+    {
+      "frame": 12,
+      "row": 1,
+      "col": 4,
+      "yawDeg": 135,
+      "label": "135°"
+    },
+    {
+      "frame": 13,
+      "row": 1,
+      "col": 5,
+      "yawDeg": 146.25,
+      "label": "146.25°"
+    },
+    {
+      "frame": 14,
+      "row": 1,
+      "col": 6,
+      "yawDeg": 157.5,
+      "label": "157.5°"
+    },
+    {
+      "frame": 15,
+      "row": 1,
+      "col": 7,
+      "yawDeg": 168.75,
+      "label": "168.75°"
+    },
+    {
+      "frame": 16,
+      "row": 2,
+      "col": 0,
+      "yawDeg": 180,
+      "label": "back"
+    },
+    {
+      "frame": 17,
+      "row": 2,
+      "col": 1,
+      "yawDeg": 191.25,
+      "label": "191.25°"
+    },
+    {
+      "frame": 18,
+      "row": 2,
+      "col": 2,
+      "yawDeg": 202.5,
+      "label": "202.5°"
+    },
+    {
+      "frame": 19,
+      "row": 2,
+      "col": 3,
+      "yawDeg": 213.75,
+      "label": "213.75°"
+    },
+    {
+      "frame": 20,
+      "row": 2,
+      "col": 4,
+      "yawDeg": 225,
+      "label": "225°"
+    },
+    {
+      "frame": 21,
+      "row": 2,
+      "col": 5,
+      "yawDeg": 236.25,
+      "label": "236.25°"
+    },
+    {
+      "frame": 22,
+      "row": 2,
+      "col": 6,
+      "yawDeg": 247.5,
+      "label": "247.5°"
+    },
+    {
+      "frame": 23,
+      "row": 2,
+      "col": 7,
+      "yawDeg": 258.75,
+      "label": "258.75°"
+    },
+    {
+      "frame": 24,
+      "row": 3,
+      "col": 0,
+      "yawDeg": 270,
+      "label": "side (character faces screen-left)"
+    },
+    {
+      "frame": 25,
+      "row": 3,
+      "col": 1,
+      "yawDeg": 281.25,
+      "label": "281.25°"
+    },
+    {
+      "frame": 26,
+      "row": 3,
+      "col": 2,
+      "yawDeg": 292.5,
+      "label": "292.5°"
+    },
+    {
+      "frame": 27,
+      "row": 3,
+      "col": 3,
+      "yawDeg": 303.75,
+      "label": "303.75°"
+    },
+    {
+      "frame": 28,
+      "row": 3,
+      "col": 4,
+      "yawDeg": 315,
+      "label": "315°"
+    },
+    {
+      "frame": 29,
+      "row": 3,
+      "col": 5,
+      "yawDeg": 326.25,
+      "label": "326.25°"
+    },
+    {
+      "frame": 30,
+      "row": 3,
+      "col": 6,
+      "yawDeg": 337.5,
+      "label": "337.5°"
+    },
+    {
+      "frame": 31,
+      "row": 3,
+      "col": 7,
+      "yawDeg": 348.75,
+      "label": "348.75°"
+    }
+  ]
+}

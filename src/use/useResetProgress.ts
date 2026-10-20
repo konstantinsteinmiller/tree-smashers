@@ -3,7 +3,7 @@
 // Several players asked for a way to start over from stage 1 — usually
 // because they feel they mis-spent coins on the wrong upgrades and want a
 // clean slate. This wipes every gameplay-progress key the game persists
-// (campaign stage, coins, diamonds, upgrade unlocks, daily challenge, daily
+// (campaign stage, coins, diamonds, upgrade unlocks, daily
 // login rewards, battle pass, leaderboard, PvP stats, chest timers, tips,
 // counters, …) while PRESERVING:
 //   • settings — sound / music volume, language, difficulty, quality
@@ -52,28 +52,28 @@ import { DAILY_SPEED_GIFT_KEY, SPEED_GIFT_KEY } from '@/use/speedGiftGate'
 import { LEAGUE_BUILD, LEAGUE_STATE_KEY, leagueAccountAllowed, loadLeague } from '@/league/leagueGate'
 
 /** Keys that must SURVIVE a progress reset (settings + purchased content).
- *  Skills (`spinner_skills`, `spinner_skill_loadout`, `spinner_skill_ui`) are
- *  deliberately NOT here: they are progress (coins spent on unlocks the stage
- *  gives back), so the sweep wipes them and the skills intro can show again. */
+ *  The smasher roster (`smashers_roster`, levels bought with coins) is
+ *  deliberately NOT here: it is progress, so the sweep wipes it — as it does
+ *  any `smashers_skill*` key a pre-roster save may still carry. */
 const KEEP_KEYS = new Set<string>([
   // Settings
-  'spinner_user_sound_volume',
-  'spinner_user_music_volume',
-  'spinner_user_language',
-  'spinner_user_difficulty',
+  'smashers_user_sound_volume',
+  'smashers_user_music_volume',
+  'smashers_user_language',
+  'smashers_user_difficulty',
   // Purchased content + equipped loadout / selections
-  'spinner_owned_skins',
-  'spinner_selected_skins',
-  'spinner_skin_picker_opened',
-  'spinner_skin_ad_progress',
-  'spinner_player_team',
-  'spinner_bg_skins_owned',
-  'spinner_bg_skin_selected',
+  'smashers_owned_skins',
+  'smashers_selected_skins',
+  'smashers_skin_picker_opened',
+  'smashers_skin_ad_progress',
+  'smashers_player_team',
+  'smashers_bg_skins_owned',
+  'smashers_bg_skin_selected',
   // Anti-farm gates, not progress. Same rationale as
   // `useRewardedThrottle`'s `__save_internal__` key: a player must not be
   // able to buy back a rewarded-ad cooldown by resetting, and the reset is
   // now instant (no reload), which would make that a one-tap loop.
-  'spinner_ad_button_ready_at',
+  'smashers_ad_button_ready_at',
   // The first-time free 2x gift (see speedGiftGate.ts): a reset must not
   // hand out a second ad-free boost. Same for today's daily free boost.
   SPEED_GIFT_KEY,
@@ -89,7 +89,7 @@ const KEEP_KEYS = new Set<string>([
  * `ca_first_midgame_ad_shown`), which is a portal-facing frequency cap
  * rather than player progress and must not be re-armed by a reset.
  */
-const RESET_PREFIX = 'spinner_'
+const RESET_PREFIX = 'smashers_'
 
 /**
  * Every key the reset should delete — the union of what the SaveManager
@@ -133,7 +133,7 @@ export const resetAllProgress = async (): Promise<void> => {
     // Collected first, then removed, so mutating the store mid-iteration
     // can't skip keys (removeItem shifts the raw index order).
     for (const key of collectProgressKeys()) localStorage.removeItem(key)
-    // The first-launch intro's seen-flag is a `spinner_` key, so the sweep
+    // The first-launch intro's seen-flag is a `smashers_` key, so the sweep
     // above already took it — named here so that contract is explicit and a
     // future KEEP-list edit cannot quietly strand it.
     localStorage.removeItem(INTRO_SEEN_KEY)

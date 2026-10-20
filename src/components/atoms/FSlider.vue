@@ -17,9 +17,10 @@ const props = withDefaults(defineProps<Props>(), {
   min: 0,
   max: 100,
   step: 1,
-  colorFrom: '#ffcd00', // Brawl Yellow
-  colorTo: '#f7a000',
-  trackColor: '#1a2b4b' // Dark Blue depth
+  // Leaf-green fill in a wood well — see DESIGN.md.
+  colorFrom: 'var(--color-leaf-400)',
+  colorTo: 'var(--color-leaf-500)',
+  trackColor: 'var(--color-wood-800)'
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -36,55 +37,56 @@ const updateValue = (event: Event) => {
 
 <template lang="pug">
   div(class="f-slider-container w-full py-4")
-    //- Label (Optional)
-    div(v-if="label" class="slider-label mb-2 text-white font-black uppercase italic text-lg tracking-wider") {{ label }}
+    div(v-if="label" class="slider-label ui-label mb-2") {{ label }}
 
     div(class="relative flex items-center h-8")
-      //- Custom Track Background (The 3D "Well")
+      //- Wood well
       div(
-        class="absolute inset-0 h-6 my-auto rounded-full border-[3px] border-[#0f1a30] overflow-hidden bg-[#0a1425]"
+        class="absolute inset-0 h-6 my-auto rounded-full border-[3px] border-[var(--color-ink)] overflow-hidden"
+        :style="{ backgroundColor: trackColor }"
       )
-        //- Progress Fill
+        //- Leaf fill (flat, with a hard light lip)
         div(
-          class="h-full transition-all duration-75 relative"
-          :style="{ \
-            width: `${progress}%`, \
-            backgroundImage: `linear-gradient(to bottom, ${colorFrom}, ${colorTo})` \
-          }"
+          class="slider-fill h-full transition-all duration-75 relative rounded-full"
+          :style="{ width: `${progress}%`, backgroundColor: colorFrom }"
         )
-          //- Inner Shine for the fill
-          span(class="absolute inset-x-0 top-0 h-1/2 bg-white/20")
 
-      //- Native Input (Invisible but functional)
       input(
         type="range"
         :min="min"
         :max="max"
         :step="step"
         :value="modelValue"
+        :aria-label="label"
         @input="updateValue"
         class="absolute inset-0 w-full h-8 opacity-0 cursor-pointer z-10 touch-manipulation"
       )
 
-      //- Custom Thumb (Visual Only)
+      //- Thumb: a round cream button with an ink outline (visual only)
       div(
-        class="thumb-visual pointer-events-none absolute h-10 w-10 flex items-center justify-center transition-transform active:scale-90"
+        class="thumb-visual pointer-events-none absolute h-10 w-10 flex items-center justify-center"
         :style="{ left: `calc(${progress}% - 20px)` }"
       )
-        //- The "3D Shadow" of the thumb
-        span(class="absolute inset-0 translate-y-[3px] bg-[#102e7a] rounded-xl border-[3px] border-[#0f1a30]")
-        //- The Main Thumb Body
-        span(class="relative block inset-0 w-full h-full bg-[#50aaff] rounded-xl border-[3px] border-[#0f1a30] overflow-hidden")
-          //- Thumb Shine
-          span(class="absolute inset-x-0 top-0 h-1/2 bg-white/30")
-          //- Little Detail (Vertical Line)
+        span(class="thumb-body relative block w-full h-full rounded-full")
           span(class="absolute inset-0 flex items-center justify-center")
-            span(class="w-1.5 h-4 bg-white/50 rounded-full")
+            span(class="w-1.5 h-4 rounded-full bg-[var(--color-wood-400)]")
 </template>
 
 <style scoped lang="sass">
 .slider-label
-  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000
+  color: var(--ui-text)
+
+.slider-fill
+  box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
+
+.thumb-body
+  background-color: var(--color-cream-100)
+  border: 3px solid var(--color-ink)
+  box-shadow: inset 0 -4px 0 var(--color-cream-400), 0 3px 0 var(--color-ink)
+
+input[type="range"]:focus-visible ~ .thumb-visual .thumb-body
+  outline: 3px solid var(--ui-focus)
+  outline-offset: 2px
 
 .f-slider-container
   -webkit-tap-highlight-color: transparent

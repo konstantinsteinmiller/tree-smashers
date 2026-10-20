@@ -53,7 +53,7 @@ export const BP_DIAMOND_STAGES = new Set<number>([15, 35, 55])
 /** Diamonds granted per diamond stage. */
 export const BP_DIAMOND_AMOUNT = 1
 
-const STORAGE_KEY = 'spinner_battle_pass'
+const STORAGE_KEY = 'smashers_battle_pass'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 

@@ -42,14 +42,15 @@ vi.mock('/images/icons/movie_128x96.webp', () => ({ default: 'movie.webp' }))
 
 const BUILD_OFF: Record<string, string> = {
   VITE_APP_CRAZY_WEB: '', VITE_APP_CRAZY_GAMES_FULL_RELEASE: '', VITE_APP_GAME_DISTRIBUTION: '',
-  VITE_APP_PLAYGAMA: '', VITE_APP_POKI: '', VITE_APP_NATIVE: '', VITE_APP_SHOW_MEDIATOR_ADS: '',
+  VITE_APP_PLAYGAMA: '', VITE_APP_POKI: '', VITE_APP_GAME_MONETIZE: '', VITE_APP_NATIVE: '', VITE_APP_SHOW_MEDIATOR_ADS: '',
   VITE_APP_ITCH: '', VITE_APP_GLITCH: '', VITE_APP_GAMEPIX: '', VITE_APP_Y8: '', VITE_APP_WAVEDASH: ''
 }
 const AD_BUILDS: Array<[string, Record<string, string>]> = [
   ['CrazyGames full release', { VITE_APP_CRAZY_WEB: 'true', VITE_APP_CRAZY_GAMES_FULL_RELEASE: 'true' }],
   ['GameDistribution', { VITE_APP_GAME_DISTRIBUTION: 'true' }],
   ['Playgama', { VITE_APP_PLAYGAMA: 'true' }],
-  ['Poki', { VITE_APP_POKI: 'true' }]
+  ['Poki', { VITE_APP_POKI: 'true' }],
+  ['GameMonetize', { VITE_APP_GAME_MONETIZE: 'true' }]
 ]
 const NO_AD_BUILDS: Array<[string, Record<string, string>]> = [
   ['CrazyGames basic launch', { VITE_APP_CRAZY_WEB: 'true' }],
@@ -128,62 +129,8 @@ describe('reward placements', () => {
   })
 })
 
-// ─── Skill picker coin top-up (skills-feature.md §6.5) ─────────────────────
-// Picked at module scope (`HAS_REWARDED_ADS ? SkillTopUpButton : null`), so a
-// no-ad build neither renders nor bundles it. Seeded so ONE ad closes the gap
-// on Learn (100 coins, cost 150, payout ≥ 125).
-
 // jsdom has no media playback.
 vi.mock('@/use/useSound', () => ({ default: () => ({ playSound: () => null }) }))
-
-const mountSkillPicker = async (coins: number) => {
-  localStorage.setItem('spinner_campaign_stage', '11')
-  localStorage.setItem('spinner_coins', String(coins))
-  vi.stubEnv('VITE_APP_FEATURE_SKILLS', 'true')
-  await loadAds()
-  const SkillPickerModal = (await import('@/components/organisms/SkillPickerModal.vue')).default
-  return mount(SkillPickerModal, {
-    props: { modelValue: true, slotIndex: 0 },
-    global: { plugins: [i18n()], stubs: { teleport: true } }
-  })
-}
-
-describe('skill picker coin top-up', () => {
-  it.each(NO_AD_BUILDS)('no-ad build %s: no top-up, even one ad short of Learn', async (_, env) => {
-    setBuild(env)
-    const w = await mountSkillPicker(100)
-    expect(w.find('[data-action="learn"]').attributes('disabled')).toBeDefined()
-    expect(w.find('button.skill-topup').exists()).toBe(false)
-    w.unmount()
-  })
-
-  it.each(AD_BUILDS)('ad build %s: top-up beside the disabled Learn', async (_, env) => {
-    setBuild(env)
-    const w = await mountSkillPicker(100)
-    expect(w.find('button.skill-topup').exists()).toBe(true)
-    w.unmount()
-  })
-
-  it('ad build: no top-up when affordable, or when one ad would not cover the gap', async () => {
-    setBuild(AD_BUILDS[0]![1])
-    const rich = await mountSkillPicker(150)
-    expect(rich.find('button.skill-topup').exists()).toBe(false)
-    rich.unmount()
-    localStorage.clear()
-    const broke = await mountSkillPicker(0)
-    // 150 short > payout at stage 11 only if the payout is below 150.
-    const { rewardedAdCoins } = await import('@/use/useStageRewards')
-    expect(broke.find('button.skill-topup').exists()).toBe(150 <= rewardedAdCoins.value)
-    broke.unmount()
-  })
-
-  it('the picker picks the top-up at module scope, never in a template v-if', () => {
-    const src = readFileSync(resolve(__dirname, '../src/components/organisms/SkillPickerModal.vue'), 'utf8')
-    expect(src).toMatch(/const TopUpButton = ADS_BUILD_FLAG \? SkillTopUpButton : null/)
-    const reveal = readFileSync(resolve(__dirname, '../src/components/organisms/SkillRevealOverlay.vue'), 'utf8')
-    expect(reveal).toMatch(/const TopUpButton = ADS_BUILD_FLAG \? SkillTopUpButton : null/)
-  })
-})
 
 // ─── League fights top-up (placement league_fights, LG5b) ─────────────────
 // Picked at module scope in the hub (`HAS_REWARDED_ADS ? LeagueFightsTopUp :
@@ -220,7 +167,7 @@ describe('league fights top-up', () => {
     await new Promise(r => setTimeout(r, 0))
     expect(providerShow).toHaveBeenCalledTimes(1)
     expect(league.grantAdFights).toHaveBeenCalledTimes(1)
-    expect(Number(localStorage.getItem('spinner_ad_button_ready_at'))).toBeGreaterThan(Date.now())
+    expect(Number(localStorage.getItem('smashers_ad_button_ready_at'))).toBeGreaterThan(Date.now())
     w.unmount()
   })
 
@@ -229,7 +176,7 @@ describe('league fights top-up', () => {
     const spent = await mountLeagueTopUp(false)
     expect(spent.w.find('button.league-topup').exists()).toBe(false)
     spent.w.unmount()
-    localStorage.setItem('spinner_ad_button_ready_at', String(Date.now() + 20_000))
+    localStorage.setItem('smashers_ad_button_ready_at', String(Date.now() + 20_000))
     const cooling = await mountLeagueTopUp(true)
     await new Promise(r => setTimeout(r, 0))
     expect(cooling.w.find('button.league-topup').exists()).toBe(false)

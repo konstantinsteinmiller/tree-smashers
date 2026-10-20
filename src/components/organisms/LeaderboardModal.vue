@@ -143,14 +143,13 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   grid-template-columns: $cols
   gap: clamp(0.3rem, 2vw, 0.6rem)
   padding: 0 clamp(0.3rem, 1.6vw, 0.6rem) clamp(0.15rem, 0.8vw, 0.3rem)
-  border-bottom: 2px solid rgba(255, 255, 255, 0.12)
+  border-bottom: 2px dashed var(--color-wood-300)
 
 .board__col
-  color: #9fb2d0
+  color: var(--ui-text-muted)
   font-weight: 900
-  text-transform: uppercase
   letter-spacing: 0.02em
-  font-size: clamp(0.5rem, 2.2vw, 0.65rem)
+  font-size: clamp(0.6rem, 2.4vw, 0.75rem)
   text-align: right
 
   &.is-rank, &.is-name
@@ -167,26 +166,25 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   align-items: center
   gap: clamp(0.3rem, 2vw, 0.6rem)
   padding: clamp(0.22rem, 1.2vw, 0.42rem) clamp(0.3rem, 1.6vw, 0.6rem)
-  border: 2px solid transparent
+  border: 2px solid var(--color-cream-400)
   border-radius: clamp(0.35rem, 1.8vw, 0.6rem)
-  background-color: rgba(0, 0, 0, 0.22)
+  background-color: var(--color-cream-200)
 
   // Zebra striping rather than a border per row: 100 rows of border is a wall.
   &:nth-child(even)
-    background-color: rgba(0, 0, 0, 0.08)
+    background-color: var(--color-cream-50)
 
   // The row the player came here to find.
   &.is-you
-    border-color: #ffcd00
-    background-image: linear-gradient(to bottom, #3a4a24, #2a3a18)
-    background-color: transparent
+    border: 3px solid var(--color-leaf-600)
+    background-color: var(--color-leaf-300)
+    box-shadow: 0 3px 0 var(--color-leaf-700)
 
 .board-row__rank
-  color: #ffd93c
+  color: var(--color-wood-700)
   font-weight: 900
   font-size: clamp(0.62rem, 2.8vw, 0.85rem)
   text-align: left
-  text-shadow: 1px 1px 0 #000
 
 .board-row__name
   display: flex
@@ -198,42 +196,44 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
-  color: #fff
-  font-weight: 700
+  color: var(--ui-text)
+  font-weight: 900
   font-size: clamp(0.62rem, 2.8vw, 0.85rem)
   text-align: left
 
 .board-row__you
   flex: 0 0 auto
-  color: #ffcd00
+  padding: 0.05em 0.45em 0.1em
+  border: 2px solid var(--color-ink)
+  border-radius: 999px
+  background-color: var(--color-cream-50)
+  color: var(--color-leaf-800)
   font-weight: 900
-  text-transform: uppercase
   letter-spacing: 0.03em
-  font-size: clamp(0.45rem, 2vw, 0.6rem)
+  font-size: clamp(0.5rem, 2.1vw, 0.65rem)
 
 .board-row__score
-  color: #8fd6ff
+  color: var(--color-sky-700)
   font-weight: 900
   font-size: clamp(0.62rem, 2.8vw, 0.85rem)
   text-align: right
-  text-shadow: 1px 1px 0 #000
 
 .board-row__power
-  color: #b9cbe8
-  font-weight: 700
+  color: var(--ui-text-muted)
+  font-weight: 900
   font-size: clamp(0.6rem, 2.6vw, 0.8rem)
   text-align: right
 
 .board__state
   padding: clamp(1rem, 8vw, 2.5rem) clamp(0.5rem, 3vw, 1rem)
-  color: #b9cbe8
-  font-weight: 700
+  color: var(--ui-text-muted)
+  font-weight: 800
   text-align: center
   font-size: clamp(0.65rem, 3vw, 0.9rem)
   line-height: 1.35
 
   &.is-failed
-    color: #ffa6a6
+    color: var(--color-berry-600)
 
 .board__footer
   display: flex
@@ -243,18 +243,19 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   gap: 0.15rem 0.4rem
   margin-top: clamp(0.2rem, 1.2vw, 0.45rem)
   padding: clamp(0.3rem, 1.6vw, 0.55rem) clamp(0.4rem, 2vw, 0.8rem)
-  border: 2px solid #ffcd00
+  border: 3px solid var(--color-ink)
   border-radius: clamp(0.35rem, 1.8vw, 0.6rem)
-  background-color: rgba(0, 0, 0, 0.3)
+  background-color: var(--color-wood-600)
+  box-shadow: inset 0 3px 0 var(--color-wood-400), inset 0 -3px 0 var(--color-wood-800), 0 3px 0 var(--color-ink)
 
 .board__footer-rank
-  color: #ffd93c
+  color: var(--color-sun-300)
   font-weight: 900
-  text-transform: uppercase
   font-size: clamp(0.68rem, 3.2vw, 0.95rem)
-  text-shadow: 2px 2px 0 #000
+  text-shadow: 0 2px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
 
 .board__footer-total
-  color: #9fb2d0
-  font-size: clamp(0.55rem, 2.4vw, 0.75rem)
+  color: var(--color-cream-200)
+  font-weight: 800
+  font-size: clamp(0.6rem, 2.4vw, 0.8rem)
 </style>

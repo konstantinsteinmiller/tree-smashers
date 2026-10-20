@@ -95,10 +95,10 @@ const isFightLocked = (entry: LeaderboardEntry): boolean => {
 // ─── Visual helpers ─────────────────────────────────────────────────────────
 
 const rankBadgeClass = (rank: number): string => {
-  if (rank === 1) return 'bg-gradient-to-b from-[#ffd700] to-[#c08a00]'
-  if (rank === 2) return 'bg-gradient-to-b from-[#e0e0e0] to-[#9a9a9a]'
-  if (rank === 3) return 'bg-gradient-to-b from-[#cd7f32] to-[#80451b]'
-  return 'bg-[#0f1a30] text-white/80'
+  if (rank === 1) return 'bg-sun-400 text-ink border-2 border-ink'
+  if (rank === 2) return 'bg-cream-300 text-ink border-2 border-ink'
+  if (rank === 3) return 'bg-wood-400 text-ink border-2 border-ink'
+  return 'bg-cream-100 text-ink-soft border-2 border-cream-400'
 }
 
 const indexToRank = (entry: LeaderboardEntry): number =>
@@ -112,10 +112,8 @@ const indexToRank = (entry: LeaderboardEntry): number =>
     class="group cursor-pointer hover:scale-[103%] transition-transform active:scale-90 scale-80 sm:scale-100 pointer-events-auto"
   )
     div.relative
-      div.absolute.inset-0.translate-y-1.rounded-lg(class="bg-[#1a2b4b]")
-      div.relative.rounded-lg.border-2.text-white.font-bold.p-2(
-        class="bg-gradient-to-b from-[#ffcd00] to-[#f7a000] border-[#0f1a30]"
-      )
+      //- Wood plank HUD button.
+      div.ui-wood.relative.font-bold.p-2
         //- Trophy SVG
         img.w-7.h-7(src="/images/icons/trophy_128x128.webp" alt="trophy")
 
@@ -134,22 +132,23 @@ const indexToRank = (entry: LeaderboardEntry): number =>
 
       //- Player summary card. `shrink-0` keeps the rank number from being
       //- compressed against the card's bottom edge when the list is long.
-      div.shrink-0.flex.items-center.justify-between.rounded-lg.border-2(
+      div.ui-panel.shrink-0.flex.items-center.justify-between(
         v-if="playerEntry"
-        class="bg-gradient-to-b from-[#ffcd00]/20 to-[#f7a000]/10 border-[#ffcd00]/60 px-3 py-2 gap-2"
+        class="px-3 py-2 gap-2"
       )
         div.flex.flex-col.items-start
-          span.text-white.uppercase.tracking-wider.game-text(class="text-[0.75rem] sm:text-xs opacity-80") {{ t('yourRank') }}
-          span.text-yellow-300.font-black.game-text(class="text-xl sm:text-2xl leading-none") {{ `#${playerRank}` }}
-            span.font-bold(class="text-xs sm:text-sm text-white/60 ml-1") /{{ totalEntries }}
+          span.text-ink-soft.font-black(class="text-[0.75rem] sm:text-xs") {{ t('yourRank') }}
+          span.text-wood-700.font-black(class="text-xl sm:text-2xl leading-none") {{ `#${playerRank}` }}
+            span.font-bold(class="text-xs sm:text-sm text-ink-soft ml-1") /{{ totalEntries }}
         div.flex.flex-col.items-center
-          button(
+          button.ui-btn.ui-btn--secondary(
+            type="button"
             @click="jumpToMe"
-            class="rounded-md border border-[#ffcd00]/60 bg-black/30 text-yellow-300 font-bold px-3 py-2.5 text-[0.9rem] sm:text-sm hover:bg-black/50 cursor-pointer game-text"
+            class="px-3 py-2 text-[0.9rem] sm:text-sm"
           ) {{ t('jumpToMe') }}
         div.flex.flex-col.items-end
-          span.text-white.uppercase.tracking-wider.game-text(class="text-[0.75rem] sm:text-xs opacity-80") {{ t('maxStage') }}
-          span.text-yellow-300.font-black.game-text(class="text-xl sm:text-2xl leading-none") {{ playerEntry.maxStage }}
+          span.text-ink-soft.font-black(class="text-[0.75rem] sm:text-xs") {{ t('maxStage') }}
+          span.text-wood-700.font-black(class="text-xl sm:text-2xl leading-none") {{ playerEntry.maxStage }}
 
       //- Entry list. No local scroll cap — FModal's body scrolls the panel.
       div.lb-scroll.flex.flex-col.gap-1.pr-1
@@ -157,34 +156,34 @@ const indexToRank = (entry: LeaderboardEntry): number =>
           v-for="entry in pagedEntries"
           :key="entry.id"
           :class="[\
-            'flex items-center gap-2 sm:gap-3 rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2',\
+            'ui-inset flex items-center gap-2 sm:gap-3 px-2 py-1.5 sm:px-3 sm:py-2',\
             entry.isPlayer\
-              ? 'bg-gradient-to-r from-[#ffcd00]/30 to-[#f7a000]/10 border-[#ffcd00]/70'\
-              : 'bg-[#0c1626] border-[#0f1a30]'\
+              ? '!bg-leaf-300 !border-leaf-600'\
+              : ''\
           ]"
         )
           //- Rank chip
-          div.flex.items-center.justify-center.rounded-md.font-black.game-text.text-white(
+          div.flex.items-center.justify-center.rounded-md.font-black(
             :class="[rankBadgeClass(indexToRank(entry)), 'w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm shrink-0']"
           ) {{ indexToRank(entry) }}
 
           //- Name + parts
           div.flex.flex-col.items-start.min-w-0.flex-1
-            span.font-bold.game-text.truncate.w-full.text-left(
-              :class="[entry.isPlayer ? 'text-yellow-300' : 'text-white', 'text-xs sm:text-sm']"
+            span.font-black.truncate.w-full.text-left(
+              :class="[entry.isPlayer ? 'text-leaf-800' : 'text-ink', 'text-xs sm:text-sm']"
             ) {{ entry.name || t('you') }}
             div.flex.items-center.gap-1.flex-wrap
-              span.rounded.border.game-text(
-                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
+              span.rounded.border(
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-cream-400 bg-cream-50 text-ink-soft"
               ) {{ t('parts.' + entry.blade.topPartId) }} +{{ entry.blade.topLevel ?? 0 }}
-              span.rounded.border.game-text(
-                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-white/15 bg-black/30 text-white/80"
+              span.rounded.border(
+                class="text-[0.7rem] sm:text-[0.75rem] px-1 py-0.5 border-cream-400 bg-cream-50 text-ink-soft"
               ) {{ t('parts.' + entry.blade.bottomPartId) }} +{{ entry.blade.bottomLevel ?? 0 }}
 
           //- Max stage
           div.flex.flex-col.items-center.shrink-0(class="w-10 sm:w-12")
-            span.uppercase.game-text(class="text-[0.6rem] sm:text-[0.7rem] text-white/60 leading-none") {{ t('stage') }}
-            span.text-yellow-300.font-black.game-text(class="text-sm sm:text-base leading-none") {{ entry.maxStage }}
+            span(class="text-[0.6rem] sm:text-[0.7rem] text-ink-soft leading-none") {{ t('stage') }}
+            span.text-wood-700.font-black(class="text-sm sm:text-base leading-none") {{ entry.maxStage }}
 
           //- Fight button (crossed swords) — never shown for the player
           button(
@@ -199,14 +198,12 @@ const indexToRank = (entry: LeaderboardEntry): number =>
             ]"
             :title="isFightLocked(entry) ? t('alreadyFoughtToday') : t('fightAsGhost')"
           )
-            div.relative
-              div.absolute.inset-0.translate-y-1.rounded-md(class="bg-[#6b1212] inset-x-[1px]")
-              div.relative.rounded-md.border-2.text-white(
-                class="bg-gradient-to-b from-[#ff5e5e] to-[#c01818] border-[#0f1a30] px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
-              ) ⚔️
+            div.ui-btn.ui-btn--danger(
+              class="px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
+            ) ⚔️
 
           //- "YOU" tag for the player row
-          span.text-yellow-300.font-black.game-text.shrink-0(
+          span.text-leaf-800.font-black.shrink-0(
             v-else
             class="text-[0.75rem] sm:text-xs px-2"
           ) {{ t('you') }}
@@ -216,17 +213,19 @@ const indexToRank = (entry: LeaderboardEntry): number =>
     //- fold, and paging is the one thing you always want to reach.
     template(#footer)
       div.flex.items-center.justify-center.gap-2
-        button(
+        button.ui-btn.ui-btn--secondary(
+          type="button"
           @click="goPrev"
           :disabled="currentPage === 1"
-          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-4 py-2.5 text-sm sm:text-base hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
+          class="px-4 py-2.5 text-sm sm:text-base"
         ) ‹ {{ t('prev') }}
-        span.text-white.font-bold.game-text(class="text-xs sm:text-sm")
+        span.ui-outline-sm.font-black(class="text-xs sm:text-sm")
           | {{ t('page') }} {{ currentPage }} / {{ totalPages }}
-        button(
+        button.ui-btn.ui-btn--secondary(
+          type="button"
           @click="goNext"
           :disabled="currentPage === totalPages"
-          class="rounded-md border border-[#ffcd00]/50 bg-black/40 text-yellow-300 font-bold px-4 py-2.5 text-sm sm:text-base hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer game-text"
+          class="px-4 py-2.5 text-sm sm:text-base"
         ) {{ t('next') }} ›
 </template>
 

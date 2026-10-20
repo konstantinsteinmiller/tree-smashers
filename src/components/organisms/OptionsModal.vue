@@ -15,6 +15,9 @@ import { prependBaseUrl } from '@/utils/function'
 import { stopGameplay } from '@/use/useCrazyGames'
 import resetAllProgress from '@/use/useResetProgress'
 import { qualityPreference, qualityTier, setQualityPreference } from '@/use/useQuality'
+import { isNative } from '@/use/useUser'
+import { privacyOptionsRequired, showPrivacyOptions } from '@/use/useAds'
+import { openExternal } from '@/utils/openExternal'
 
 const props = defineProps<{
   isOpen: boolean
@@ -127,10 +130,20 @@ const qualityOptions = computed(() => [
 ])
 
 
+// ─── Privacy (native builds) ──────────────────────────────────────────────
+// Google Play wants the privacy policy reachable from inside the app, not only
+// from the store listing. "Privacy settings" reopens the ad-consent form; it
+// appears only where the consent platform asked for it (GDPR regions).
+const privacyPolicyUrl: string = import.meta.env.VITE_APP_PRIVACY_POLICY_URL ?? ''
+const showPrivacyLinks = computed(() => isNative && (!!privacyPolicyUrl || privacyOptionsRequired.value))
+const openPrivacyPolicy = () => {
+  if (privacyPolicyUrl) void openExternal(privacyPolicyUrl)
+}
+
 // Removed: showAskResetModal / askReset / doResetProgress. They drove a
 // "Reset" button that called the old `resetGameProgress` helper, which
 // only touched CardQuest-relic fields (campaign / hand / quest-* /
-// skipRulesModal). For chaos-arena it was a no-op — the visible button
+// skipRulesModal). For tree-smashers it was a no-op — the visible button
 // did nothing useful, so the whole flow has been removed alongside the
 // useUserDb cleanup.
 </script>
@@ -168,20 +181,33 @@ const qualityOptions = computed(() => [
             :model-value="qualityPreference"
             @update:model-value="setQualityPreference($event)"
           )
-          span.game-text(class="text-[0.7rem] md:text-[0.85rem] text-slate-400 text-center px-2") {{ t('graphicsQualityNote') }}
+          span(class="ui-body text-[0.7rem] md:text-[0.85rem] text-center px-2") {{ t('graphicsQualityNote') }}
 
-        hr(class="border-slate-600 my-1 md:my-2 pt-0")
+        hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
+
+        //- Privacy policy + ad-consent choice (native builds only).
+        div(v-if="showPrivacyLinks" class="flex flex-wrap justify-center gap-2 scale-90 sm:scale-100")
+          FButton(
+            v-if="privacyPolicyUrl"
+            type="secondary"
+            @click="openPrivacyPolicy"
+          ) {{ t('privacyPolicy') }}
+          FButton(
+            v-if="privacyOptionsRequired"
+            type="secondary"
+            @click="showPrivacyOptions"
+          ) {{ t('privacySettings') }}
+
+        hr(v-if="showPrivacyLinks" class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
 
         //- Danger zone: wipe all progress (keeps settings + purchased skins).
         //- Guarded by the confirmation modal below.
         div(class="flex flex-col items-center gap-1 scale-90 sm:scale-100")
           FButton(
-            color-from="#ff6b6b"
-            color-to="#c62828"
-            shadow-color="#6b1212"
+            tone="danger"
             @click="showResetConfirm = true"
           ) {{ t('resetCampaign') }}
-          span.game-text(class="text-[0.7rem] md:text-[0.85rem] text-slate-400 text-center px-2") {{ t('resetKeepsNote') }}
+          span(class="ui-body text-[0.7rem] md:text-[0.85rem] text-center px-2") {{ t('resetKeepsNote') }}
 
 
     //- Difficulty Tab
@@ -193,16 +219,16 @@ const qualityOptions = computed(() => [
           :type="userDifficulty === difficulty ? 'primary' : 'secondary'"
           @click="setSettingValue('difficulty', difficulty)"
         ) {{ t(difficulty) }}
-        hr(class="border-slate-600 my-1 md:my-2 pt-0")
+        hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
 
     //- Audio Tab
     div(v-else-if="currentTab === 'audio'").flex.flex-col.justify-between.items-center
       FSlider.px-4(class="!py-1 !pb-3 !max-w-[300px]" :model-value="userSoundVolume" @update:modelValue="setSettingValue('sound', $event)" :label="t('soundEffects')" :min="0" :max="1" :step="0.01")
       FSlider.px-4(class="!py-1 !pb-2 !max-w-[300px]" :model-value="userMusicVolume" @update:modelValue="setSettingValue('music', $event)" :label="t('music')" :min="0" :max="1" :step="0.01")
-      hr(class="border-slate-600 my-1 md:my-2 pt-0")
+      hr(class="border-t-2 border-dashed border-wood-300 my-1 md:my-2 pt-0")
 
     template(#footer)
-      FButton.w-full(@click="emit('close')") {{ t('close') }}
+      FButton.w-full(tone="primary" @click="emit('close')") {{ t('close') }}
 
   //- Safety-question modal — confirm before wiping progress. Not closable via
   //- the X so the choice is explicit (Cancel vs Reset).
@@ -213,8 +239,8 @@ const qualityOptions = computed(() => [
     @update:model-value="showResetConfirm = false"
   )
     div(class="flex flex-col gap-2 p-2 max-w-sm mx-auto")
-      p.game-text(class="text-sm md:text-base text-white") {{ t('sureResetCampaign') }}
-      p.game-text(class="text-[0.85rem] md:text-xs text-slate-300") {{ t('resetKeepsNote') }}
+      p(class="ui-label text-sm md:text-base text-ink") {{ t('sureResetCampaign') }}
+      p(class="ui-body text-[0.85rem] md:text-xs") {{ t('resetKeepsNote') }}
     template(#footer)
       FButton(
         type="secondary"
@@ -222,18 +248,9 @@ const qualityOptions = computed(() => [
         @click="showResetConfirm = false"
       ) {{ t('cancel') }}
       FButton(
-        color-from="#ff6b6b"
-        color-to="#c62828"
-        shadow-color="#6b1212"
+        tone="danger"
         :is-disabled="isResetting"
         @click="confirmReset"
       ) {{ t('reset') }}
 </template>
 
-<style lang="sass" scoped>
-.diff-btn
-  @apply py-3 px-6 rounded-lg uppercase font-bold transition-all hover:brightness-125
-
-span
-  text-shadow: 2px 2px 0 #000
-</style>

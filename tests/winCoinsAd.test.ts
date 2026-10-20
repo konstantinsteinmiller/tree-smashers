@@ -108,7 +108,7 @@ describe('where the button appears', () => {
     expect(showsWinCoinsAd({ ...base, pvp: true, result: 'lose' })).toBe(false)
   })
 
-  it('still on every other non-boss win: campaign, ghost/leaderboard, daily challenge', () => {
+  it('still on every other non-boss win: campaign, ghost/leaderboard', () => {
     // Campaign: the fought stage's rewardWin (non-boss stages).
     for (const id of [1, 4, 9, 14]) {
       const stage = getStageById(id)
@@ -117,8 +117,6 @@ describe('where the button appears', () => {
     }
     // Ghost / leaderboard win: the ghost formula (50 + 2 x enemy stage).
     expect(showsWinCoinsAd({ ...base, baseCoins: 50 + 12 * 2 })).toBe(true)
-    // Daily challenge win: 75% of the current stage's win reward.
-    expect(showsWinCoinsAd({ ...base, baseCoins: Math.round(getStageById(9).rewardWin * 0.75) })).toBe(true)
   })
 
   it('never after a cheat-stage or Boss Lab win (G5: they pay fixed 500/100)', () => {
@@ -159,7 +157,6 @@ describe('where the button appears', () => {
     // The label shows what was granted (+ the ad's extra), not rewardAmount,
     // which already reads the NEXT stage after advanceStage().
     expect(src).toContain('+{{ grantedCoins + winAdExtra }}')
-    expect(src).toContain('+{{ dailyCoinReward + winAdExtra }}')
     expect(src).toContain('+{{ PVP_COIN_REWARD + winAdExtra }}')
     const snap = src.indexOf('grantedCoins.value = rewardAmount.value')
     const adv = src.indexOf('advanceStage()', snap)

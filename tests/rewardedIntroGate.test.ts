@@ -58,10 +58,12 @@ vi.mock('@/platforms/resolveAdProvider', async () => {
 
 /** Load `useAds` + `useRewardedIntro` fresh with `VITE_APP_NATIVE` stubbed.
  *  Both modules read the flag at import time, so the stub has to land before
- *  the dynamic import and the module registry has to be reset each time. */
-const loadAds = async (native: boolean) => {
+ *  the dynamic import and the module registry has to be reset each time.
+ *  `childDirected: false` is the 18+ native build (`VITE_APP_ADS_CHILD_DIRECTED`). */
+const loadAds = async (native: boolean, { childDirected = true } = {}) => {
   vi.resetModules()
   vi.stubEnv('VITE_APP_NATIVE', native ? 'true' : '')
+  vi.stubEnv('VITE_APP_ADS_CHILD_DIRECTED', childDirected ? '' : 'false')
   // Both must be AD builds: without rewarded ads `useAds` refuses every
   // rewarded placement before the intro is reached. Native = AdMob build
   // (SHOW_MEDIATOR_ADS), web = GameDistribution.
@@ -118,6 +120,15 @@ describe('rewarded intro gate', () => {
     expect(showRewardedSpy).not.toHaveBeenCalled()
     expect(intro.isRewardedIntroOpen.value).toBe(false)
     expect(intro.rewardedIntroReward.value).toBeNull()
+  })
+
+  it('is skipped on the 18+ native build and goes straight to the provider', async () => {
+    const { ads, intro } = await loadAds(true, { childDirected: false })
+    expect(intro.requiresRewardedIntro).toBe(false)
+
+    await expect(ads.showRewardedAd({ kind: 'coins', amount: 125 })).resolves.toBe(true)
+    expect(showRewardedSpy).toHaveBeenCalledTimes(1)
+    expect(intro.isRewardedIntroOpen.value).toBe(false)
   })
 
   it('goes straight to the provider on web builds', async () => {

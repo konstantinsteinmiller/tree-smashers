@@ -64,7 +64,9 @@ const sizeOf = (i: number): number => 24 + i * 6
   align-items: center
   gap: 0.6rem
   padding: 0.25rem 0.5rem 0.25rem
+  color: var(--ui-text)
 
+// Recessed cream well the tier steps stand in.
 .lup__stairs
   display: flex
   align-items: flex-end
@@ -72,14 +74,16 @@ const sizeOf = (i: number): number => 24 + i * 6
   gap: 0.15rem
   max-width: 100%
   padding: 0.4rem 0.25rem 0.2rem
-  border-radius: 1rem
-  background: radial-gradient(90% 90% at 50% 100%, rgba(255, 201, 60, 0.25), transparent 70%)
+  border-radius: var(--radius-ui)
+  border: 2px solid var(--color-cream-400)
+  background-color: var(--color-cream-200)
+  box-shadow: inset 0 2px 0 rgba(110, 69, 39, 0.16)
 
 .lup__step
   flex-shrink: 1
   min-width: 0
   animation: lup-rise 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both
-  filter: drop-shadow(0 3px 0 #0f1a30)
+  filter: drop-shadow(0 3px 0 var(--color-ink))
 
 @keyframes lup-rise
   from
@@ -92,7 +96,7 @@ const sizeOf = (i: number): number => 24 + i * 6
   font-size: 1rem
   font-weight: 800
   line-height: 1.3
-  color: #fff
+  color: var(--ui-text)
 
 .lup__points
   display: flex
@@ -103,8 +107,8 @@ const sizeOf = (i: number): number => 24 + i * 6
   list-style: none
   text-align: left
   font-size: 0.9rem
-  font-weight: 700
-  color: #d7deea
+  font-weight: 800
+  color: var(--ui-text-muted)
 
   li
     display: flex
@@ -112,12 +116,12 @@ const sizeOf = (i: number): number => 24 + i * 6
     gap: 0.5rem
 
 .lup__dot
-  width: 0.55rem
-  height: 0.55rem
+  width: 0.6rem
+  height: 0.6rem
   flex-shrink: 0
   border-radius: 999px
-  background: #ffc93c
-  box-shadow: 0 0 0 2px #0f1a30
+  background: var(--color-leaf-500)
+  box-shadow: 0 0 0 2px var(--color-ink)
 
 .lup__actions
   display: flex
@@ -130,11 +134,16 @@ const sizeOf = (i: number): number => 24 + i * 6
   padding: 0 1rem
   border: 0
   background: none
-  color: #b8c6dc
+  color: var(--ui-text-muted)
   font-weight: 800
   text-decoration: underline
   text-underline-offset: 3px
   cursor: pointer
+
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 2px
+    border-radius: var(--radius-ui)
 
 .lup--static .lup__step
   animation: none

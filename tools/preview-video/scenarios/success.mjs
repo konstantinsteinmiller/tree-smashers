@@ -76,7 +76,7 @@ export default {
     // Load the opening shot NOW, in unrecorded time, so frame 0 already has
     // the slingshot drawn. `aim()` needs `player_turn` but not a running
     // physics tick, so it survives the freeze `boot()` ends on.
-    await ctx.evaluate(() => window.__chaos.aimAtBlade(0, 'npc', 0, 1))
+    await ctx.evaluate(() => window.__smashers.aimAtBlade(0, 'npc', 0, 1))
 
     const s = await g.snapshot(ctx)
     ctx.log.info(

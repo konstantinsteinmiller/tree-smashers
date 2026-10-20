@@ -29,24 +29,43 @@ const onClick = (value: T) => {
 </script>
 
 <template lang="pug">
+  //- Wooden pill with a leaf-green active segment (see DESIGN.md).
   div.button-switch.relative.inline-block
-    //- 3D drop-shadow base
-    div.absolute.inset-0.translate-y-1.rounded-xl(class="bg-[#1a2b4b]")
-    //- Pill body
-    div.relative.flex.rounded-xl.border-2.overflow-hidden.shadow-lg(
-      class="bg-gradient-to-b from-[#0f1a30] to-[#1a2b4b] border-[#0f1a30]"
-    )
+    div.switch-pill.relative.flex.overflow-hidden(role="radiogroup")
       div.relative.button-wrap(v-for="option in options" :key="option.value")
-        button.relative.cursor-pointer.transition-all.font-black.game-text.leading-none(
-          class="px-3 py-1.5 text-xs sm:text-sm active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100"
-          :class="modelValue === option.value \
-            ? 'bg-gradient-to-b from-[#ffcd00] to-[#f7a000] text-white shadow-inner' \
-            : disabledValues.includes(option.value) \
-              ? 'text-white/30' \
-              : 'text-white/60 hover:text-white'"
+        button.switch-opt.relative.cursor-pointer.font-black.leading-none(
+          type="button"
+          role="radio"
+          :aria-checked="modelValue === option.value"
+          class="px-3 py-1.5 text-xs sm:text-sm disabled:cursor-not-allowed"
+          :class="modelValue === option.value ? 'is-active' : disabledValues.includes(option.value) ? 'is-disabled' : ''"
           :disabled="disabledValues.includes(option.value)"
           @click="onClick(option.value)"
         )
           slot(name="default" :option="option" :is-active="modelValue === option.value") {{ option.value }}
         slot(name="hint" :option="option" :is-active="modelValue === option.value")
 </template>
+
+<style scoped lang="sass">
+.switch-pill
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-wood-700)
+  box-shadow: inset 0 3px 0 var(--color-wood-800), 0 4px 0 var(--color-ink)
+
+.switch-opt
+  color: var(--color-cream-200)
+  transition: background-color 0.1s ease
+  &:hover:not(:disabled)
+    color: var(--color-cream-50)
+  &.is-active
+    color: var(--color-cream-50)
+    background-color: var(--color-leaf-500)
+    box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-700)
+    text-shadow: 0 2px 0 var(--color-ink), 1px 0 0 var(--color-ink), -1px 0 0 var(--color-ink), 0 -1px 0 var(--color-ink)
+  &.is-disabled
+    color: rgba(247, 227, 184, 0.4)
+  &:focus-visible
+    outline: 3px solid var(--ui-focus)
+    outline-offset: -3px
+</style>

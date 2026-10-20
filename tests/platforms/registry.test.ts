@@ -7,12 +7,22 @@ import { describe, expect, it } from 'vitest'
 import { ALL_PLATFORMS, activePlatform, activeCapabilities } from '@/platforms'
 
 describe('platform registry', () => {
-  it('contains all 9 platforms', () => {
+  it('contains all 10 platforms', () => {
     const ids = ALL_PLATFORMS.map(p => p.id).sort()
     expect(ids).toEqual([
-      'crazygames', 'gamedistribution', 'gamepix', 'glitch', 'itch', 'playgama',
-      'poki', 'wavedash', 'y8'
+      'crazygames', 'gamedistribution', 'gamemonetize', 'gamepix', 'glitch', 'itch',
+      'playgama', 'poki', 'wavedash', 'y8'
     ])
+  })
+
+  it('GameMonetize: ads, no cloud save, no hostname gate, no child-directed signal', () => {
+    const gm = ALL_PLATFORMS.find(p => p.id === 'gamemonetize')!
+    expect(gm.envFlag).toBe('GAME_MONETIZE')
+    expect(gm.capabilities.hasAds).toBe(true)
+    expect(gm.capabilities.hasCloudSave).toBe(false)
+    expect(gm.capabilities.hostnameMatcher).toBe('')
+    // Child-directed ad treatment is a Tauri (app-store) build concern only.
+    expect(gm.capabilities.childDirectedAdSignal).toBe(false)
   })
 
   it('every platform has the required descriptor shape', () => {

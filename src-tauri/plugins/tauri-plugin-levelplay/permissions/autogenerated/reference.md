@@ -1,14 +1,13 @@
 ## Default Permission
 
-Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands, the LevelPlay
-Test Suite launcher, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to
-rewarded-state / interstitial-state.
+Default permissions for the LevelPlay plugin — exposes init plus rewarded and interstitial ad commands, the consent (privacy options) form, the LevelPlay Test Suite launcher, and the framework-provided event-listener commands needed for `addPluginListener` to subscribe to rewarded-state / interstitial-state.
 
 #### This default permission set includes the following:
 
 - `allow-init`
 - `allow-show-rewarded`
 - `allow-show-interstitial`
+- `allow-show-privacy-options`
 - `allow-launch-test-suite`
 - `allow-registerListener`
 - `allow-removeListener`
@@ -96,6 +95,32 @@ Enables the show_interstitial command without any pre-configured scope.
 <td>
 
 Denies the show_interstitial command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`levelplay:allow-show-privacy-options`
+
+</td>
+<td>
+
+Enables the show_privacy_options command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`levelplay:deny-show-privacy-options`
+
+</td>
+<td>
+
+Denies the show_privacy_options command without any pre-configured scope.
 
 </td>
 </tr>

@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { mobileCheck } from '@/utils/function'
 import { useMusic } from '@/use/useSound'
-import { useExtensionGuard } from '@/use/useExtensionGuard'
 import { windowWidth, windowHeight } from '@/use/useUser'
 import { isDebug } from '@/use/useMatch'
 import useAssets from '@/use/useAssets'
 import FLogoProgress from '@/components/atoms/FLogoProgress.vue'
 import FPerfMeter from '@/components/atoms/FPerfMeter.vue'
-import NativeAdsDebugOverlay from '@/components/atoms/NativeAdsDebugOverlay.vue'
 import SaveStatusBanner from '@/components/atoms/SaveStatusBanner.vue'
 import AdsBlockedModal from '@/components/atoms/AdsBlockedModal.vue'
+import ForcedDarkModeModal from '@/components/atoms/ForcedDarkModeModal.vue'
 import RewardedAdIntroModal from '@/components/atoms/RewardedAdIntroModal.vue'
 import VConsoleHideButton from '@/components/atoms/VConsoleHideButton.vue'
+import { currentReveal } from '@/use/useRewardReveal'
 import { useCrazyMuteSync } from '@/use/useCrazyMuteSync'
 import { applyMute } from '@/use/usePlatformMute'
 import { setGamePaused } from '@/use/useGamePause'
@@ -29,6 +29,7 @@ import {
   isPlaygama,
   isYouTube,
   isPoki,
+  isGameMonetize,
   isNative,
   orientation
 } from '@/use/useUser'
@@ -36,9 +37,15 @@ import { glitchLicenseStatus } from '@/use/useGlitchLicense'
 import { resolveCapabilities } from '@/platforms/capabilities'
 import { logFirstFrameState } from '@/utils/bootDiagnostics'
 
+// LevelPlay's on-device debug HUD (with the Test Suite launcher). Picked at
+// module scope from the build flag, so a web build never bundles the native
+// provider's command strings (tests/platforms/bundlePurity.test.ts).
+const NativeAdsDebugOverlay = import.meta.env.VITE_APP_NATIVE === 'true'
+  ? defineAsyncComponent(() => import('@/components/atoms/LevelPlayDebugOverlay.vue'))
+  : null
+
 const { t } = useI18n()
 const { initMusic, pauseMusic, continueMusic } = useMusic()
-useExtensionGuard()
 const { resourceCache, areAllAssetsLoaded } = useAssets()
 useCrazyMuteSync()
 
@@ -155,6 +162,38 @@ if (isPoki) {
   })
 }
 
+// GameMonetize wiring. Static imports for the same reason as the two blocks
+// above; `isGameMonetize` is an env literal so the `if` folds away on other
+// builds, where `resolve.alias` also swaps the plugin for a no-op stub.
+import { isGmAdShowing } from '@/utils/gameMonetizePlugin'
+import { armFirstLoadInterstitial } from '@/use/useFirstLoadInterstitial'
+
+// The gift reveal: one host for every non-battle reward screen; its chunk
+// loads with the first reward (see useRewardReveal.ts).
+const RewardRevealHost = defineAsyncComponent(() => import('@/components/organisms/RewardRevealHost.vue'))
+const rewardRevealUsed = ref(false)
+watch(currentReveal, (r) => { if (r) rewardRevealUsed.value = true })
+
+if (isGameMonetize) {
+  // ─── Ad pause + audio ────────────────────────────────────────────────
+  // GameMonetize is an ad SDK only: no pause signal, no mute signal. The one
+  // edge it gives is SDK_GAME_PAUSE / SDK_GAME_START around an ad that really
+  // opened, published as `isGmAdShowing`. As with Poki, this watcher is the
+  // single owner that turns it into a paused loop and paused music; a no-fill
+  // never raises it, so an unfilled break leaves the audio untouched.
+  watch(isGmAdShowing, (showing) => {
+    setGamePaused(showing)
+    if (showing) pauseMusic()
+    else continueMusic()
+  })
+
+  // ─── Moderation requirement: an ad right after the game loads ────────
+  // Armed on the same splash-resolved edge the other portals use for their
+  // game-ready signal. See `useFirstLoadInterstitial.ts` for why this watches
+  // readiness instead of checking it once.
+  armFirstLoadInterstitial(areAllAssetsLoaded)
+}
+
 initMusic()
 
 const portraitQuery = window.matchMedia('(orientation: portrait)')
@@ -248,7 +287,7 @@ const hostname = window.location.hostname
 const parentOrigin = window.location.ancestorOrigins?.[0] ?? document.referrer ?? ''
 const platformFlags = {
   isCrazyWeb, isWaveDash, isItch, isGlitch, isGameDistribution, isY8, isGamePix,
-  isPlaygama, isPoki
+  isPlaygama, isPoki, isGameMonetize
 }
 const capabilities = computed(() => resolveCapabilities({
   flags: platformFlags,
@@ -267,6 +306,7 @@ const isGameShowAllowed = computed(() =>
   capabilities.value.allowedToShowOnGamePix ||
   capabilities.value.allowedToShowOnPlaygama ||
   capabilities.value.allowedToShowOnPoki ||
+  capabilities.value.allowedToShowOnGameMonetize ||
   hostname.includes('localhost')
 )
 const isGlitchDenied = computed(() => capabilities.value.isGlitchDenied)
@@ -278,14 +318,18 @@ const plattformText = computed(() => capabilities.value.plattformText)
   div(v-if="isGameShowAllowed" id="app-root" class="h-screen h-dvh w-screen app-container root-protection game-ui-immune")
     FLogoProgress
     FPerfMeter(v-if="isDebug" :offset-y="52")
-    NativeAdsDebugOverlay(v-if="isNative && isDebug")
+    component(v-if="NativeAdsDebugOverlay && isNative && isDebug" :is="NativeAdsDebugOverlay")
     SaveStatusBanner
     AdsBlockedModal
-    //- Rewarded-ad intro screen. Required before every native rewarded ad
-    //- (AdMob rewarded-interstitial contract + Play Families ad disclosure).
+    //- Blocking notice while a forced dark-mode overrider repaints the HUD.
+    //- Self-dismissing; see the component.
+    ForcedDarkModeModal
+    //- Rewarded-ad intro screen for child-directed native builds (Play
+    //- Families ad disclosure); inert elsewhere, see useRewardedIntro.
     RewardedAdIntroModal
     VConsoleHideButton
     RouterView
+    RewardRevealHost(v-if="rewardRevealUsed")
 
   div.relative.w-full.h-full(v-else-if="isGlitchDenied")
     h1.absolute.text-red-500(class="left-1/2 -translate-x-[50%] top-1/2 -translate-y-[50%] text-3xl") Access Denied: Please purchase a license.
@@ -298,9 +342,9 @@ const plattformText = computed(() => capabilities.value.plattformText)
 
 <style lang="sass">
 *
-  // `--font-game` is defined in `assets/css/fonts.sass`. It keeps `Angry`
+  // `--font-game` is defined in `assets/css/fonts.sass`. It keeps `Nunito`
   // first (so Latin + digits render in the display face) and then names a
-  // real CJK system font for every platform we ship to, because `Angry`
+  // real CJK system font for every platform we ship to, because `Nunito`
   // has no Han/Kana/Hangul coverage at all. See that file for the full
   // rationale — the old `'Angry', cursive` stack is what Playgama QA saw
   // as broken Chinese.

@@ -8,6 +8,10 @@ import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import com.google.android.ump.ConsentDebugSettings
+import com.google.android.ump.ConsentInformation
+import com.google.android.ump.ConsentRequestParameters
+import com.google.android.ump.UserMessagingPlatform
 import com.unity3d.mediation.LevelPlay
 import com.unity3d.mediation.LevelPlayAdError
 import com.unity3d.mediation.LevelPlayAdInfo
@@ -15,6 +19,7 @@ import com.unity3d.mediation.LevelPlayConfiguration
 import com.unity3d.mediation.LevelPlayInitError
 import com.unity3d.mediation.LevelPlayInitListener
 import com.unity3d.mediation.LevelPlayInitRequest
+import com.unity3d.mediation.LevelPlayPrivacySettings
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAd
 import com.unity3d.mediation.interstitial.LevelPlayInterstitialAdListener
 import com.unity3d.mediation.rewarded.LevelPlayReward
@@ -28,6 +33,10 @@ import com.unity3d.mediation.rewarded.LevelPlayRewardedAdListener
 // dashboard under Ads → Ad Units. When empty, the matching show method
 // returns a clean "not-configured" response so the rest of the app
 // treats the call as a no-op instead of crashing.
+//
+// `admobTfcd` / `admobTfua` / `deviceIdOptOut` / `metaMixedAudience` are
+// still part of the payload because the iOS plugin reads them; on Android
+// everything child-related derives from `isChildDirected` alone.
 @InvokeArg
 class InitArgs {
     var appKey: String = ""
@@ -35,24 +44,32 @@ class InitArgs {
     var interstitialAdUnitId: String = ""
     var isChildDirected: Boolean = true
     var admobTfcd: Boolean = true
-    var admobTfua: Boolean = true
+    var admobTfua: Boolean = false
     var deviceIdOptOut: Boolean = true
     var metaMixedAudience: Boolean = false
+    var consentDebugEea: Boolean = false
     var enableTestSuite: Boolean = false
 }
 
 // LevelPlay 9.x integration for Tauri.
 //
-// Two ordering rules for COPPA/Families-Policy compliance:
+// ## Order of a session
 //
-//   1. Every `LevelPlay.setMetaData(...)` call MUST happen BEFORE
-//      `LevelPlay.init(...)`. The init call propagates the flags to each
-//      adapter's SDK during startup; setting metadata afterwards is a
-//      silent no-op for adapters that have already initialised.
+//   1. Privacy flags (COPPA, the AdMob child tags, device-ID opt-out) are set
+//      BEFORE `LevelPlay.init`. Init propagates them to each adapter's SDK;
+//      flags set afterwards are a silent no-op for adapters that already
+//      started.
 //
-//   2. Ad-format listeners (`LevelPlayRewardedAd.setListener` etc.) are
-//      attached BEFORE we call `loadAd()` so the first load attempt
-//      never races past the listener registration.
+//   2. Consent: Google UMP asks the player for GDPR consent where the law
+//      needs it (EEA/UK/CH) and shows nothing anywhere else. The message
+//      itself is configured in AdMob → Privacy & messaging. LevelPlay 7.7.0+
+//      picks up the consent UMP stores and passes it to every network, so
+//      nothing here forwards it by hand. A child-directed session skips the
+//      form: under-age players are never asked for consent.
+//
+//   3. `LevelPlay.init`, then one rewarded and one interstitial ad object
+//      per configured unit, each with its listener attached BEFORE the first
+//      `loadAd()` so the first load never races the registration.
 //
 // The 9.x SDK uses per-instance ad objects (LevelPlayRewardedAd,
 // LevelPlayInterstitialAd) keyed by dashboard-issued ad unit IDs. Each
@@ -77,6 +94,10 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
     // playback actually ended (not just that credit was granted).
     private var lastRewardGranted = false
 
+    private val consentInformation: ConsentInformation by lazy {
+        UserMessagingPlatform.getConsentInformation(activity)
+    }
+
     override fun load(webView: WebView) {
         super.load(webView)
     }
@@ -90,14 +111,59 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
 
-        // ── COPPA / Families Policy metadata — MUST come before init ──
-        // See class doc for the ordering rule. Values are strings the
-        // SDK parses as booleans from the literal "true" / "false" text.
-        LevelPlay.setMetaData("is_child_directed", args.isChildDirected.boolText())
-        LevelPlay.setMetaData("AdMob_TFCD", args.admobTfcd.boolText())
-        LevelPlay.setMetaData("AdMob_TFUA", args.admobTfua.boolText())
-        LevelPlay.setMetaData("is_deviceid_optout", args.deviceIdOptOut.boolText())
-        LevelPlay.setMetaData("Meta_Mixed_Audience", args.metaMixedAudience.boolText())
+        applyPrivacyFlags(args.isChildDirected)
+
+        activity.runOnUiThread {
+            gatherConsent(args) { startLevelPlay(args, invoke) }
+        }
+    }
+
+    // ── 1. Privacy flags — MUST come before init ─────────────────────────
+    private fun applyPrivacyFlags(childDirected: Boolean) {
+        // 9.4+: setCOPPA also drives each network's child tags (AdMob TFCD
+        // included — the old "AdMob_TFCD" / "AdMob_TFUA" metadata keys are
+        // deprecated and logged as such).
+        LevelPlayPrivacySettings.setCOPPA(childDirected)
+        LevelPlay.setMetaData("is_deviceid_optout", childDirected.boolText())
+    }
+
+    // ── 2. Consent (Google UMP) ──────────────────────────────────────────
+    private fun gatherConsent(args: InitArgs, done: () -> Unit) {
+        if (args.isChildDirected) {
+            done()
+            return
+        }
+        val params = ConsentRequestParameters.Builder()
+            .setTagForUnderAgeOfConsent(false)
+        if (args.consentDebugEea) {
+            // Debug builds only: pretend the device is in the EEA so the
+            // consent form can be tested from anywhere. Honoured on test
+            // devices only (emulators are test devices automatically).
+            params.setConsentDebugSettings(
+                ConsentDebugSettings.Builder(activity)
+                    .setDebugGeography(ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_EEA)
+                    .build()
+            )
+        }
+        // A failed consent update or form must never cost the session its
+        // ads: LevelPlay starts either way, and the networks then serve
+        // what the stored consent signal (or its absence) allows.
+        consentInformation.requestConsentInfoUpdate(
+            activity,
+            params.build(),
+            {
+                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { _ -> done() }
+            },
+            { _ -> done() }
+        )
+    }
+
+    private fun privacyOptionsRequired(): Boolean =
+        consentInformation.privacyOptionsRequirementStatus ==
+            ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+
+    // ── 3. LevelPlay ─────────────────────────────────────────────────────
+    private fun startLevelPlay(args: InitArgs, invoke: Invoke) {
         if (args.enableTestSuite) {
             LevelPlay.setMetaData("is_test_suite", "enable")
         }
@@ -141,6 +207,7 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
 
                 val res = JSObject()
                 res.put("initialized", true)
+                res.put("privacyOptionsRequired", privacyOptionsRequired())
                 invoke.resolve(res)
             }
 
@@ -154,9 +221,12 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
     // listens for "rewarded-state" / "interstitial-state" and mirrors
     // `ready` into Vue refs that gate ad-button visibility, so a
     // "watch ad" prompt never appears unless an ad is actually loaded.
-    private fun emitReadiness(event: String, ready: Boolean) {
+    private fun emitReadiness(event: String, ready: Boolean, error: LevelPlayAdError? = null) {
         val obj = JSObject()
         obj.put("ready", ready)
+        // Load failures carry their reason (no fill, unit paused, …) to the
+        // debug HUD — mobile builds have no console to read it from.
+        if (error != null) obj.put("error", "${error.errorCode}: ${error.errorMessage}")
         trigger(event, obj)
     }
 
@@ -167,7 +237,7 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         override fun onAdLoadFailed(error: LevelPlayAdError) {
-            emitReadiness("rewarded-state", false)
+            emitReadiness("rewarded-state", false, error)
         }
 
         override fun onAdDisplayed(adInfo: LevelPlayAdInfo) {}
@@ -216,7 +286,7 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         override fun onAdLoadFailed(error: LevelPlayAdError) {
-            emitReadiness("interstitial-state", false)
+            emitReadiness("interstitial-state", false, error)
         }
 
         override fun onAdDisplayed(adInfo: LevelPlayAdInfo) {}
@@ -302,6 +372,21 @@ class LevelPlayPlugin(private val activity: Activity) : Plugin(activity) {
             val obj = JSObject()
             obj.put("launched", true)
             invoke.resolve(obj)
+        }
+    }
+
+    // Re-opens the consent form so a player can change their choice — the
+    // "privacy options entry point" Google requires wherever UMP said a
+    // form was needed (`privacyOptionsRequired` in the init response).
+    @Command
+    fun showPrivacyOptions(invoke: Invoke) {
+        activity.runOnUiThread {
+            UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
+                val obj = JSObject()
+                obj.put("shown", formError == null)
+                if (formError != null) obj.put("error", formError.message ?: "form-failed")
+                invoke.resolve(obj)
+            }
         }
     }
 

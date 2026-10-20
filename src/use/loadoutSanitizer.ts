@@ -26,6 +26,10 @@
 //   • known top / bottom part ids only (an unknown entry is dropped)
 //   • part levels: finite, floored, 0…PART_LEVEL_SANITY_MAX; `levelOne` → 1
 //   • `modelId` kept only when it is a known skin id (it becomes an image path)
+//   • `smasherId` (+ `level`): a known smasher id rebuilds the whole config
+//     from the catalogue (`smasherConfig`, level clamped 1…30, `levelOne` →
+//     1), so parts and part levels always match the smasher; an unknown id is
+//     ignored and the entry falls back to its parts
 //   • boss flags (`isBoss`, `bossAbility`, `bossStats`) are never accepted
 //     from a peer — they are campaign-only engine switches
 
@@ -38,6 +42,7 @@ import {
   type TopPartId
 } from '@/types/spinner'
 import type { SkillLoadout } from '@/types/skills'
+import { clampSmasherLevel, isSmasherId, smasherConfig } from '@/data/smasherCatalog'
 
 /** Honest part levels grow slowly (upgrade costs escalate); anything past
  *  this is a tampered save or a hostile peer — clamp so stats stay finite. */
@@ -83,6 +88,11 @@ export function sanitizePvpTeam(raw: unknown, opts: TeamSanitizeOptions): Spinne
   for (const entry of raw) {
     if (out.length >= size) break
     if (!isRecord(entry)) continue
+    if (isSmasherId(entry.smasherId)) {
+      const model = typeof entry.modelId === 'string' && MODEL_IDS.has(entry.modelId) ? entry.modelId : undefined
+      out.push(smasherConfig(entry.smasherId, opts.levelOne ? 1 : clampSmasherLevel(entry.level), model))
+      continue
+    }
     const top = entry.topPartId
     const bottom = entry.bottomPartId
     if (typeof top !== 'string' || !TOP_IDS.has(top)) continue
