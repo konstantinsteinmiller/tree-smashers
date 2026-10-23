@@ -1,0 +1,35 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE WITH THREE SEPARATE HORIZONTAL BORDER STRIPS STACKED ABOVE EACH OTHER, ON FLAT MAGENTA.
+One square image, 1:1. Three long horizontal strips, one above the other, with flat magenta between them.
+· Exactly 3 strips. Not 2, not 4.
+
+WHAT THEY ARE — the BORDER around the clearing (the arena edge) of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning discs in a clearing: a TOY FENCE in a child's playroom: a continuous low row of chunky wooden TOY BUILDING BLOCKS (cubes, half-round arches and little cylinders) in soft red, sky blue, butter yellow and mint, lined up and stacked one or two high, with a few fat round PLUSH PILLOWS squeezed in between them.
+The strip is a straight section cut out of an ENDLESS border that runs all the way around the arena; the game lays it along the arena's curvy edge.
+
+THE THREE STRIPS — three variations of the SAME border: the same kind of pieces, the same thickness, the same colours, the same scale, but a different arrangement of the pieces in each strip.
+
+SHAPE OF EACH STRIP — this matters:
+· It runs the FULL WIDTH of the canvas, from the very left edge to the very right edge, and is CUT OFF by both side edges, like a piece of an endless border. NO rounded ends, NO end caps, nothing that stops, tapers or curls up before the side edges.
+· It is about one fifth of the canvas tall. Leave a clear band of magenta (about one tenth of the canvas) above the top strip, between the strips and below the bottom strip.
+· Its LOWER edge is the side that faces the arena floor: a fairly even, continuous edge running straight across from left to right at the same height all along, with only small bumps. Its upper edge (the outside) may be bumpier.
+· The pieces are evenly spread along the whole length: the same density everywhere, NO single big or eye-catching piece, NO gap in the middle — the strip is repeated many times around the arena.
+
+COLOUR — soft toy colours (like #e0574f red, #7fb6e6 sky blue, #f2d36b butter yellow, #9fd8b4 mint), honey-wood blocks (like #d9a86a), cream and pale-blue pillows.
+
+VIEW — seen from HIGH ABOVE, almost straight down onto the tops of the pieces, with just a little of their lower (arena-facing) side visible. Lit evenly from straight above: the tops lighter, the lower front side a little darker. No cast shadows.
+
+STYLE — polished, cute cartoon, like the decoration around the board of a cosy mobile game, all three strips painted in one hand: bold, dark brown outline around every piece's silhouette (clearly visible when a strip is shown 60 pixels tall), flat cel shading with two or three hard-edged tones per colour, simple rounded chunky shapes, friendly and toy-like. NO stitches, NO seams, NO felt or fabric texture on stones, wood, plants, snow or blocks. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism, NO noise grain. No text, no letters, no numbers.
+
+WHAT IT IS NOT — the pillows are smooth, plain soft fabric — NO stitches, NO dashed seams, NO buttons; no letters or numbers on the blocks, no toys with faces, no furniture; no ground patch, no floor, no grass carpet under the strip, no characters, no scenery above or below the strips.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not part of a strip with solid, flat, pure magenta #FF00FF — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No piece contains magenta, purple or hot pink (anything pink is a soft salmon-peach pink, never magenta).
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 3 horizontal strips, each running edge to edge across the whole width, each cut off by the left and right edges (no ends).
+· Magenta above, between and below the strips; the lower edge of each strip is even and straight.
+· Same thickness, colours and scale in all three.
+
+OUTPUT: one square 1:1 image, three stacked horizontal border strips (bedroom) on flat #FF00FF magenta.
