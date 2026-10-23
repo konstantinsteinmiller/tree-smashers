@@ -52,7 +52,7 @@ export const SEED_FILE = resolve(
 /** Rows the Worker publishes, so the baked board matches its shape exactly. */
 const TOP_N = 100
 /** Population size. */
-const POPULATION = 257114
+const POPULATION = 1789
 /**
  * Hard ceiling, set well ABOVE where anyone is expected to land.
  *
