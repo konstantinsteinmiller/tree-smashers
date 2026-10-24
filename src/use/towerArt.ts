@@ -63,6 +63,38 @@ let requested = false
 let revision = 0
 /** Bumps when the painted tower atlas lands — key the static bake on it. */
 export const towerArtRevision = (): number => revision
+// #Consistency-3: the lush green trees stood unchanged on ash / ice / ruin floors. Each theme
+// grades the painted tree once (offscreen, cached per sprite) so it belongs to its ground; the
+// team bows stay readable (blue vs red). No `ctx.filter` support (Safari) = untinted, as before.
+const TREE_GRADE: Readonly<Record<string, string>> = {
+  volcanic: 'saturate(0.5) brightness(0.78) sepia(0.3) contrast(1.05)',
+  snowy: 'saturate(0.7) brightness(1.1) hue-rotate(16deg)',
+  ruins: 'saturate(0.68) brightness(0.92)',
+  rocky: 'saturate(0.82) brightness(0.93)'
+}
+let treeTheme = ''
+/** Set the arena theme the trees are graded for (the static bake key already includes it). */
+export const setTowerTheme = (theme: string): void => { treeTheme = theme }
+const graded = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+const gradedSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanvas | null => {
+  const grade = TREE_GRADE[treeTheme]
+  if (!grade || name.endsWith('Felled') || !atlas) return null
+  const key = `${name}|${treeTheme}`
+  const hit = graded.get(key)
+  if (hit) return hit
+  const s = PAINTED_TOWERS?.sprites[name]
+  if (!s) return null
+  let c: HTMLCanvasElement | OffscreenCanvas
+  if (typeof OffscreenCanvas !== 'undefined') c = new OffscreenCanvas(s.w, s.h)
+  else { c = document.createElement('canvas'); c.width = s.w; c.height = s.h }
+  const g = c.getContext('2d') as CanvasRenderingContext2D | null
+  if (!g || !('filter' in g)) return null
+  g.filter = grade
+  g.drawImage(atlas, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h)
+  graded.set(key, c)
+  return c
+}
+
 /** White silhouettes for the hit flash, baked lazily once per sprite. */
 const flashSprites = new Map<PaintedTowerName, HTMLCanvasElement | OffscreenCanvas>()
 
@@ -146,7 +178,9 @@ export const drawPaintedTower = (
   const ks = stage === 3 ? k * FELLED_STUMP_SCALE : k
   const dx = gx - s.gx * ks
   const dy = gy - s.gy * ks
-  ctx.drawImage(atlas, s.x, s.y, s.w, s.h, dx, dy, s.w * ks, s.h * ks)
+  const tinted = gradedSprite(name)
+  if (tinted) ctx.drawImage(tinted as CanvasImageSource, dx, dy, s.w * ks, s.h * ks)
+  else ctx.drawImage(atlas, s.x, s.y, s.w, s.h, dx, dy, s.w * ks, s.h * ks)
   if (flash > 0.05) {
     const f = flashSprite(name)
     if (f) {

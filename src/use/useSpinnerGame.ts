@@ -62,7 +62,7 @@ import { BALLOON_HP, balloonCount, drawBalloonHp, drawBalloonHpNumber, newBalloo
 import { preloadBalloonArt } from '@/use/balloonArt'
 import { BALLOON_FX_CAP, createBalloonPopFx, drawBalloonPopFx, resetBalloonPopFx, tickBalloonPopFx, type BalloonPopFx } from '@/use/balloonPopFx'
 import { newSlotOn, BALLOON_POP_SFX } from '@/audio/audioVersions'
-import { drawPaintedTower, towerArtMaxScale, preloadTowerArt, towerArtRevision, towerDamageStage } from '@/use/towerArt'
+import { setTowerTheme, drawPaintedTower, towerArtMaxScale, preloadTowerArt, towerArtRevision, towerDamageStage } from '@/use/towerArt'
 import { matchRng, seedMatchRng, seedMatchRngRandom, currentMatchSeed, createRng, GAMEPLAY_RNG_SALT } from '@/use/useDeterministicRng'
 import { currentPvpRole } from '@/use/usePVP'
 import { saveDataVersion } from '@/use/useSaveStatus'
@@ -5567,6 +5567,11 @@ export const useSpinnerGame = () => {
       })
     }
 
+    // #Consistency-7: tree HP gauges ride ABOVE the smashers and their balloons (a spawn row sits
+    // right at each tree, and the plate used to vanish under the balloons / overlap the disc).
+    // The SAME gauge a smasher shows, on the side of the tree that bulges into the arena.
+    if (!CLEAN_FEED || CLEAN_HP_RINGS) for (const t of towers) if (t.hp > 0) renderTowerGauge(ctx, t)
+
     // Floating damage numbers.
     //
     // The digits themselves are already gone in a clean feed (the recorder
@@ -5883,6 +5888,7 @@ export const useSpinnerGame = () => {
     // patches and the theme's floor decor. No radial gradients or blur (perf
     // rule): flat fills + alpha shapes only.
     const artTheme = arenaTheme()
+    setTowerTheme(artTheme)
     const look = THEME_LOOK[artTheme]
     const pal = look.floor
     // A layout may retint the plain meadow clearing (snow, autumn, marsh …);
@@ -6082,9 +6088,6 @@ export const useSpinnerGame = () => {
         }
         ctx.restore()
       }
-      // HP — the SAME gauge a smasher shows, on the side of the tree that
-      // bulges into the arena (the rest is set into the wall).
-      if (!CLEAN_FEED || CLEAN_HP_RINGS) renderTowerGauge(ctx, t)
     }
     for (const d of towerDebris) {
       ctx.save()

@@ -358,15 +358,39 @@ export const TERRAIN_FEATURE_DRAW = {
   log: drawLog
 }
 
+// #Consistency-4/-5: the painted green leaf arrows and golden honey are woodland art. On other
+// themes they are hue-graded (once, in the static bake) so they belong to the ground: ember
+// arrows + tar on volcanic, icy arrows + blue-white "frost gel" on snowy, muted on ruins/rocky.
+const ARROW_GRADE: Readonly<Partial<Record<ArenaTheme, string>>> = {
+  volcanic: 'hue-rotate(-92deg) saturate(1.15) brightness(1.05)',
+  snowy: 'hue-rotate(78deg) saturate(0.8) brightness(1.15)',
+  ruins: 'hue-rotate(-28deg) saturate(0.7)',
+  rocky: 'saturate(0.7) brightness(0.95)',
+  bedroom: 'hue-rotate(-60deg) saturate(1.1)'
+}
+const HONEY_GRADE: Readonly<Partial<Record<ArenaTheme, string>>> = {
+  volcanic: 'hue-rotate(-12deg) saturate(0.7) brightness(0.45)',
+  snowy: 'hue-rotate(165deg) saturate(0.55) brightness(1.2)',
+  ruins: 'saturate(0.55) brightness(0.85)',
+  rocky: 'saturate(0.6) brightness(0.8)'
+}
+const withGrade = (ctx: Ctx, grade: string | undefined, draw: () => void): void => {
+  if (!grade || !('filter' in ctx)) return draw()
+  const prev = ctx.filter
+  ctx.filter = grade
+  draw()
+  ctx.filter = prev
+}
+
 /** Draws every feature of a layout, flat ground first, solids on top. Solids
  *  wear the arena theme's look (arenaThemes OBSTACLE_LOOK — visual only). */
 export const renderTerrainFeatures = (ctx: Ctx, t: TerrainLayout, theme: ArenaTheme = 'meadow'): void => {
   const D = TERRAIN_FEATURE_DRAW
   const look = OBSTACLE_LOOK[theme]
   for (const h of t.holes) (h.deep ? D.deepHole : D.mud)(ctx, h)
-  for (const h of t.honey) D.honey(ctx, h)
+  withGrade(ctx, HONEY_GRADE[theme], () => { for (const h of t.honey) D.honey(ctx, h) })
   for (const b of t.boosters) D.booster(ctx, b)
-  for (const a of t.arrows) D.leafArrow(ctx, a)
+  withGrade(ctx, ARROW_GRADE[theme], () => { for (const a of t.arrows) D.leafArrow(ctx, a) })
   for (const isl of t.islands) {
     const k = look[isl.kind]
     if (k === 'plain') D[isl.kind](ctx, isl)

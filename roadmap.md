@@ -299,9 +299,18 @@ Held back by the release gate (Humphrey, Boxa, Howler, Snapjaw, Leon, Antlo, Gro
   Do short simulations for whether pop-in and loading delays still happens afterwards, test 3-5 scenarios of a cold-loading a fresh player, cold-loading an progressed player and hot-loading, opening upgrade modal and other menus.
   DON'T START WITHOUT MY OWN INITIATED REQUEST TO START IT.
 
+## #Consistency-1 audit findings (2026-10-24, stages 3/14/27 viewed at 1280×720; 41/58/77 not yet)
 - [ ] #Consistency-1 Check all assets and game mechanics and visual style of the game for consistency. Does the game asset assembly makes sense in most of the situations? Are non-seemless texture cuts visible? How likely can this game be identified as an AI slop by human eyes without knowing about weather the games art is done by AI or not.
   write all found inconsistencies as new bullet points #Consistency-3...XXX
 - [x] #Consistency-2 (stump 0.4×; smasher deaths now burst cotton stuffing — `stuffingFx.ts`; stage 1 keeps the demo-pull hint until a shot is fired) The tree stump of the cut down/defeated tree model is ~2.5x as big as the tree log of the actual tree model. The explosion vfx doesnt fit well with the smashers, create an "Watte explosion"(german wording) vfx effect instead as the stuffed animals die, their insides are flowing out. On the first stage, show the drag indicator from the beginning until the player does a backwards drag on the first smasher as some are trying to drag from the players smasher to the enemies one.
+- [x] #Consistency-3 Volcanic arenas (stage 27): the player/enemy trees stay lush green with red bows on ash + lava. Give each theme a matching tree variant (ash/charred, frozen, autumn) or tint the crown to the floor palette.
+- [x] #Consistency-4 The bright-green leaf boost arrows sit on ash/lava floors (stage 27) and read as pasted-on; make arrow/booster skins per theme (ember arrows on volcanic, ice shards on snowy).
+- [x] #Consistency-5 Honey blobs on a volcanic floor are saturated yellow with a different outline weight than the neighbouring rocks; theme the hazard (molten gold / tar) or skip honey on non-woodland themes.
+- [x] #Consistency-6 Grey cratered boulders (stage 27) are a different render style (soft shading, no ink outline) from the outlined rock/crystal props around them — repaint with the same ink line and shading.
+- [x] #Consistency-7 Tree HP number plates collide with the nearest smasher/balloons (stage 14 top tree: plate under the bow overlaps the red balloons; bottom tree plate under the blue smasher). Keep plate and arc off the spawn rows.
+- [ ] #Consistency-8 Smasher scale vs props: smashers + balloons are ~1.5× the height of the pine trees in the forest wall, so the wall reads as a diorama and not as the same world; either shrink the border trees' apparent size cues or add a depth/blur step.
+- [ ] #Consistency-9 AI-slop tells to review: identical bow-tie tree faces on every stage, repeated flower pattern along the stage-14 hedge (tile repeat every ~1 arc), uniformly rounded toy-style smashers with different line weights between painted generations — normalise outline weight across the 48 sheets.
+- [ ] #Consistency-10 Remaining stages (41/58/77) and menus (upgrade modal, skins, league) still to be audited.
 
 
 - [ ] #Perf-1 The game showed 13 fps on this tablet device.
@@ -329,12 +338,5 @@ Held back by the release gate (Humphrey, Boxa, Howler, Snapjaw, Leon, Antlo, Gro
 - [x] Terrain features repainted in the flat toy style (booster speed pad + leaf arrow, stump, rock, pond, mushroom, mud, hole, honey) — old sheet in `art-sheets/painted/stale/terrain-features.v1-*.png`; `slice-painted.mjs --max-aspect 1.6` accepted the squat leaf
 - [ ] Wavedash leaderboard: the SDK init now finds `window.Wavedash` and failed SDK calls warn in the console (`[Wavedash leaderboard]`); NOT yet confirmed on a live `wavedash dev` — rebuild `wavedash-dist` first (`dev:wavedash` serves the last build)
 
-## #Consistency-1 audit findings (2026-10-24, stages 3/14/27 viewed at 1280×720; 41/58/77 not yet)
-- [ ] #Consistency-3 Volcanic arenas (stage 27): the player/enemy trees stay lush green with red bows on ash + lava. Give each theme a matching tree variant (ash/charred, frozen, autumn) or tint the crown to the floor palette.
-- [ ] #Consistency-4 The bright-green leaf boost arrows sit on ash/lava floors (stage 27) and read as pasted-on; make arrow/booster skins per theme (ember arrows on volcanic, ice shards on snowy).
-- [ ] #Consistency-5 Honey blobs on a volcanic floor are saturated yellow with a different outline weight than the neighbouring rocks; theme the hazard (molten gold / tar) or skip honey on non-woodland themes.
-- [ ] #Consistency-6 Grey cratered boulders (stage 27) are a different render style (soft shading, no ink outline) from the outlined rock/crystal props around them — repaint with the same ink line and shading.
-- [ ] #Consistency-7 Tree HP number plates collide with the nearest smasher/balloons (stage 14 top tree: plate under the bow overlaps the red balloons; bottom tree plate under the blue smasher). Keep plate and arc off the spawn rows.
-- [ ] #Consistency-8 Smasher scale vs props: smashers + balloons are ~1.5× the height of the pine trees in the forest wall, so the wall reads as a diorama and not as the same world; either shrink the border trees' apparent size cues or add a depth/blur step.
-- [ ] #Consistency-9 AI-slop tells to review: identical bow-tie tree faces on every stage, repeated flower pattern along the stage-14 hedge (tile repeat every ~1 arc), uniformly rounded toy-style smashers with different line weights between painted generations — normalise outline weight across the 48 sheets.
-- [ ] #Consistency-10 Remaining stages (41/58/77) and menus (upgrade modal, skins, league) still to be audited.
+
+  - 2026-10-25: #3 trees graded per theme (towerArt.ts TREE_GRADE, ctx.filter — Safari stays ungraded); #4/#5 arrows + honey hue-graded per theme (arenaTerrainDraw.ts); #6 pumice dome repainted brown (only cell 8 taken from a new Gemini sheet — a text-only repaint of the full sheet comes back side-on, so the old v1 sheet is kept in painted/terrain-obstacles-a.v1-cratered.png); #7 tree HP gauges drawn above smashers/balloons.
