@@ -107,6 +107,7 @@ import useTips from '@/use/useTips'
 import type { TipId } from '@/use/useTips'
 import TipBadge from '@/components/atoms/TipBadge.vue'
 import { useHint } from '@/use/useHint'
+import { warmMenusWhenIdle } from '@/use/menuWarm'
 import { useDragHintPlacement } from '@/use/useDragHintPlacement'
 import { useFitText } from '@/use/useFitText'
 import { useScreenshake } from '@/use/useScreenshake'
@@ -571,6 +572,8 @@ const rankedTeamWithUpgrades = (): SpinnerConfig[] => teamWithUpgrades(RANKED_TE
 // shot has actually been fired from it.
 const stage1PullLearned = ref(false)
 const stage1Guide = (): boolean => currentStageId.value === 1 && !stage1PullLearned.value
+// Team / upgrade modal art: warmed in quiet-network batches from the moment the arena is up.
+warmMenusWhenIdle()
 watch(phase, (p, prev) => {
   if (prev === 'player_turn' && p !== 'player_turn' && currentStageId.value === 1) stage1PullLearned.value = true
   if (p === 'player_turn') {

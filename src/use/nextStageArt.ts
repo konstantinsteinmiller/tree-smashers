@@ -77,3 +77,18 @@ export const warmNextStageArt = (): void => {
   }
   timer = window.setTimeout(tick, POLL_MS)
 }
+
+/** Resolves true once the network has been quiet (polls every `pollMs`, up to `maxPolls`), false if it never was. */
+export const whenNetworkQuiet = (pollMs = 600, maxPolls = 60): Promise<boolean> => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(false)
+  return new Promise(resolve => {
+    let polls = 0
+    const tick = (): void => {
+      const conn = (navigator as Navigator & { connection?: NetInfo }).connection
+      if (networkIsQuiet(performance.now(), recentResourceEnds(), document.visibilityState === 'hidden', conn)) return resolve(true)
+      if (++polls >= maxPolls) return resolve(false)
+      window.setTimeout(tick, pollMs)
+    }
+    tick()
+  })
+}
