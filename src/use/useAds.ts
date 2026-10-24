@@ -79,6 +79,23 @@ export const isRewardedReady = computed(() =>
   HAS_REWARDED_ADS && provider.isRewardedReady.value && !isRewardedThrottled.value
 )
 export const isInterstitialReady = computed(() => provider.isInterstitialReady.value)
+
+/**
+ * "Can this SESSION unlock things with a rewarded ad at all?" — the switch
+ * between the two prices of every ad-unlock placement (skins, premium
+ * smashers): true → the MovieIcon "Unlock" button (disabled while
+ * `isRewardedReady` is false: nothing loaded yet / throttled — try again);
+ * false → the coin price.
+ *
+ * False on a build without rewarded ads (`HAS_REWARDED_ADS`), and it turns
+ * false at runtime when the build loses ad support for good: the provider
+ * detected an ad blocker, or the portal said it can never serve a rewarded ad
+ * (`isRewardedSupported`, Playgama Bridge). It never flips on a mere no-fill
+ * — that is `isRewardedReady`'s job — so the price does not flicker.
+ */
+export const rewardedUnlocksAvailable = computed(() =>
+  HAS_REWARDED_ADS && !provider.isAdsBlocked.value && provider.isRewardedSupported?.value !== false
+)
 /** True once the active ad provider has detected a browser-extension
  *  ad-blocker (uBlock, AdGuard, Brave Shields, etc.). Drives the
  *  shared `AdsBlockedModal`. Always false on native builds. */

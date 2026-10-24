@@ -29,6 +29,7 @@ import { installSkillPort } from './helpers/skillsBuild'
 import { installBossPort } from './helpers/bosses100Build'
 import { SMASHER_LIST, smasherConfig, smasherLevelCost, type SmasherId } from '@/data/smasherCatalog'
 import type { SpinnerConfig } from '@/types/spinner'
+import { teamSlotsForStage } from '@/data/teamSize'
 
 const ON = process.env.BALANCE_SIM === '1'
 const MODE = process.env.BALANCE_MODE ?? 'ref'
@@ -101,7 +102,7 @@ const applyTuning = async () => {
   }
   const path = process.env.BALANCE_TUNING
   if (!path) return
-  const t = JSON.parse(readFileSync(path, 'utf8')) as Record<string, Record<string, object> | number>
+  const t = JSON.parse(readFileSync(path, 'utf8')) as Record<string, Record<string, object> | number | string>
   for (const key of Object.keys(tables)) {
     const over = t[key]
     if (over && typeof over === 'object') for (const [id, v] of Object.entries(over)) Object.assign(tables[key]![id] as object, v)
@@ -110,6 +111,19 @@ const applyTuning = async () => {
   if (typeof t.npcHp === 'number') camp.CAMPAIGN_NPC_TUNING.hpCurve = [[0, t.npcHp]]
   if (Array.isArray(t.npcHpCurve)) camp.CAMPAIGN_NPC_TUNING.hpCurve = t.npcHpCurve
   if (typeof t.npcDmg === 'number') camp.CAMPAIGN_NPC_TUNING.dmgMul = t.npcDmg
+  // Team size: the campaign offset of a lone NPC's solo boost (useSpinnerCampaign).
+  if (typeof t.soloHp === 'number') camp.CAMPAIGN_NPC_TUNING.soloHpMul = t.soloHp
+  if (typeof t.soloDmg === 'number') camp.CAMPAIGN_NPC_TUNING.soloDmgMul = t.soloDmg
+  if (Array.isArray(t.npcCountHp)) camp.CAMPAIGN_NPC_TUNING.countHpMul = t.npcCountHp
+  if (typeof t.bossHp === 'number') camp.CAMPAIGN_NPC_TUNING.bossHpMul = t.bossHp
+  // Team trees (arenaTerrain TOWER_TUNING): HP share, boss-tree multiplier,
+  // spiked front cover rule + recoil share.
+  const terr = await import('@/use/arenaTerrain')
+  if (typeof t.towerHp === 'number') terr.TOWER_TUNING.hpRatio = t.towerHp
+  if (typeof t.bossTowerHp === 'number') terr.TOWER_TUNING.bossHpMul = t.bossTowerHp
+  if (typeof t.ownBossTowerHp === 'number') terr.TOWER_TUNING.ownBossStageHpMul = t.ownBossTowerHp
+  if (typeof t.spikeRecoil === 'number') terr.TOWER_TUNING.spikeRecoil = t.spikeRecoil
+  if (t.towerSpikes === 'boss' || t.towerSpikes === 'all' || t.towerSpikes === 'none') terr.TOWER_TUNING.spikes = t.towerSpikes
 }
 
 let game: GameModule | null = null
@@ -130,11 +144,31 @@ interface Fight {
   seed: number
   terrain: boolean
   arena?: string
-  bouncers?: number
   powerups?: boolean
   layout?: number
   towers?: boolean
 }
+
+/** Scripted player: chance per launch to aim at the enemy tower while enemy
+ *  smashers still stand (BALANCE_TOWER_AIM, default 0.2; a "tower rush"
+ *  policy = 0.7 — how attractive the tower route is). */
+const TOWER_AIM = Number(process.env.BALANCE_TOWER_AIM ?? 0.2)
+
+/** How a fight ended (tower stats — the camp rows carry it as `m`). */
+interface FightStats {
+  /** 'tower' = a tower fell first, 'ko' = a team was knocked out, 'timeout'. */
+  end: 'tower' | 'ko' | 'timeout'
+  /** Remaining hp fraction of the enemy (npc) / own (player) tower, -1 = none. */
+  nTower: number
+  pTower: number
+  /** Scripted-player launches in the whole fight / until the enemy tower fell (-1). */
+  launches: number
+  nFellAt: number
+  frames: number
+  /** Enemy tower max hp over the enemy team's max hp at spawn. */
+  towerRatio: number
+}
+let lastStats: FightStats | null = null
 
 /** 1 = the scripted player side won, 0 = lost, 0.5 = timeout. */
 const battle = async (f: Fight): Promise<number> => {
@@ -143,7 +177,7 @@ const battle = async (f: Fight): Promise<number> => {
   const { seed } = f
   rs = seed * 7919 + 1
   const e = g.useSpinnerGame()
-  e.initGame(f.player.map(c => ({ ...c })), f.npc.map(c => ({ ...c })), false, (f.arena ?? 'default') as never, f.bouncers ?? 0, !!f.powerups, undefined, null, 'circle', {
+  e.initGame(f.player.map(c => ({ ...c })), f.npc.map(c => ({ ...c })), false, (f.arena ?? 'default') as never, !!f.powerups, undefined, null, 'circle', {
     seed,
     skillLoadout: [],
     enemySkillLoadout: [],
@@ -158,8 +192,14 @@ const battle = async (f: Fight): Promise<number> => {
   }
   const maxPull = g.MAX_PULL_DISTANCE
   let launchAt: number | null = null
-  for (let fr = 0; fr < 60 * 60 * 4; fr++) {
+  let launches = 0
+  let nFellAt = -1
+  let fr = 0
+  const tw0 = e.towers().find(t => t.side === 'npc')
+  const nTeamHp = e.npcBlades.value.reduce((s, b) => s + b.maxHp, 0)
+  for (; fr < 60 * 60 * 4; fr++) {
     frame()
+    if (nFellAt < 0 && e.towers().some(t => t.side === 'npc' && t.hp <= 0)) nFellAt = launches
     const p = e.phase.value
     if (p === 'game_over') break
     if (p !== 'player_turn') {
@@ -173,16 +213,30 @@ const battle = async (f: Fight): Promise<number> => {
     const tower = e.towers().find(t => t.side === 'npc' && t.hp > 0)
     if (mine.length && (theirs.length || tower)) {
       const me = mine[Math.floor(plan() * mine.length)]!
-      const t: { x: number; y: number } = tower && (plan() < 0.2 || !theirs.length) ? tower : theirs[Math.floor(plan() * theirs.length)]!
+      const t: { x: number; y: number } = tower && (plan() < TOWER_AIM || !theirs.length) ? tower : theirs[Math.floor(plan() * theirs.length)]!
       const ang = Math.atan2(t.y - me.y, t.x - me.x) + (plan() - 0.5) * 0.5
       const pull = (0.55 + plan() * 0.45) * maxPull
       e.beginDrag(me.x, me.y)
       e.updateDrag(me.x - Math.cos(ang) * pull, me.y - Math.sin(ang) * pull)
       e.releaseDrag()
+      launches++
     }
     launchAt = null
   }
   const r = e.gameResult.value
+  const tw = e.towers()
+  const nT = tw.find(t => t.side === 'npc')
+  const pT = tw.find(t => t.side === 'player')
+  const towerDown = tw.some(t => t.hp <= 0)
+  lastStats = {
+    end: r === null ? 'timeout' : towerDown ? 'tower' : 'ko',
+    nTower: nT ? +(nT.hp / nT.maxHp).toFixed(3) : -1,
+    pTower: pT ? +(pT.hp / pT.maxHp).toFixed(3) : -1,
+    launches,
+    nFellAt,
+    frames: fr,
+    towerRatio: tw0 && nTeamHp > 0 ? +(tw0.maxHp / nTeamHp).toFixed(3) : -1
+  }
   e.disposePhysics()
   return r === 'win' ? 1 : r === 'lose' ? 0 : 0.5
 }
@@ -191,36 +245,49 @@ const battle = async (f: Fight): Promise<number> => {
 // Coins a "typical" player has banked when reaching stage s (the income model
 // of tools/skills-sim/econ.mjs: every win, 0.2 losses per early stage / 0.6
 // later, 0.8 / 1.5 per boss, boss roulette EV ×1.141, one rewarded ad and one
-// big chest per three stages, daily rewards at 6 stages a day), spent evenly
-// on the two fielded smashers (cheapest level first).
-const campLevels = async (stage: number): Promise<[number, number]> => {
+// big chest per three stages, daily rewards at 6 stages a day), spent after
+// every stage on the smashers fielded at the next one (cheapest level first).
+//
+// Team size per stage (src/data/teamSize.ts), env BALANCE_TEAM:
+//   progression (default) — the default player: 1 smasher on stages 1–3
+//                 (slot 2 opens after winning stage 3), 2 on stages 4–10, then
+//                 BALANCE_TEAM_LATE (1 | 2 | 3, default 2) — the player's pick
+//   fixed2      — two smashers everywhere (the campaign before team sizes)
+const TEAM_MODE = process.env.BALANCE_TEAM ?? 'progression'
+const TEAM_LATE = Number(process.env.BALANCE_TEAM_LATE ?? 2)
+const campTeamSize = (stage: number): number =>
+  TEAM_MODE === 'fixed2' ? 2 : Math.min(teamSlotsForStage(stage), stage > 10 ? TEAM_LATE : 2)
+
+const campLevels = async (stage: number): Promise<number[]> => {
   const { getStageById } = await import('@/use/useSpinnerCampaign')
   let coins = 0
+  const lv = [1, 1, 1]
   for (let i = 1; i < stage; i++) {
     const st = getStageById(i)
     const early = i < 15
     const losses = st.isBoss ? (early ? 0.8 : 1.5) : (early ? 0.2 : 0.6)
     coins += st.rewardWin * (st.isBoss ? 1.141 : 1) + losses * st.rewardLose
     if (i >= 3) coins += (Math.max(125, Math.round((3 * st.rewardLose) / 5) * 5) + Math.max(100, Math.round((3 * st.rewardLose) / 5) * 5)) / 3 + 1450 / 7 / 6
+    const n = campTeamSize(i + 1)
+    for (;;) {
+      let k = 0
+      for (let j = 1; j < n; j++) if (lv[j]! < lv[k]!) k = j
+      const c = smasherLevelCost(lv[k]!)
+      if (c === null || c > coins) break
+      coins -= c
+      lv[k]!++
+    }
   }
-  const lv: [number, number] = [1, 1]
-  for (;;) {
-    const k = lv[0] <= lv[1] ? 0 : 1
-    const c = smasherLevelCost(lv[k])
-    if (c === null || c > coins) break
-    coins -= c
-    lv[k]++
-  }
-  return lv
+  return lv.slice(0, campTeamSize(stage))
 }
 
-/** Campaign rosters: the default team, and a "collector" team that fields
- *  the two newest unlocked smashers. */
-const ROSTERS: Record<string, (stage: number) => [SmasherId, SmasherId]> = {
-  default: () => ['bramble', 'thumper'],
+/** Campaign rosters: the default team (+ the next recruit, as the game pads a
+ *  third slot), and a "collector" team that fields the newest unlocked smashers. */
+const ROSTERS: Record<string, (stage: number) => SmasherId[]> = {
+  default: () => ['bramble', 'thumper', 'grizzle'],
   newest: (stage) => {
     const un = SMASHER_LIST.filter(s => s.unlockStage <= Math.min(stage, 100)).map(s => s.id)
-    return [un[un.length - 1]!, un[un.length - 2]!]
+    return [un[un.length - 1]!, un[un.length - 2]!, un[un.length - 3] ?? 'grizzle']
   }
 }
 
@@ -290,13 +357,12 @@ const jobs = (): Job[] => {
           // Past the base campaign the roster keeps its stage-100 picks.
           const ids = ROSTERS[roster]!(Math.min(stage, BASE_CAMPAIGN_LENGTH))
           return {
-            player: [smasherConfig(ids[0], lv[0]), smasherConfig(ids[1], lv[1])],
+            player: lv.map((l, k) => smasherConfig(ids[k]!, l)),
             npc: stageEnemyConfigs(st),
             seed: 60000 + stage * 17 + s,
             terrain: true,
             layout: layoutForStage(stage),
             arena: st.arenaType ?? 'default',
-            bouncers: st.bouncers ?? 0,
             powerups: stage >= 2,
             towers: stage >= TOWERS_FROM_STAGE
           }
@@ -312,18 +378,26 @@ describe.skipIf(!ON)('balance sim', () => {
     const [si, sn] = (process.env.BALANCE_SHARD ?? '0/1').split('/').map(Number) as [number, number]
     const all = jobs()
     const mine = all.filter((_, i) => i % sn === si)
-    const rows: { key: Record<string, unknown>; r: number }[] = []
+    const rows: { key: Record<string, unknown>; r: number; m?: FightStats & { boss?: boolean } }[] = []
     const extra: Record<string, unknown> = {
       arche: Object.fromEntries(SMASHER_LIST.map(d => [d.id, `${d.archetype.top}/${d.archetype.bottom}`]))
     }
     if (MODE === 'camp' && si === 0) {
-      const lv: Record<number, [number, number]> = {}
+      const lv: Record<number, number[]> = {}
       for (const s of parseStages(process.env.BALANCE_STAGES ?? '1-100,110,120,130,140,150,160,170,180,190,200')) {
         lv[s] = await campLevels(s)
       }
       extra.levels = lv
     }
-    for (const j of mine) rows.push({ key: j.key, r: await battle(await j.fight()) })
+    for (const j of mine) {
+      const f = await j.fight()
+      const r = await battle(f)
+      // Camp rows carry the fight's end stats (tower kill vs knock-out).
+      if (MODE === 'camp' && lastStats) {
+        const { getStageById } = await import('@/use/useSpinnerCampaign')
+        rows.push({ key: j.key, r, m: { ...lastStats, boss: !!getStageById(j.key.stage as number).isBoss } })
+      } else rows.push({ key: j.key, r })
+    }
     if (process.env.BALANCE_OUT) writeFileSync(process.env.BALANCE_OUT, JSON.stringify({ mode: MODE, rows, ...extra }))
     expect(rows.length).toBe(mine.length)
   }, 24 * 3_600_000)

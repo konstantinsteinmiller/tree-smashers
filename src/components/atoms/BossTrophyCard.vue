@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import FRibbon from '@/components/atoms/FRibbon.vue'
 import { modelImgPath } from '@/use/useModels'
 
 /**
@@ -22,7 +23,8 @@ const { t } = useI18n()
     class="gap-2 sm:gap-3"
     :data-boss-trophy="skinId"
   )
-    div.roulette-grant-tag.trophy-tag.ui-tag.ui-tag--plum.font-black.uppercase.game-text(
+    FRibbon.roulette-grant-tag.trophy-tag.uppercase(
+      tone="plum"
       class="text-xs sm:text-sm tracking-[0.04em]"
     ) {{ t('trophySkin.label') }}
     div.trophy-glow.flex.flex-col.items-center.gap-2
@@ -49,9 +51,6 @@ const { t } = useI18n()
   isolation: isolate
 
 .trophy-tag
-  color: var(--color-ice-50)
-  text-shadow: var(--ui-stroke-sm)
-  padding: 0.2em 0.9em 0.3em
   animation: trophy-tag-in 0.45s cubic-bezier(0.2, 1.5, 0.4, 1) 0.2s both
 
 .trophy-star
@@ -64,7 +63,7 @@ const { t } = useI18n()
   margin-top: -1.25rem
   z-index: -1
   background-color: var(--color-sun-400)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   clip-path: polygon(50% 0, 60% 30%, 93% 21%, 72% 46%, 100% 64%, 66% 66%, 71% 100%, 50% 77%, 29% 100%, 34% 66%, 0 64%, 28% 46%, 7% 21%, 40% 30%)
   animation: trophy-star-turn 10s linear infinite
   @media (min-width: 640px)

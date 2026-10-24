@@ -186,10 +186,40 @@ const bootstrap = async () => {
     startLoading()
   } else if (isWaveDash) {
     try {
-      const sdk = await (window as any).WavedashJS
+      // The host injects the SDK as `window.Wavedash` (docs.wavedash.com/sdk/setup:
+      // `init()` is REQUIRED and synchronous) and, on older wrappers, as a
+      // `window.WavedashJS` promise. Reading only the old name left the SDK
+      // un-initialised on the current host, so every leaderboard upload failed.
+      const w = window as any
+      const sdk = await (w.Wavedash ?? w.WavedashJS)
       if (sdk) await sdk.init({ debug: isDebug.value })
     } catch (e) {
       console.warn('[Wavedash] SDK init failed:', e)
+    }
+    // The env LITERAL, not `isWaveDash`: the dynamic import below must fold
+    // away in every other build (main.ts is excluded from obfuscation, so the
+    // literal survives to Rollup's dead-branch pass).
+    if (import.meta.env.VITE_APP_WAVEDASH === 'true') {
+      // The host injects the SDK as `window.Wavedash` (current docs) and also
+      // as `window.WavedashJS` (older wrappers; a Promise there). `await`
+      // handles both shapes.
+      const wavedashSdk = async (): Promise<any> => {
+        const w = window as any
+        return (await (w.Wavedash ?? w.WavedashJS)) ?? null
+      }
+      // Our own board's rows carry the Wavedash username — every Wavedash
+      // player is signed in, so this is the name they are known by there.
+      setSdkNameSource(async () => {
+        const sdk = await wavedashSdk()
+        const name = sdk?.getUsername?.()
+        return typeof name === 'string' ? name : null
+      })
+      // The Wavedash leaderboard: score mirror + the modal's Wavedash tab.
+      // Not awaited — no run can be reported before the arena mounts, and the
+      // modal's tab appears reactively once this lands.
+      void import('@/platforms/wavedash/wavedashLeaderboard')
+        .then(({ installWavedashLeaderboard }) => installWavedashLeaderboard(wavedashSdk))
+        .catch((e) => console.warn('[Wavedash] leaderboard unavailable:', e))
     }
   }
 
@@ -614,7 +644,8 @@ const bootstrap = async () => {
   // Signal to Wavedash that the game is fully loaded and ready
   if (isWaveDash) {
     try {
-      const sdk = await (window as any).WavedashJS
+      const w = window as any
+      const sdk = await (w.Wavedash ?? w.WavedashJS)
       if (sdk) {
         sdk.updateLoadProgressZeroToOne?.(1)
         sdk.readyForEvents?.()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { movieIconSrc } from '@/use/badgeIconArt'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
@@ -67,7 +68,7 @@ const watchAd = async () => {
   )
     span.game-text(v-if="isNative" aria-hidden="true") {{ t('spinner.ad') }}
     img(
-      :src="prependBaseUrl('images/icons/movie_128x96.webp')"
+      :src="movieIconSrc()"
       alt=""
       aria-hidden="true"
       draggable="false"

@@ -3,5 +3,5 @@
 // PAINTED_TERRAIN_KINDS order, each feature centred with its radius = rFrac of
 // a cell; directional kinds point to +x (angle 0).
 export const PAINTED_TERRAIN: { file: string, cell: number, rFrac: number, v: string } | null =
-  { file: "features_960x960.webp", cell: 320, rFrac: 0.36, v: '9e0cd3e4' }
+  { file: "features_960x960.webp", cell: 320, rFrac: 0.36, v: '4a5024d4' }
 export const PAINTED_TERRAIN_KINDS = ["stump","rock","pond","mushroom","mud","deepHole","honey","booster","leafArrow"] as const

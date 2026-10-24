@@ -11,11 +11,20 @@
 //    context transform);
 //  - with `?art=procedural` (A/B).
 // Islands and mushroom caps keep the procedural flat drop shadow under the
-// sprite (the painting has none). Logs stay procedural (variable length).
+// sprite (the painting has none). Logs (variable-length capsules) draw from
+// a 3-slice strip (PAINTED_LOG: bark cap | tileable middle | cut-face cap)
+// along the capsule axis, same fallbacks.
 // Drawn once into the static arena buffer, never per frame.
 import { prependBaseUrl } from '@/utils/function'
 import { TERRAIN_FEATURE_DRAW } from '@/use/arenaTerrainDraw'
 import { PAINTED_TERRAIN, PAINTED_TERRAIN_KINDS } from '@/use/paintedTerrain'
+import { PAINTED_LOG, type PaintedLogMeta } from '@/use/paintedLog'
+import type { TerrainLog } from '@/use/arenaTerrain'
+import { OBSTACLE_DRAW } from '@/use/arenaObstacleDraw'
+import { OBSTACLE_LOOKS_A, OBSTACLE_LOOKS_B, type DiscLook } from '@/use/arenaThemes'
+import { PAINTED_OBSTACLES_A } from '@/use/paintedObstaclesA'
+import { PAINTED_OBSTACLES_B } from '@/use/paintedObstaclesB'
+import { installDecorArt } from '@/use/arenaDecorArt'
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 type Kind = typeof PAINTED_TERRAIN_KINDS[number]
@@ -30,12 +39,122 @@ export const terrainArtRevision = (): number => revision
 
 let atlas: HTMLImageElement | null = null
 
+const canPaint = (): boolean => {
+  if (typeof Image === 'undefined' || typeof location === 'undefined') return false
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return false
+  return !/[?&]art=procedural(?:&|$)/.test(location.search)
+}
+
+/**
+ * Draws a log capsule from the 3-slice strip: caps at the capsule's rounded
+ * ends, the middle repeated a whole number of times (each tile stretched a
+ * little) between them. Exported for tests; `img` is the loaded strip.
+ */
+export const drawPaintedLog = (ctx: Ctx, l: TerrainLog, img: CanvasImageSource, m: PaintedLogMeta): void => {
+  const r = l.radius
+  const len = Math.hypot(l.bx - l.ax, l.by - l.ay)
+  const k = (2 * r) / m.body
+  const h = m.h * k
+  const y0 = -r - m.top * k
+  const total = len + 2 * r
+  let lw = m.left[1] * k
+  let rw = m.right[1] * k
+  if (lw + rw > total) {
+    const f = total / (lw + rw)
+    lw *= f
+    rw *= f
+  }
+  ctx.save()
+  ctx.translate(l.ax, l.ay)
+  ctx.rotate(Math.atan2(l.by - l.ay, l.bx - l.ax))
+  // flat drop shadow (the painting has none)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
+  ctx.beginPath()
+  ctx.arc(3, 4, r, Math.PI / 2, Math.PI * 1.5)
+  ctx.arc(len + 3, 4, r, -Math.PI / 2, Math.PI / 2)
+  ctx.closePath()
+  ctx.fill()
+  const x0 = -r + lw
+  const span = total - lw - rw
+  if (span > 0) {
+    const n = Math.max(1, Math.round(span / (m.mid[1] * k)))
+    const tw = span / n
+    // 0.5 unit overlap hides hairline seams between tiles and against the caps
+    for (let i = 0; i < n; i++) ctx.drawImage(img, m.mid[0], 0, m.mid[1], m.h, x0 + i * tw - 0.5, y0, tw + 1, h)
+  }
+  ctx.drawImage(img, m.left[0], 0, m.left[1], m.h, -r, y0, lw, h)
+  ctx.drawImage(img, m.right[0], 0, m.right[1], m.h, len + r - rw, y0, rw, h)
+  ctx.restore()
+}
+
+let logImg: HTMLImageElement | null = null
+
+const installLog = () => {
+  const m = PAINTED_LOG
+  if (!m || !canPaint()) return
+  const img = new Image()
+  img.decoding = 'async'
+  img.onload = () => {
+    logImg = img
+    revision++
+  }
+  img.src = prependBaseUrl(`images/terrain/${m.file}?v=${m.v}`)
+  const D = TERRAIN_FEATURE_DRAW
+  const vector = D.log
+  D.log = (ctx: Ctx, l: TerrainLog) => {
+    const t = ctx.getTransform()
+    const deviceScale = Math.hypot(t.a, t.b) || 1
+    if (!logImg || 2 * l.radius * deviceScale > m.body) {
+      vector(ctx, l)
+      return
+    }
+    drawPaintedLog(ctx, l, logImg, m)
+  }
+}
+
+/** Themed obstacle looks (igloo, broken column, toy drum …): two 3 × 3
+ *  atlases, same rules as the feature atlas (shadow under, vector fallback
+ *  until loaded / above the sprite's resolution / ?art=procedural). */
+const installObstacles = (meta: typeof PAINTED_OBSTACLES_A, looks: readonly DiscLook[]) => {
+  if (!meta || !canPaint()) return
+  let img: HTMLImageElement | null = null
+  const el = new Image()
+  el.decoding = 'async'
+  el.onload = () => {
+    img = el
+    revision++
+  }
+  el.src = prependBaseUrl(`images/terrain/${meta.file}?v=${meta.v}`)
+  const spriteR = meta.cell * meta.rFrac
+  looks.forEach((look, i) => {
+    const vector = OBSTACLE_DRAW[look]
+    OBSTACLE_DRAW[look] = (ctx, f) => {
+      const t = ctx.getTransform()
+      const deviceScale = Math.hypot(t.a, t.b) || 1
+      if (!img || f.radius * deviceScale > spriteR) {
+        vector(ctx, f)
+        return
+      }
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
+      ctx.beginPath()
+      ctx.arc(f.x + 3, f.y + 4, f.radius, 0, Math.PI * 2)
+      ctx.fill()
+      const k = f.radius / spriteR
+      const c = meta.cell
+      ctx.drawImage(img, (i % 3) * c, Math.floor(i / 3) * c, c, c, f.x - c / 2 * k, f.y - c / 2 * k, c * k, c * k)
+    }
+  })
+}
+
 const install = () => {
+  // Floor decor atlas (arenaDecorArt): shares this revision, so every static
+  // bake keyed on terrainArtRevision() re-bakes when it lands.
+  installDecorArt(() => { revision++ })
+  installLog()
+  installObstacles(PAINTED_OBSTACLES_A, OBSTACLE_LOOKS_A)
+  installObstacles(PAINTED_OBSTACLES_B, OBSTACLE_LOOKS_B)
   const meta = PAINTED_TERRAIN
-  if (!meta) return
-  if (typeof Image === 'undefined' || typeof location === 'undefined') return
-  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) return
-  if (/[?&]art=procedural(?:&|$)/.test(location.search)) return
+  if (!meta || !canPaint()) return
   const img = new Image()
   img.decoding = 'async'
   img.onload = () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { movieIconSrc } from '@/use/badgeIconArt'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IconCoin from '@/components/icons/IconCoin.vue'
@@ -95,9 +96,9 @@ const claim = async () => {
         //- Ad disclosure (native builds only — Families policy)
         span.game-text.leading-tight(v-if="isNative" class="text-[10px] sm:text-xs") {{ t('spinner.ad') }}
         img.object-contain(
-          :src="prependBaseUrl('images/icons/movie_128x96.webp')"
+          :src="movieIconSrc()"
           alt=""
-          class="h-5 w-5 sm:h-6 sm:w-6"
+          class="h-[1.5625rem] w-[1.5625rem] sm:h-[1.875rem] sm:w-[1.875rem] -my-1 shrink-0"
         )
         span.font-black.game-text.leading-tight(class="text-lg sm:text-xl") {{ WIN_AD_MULTIPLIER }}x
         IconCoin.inline(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-300")

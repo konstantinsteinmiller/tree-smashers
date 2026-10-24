@@ -10,7 +10,9 @@ import type { SpinnerConfig } from '@/types/spinner'
 import {
   applyGround, buildTerrainLayout, BOOSTER_CAP_RATIO, BOOSTER_MAX_PER_LAUNCH, BOOSTER_MUL, createTower,
   decideResult, layoutForSeed, layoutForStage, MUD_KEEP, newGroundState, TERRAIN_LAYOUT_COUNT,
-  terrainCircles, TOWER_RADIUS_MUL, TOWER_Y_RATIO, type GroundEffect
+  terrainCircles, TOWER_RADIUS_MUL, TOWER_Y_RATIO, type GroundEffect,
+  BOSS_STAGE_OWN_TREE_HP_MUL, BOSS_TOWER_HP_MUL, onTowerFront, TOWER_HP_RATIO, TOWER_SPIKE_RECOIL, TOWER_SPIKES, TOWER_TUNING, towerFrontAngle,
+  towerSpecFor, towerSpikeRecoil
 } from '@/use/arenaTerrain'
 
 const ARENA_R = 200
@@ -74,8 +76,9 @@ describe('terrain layouts', () => {
   for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
     it(`layout ${id}: features stay inside the arena, clear of spawns, towers and each other`, () => {
       const t = buildTerrainLayout(id)
+      // an empty clearing is fine: obstacles are rare and some layouts are
+      // obstacle-only by design (solidBudgetFor)
       const feats = terrainCircles(t)
-      expect(feats.length).toBeGreaterThan(0)
       for (const f of feats) {
         expect(Math.hypot(f.x, f.y) + f.radius).toBeLessThan(ARENA_R - 8)
         for (const s of spawnDiscs()) expect(overlaps(f, s), `feature ${JSON.stringify(f)} vs spawn ${JSON.stringify(s)}`).toBe(false)
@@ -189,12 +192,66 @@ describe('tower result rule', () => {
     expect(decideResult(0, 0, false, false)).toBe('win') // campaign: player wins ties
   })
 
-  it('tower HP is 60% of the team max HP', () => {
+  it('tower HP is TOWER_HP_RATIO of the team max HP (a bare tree)', () => {
     const t = createTower('npc', ARENA_R, 27, 500)
-    expect(t.maxHp).toBe(300)
-    expect(t.hp).toBe(300)
+    expect(t.maxHp).toBe(Math.round(500 * TOWER_HP_RATIO))
+    expect(t.hp).toBe(t.maxHp)
     expect(t.y).toBeLessThan(0)
     expect(t.radius).toBe(Math.round(27 * TOWER_RADIUS_MUL))
+    expect(t.spiked).toBe(false)
+  })
+})
+
+describe('spiked trees (boss trees: extra HP + the thorny front cover)', () => {
+  it("ships the owner's numbers: 15 % recoil, spikes on boss trees, a tougher boss tree", () => {
+    expect(TOWER_SPIKE_RECOIL).toBe(0.15)
+    expect(TOWER_SPIKES).toBe('boss')
+    // Every tree tougher than the old 0.6 share; the boss tree ≥ 1.6 × the old one.
+    expect(TOWER_HP_RATIO).toBeGreaterThan(0.6)
+    expect(TOWER_HP_RATIO * BOSS_TOWER_HP_MUL).toBeGreaterThanOrEqual(0.6 * 1.6)
+    expect(TOWER_TUNING).toEqual({ hpRatio: TOWER_HP_RATIO, bossHpMul: BOSS_TOWER_HP_MUL, ownBossStageHpMul: BOSS_STAGE_OWN_TREE_HP_MUL, spikeRecoil: TOWER_SPIKE_RECOIL, spikes: TOWER_SPIKES })
+  })
+
+  it('a boss tree gets the HP multiplier and the spikes; every other tree stays bare', () => {
+    expect(towerSpecFor('plain')).toEqual({ hpMul: 1, spiked: false })
+    expect(towerSpecFor('bossFoe')).toEqual({ hpMul: BOSS_STAGE_OWN_TREE_HP_MUL, spiked: false })
+    expect(towerSpecFor('boss')).toEqual({ hpMul: BOSS_TOWER_HP_MUL, spiked: true })
+    const boss = createTower('npc', ARENA_R, 27, 500, 'circle', towerSpecFor('boss'))
+    expect(boss.maxHp).toBe(Math.round(500 * TOWER_HP_RATIO * BOSS_TOWER_HP_MUL))
+    expect(boss.spiked).toBe(true)
+  })
+
+  it("recoil = 15 % of the plain impact, only on a spiked tree's front", () => {
+    const t = createTower('npc', ARENA_R, 28, 500, 'circle', { spiked: true })
+    const f = towerFrontAngle(t)
+    expect(f).toBeCloseTo(Math.PI / 2, 9) // the top tree faces down, into the clearing
+    expect(towerSpikeRecoil(t, Math.cos(f), Math.sin(f), 40)).toBeCloseTo(6, 9)
+    // Edge of the reachable arc (45 % of the outline) still counts.
+    const edge = f + Math.PI * 0.44
+    expect(onTowerFront(t, Math.cos(edge), Math.sin(edge))).toBe(true)
+    // Behind the wall: never.
+    expect(towerSpikeRecoil(t, Math.cos(-f), Math.sin(-f), 40)).toBe(0)
+    expect(towerSpikeRecoil({ ...t, spiked: false }, Math.cos(f), Math.sin(f), 40)).toBe(0)
+    expect(towerSpikeRecoil(t, Math.cos(f), Math.sin(f), 0)).toBe(0)
+    const p = createTower('player', ARENA_R, 28, 500, 'circle', { spiked: true })
+    expect(towerFrontAngle(p)).toBeCloseTo(-Math.PI / 2, 9)
+  })
+
+  it('every contact a smasher can make with a tree is on its front', () => {
+    // Blade discs touching the tree anywhere along its outline, kept only
+    // where the blade centre is inside the arena: all of them are "front".
+    for (const shape of ['circle'] as const) {
+      for (const side of ['player', 'npc'] as const) {
+        const t = createTower(side, ARENA_R, BLADE_R, 500, shape, { spiked: true })
+        for (let i = 0; i < 360; i++) {
+          const a = (i / 360) * Math.PI * 2
+          const bx = t.x + Math.cos(a) * (t.radius + BLADE_R)
+          const by = t.y + Math.sin(a) * (t.radius + BLADE_R)
+          if (Math.hypot(bx, by) > ARENA_R - BLADE_R) continue
+          expect(onTowerFront(t, Math.cos(a), Math.sin(a)), `${side} ${i}°`).toBe(true)
+        }
+      }
+    }
   })
 })
 
@@ -262,7 +319,7 @@ const start = async (layout: number, towers: boolean, seed = 0x7e44a1, mathSeed 
   rs = mathSeed
   frameClock = 1000
   const e = game.useSpinnerGame()
-  e.initGame(PLAYER, ENEMY, false, 'default', 0, false, undefined, null, 'circle',
+  e.initGame(PLAYER, ENEMY, false, 'default', false, undefined, null, 'circle',
     { seed, firstTurn: 'player', terrain: { layout, towers } })
   e.startMatch()
   return { game, e }
@@ -329,13 +386,14 @@ const playBattle = async (layout: number, mathSeed: number) => {
 }
 
 describe('engine — terrain + towers', () => {
-  it('builds the layout (islands as bouncers) and two towers at 60% team HP', async () => {
-    const { e } = await start(2, true)
-    expect(e.terrainLayout()?.id).toBe(2)
-    expect(e.bouncers().filter(b => b.island !== undefined)).toHaveLength(2)
+  it('builds the layout (two islands) and two bare towers at TOWER_HP_RATIO team HP', async () => {
+    const { e } = await start(8, true) // a two-obstacle stage (solidBudgetFor)
+    expect(e.terrainLayout()?.id).toBe(8)
+    expect(e.terrainLayout()?.islands).toHaveLength(2)
     const pHp = e.playerBlades.value.reduce((s, b) => s + b.maxHp, 0)
     const p = e.towers().find(t => t.side === 'player')!
-    expect(p.maxHp).toBe(Math.round(pHp * 0.6))
+    expect(p.maxHp).toBe(Math.round(pHp * TOWER_HP_RATIO))
+    expect(e.towers().some(t => t.spiked)).toBe(false)
     expect(p.y).toBeGreaterThan(0)
     e.disposePhysics()
   })
@@ -344,10 +402,9 @@ describe('engine — terrain + towers', () => {
     localStorage.clear()
     const game = await loadGame()
     const e = game.useSpinnerGame()
-    e.initGame(PLAYER, ENEMY, false, 'default', 0, false, undefined, null, 'circle', { seed: 3 })
+    e.initGame(PLAYER, ENEMY, false, 'default', false, undefined, null, 'circle', { seed: 3 })
     expect(e.terrainLayout()).toBeNull()
     expect(e.towers()).toHaveLength(0)
-    expect(e.bouncers()).toHaveLength(0)
     e.disposePhysics()
   })
 
@@ -426,5 +483,67 @@ describe('engine — terrain + towers', () => {
       expect(runUntil(e, () => e.phase.value !== 'player_launched' && e.phase.value !== 'player_turn', 60 * 20)).toBeGreaterThan(0)
     }
     e.disposePhysics()
+  })
+})
+
+describe('engine — boss stage: the spiked boss tree', () => {
+  const BOSS = [{ ...cfg('triangle', 'tanky', 10), isBoss: true }]
+
+  const startBoss = async (mathSeed = 5) => {
+    localStorage.clear()
+    const game = await loadGame()
+    const terr = await import('@/use/arenaTerrain') // the engine's own module instance
+    rs = mathSeed
+    frameClock = 1000
+    const e = game.useSpinnerGame()
+    e.initGame(PLAYER, BOSS, false, 'default', false, undefined, null, 'circle',
+      { seed: 0x5eed, firstTurn: 'player', terrain: { layout: 0, towers: true } })
+    e.startMatch()
+    return { game, e, terr }
+  }
+
+  it('the boss tree gets the boss HP multiplier and the spikes; the player tree stays bare', async () => {
+    const { e, terr } = await startBoss()
+    expect(e.isBossStage.value).toBe(true)
+    const npcHp = e.npcBlades.value.reduce((s, b) => s + b.maxHp, 0)
+    const pHp = e.playerBlades.value.reduce((s, b) => s + b.maxHp, 0)
+    const boss = e.towers().find(t => t.side === 'npc')!
+    const mine = e.towers().find(t => t.side === 'player')!
+    expect(boss.spiked).toBe(true)
+    expect(boss.maxHp).toBe(Math.round(npcHp * terr.TOWER_TUNING.hpRatio * terr.TOWER_TUNING.bossHpMul))
+    expect(mine.spiked).toBe(false)
+    expect(mine.maxHp).toBe(Math.round(pHp * terr.TOWER_TUNING.hpRatio * terr.TOWER_TUNING.ownBossStageHpMul))
+    e.disposePhysics()
+  })
+
+  const ramTheBossTree = async (mathSeed: number) => {
+    const { game, e, terr } = await startBoss(mathSeed)
+    runUntil(e, () => e.phase.value === 'player_turn')
+    const tree = e.towers().find(t => t.side === 'npc')!
+    // Clear the lane: the boss and the other player smasher out of the way.
+    e.npcBlades.value.forEach(b => { b.x = 150; b.y = 60 })
+    const [me, mate] = e.playerBlades.value
+    mate!.x = -150
+    mate!.y = 100
+    me!.x = 0
+    me!.y = -40
+    const tree0 = tree.hp
+    const me0 = me!.hp
+    fling(game, e, me!.id, tree.x, tree.y, 1)
+    runUntil(e, () => e.phase.value !== 'player_launched' && e.phase.value !== 'player_turn', 60 * 20)
+    const out = { dealt: tree0 - tree.hp, taken: me0 - me!.hp, hash: e.computeStateHash(), recoil: terr.TOWER_TUNING.spikeRecoil }
+    e.disposePhysics()
+    return out
+  }
+
+  it('ramming the spiked tree pricks the attacker for 15 % of the damage it dealt — deterministically', async () => {
+    const a = await ramTheBossTree(7)
+    expect(a.dealt).toBeGreaterThan(0)
+    expect(a.recoil).toBe(0.15)
+    expect(a.taken).toBeCloseTo(a.dealt * 0.15, 6)
+    const b = await ramTheBossTree(123_456)
+    expect(b.dealt).toBe(a.dealt)
+    expect(b.taken).toBe(a.taken)
+    expect(b.hash).toBe(a.hash)
   })
 })

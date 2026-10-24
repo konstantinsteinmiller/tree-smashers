@@ -116,7 +116,7 @@ const pick = (code: string) => {
     outline-offset: 2px
   &.is-selected
     background-color: var(--color-leaf-500)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     color: var(--color-ice-50)
     box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -4px 0 var(--color-leaf-700), 0 3px 0 var(--color-ink)
     text-shadow: var(--ui-stroke-sm)

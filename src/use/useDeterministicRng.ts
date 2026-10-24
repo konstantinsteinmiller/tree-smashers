@@ -49,7 +49,7 @@ export const matchRng = (): number => {
  * An INDEPENDENT mulberry32 stream with its own state.
  *
  * For systems that must replay identically without touching the shared match
- * stream above — the first-launch intro cutscene (`introFight.ts`) seeds one of
+ * stream above — the first-launch intro cutscene (`introRender.ts`) seeds one of
  * these, so running it can never shift the RNG sequence of the match that
  * follows it (or of a PvP peer).
  */
@@ -65,7 +65,7 @@ export const createRng = (seed: number): (() => number) => {
 
 /**
  * Salt for a seeded battle's AUX gameplay stream: `createRng(seed ^ salt)`.
- * `useSpinnerGame` draws NPC spawn jitter, bouncer placement, NPC AI picks and
+ * `useSpinnerGame` draws NPC spawn jitter, NPC AI picks and
  * split-child jitter from it when `initGame` got a seed (league battles), so
  * those rolls replay from the seed without shifting `matchRng()`'s draw order.
  */

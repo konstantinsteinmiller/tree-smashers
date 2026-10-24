@@ -51,3 +51,21 @@ export const fmtNum = (n: number, locale = 'en'): string =>
 /** 1.5 → "1.50" (en, digits 2) / "1,50" (de) — exactly `digits` decimals, like `toFixed`. */
 export const fmtFixed = (n: number, digits: number, locale = 'en'): string =>
   numberFormatFor(locale, digits).format(n)
+
+const GROUPED_FORMATS = new Map<string, Intl.NumberFormat>()
+
+/** 33883 → "33,883" (en) / "33.883" (de) / "33 883" (fr) — a whole number WITH
+ *  the locale's grouping, Latin digits (#UX1c: the win screen's rank badge). */
+export const fmtGrouped = (n: number, locale = 'en'): string => {
+  let nf = GROUPED_FORMATS.get(locale)
+  if (!nf) {
+    const opts: Intl.NumberFormatOptions = { maximumFractionDigits: 0, useGrouping: true, numberingSystem: 'latn' }
+    try {
+      nf = new Intl.NumberFormat(LANGUAGE_BY_CODE[locale]?.bcp47 ?? locale, opts)
+    } catch {
+      nf = new Intl.NumberFormat('en', opts)
+    }
+    GROUPED_FORMATS.set(locale, nf)
+  }
+  return nf.format(Math.round(n))
+}

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--
+  DEV-ONLY composite screens (#UX1c): the moments the arena only reaches deep
+  into a run — boss defeated, boss intro, win / lose result, the gift reveal,
+  a sample modal, the HUD coin pop + toast — mounted from the real components
+  so they can be screenshotted at phone / desktop sizes.
+
+    pnpm dev   →   http://localhost:5173/dev/ui-screens.html?screen=bossDefeated
+                   screens: bossDefeated · bossIntro (?model=) · win · lose · reveal · roulette ·
+                            modal · coinpop
+
+  Vite serves every .html under the root in dev, but a production build only
+  bundles index.html, so nothing reachable from here ships.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <base href="/">
+  <title>Tree Smashers — UI screens (dev)</title>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/dev/uiScreensPreview.ts"></script>
+</body>
+</html>

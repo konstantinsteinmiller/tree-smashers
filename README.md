@@ -12,12 +12,18 @@ WIP: [playable demo](https://konstantinsteinmiller.github.io/tree-smashers/)
 ## Game overview
 
 - **Smashers** — 12 unique plush animals (`src/data/smasherCatalog.ts`): hedgehog, rabbit, bear cub, beaver, ram, fox,
-  turtle, woodpecker, sloth, squirrel, owl and boar. Each has its own stat profile and 3 unique skills; levels 1–30 are
-  bought with coins, skill 2 unlocks at level 10, skill 3 at level 20. Roster state: `src/use/useSmashers.ts`.
+  turtle, woodpecker, sloth, squirrel, owl and boar. Each has its own stat profile and 3 unique skills; levels are
+  bought with coins with no cap (past 30 each level costs ×1.08 more on top of the quadratic curve and its stat gain
+  tapers; skill levels stop at 10; 9999 is only a corrupted-save ceiling), skill 2 unlocks at level 10, skill 3 at level 20. Roster state: `src/use/useSmashers.ts`.
 - **Skills** — every smasher skill runs on one of the 10 skill-engine effects (`src/use/skills/*`) with its own
   multipliers (`mods`), so similar skills have different strengths and weaknesses.
 - **Arenas** — 3 layouts repeating by stage (Mossy Glade, Mud Hollow, Twin Islands) with islands, speed boosters and
   pot holes, on top of the arena types (lava, ice, forest, boss).
+- **Team size** — 1, 2 or 3 smashers per side (`src/data/teamSize.ts`, state `src/use/useTeamSize.ts`). Slot 1 from
+  the start, slot 2 after winning stage 3, slot 3 after winning stage 10; the player picks the count in the Team modal.
+  Every smasher is 10 % smaller than before (×0.9) and a side's count scales it again (1 → ×1, 2 → ×0.87, 3 → ×0.75);
+  a side of one gets ×1.2 damage and max HP. Campaign NPC teams keep their composition and are sized by their own count;
+  league fights and leaderboard ghosts are always 2v2; PvP is 1v1 / 2v2 (default) / 3v3, set by the host.
 - **Team Towers** — from stage 3 on (and in PvP / league), destroying the enemy tower wins the battle instantly.
 - **Art** — smashers are drawn procedurally from a 3D rig (`src/smashers/*`) in 16 consistent angles;
   `pnpm art:smashers` exports the reference sheets for the art desk (`art-sheets/smashers/`).
@@ -63,7 +69,7 @@ Features rated on impact to three KPIs (1–5 scale each, 5 = highest impact):
 | Blade element system (fire > nature > water > fire) with arena hazards                |     2      |     4     |     4     | **3.4** | Adds team-building strategy and counter-play                |
 | Arena modifiers (ice = low friction, lava ring = damage zone, shrinking arena)        |     2      |     4     |     4     | **3.4** | Variety prevents repetitive sessions                        |
 | Smarter NPC AI (target weakest blade, combo launches, defensive positioning)          |     1      |     4     |     3     | **2.7** | Makes late-game feel challenging, not grindy                |
-| 3v3 team expansion (unlocked at stage 15)                                             |     1      |     4     |     3     | **2.7** | More tactical depth for engaged players                     |
+| ~~3v3 team expansion~~ — shipped as team sizes 1 / 2 / 3 (slot 3 after stage 10)       |     1      |     4     |     3     | **2.7** | More tactical depth for engaged players                     |
 | Combo system (rapid successive hits = multiplier + screen effects)                    |     3      |     3     |     3     | **3.0** | Skill expression + satisfying feedback                      |
 | Charge/power meter (hold longer = stronger but riskier launch)                        |     2      |     3     |     2     | **2.3** | Adds skill ceiling to launch mechanic                       |
 

@@ -47,7 +47,7 @@
 | 5  | **Lucky Edge**     | OFF | 30 · Chaos Incarnate      | 13 % of non-crit hits deal ×2.0                                                     | 1.08 / 1.13           |
 | 6  | **Homing Rockets** | OFF | 35 · The Ravenous Swarm   | every 5 enemy contacts: rockets for 17 % of a reference hit, split over ≤ 3 enemies | 1.08 / 1.20           |
 | 7  | **Opening Salvo**  | OFF | 40 · The Dragon Specter   | battle start: every enemy loses 14 % of max HP (non-lethal)                         | 1.13 / 1.16           |
-| 8  | **Momentum**       | OFF | 45 · The Unbroken Trio    | in own launch: +7.5 % hit damage per wall/bouncer rebound or hit, max 3 stacks      | 1.04 / 1.08           |
+| 8  | **Momentum**       | OFF | 45 · The Unbroken Trio    | in own launch: +7.5 % hit damage per wall/obstacle rebound or hit, max 3 stacks      | 1.04 / 1.08           |
 | 9  | **Hazard Ward**    | UTL | 50 · The Eternal Grove    | lava/thunder aura −40 %, Spiky chip −15 %, keeps 19 % speed on shock (vs 10 %)      | 1.04 / 1.09           |
 | 10 | **Static Charge**  | CTL | 55 · The Dread Scorpion   | 18 % chance: an enemy ramming you stops and skips its next turn                     | 1.02 / 1.16           |
 
@@ -162,7 +162,7 @@ it:
 
 - **Replicated 1:1** (with source citations in `engine.mjs`): fixed 60 Hz step,
   acceleration ramp (`ACCEL_FRAMES 28`), decay incl. ice, low-speed brake and no-hit drag,
-  circle walls with wall boost + bounce decay, bouncers, all-pairs collision incl. friendly
+  circle walls with wall boost + bounce decay, all-pairs collision incl. friendly
   fire, elastic bounce, contact re-arm gate, hug-break, back-hit crits + crit cooldown,
   Star lucky crit, Piercer/Star defence rules, speed advantage, anti-draw,
   Spiky chip, lava/forest/shock/thunder-aura hazards, powerups (stage ≥ 2), turn-order
@@ -737,12 +737,12 @@ Conventions for every card:
 *An unbroken chain: every rebound winds the spinner tighter.*
 
 - **Effect:** Only during the bearer's **own launch** (`launchedBladeId === bearer.id`): every wall rebound, every
-  bouncer rebound and every hit on an enemy adds a stack (max 3). Each collision hit on an enemy is multiplied by
+  island / mushroom / log rebound and every hit on an enemy adds a stack (max 3). Each collision hit on an enemy is multiplied by
   `1 + perStack × stacks` (stacks counted **before** that hit adds its own). Stacks reset in `beginLaunch`.
 - **Proc / rules:** Clamped together with Lucky Edge by `SKILL_HIT_MUL_CAP`. No effect on chip/rockets/reflect.
 - **Counterplay / limits:** Needs deliberate bank shots; a straight shot into the first enemy gets nothing; Teleporter
   skin (wall pass) never rebounds.
-- **Softens:** Speedy bottoms, ice arena and bouncer stages, skilled players who aim off walls — the skill-expression
+- **Softens:** Speedy bottoms, ice arena and obstacle-rich terrain layouts, skilled players who aim off walls — the skill-expression
   pick of the ten. The simulated player never aims off walls on purpose, so its measured median (~1.04) is a floor;
   1.225 (every hit at 3 stacks) is the ceiling.
 - **Edge cases:** Worst case every hit at 3 stacks = ×1.225 at L10 (§3.8). (The shock-wall and thunder-arena combo
@@ -765,7 +765,7 @@ Conventions for every card:
 - **Effect:** Against the bearer: lava wall burn ×(1 − `lava`), thunder-boss aura ×(1 − `thunder`), Spiky chip ×(1 −
   `chip`); on a Frost Lock cold touch the bearer keeps `10 % + 90 % × shockKeep` of its speed instead of 10 % (shock walls were retired).
 - **Proc / rules:** Applied first in `applyHpLoss` for kinds `lava`, `thunder`, `chip`; shock handled in
-  `bounceOffWalls`/`bounceOffBouncers`. The lava popup shows the reduced amount (cyan tint).
+  `bounceOffWalls`. The lava popup shows the reduced amount (cyan tint).
 - **Counterplay / limits:** Does nothing on default/ice/forest arenas without Spiky or thunder enemies — a loadout
   choice per stage, not a permanent pick.
 - **Softens:** the 17 lava stages (12, 17, 27, 32, 36, 42, 47, 52, 57, 62, 67, 72, 77, 82, 86, 92, 97), the 10 shock
@@ -914,7 +914,8 @@ Income model (`tools/skills-sim/econ.mjs`), all inputs read from the game tables
   stage, 1.5 per boss from stage 15; 0.2/0.8 before);
 - rewarded ad `max(125, round5(3 × rewardLose))`, big chest `max(100, round5(3 ×
   rewardLose))`, daily rewards (coin days only: 1,450 per 7-day cycle), battle-pass coins
-  (`bpCoinReward`, 50 xp/win, 12.5 xp/loss, skin and diamond tiers pay no coins).
+  (`bpCoinReward`, 50 xp/win, 12.5 xp/loss, skin tiers pay no coins; the three
+  3,000-coin jackpot tiers — diamond tiers until 2026-10-21 — are not modelled).
 
 Profiles: **campaign-only** (wins + losses, nothing else), **typical** (1 ad per 3 stages,
 1 big chest per 3 stages, 6 stages/day, battle pass claimed), **engaged** (1 ad per stage).
@@ -1431,8 +1432,8 @@ export interface BladeSkills {
    `blade.hp = …` with `applyHpLoss(blade, lavaDmg, 'lava')` (the number shown is the
    post-ward, post-shield amount). Shock branch: `const keep = 0.1 + 0.9 ·
    hazardShockKeep(blade)`; `vx *= keep; vy *= keep`.
-7. **`bounceOffBouncers` (≈3092):** after the reflect → `onOwnBounce(blade)`; shock keep
-   as above.
+7. **`bounceOffIslands` (terrain islands; mushrooms / logs in `applyTerrainGround`):** after the reflect →
+   `onOwnBounce(blade)`.
 8. **`resolveCollision` (≈3142)** inside `if (contactArmed)`, after `dmgAtoB`/`dmgBtoA` are
    computed and **before** the anti-draw block — the §5 order; the anti-draw survivability
    check becomes `hp + (skills?.shield ?? 0)`. Fast path: skip everything when

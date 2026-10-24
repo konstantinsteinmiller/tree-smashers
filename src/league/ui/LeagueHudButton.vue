@@ -3,15 +3,18 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isLowQuality } from '@/use/useQuality'
 import { LEAGUE_TIER_META, divisionNumeral } from '@/use/leagueTiers'
-import LeagueTierIcon from '@/components/atoms/LeagueTierIcon.vue'
+import UiIcon from '@/components/icons/UiIcon.vue'
 import type { LeagueUiSource } from '@/league/ui/leagueUi'
 
 /**
  * ─── League HUD button (LG5b) ───────────────────────────────────────────────
  *
- * The entry to the league from the idle HUD: the player's tier icon with the
- * division (or Champion #N) as real text under it, and a bubble with the
- * fights left today. A finished season waiting to be claimed turns the bubble
+ * The entry to the league from the idle HUD: the league emblem (UiIcon
+ * `league` — painted sprite, drawn shield fallback; the same HUD icon family as
+ * the trophy / upgrade buttons beside it) with the player's tier on the
+ * button itself — the tier colour as the top lip and as the chip carrying the
+ * division (or Champion #N) as real text — and a bubble with the fights left
+ * today. The full tier emblems (LeagueTierIcon) live in the hub and cards. A finished season waiting to be claimed turns the bubble
  * into a gift marker and the button bounces (static on low quality / reduced
  * motion).
  *
@@ -56,7 +59,7 @@ const aria = computed(() =>
 </script>
 
 <template lang="pug">
-  button.lhb(
+  button.lhb.ui-hit-44(
     type="button"
     class="scale-80 sm:scale-100"
     data-league="hud-button"
@@ -68,7 +71,8 @@ const aria = computed(() =>
   )
     span.lhb__shadow(aria-hidden="true")
     span.lhb__body(aria-hidden="true")
-      LeagueTierIcon(:tier="standing.tier" :size="tag ? 26 : 32" :animated="false")
+      span.lhb__icon(:class="{ 'lhb__icon--tagged': tag }")
+        UiIcon(name="league")
       span.lhb__tag(v-if="tag") {{ tag }}
     span.lhb__bubble(v-if="hasReward" aria-hidden="true" class="lhb__bubble--gift")
       svg(viewBox="0 0 24 24" width="100%" height="100%")
@@ -118,7 +122,7 @@ const aria = computed(() =>
   border-radius: var(--radius-ui)
   border: 3px solid var(--color-ink)
   background-color: var(--color-royal-500)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 4px 0 var(--lhb-accent), inset 0 -4px 0 var(--color-royal-700)
   transition: transform 0.26s var(--ui-spring), background-color 0.12s ease
 
@@ -132,13 +136,32 @@ const aria = computed(() =>
   transition-duration: var(--ui-press-down)
   transition-timing-function: ease-out
 
+.lhb__icon
+  display: block
+  width: 2rem
+  height: 2rem
+  &--tagged
+    width: 1.75rem
+    height: 1.75rem
+    margin-top: -0.35rem
+
+// The division / position on a chip in the tier colour, overlapping the
+// emblem's foot so the icon keeps its size.
 .lhb__tag
-  font-size: 0.62rem
+  position: absolute
+  bottom: 0.1rem
+  left: 50%
+  transform: translateX(-50%)
+  padding: 0.05rem 0.3rem 0.08rem
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem
+  background-color: var(--lhb-accent)
+  font-size: 0.6rem
   font-weight: 900
   line-height: 1
-  color: var(--color-ice-50)
+  color: var(--color-ink)
   font-variant-numeric: tabular-nums
-  text-shadow: var(--ui-stroke-sm)
+  white-space: nowrap
 
 .lhb__bubble
   position: absolute

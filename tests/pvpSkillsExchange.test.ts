@@ -170,11 +170,12 @@ describe('PvP player-ready skills exchange', () => {
     pvp.leavePvP()
   })
 
-  it('is protocol v3', () => {
-    expect(PVP_PROTOCOL_VERSION).toBe(3)
+  it('is protocol v5 (v4: team sizes changed the simulation; v5: the hello message)', () => {
+    expect(PVP_PROTOCOL_VERSION).toBe(5)
   })
 
   it('refuses a v2 peer (pre-skills) with the localized message', () => {
+    // (a v3 peer — pre-team-size — is refused the same way: any proto ≠ 4)
     config()
     receivePvpMessage({ type: 'player-ready', team, skills: [{ id: 'momentum', level: 2 }], proto: 2 })
     expect(pvp.hostReady.value).toBe(false)

@@ -48,7 +48,13 @@ export const corsHeaders = (env: Env, origin: string | null): Record<string, str
     'access-control-allow-origin': ok ? (origin ?? '*') : 'null',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
     'access-control-allow-headers': 'content-type',
-    'access-control-max-age': '86400'
+    'access-control-max-age': '86400',
+    // Wavedash serves the game cross-origin isolated (COEP: require-corp) and
+    // asks every server the game talks to for this on EVERY response, errors
+    // included (docs.wavedash.com/platform/cross-origin-isolation). A CORS
+    // `fetch` already passes on the allow-origin header alone; this covers
+    // anything ever loaded without CORS. Harmless for every other portal.
+    'cross-origin-resource-policy': 'cross-origin'
   }
 }
 

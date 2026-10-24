@@ -19,6 +19,8 @@
 //                       startBattleMusic: prependBaseUrl(musicPath(`battle-${idx}`))
 //   2. use/useAssets.ts SOUND_ASSETS, skills/skillSfx.ts SKILL_*_SFX_ASSETS,
 //      bosses/bossTraitSfx.ts BOSS_TRAIT_SFX_ASSETS, introAudio.ts sfxUrl:
+//      (skill / boss-trait entries via audio/featureSfxVersions.ts
+//      featureSfxPath — keep that import inside the lazy feature modules)
 //      build each entry with sfxPath(name) so the preload decodes the same
 //      URL playSound asks for.
 //   3. use/uiSfx.ts playUiSfx: call
@@ -27,14 +29,18 @@
 //      INTRO_CUE_VERSION[c.kind] === 'v2'
 //        ? renderIntroCueV2(ctx, ctx.destination, c.kind, volume, ctx.currentTime, { gain, pitchHz })
 //        : the existing tone(...) call.
-//   Proposals (no v1 exists) also need their own trigger — see PROPOSALS.
+//   New slots (no v1 sound) also need their own trigger — see NEW_SLOT_VERSION.
 
 import type { UiSfxName } from '@/use/uiSfx'
 import type { IntroCueKind } from '@/audio/uiSfxV2'
 
 export type AudioVersion = 'v1' | 'v2'
 
-/** File-based SFX and the two result stingers (played through playSound). */
+/** File-based SFX and the two result stingers (played through playSound).
+ *  Skill and boss-trait SFX are NOT here: this module sits in the hot path
+ *  (useSound/useAssets/useSpinnerGame), and their names must stay in the
+ *  lazy feature chunks (skillsFlagPurity / bosses100FlagPurity). Their
+ *  switches live in audio/featureSfxVersions.ts. */
 export const SFX_VERSION = {
   'clash-1': 'v1',
   'clash-2': 'v1',
@@ -48,17 +54,7 @@ export const SFX_VERSION = {
   'level-up': 'v1',
   'reward-continue': 'v1',
   win: 'v1',
-  lose: 'v1',
-  'skill-shield': 'v1',
-  'skill-rocket': 'v1',
-  'skill-zap': 'v1',
-  'skill-crit': 'v1',
-  'skill-whoosh': 'v1',
-  'skill-boost': 'v1',
-  'boss-ember-pulse': 'v1',
-  'boss-freeze': 'v1',
-  'boss-crack': 'v1',
-  'boss-chill': 'v1'
+  lose: 'v1'
 } as const satisfies Record<string, AudioVersion>
 
 /** Battle music loops (useSound.startBattleMusic picks one at random). */
@@ -93,29 +89,89 @@ export const INTRO_CUE_VERSION: Record<IntroCueKind, AudioVersion> = {
 }
 
 /**
- * New slots with no v1 sound. `true` = approved; each still needs its
- * trigger in game code:
+ * New slots — sounds the game does not have yet. 'v1' = today's behaviour
+ * (silent; for tree-fall the reused 'celebration-1'), 'v2' = play the new
+ * file. Flipping one needs its trigger in game code once (not wired yet):
  *   menu-1      loop on the menu / stage map (useMusic gains a menu track)
  *   boss-1      replaces the random battle pick on boss stages
- *   tower-fall  onTowerDestroyed (useSpinnerGame) instead of 'celebration-1'
+ *   tree-hit    useSpinnerGame.ts tower contact, right after
+ *               `tower.hp = …; tower.flash = 1` where spawnSplinters is called
+ *               (OUTSIDE the `if (!FX.low)` VFX gate): play treeHitName(n++)
+ *               and add TREE_HIT_HEAVY when dmg >= tower.maxHp * 0.06 (the
+ *               same "hard hit" test the leaf shake uses)
+ *   tree-stage  useSpinnerGame.ts tickTowerVfx, where noteTowerStage(...)
+ *               returns n > 0 for stage 1 or 2 (not 3: that is tree-fall)
+ *   tree-fall   useSpinnerGame.ts onTowerDestroyed, instead of
+ *               playSound('celebration-1')
+ *   balloon-pop #UX3 — WIRED (owner request) and ON while its r1 waits for
+ *               review: useSpinnerGame.ts renderBalloonLayer plays it when a
+ *               smasher's HP balloon bursts (balloon builds only,
+ *               VITE_APP_BALOON_HP_BAR), one per 90 ms cooldown however many
+ *               pop at once. 'v1' here silences it (the balloons still pop).
+ *   vs-intro    WIRED (owner request) and ON while its r1 waits for review:
+ *               the 5 s VS screen before a new matchup (components/organisms/
+ *               VsIntro.vue, cues in use/vsIntro.ts VS_SOUND_CUES) plays
+ *               vs-whoosh (halves in + exit wipe), vs-thump (cards land) and
+ *               vs-slam (the VS emblem lands). 'v1' here silences them.
  */
-export const PROPOSALS = {
-  'menu-1': false,
-  'boss-1': false,
-  'tower-fall': false
-} as const satisfies Record<string, boolean>
+export type NewSlot = 'menu-1' | 'boss-1' | 'tree-hit' | 'tree-stage' | 'tree-fall' | 'balloon-pop' | 'vs-intro'
 
-export const PROPOSAL_PATHS = {
-  'menu-1': 'audio/v2/music/menu-1.ogg',
-  'boss-1': 'audio/v2/music/boss-1.ogg',
-  'tower-fall': 'audio/v2/sfx/tower-fall.ogg'
-} as const satisfies Record<keyof typeof PROPOSALS, string>
+export const NEW_SLOT_VERSION: Record<NewSlot, AudioVersion> = {
+  'menu-1': 'v1',
+  'boss-1': 'v1',
+  'tree-hit': 'v1',
+  'tree-stage': 'v1',
+  'tree-fall': 'v1',
+  'balloon-pop': 'v2',
+  'vs-intro': 'v2'
+}
+
+/** Files each new slot plays (public paths, no base URL). */
+export const NEW_SLOT_FILES = {
+  'menu-1': ['audio/v2/music/menu-1.ogg'],
+  'boss-1': ['audio/v2/music/boss-1.ogg'],
+  'tree-hit': [
+    'audio/v2/sfx/tree-hit-1.ogg',
+    'audio/v2/sfx/tree-hit-2.ogg',
+    'audio/v2/sfx/tree-hit-3.ogg',
+    'audio/v2/sfx/tree-hit-heavy.ogg'
+  ],
+  'tree-stage': ['audio/v2/sfx/tree-stage.ogg'],
+  'tree-fall': ['audio/v2/sfx/tree-fall.ogg'],
+  'balloon-pop': ['audio/v2/sfx/balloon-pop.ogg'],
+  'vs-intro': ['audio/v2/sfx/vs-whoosh.ogg', 'audio/v2/sfx/vs-thump.ogg', 'audio/v2/sfx/vs-slam.ogg']
+} as const satisfies Record<NewSlot, readonly string[]>
+
+/** Whether a new slot is switched on. */
+export const newSlotOn = (slot: NewSlot): boolean => NEW_SLOT_VERSION[slot] === 'v2'
+
+/** Round-robin tree-hit variants (names for playSound once sfxPath is hooked up). */
+export const TREE_HIT_VARIANTS = ['tree-hit-1', 'tree-hit-2', 'tree-hit-3'] as const
+/** Damage-scaled layer played together with a variant on hard hits. */
+export const TREE_HIT_HEAVY = 'tree-hit-heavy'
+/** n-th tree-hit variant (caller keeps the counter). */
+export const treeHitName = (n: number): (typeof TREE_HIT_VARIANTS)[number] =>
+  TREE_HIT_VARIANTS[((Math.floor(n) % 3) + 3) % 3]!
+
+/** #UX3: a smasher's HP balloon bursting (playSound name). */
+export const BALLOON_POP_SFX = 'balloon-pop'
+
+/** The VS intro's three sounds (playSound names). */
+export const VS_INTRO_SFX = ['vs-whoosh', 'vs-thump', 'vs-slam'] as const
+
+/** New-slot SFX live only under audio/v2/sfx (no v1 file exists). */
+const NEW_SLOT_SFX = new Set<string>([...TREE_HIT_VARIANTS, TREE_HIT_HEAVY, 'tree-stage', 'tree-fall', BALLOON_POP_SFX, ...VS_INTRO_SFX])
+
+/** Whether `name` is a new-slot SFX (only a v2 file exists — playSound must
+ *  resolve it through sfxPath; every other name keeps its v1 path until the
+ *  one-time hook-up above). */
+export const isNewSlotSfx = (name: string): boolean => NEW_SLOT_SFX.has(name)
 
 const isV2 = (table: Readonly<Record<string, AudioVersion>>, id: string): boolean => table[id] === 'v2'
 
 /** Public path (no base URL) of an SFX file, honouring the switchboard. */
 export const sfxPath = (name: string): string =>
-  isV2(SFX_VERSION, name) ? `audio/v2/sfx/${name}.ogg` : `audio/sfx/${name}.ogg`
+  isV2(SFX_VERSION, name) || NEW_SLOT_SFX.has(name) ? `audio/v2/sfx/${name}.ogg` : `audio/sfx/${name}.ogg`
 
 /** Public path (no base URL) of a music file, honouring the switchboard. */
 export const musicPath = (name: string): string =>

@@ -5,7 +5,7 @@
 // it the live values.
 //
 // The cutscene is the strongest hook the game has for a STRANGER and the most
-// annoying 14 seconds it could show somebody coming back. So the gate is the
+// annoying 16 seconds it could show somebody coming back. So the gate is the
 // `casual-game-onboarding-player-optimization` rule, verbatim:
 //
 //   play  =  no seen-flag  AND  no saved progress  AND  the save read SETTLED
@@ -20,7 +20,7 @@
 //   • THROWN IS NOT EMPTY. A storage read that throws (blocked site data,
 //     preview contexts) reports `null` — unknown — and unknown fails CLOSED:
 //     the player is treated as returning. Missing the intro costs one
-//     stranger 14 seconds of spectacle; showing it wrongly costs a regular.
+//     stranger 16 seconds of spectacle; showing it wrongly costs a regular.
 //
 // The seen-flag alone cannot carry this: every player who installed the game
 // BEFORE the intro shipped has no flag. That is what the progress probe is
@@ -42,10 +42,10 @@ export const INTRO_SEEN_KEY = 'smashers_intro_seen'
  */
 export const INTRO_DECISION_BUDGET_MS = 6000
 
-/** The three skins the cutscene draws. Named here (not in the renderer) so the
- *  asset loader can put them in the FIRST tier for a probable first-timer
- *  without importing the cutscene chunk. */
-export const INTRO_SKIN_IDS = ['thunderstorm', 'tornado', 'diamond'] as const
+/** The five smashers the cutscene casts (introStory.ts CAST — pinned equal by
+ *  tests/introStory.test.ts). Named here, in the pure gate, so tools and tests
+ *  can name them without importing the cutscene chunk. */
+export const INTRO_SMASHER_IDS = ['bramble', 'grizzle', 'chomper', 'thumper', 'vixie'] as const
 
 export type IntroDecision = 'play' | 'skip' | 'wait'
 

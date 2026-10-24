@@ -13,7 +13,7 @@ export interface PaintedBorder {
   tiles: readonly { y: number, w: number }[], seam: number, quilt: number
 }
 export const PAINTED_BORDERS: Readonly<Partial<Record<BorderKey, PaintedBorder>>> = {
-  "bedroom": {"file":"bedroom_874x696.webp","w":874,"h":696,"v":"8ee4b4f8","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":81,"tiles":[{"y":2,"w":692},{"y":234,"w":858},{"y":466,"w":858}],"seam":0.398,"quilt":1.317},
+  "bedroom": {"file":"bedroom_837x696.webp","w":837,"h":696,"v":"63fd489f","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":709},{"y":234,"w":809},{"y":466,"w":821}],"seam":0.018,"quilt":2.482},
   "heal": {"file":"heal_806x696.webp","w":806,"h":696,"v":"d3abe0d4","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":720},{"y":234,"w":790},{"y":466,"w":619}],"seam":0.803,"quilt":1.245},
   "lava": {"file":"lava_640x464.webp","w":640,"h":464,"v":"cfff7529","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":615},{"y":234,"w":624}],"seam":0.661,"quilt":1.163},
   "meadow": {"file":"meadow_590x696.webp","w":590,"h":696,"v":"e9904149","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":544},{"y":234,"w":505},{"y":466,"w":574}],"seam":0.586,"quilt":1.032},

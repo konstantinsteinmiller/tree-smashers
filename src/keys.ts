@@ -26,6 +26,17 @@ export const SKINS_KEY = 'smashers_owned_skins'
  *  `{ [modelId]: count }`. Rides the cloud save (`smashers_` prefix) and
  *  survives a progress reset like the skins it pays for. */
 export const SKIN_AD_PROGRESS_KEY = 'smashers_skin_ad_progress'
+/** Premium (legendary, Tuskar onwards) smashers the player has UNLOCKED
+ *  (src/use/premiumSmashers.ts): `{ "v": 1, "own": [smasherId…], "at": stage }`
+ *  — `at` is the best stage the record has accounted for (grandfathering of
+ *  saves from before the rule). Rides the cloud save (`smashers_` prefix) and
+ *  survives a progress reset like the skins: an ad / coins paid for it. */
+export const PREMIUM_SMASHERS_KEY = 'smashers_premium_smashers'
+/** VS screens already shown (src/use/vsIntro.ts, "once per matchup"):
+ *  `{ "stage": highest campaign stage with its VS, "opp": [ghost / league
+ *  opponent ids] }`. Rides the cloud save (`smashers_` prefix); a progress
+ *  reset clears it with the campaign. */
+export const VS_SEEN_KEY = 'smashers_vs_seen'
 
 // ─── Global leaderboard ─────────────────────────────────────────────────────
 //
@@ -62,3 +73,19 @@ export const SUBMITTED_STAGE_KEY = 'smashers_submitted_stage'
  *  the next report simply re-posts the current build. */
 export const POSTED_BUILD_KEY = 'smashers_posted_build'
 
+
+// ─── Team size (src/data/teamSize.ts) ───────────────────────────────────────
+//
+// All `smashers_`-prefixed (cloud save) and all PROGRESS: a progress reset
+// wipes them, so a fresh start fights with one smasher again. The team picks
+// themselves stay in `smashers_player_team` (kept across a reset).
+
+/** The team size the player chose in the team modal (1 … 3). Absent = never
+ *  chosen: the game fields 2 once slot 2 is open, else 1. */
+export const TEAM_SIZE_KEY = 'smashers_team_size'
+/** High-water mark of the team slots opened (1 … 3). Also derived from the
+ *  best stage reached, so a pre-team-size save gets its slots on first load. */
+export const TEAM_SLOTS_KEY = 'smashers_team_slots'
+/** Team slots the player has seen in the team modal — a newly opened slot
+ *  badges the Team button until the modal is opened. */
+export const TEAM_SLOTS_SEEN_KEY = 'smashers_team_slots_seen'

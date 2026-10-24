@@ -162,8 +162,9 @@ const waitForGame = async (page) => {
 
 /** Click a menu icon button until a modal is actually open (the menu can
  *  still be animating in and swallow the first tap). */
-const clickIcon = async (page, imgPart) => {
-  const btn = page.locator(`img[src*="${imgPart}"]`).first()
+const clickOptions = (page) => clickIcon(page, null, '[data-testid="hud-options"]')
+const clickIcon = async (page, imgPart, sel = `img[src*="${imgPart}"]`) => {
+  const btn = page.locator(sel).first()
   for (let attempt = 0; attempt < 4; attempt++) {
     await btn.waitFor({ state: 'visible', timeout: 15_000 })
     await btn.click()
@@ -187,13 +188,13 @@ const startBattle = async (page) => {
 const SCREENS = {
   menu: async () => {
   },
-  options: async (page) => clickIcon(page, 'gears_128x128'),
+  options: async (page) => clickOptions(page),
   language: async (page) => {
-    await clickIcon(page, 'gears_128x128')
+    await clickOptions(page)
     await page.locator('[data-testid="language-picker"]').click()
     await sleep(900)
   },
-  config: async (page) => clickIcon(page, 'team_128x128'),
+  config: async (page) => clickIcon(page, null, '[data-testid="hud-team"]'),
   battle: async (page) => startBattle(page),
   win: async (page) => {
     await startBattle(page)

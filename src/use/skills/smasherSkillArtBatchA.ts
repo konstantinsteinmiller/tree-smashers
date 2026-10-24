@@ -213,7 +213,7 @@ export const BATCH_A_SKILL_ART: Readonly<Record<string, SmasherSkillArt>> = {
     flavour: fl('leaf', [LEAF5, LEAF4], { detail: LEAF7, count: 4, speed: 0.08, gravity: 0.00004, size: 4.5 }),
     sfx: { name: 'skill-whoosh', rate: 0.95 }
   },
-  // ── Slinky (stoat)
+  // ── Kip (koala, id slinky)
   war_dance: {
     icon: [
       { d: 'M5 18C3 12 7 5 13 5C18 5 21 9 19 13C17.5 16 13 15.5 13.5 12.5', stroke: INK, w: 4.4 },

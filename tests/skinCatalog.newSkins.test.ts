@@ -26,6 +26,7 @@
 // import-cycle note in tests/useBattlePassSkinClaim.test.ts.
 
 import { describe, it, expect } from 'vitest'
+import { isSmasherSkin } from '@/data/smasherSkinCatalog'
 import { smasherForSkin, smasherPalette } from '@/smashers/smasherSkins'
 import {
   SKINS_PER_TOP,
@@ -74,8 +75,10 @@ const LOCALES: Record<string, any> = Object.fromEntries(
 )
 
 const allCatalogIds = (): SpinnerModelId[] => [...new Set(Object.values(SKINS_PER_TOP).flat())]
+// The per-smasher skins (2026-10-23, src/data/smasherSkinCatalog.ts) are their own class:
+// owned per smasher, 1000 coins / one ad, never in a top-part list or a free-reward pool.
 const newIds = (): SpinnerModelId[] =>
-  (SPINNER_MODEL_IDS as readonly string[]).filter(id => !LEGACY_MODEL_IDS.includes(id)) as SpinnerModelId[]
+  (SPINNER_MODEL_IDS as readonly string[]).filter(id => !LEGACY_MODEL_IDS.includes(id) && !isSmasherSkin(id)) as SpinnerModelId[]
 /** New REGULAR skins — the ones that must join the free pools (not the earn-only trophies). */
 const newRegularIds = (): SpinnerModelId[] => newIds().filter(id => !TROPHY_SKINS.has(id))
 

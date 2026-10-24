@@ -81,7 +81,7 @@ first — pick anything, it becomes part of the URL. When it finishes it prints:
 
 ```
 Published leaderboard-tree-smashers
-  https://leaderboard-tree-smashers.rodent-race.workers.dev
+  https://leaderboard-tree-smashers.hyperg8.workers.dev
 ```
 
 **That URL is what the game needs.** Keep it.
@@ -89,7 +89,7 @@ Published leaderboard-tree-smashers
 ## 6. Check it is alive
 
 ```powershell
-$BOARD = 'https://leaderboard-tree-smashers.rodent-race.workers.dev'
+$BOARD = 'https://leaderboard-tree-smashers.hyperg8.workers.dev'
 
 # The board — empty at this point, which is the correct answer.
 Invoke-RestMethod "$BOARD/top"
@@ -128,7 +128,7 @@ npx wrangler d1 execute leaderboard-tree-smashers --remote --command "DELETE FRO
 In the repo root, edit `.env`:
 
 ```
-VITE_LEADERBOARD_URL=https://leaderboard-tree-smashers.rodent-race.workers.dev
+VITE_LEADERBOARD_URL=https://leaderboard-tree-smashers.hyperg8.workers.dev
 VITE_LEADERBOARD_SECRET=
 ```
 

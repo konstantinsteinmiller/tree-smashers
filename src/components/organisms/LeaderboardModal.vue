@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 // The project's own modal shell — swap this for whatever it already uses. The
 // board below is just a grid; it does not care what frames it.
 import FModal from '@/components/molecules/FModal.vue'
+import type { TabOption } from '@/components/atoms/FTabs.vue'
+import { platformBoard, type PlatformBoardRow } from '@/use/platformBoard'
 import { playerDisplayName } from '@/use/usePlayerIdentity'
 import { sanitizeDisplayName } from '@/utils/nameDenylist'
 import {
@@ -37,6 +39,24 @@ const { t } = useI18n()
 
 const entries = computed(() => leaderboard.value?.entries ?? [])
 
+// ─── The portal's own board (Wavedash), as a second tab ─────────────────────
+//
+// Installed by the platform's boot branch (`src/use/platformBoard.ts`); `null`
+// on every other build, which keeps this modal exactly the single-board screen
+// it always was — no tabs, the title ribbon instead. With one, the portal's
+// board opens first: it is the board of the accounts the player plays under
+// there, and ours ("All players") ranks every portal together.
+type BoardTab = 'platform' | 'global'
+const tab = ref<BoardTab>('platform')
+const portal = computed(() => platformBoard.value)
+const showPortal = computed(() => portal.value !== null && tab.value === 'platform')
+const tabs = computed<TabOption[]>(() => portal.value
+  ? [
+      { label: t(portal.value.labelKey), value: 'platform' },
+      { label: t('leaderboard.tabGlobal'), value: 'global' }
+    ]
+  : [])
+
 /**
  * The name the player's row would carry.
  *
@@ -58,24 +78,34 @@ const ownName = ref('')
  */
 const isYou = (name: string): boolean => ownName.value.length > 0 && name === ownName.value
 
-const onBoard = computed(() => entries.value.some((e) => isYou(e.name)))
+/** The rows on screen, from whichever board the active tab shows. The portal's
+ *  rows mark the player by their portal user id, ours by name (see `isYou`);
+ *  a portal row posted without metadata has no power and shows a dash. */
+const rows = computed<PlatformBoardRow[]>(() => showPortal.value
+  ? [...(portal.value?.rows.value ?? [])]
+  : entries.value.map((e) => ({ ...e, isYou: isYou(e.name) })))
+
+const onBoard = computed(() => rows.value.some((r) => r.isYou))
 
 /** The player's own rank, for the footer. `0` means "nothing to say yet". */
-const ownRank = computed(() => rankFor(props.score))
+const ownRank = computed(() => showPortal.value ? (portal.value?.ownRank.value ?? 0) : rankFor(props.score))
 
 /** Always a number. Below the published cut `rankFor` ranks against the
  *  histogram, or estimates — it never hands back a "past the last row we can
  *  see" sentinel for this to render, because that is not a placing. */
 const ownRankLabel = computed(() => String(ownRank.value))
+const total = computed(() => showPortal.value ? (portal.value?.total.value ?? 0) : playerTotal.value)
 
 const showOwnRank = computed(() => !onBoard.value && ownRank.value !== 0)
 
-const showLoading = computed(() => leaderboardPending.value && entries.value.length === 0)
-const showFailed = computed(() =>
-  !leaderboardPending.value && leaderboardFailed.value && entries.value.length === 0)
+const pending = computed(() => showPortal.value ? (portal.value?.pending.value ?? false) : leaderboardPending.value)
+const failed = computed(() => showPortal.value ? (portal.value?.failed.value ?? false) : leaderboardFailed.value)
+const loaded = computed(() => showPortal.value ? !failed.value : leaderboard.value !== null)
+
+const showLoading = computed(() => pending.value && rows.value.length === 0)
+const showFailed = computed(() => !pending.value && failed.value && rows.value.length === 0)
 const showEmpty = computed(() =>
-  !leaderboardPending.value && !leaderboardFailed.value && leaderboard.value !== null
-  && entries.value.length === 0)
+  !pending.value && !failed.value && loaded.value && rows.value.length === 0)
 
 // Fetched on OPEN, not on mount: the modal is mounted for the whole session and
 // most sessions never open it. `ensureBoard` is idempotent and cached, so a
@@ -84,16 +114,25 @@ const showEmpty = computed(() =>
 watch(model, (open) => {
   if (!open) return
   void ensureBoard()
+  // The portal board is read on open too (its own 30 s reuse window makes a
+  // re-open free), so switching tabs never waits on a first request.
+  void portal.value?.refresh()
   void playerDisplayName().then((name) => {
     // Masked the same way the board's rows are (deterministically), so a player
     // whose own name was masked still finds their row.
     ownName.value = sanitizeDisplayName(name)
   })
 }, { immediate: true })
+
+// A board installed while the modal is already open (the platform module is
+// loaded lazily at boot) is fetched right away.
+watch(portal, (b) => {
+  if (b && model.value) void b.refresh()
+})
 </script>
 
 <template lang="pug">
-  FModal(v-model="model" :title="t('leaderboard.title')")
+  FModal(v-model="model" :title="t('leaderboard.title')" :tabs="tabs" v-model:activeTab="tab")
     div.board
       div.board__head
         span.board__col.is-rank {{ t('leaderboard.rank') }}
@@ -107,24 +146,24 @@ watch(model, (open) => {
 
       div.board__list(v-else)
         div.board-row.ui-pop-in(
-          v-for="(entry, i) in entries"
-          :key="`${entry.rank}-${entry.name}-${i}`"
-          :class="{ 'is-you': isYou(entry.name), [`is-top${entry.rank}`]: entry.rank <= 3 }"
+          v-for="(entry, i) in rows"
+          :key="`${tab}-${entry.rank}-${entry.name}-${i}`"
+          :class="{ 'is-you': entry.isYou, [`is-top${entry.rank}`]: entry.rank <= 3 }"
           :style="{ '--i': Math.min(i, 12) }"
         )
           span.board-row__rank
             span {{ entry.rank }}
           span.board-row__name
             span.board-row__name-text {{ entry.name }}
-            span.board-row__you(v-if="isYou(entry.name)") {{ t('leaderboard.you') }}
+            span.board-row__you(v-if="entry.isYou") {{ t('leaderboard.you') }}
           span.board-row__score {{ entry.score }}
-          span.board-row__power {{ entry.power }}
+          span.board-row__power {{ entry.power ?? '–' }}
 
       //- Where the player stands when they are not up there. The reason a
       //- player outside the top 100 opens this screen at all.
       div.board__footer(v-if="showOwnRank")
         span.board__footer-rank {{ t('leaderboard.yourRank', { n: ownRankLabel }) }}
-        span.board__footer-total(v-if="playerTotal > 0") {{ t('leaderboard.of', { n: playerTotal }) }}
+        span.board__footer-total(v-if="total > 0") {{ t('leaderboard.of', { n: total }) }}
 </template>
 
 <style scoped lang="sass">
@@ -185,13 +224,13 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
     box-shadow: 0 2px 0 var(--color-ink)
   &.is-top1
     background-color: var(--color-sun-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
 
   // The row the player came here to find: sky edge + lip, lifted.
   &.is-you
     border: 3px solid var(--color-ink)
     background-color: var(--color-sky-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 0 0 2px var(--color-sky-500), inset 0 -4px 0 var(--color-sky-500), 0 3px 0 var(--color-ink)
     transform: scale(1.015)
 
@@ -285,7 +324,7 @@ $cols: clamp(1.6rem, 8vw, 2.4rem) minmax(0, 1fr) clamp(2rem, 9vw, 3rem) clamp(2.
   border: 3px solid var(--color-ink)
   border-radius: clamp(0.35rem, 1.8vw, 0.6rem)
   background-color: var(--color-royal-600)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -3px 0 var(--color-royal-800), 0 3px 0 var(--color-ink)
 
 .board__footer-rank

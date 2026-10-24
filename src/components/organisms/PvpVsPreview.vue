@@ -31,7 +31,7 @@ import type { SkillLoadout } from '@/types/skills'
  *  84 – 100 %  whole card fades out (done exactly at durationMs)
  *
  * Look: a face-off — the panels are SKEWED plates leaning in toward the
- * centre (own side sky, opponent berry, flat stripes, ink outline + hard
+ * centre (own side sky, opponent berry, two-tone facet, ink outline + hard
  * drop) that slam in from their edges; the sun "VS" sits on a spiky starburst
  * and crashes in with a deep thunk.
  *
@@ -209,7 +209,7 @@ const onAnimEnd = (e: AnimationEvent) => {
     border: 3px solid var(--color-ink)
     border-radius: var(--radius-ui)
     background-color: var(--vs-fill)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 4px 0 var(--vs-lip), inset 0 -6px 0 var(--vs-band), 0 5px 0 var(--color-ink)
     transform: skewX(var(--vs-skew))
 
@@ -283,7 +283,8 @@ $star: polygon(50% 0%, 61% 30%, 93% 18%, 72% 45%, 100% 62%, 67% 66%, 72% 100%, 5
 .vs-star--sun
   inset: -16%
   background-color: var(--color-sun-400)
-  background-image: repeating-linear-gradient(300deg, var(--color-sun-400) 0 6px, var(--color-sun-500) 6px 12px)
+  // #UX1c: a flat two-tone split (sun over a deeper sun half) instead of stripes.
+  background-image: linear-gradient(160deg, var(--color-sun-300) 0 48%, var(--color-sun-500) 48%)
 
 .vs-text
   font-size: 2rem
@@ -296,12 +297,12 @@ $star: polygon(50% 0%, 61% 30%, 93% 18%, 72% 45%, 100% 62%, 67% 66%, 72% 100%, 5
   @media (min-width: 640px)
     font-size: 3rem
 
-// Flat shock ring (no blur): an ink-dashed sun ring that bursts outward.
+// Flat shock ring (no blur): a solid light ring that bursts outward.
 .vs-ring
   inset: -40%
   border-radius: 9999px
   background: rgba(255, 210, 26, 0.3)
-  border: 4px dashed rgba(255, 255, 255, 0.7)
+  border: 4px solid rgba(255, 255, 255, 0.7)
   clip-path: circle(36%)
   animation: vs-ring var(--vs-dur) ease-out both
 

@@ -6,8 +6,12 @@
 // every component they render) shipped in every build. A module-scope ternary
 // on the `import.meta.env`-derived flag does fold: the unused component is
 // never referenced, so its module drops out of the bundle.
-import { rosterPower, teamConfigs } from '@/use/useSmashers'
-import { hashString, layoutForSeed, layoutForStage, TOWERS_FROM_STAGE } from '@/use/arenaTerrain'
+import { fieldTeam, rosterPower, teamConfigs } from '@/use/useSmashers'
+import { settlePremiumSmashers } from '@/use/premiumSmashers'
+import { hasUnseenTeamSlot, markTeamSlotsSeen, secondSlotJustOpened, syncTeamSlots, teamSizeAt } from '@/use/useTeamSize'
+import { HUD_TOAST_MS, showHudToast } from '@/use/useHudToast'
+import { PVP_DEFAULT_TEAM_SIZE, RANKED_TEAM_SIZE } from '@/data/teamSize'
+import { hashString, layoutForSeed, layoutForStage, TOWERS_FROM_STAGE, treeCountForStage } from '@/use/arenaTerrain'
 import { HAS_REWARDED_ADS as ADS_BUILD_FLAG } from '@/platforms/rewardedAdsBuild'
 import AdRewardButton from '@/components/organisms/AdRewardButton.vue'
 import RewardedAdButton from '@/components/organisms/RewardedAdButton.vue'
@@ -24,10 +28,7 @@ const SpeedBoostCoinBadge = ADS_BUILD_FLAG ? null : SpeedCoinBadge
 // flag boundary (src/skills/skillsGate.ts) — each is null on a skills-off
 // build, so none can render and no skill component is even bundled; the arena
 // shows exactly what it showed before skills (tests/skillsFlagBoundary.test.ts).
-import {
-  SkillHudChipUi as SkillHudChip,
-  PvpVsCardUi as PvpVsCard
-} from '@/skills/skillsGate'
+import { SkillHudChipUi as SkillHudChip } from '@/skills/skillsGate'
 
 // Bosses 100+ surfaces (bosses-100-feature.md §3.5, §7.2, §7.3, §11): lazy
 // handles from the bosses flag boundary (src/bosses/bosses100Gate.ts) — each
@@ -55,6 +56,8 @@ import {
 </script>
 
 <script setup lang="ts">
+import { movieIconSrc } from '@/use/badgeIconArt'
+import { mobileCheck } from '@/utils/function'
 import {
   ref,
   onMounted,
@@ -112,6 +115,7 @@ import type { SpinnerConfig } from '@/types/spinner'
 import useUser, { isMobileLandscape, isMobilePortrait, isNative } from '@/use/useUser'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import StatIcon from '@/components/icons/StatIcon.vue'
+import UiIcon from '@/components/icons/UiIcon.vue'
 import DailyRewards from '@/components/organisms/DailyRewards.vue'
 import BattlePass from '@/components/organisms/BattlePass.vue'
 import useBattlePass from '@/use/useBattlePass'
@@ -119,8 +123,6 @@ import TreasureChest from '@/components/organisms/TreasureChest.vue'
 import SkinChestTimer from '@/components/organisms/SkinChestTimer.vue'
 import type { GrantedSkin } from '@/use/useSkinChest'
 import CoinBadge from '@/components/organisms/CoinBadge.vue'
-import IconDiamond from '@/components/icons/IconDiamond.vue'
-import { prependBaseUrl } from '@/utils/function'
 import FMuteButton from '@/components/atoms/FMuteButton.vue'
 import FButtonSwitch from '@/components/atoms/FButtonSwitch.vue'
 import StageBadge from '@/components/StageBadge.vue'
@@ -128,7 +130,8 @@ import FakeLeaderBoard from '@/components/organisms/FakeLeaderBoard.vue'
 import SurrenderIcon from '@/components/organisms/SurrenderIcon.vue'
 import PvPButton from '@/components/organisms/PvPButton.vue'
 import PvPLobbyModal from '@/components/organisms/PvPLobbyModal.vue'
-import usePVP from '@/use/usePVP'
+import usePVP, { pendingInviteCode, startCrazyMultiplayer } from '@/use/usePVP'
+import { botPlayStyle, type BotOpponent } from '@/use/pvpBots'
 import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
 import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/useLeaderboard'
 import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
@@ -137,6 +140,8 @@ import BossPeekBadge from '@/components/atoms/BossPeekBadge.vue'
 import { getBossPeek, battleModeOf, type BattleMode, type BossPeek } from '@/use/bossPeek'
 import { shouldShowBossDefeated } from '@/use/bossDefeated'
 import BossDefeatedBanner from '@/components/atoms/BossDefeatedBanner.vue'
+import HudToast from '@/components/atoms/HudToast.vue'
+import FRibbon from '@/components/atoms/FRibbon.vue'
 import { stageEnemyConfigs } from '@/use/stageBladeConfig'
 import { fmtFixed } from '@/utils/localeNumber'
 import type { BossTrophyInput, TraitCardView } from '@/use/bosses/bossArenaUi'
@@ -148,22 +153,15 @@ import { bossPreviewModelId } from '@/use/bossPeek'
 import { leaderboardVisible, reportRun, setPlayerBuildSource } from '@/use/useLiveLeaderboard'
 import { triggerHappytime } from '@/use/useCrazyGames'
 import { syncGameplayLifecycle, stopGameplayLifecycle } from '@/use/useGameplayLifecycle'
-import { isSingleCurrency, displayDiamondReward } from '@/use/useCurrency'
+import { isSingleCurrency } from '@/use/useCurrency'
 import {
   adsInFlight,
   isAdsBlockedModalShown,
   isRewardedReady,
-  isInterstitialReady,
-  showRewardedAd,
-  showMidgameAd
+  showRewardedAd
 } from '@/use/useAds'
-import {
-  firstMidgameAdShown,
-  incrementAdCounter,
-  isMidgameAdDue,
-  markFirstMidgameAdShown,
-  resetAdCounter
-} from '@/use/midgameCadence'
+import { incrementAdCounter } from '@/use/midgameCadence'
+import { useArenaAdBreaks } from '@/use/arenaAdBreaks'
 import { hasAnyFreeSpeedGift, claimFreeSpeedBoost, refreshFreeSpeedGiftDay } from '@/use/useFreeSpeedGift'
 import { DAILY_SPEED_GIFT_DURATION_MS } from '@/use/speedGiftGate'
 import {
@@ -173,10 +171,11 @@ import {
   isSpeedSwitchOffered
 } from '@/use/speedBoostPurchase'
 import useBottomSafe from '@/use/useBottomSafe'
+import { useArenaHudFit } from '@/use/useArenaHudFit'
 import { getSelectedSkin, grantTrophySkins, modelImgPath, type SpinnerModelId } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
-import { spawnCoinExplosion, flyDiamondsToBadge, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
-import { revealRewards } from '@/use/useRewardReveal'
+import { spawnCoinExplosion, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
+import { revealRewards, whenRevealIdle, lastRevealOrigin } from '@/use/useRewardReveal'
 import useCheats from '@/use/useCheats'
 import { cheatRouletteSignal, bossLabSignal, cheatsEnabled } from '@/use/useCheats'
 import RouletteWheel from '@/components/organisms/RouletteWheel.vue'
@@ -200,6 +199,13 @@ import { loadIntroCutscene } from '@/use/introCutsceneLoader'
 import { SKILLS_BUILD, loadArenaSkills, loadSkillEngine } from '@/skills/skillsGate'
 import type { ArenaSkills } from '@/use/skills/arenaSkills'
 import { isGamePaused } from '@/use/useGamePause'
+import { computeStats } from '@/use/useSpinnerConfig'
+import {
+  VS_HANDOFF_MS, VS_TOTAL_MS, buildVsSide, emptyVsSeen, parseVsSeen, recordVsSeen, shouldShowVsIntro, vsUsesWallClock,
+  type VsIntroData, type VsMatchup, type VsMode, type VsSeen, type VsUnitInput
+} from '@/use/vsIntro'
+import { VS_SEEN_KEY } from '@/keys'
+import type { SpinnerState } from '@/types/spinner'
 import { isForcedDarkBlocking, whenForcedDarkGuardClear } from '@/use/useForcedDarkModeGuard'
 import { isRewardedIntroOpen } from '@/use/useRewardedIntro'
 // Stub-swapped on every non-Poki build (vite.config alias), so this never
@@ -264,6 +270,8 @@ const {
   isJoystickVisible,
   isJoystickDragging,
   renderJoystickOverlay,
+  setArenaFitHud,
+  arenaScreenLayout,
   startPhysics,
   stopPhysics,
   disposePhysics,
@@ -314,9 +322,14 @@ const {
   sendSurrender: pvpSendSurrender,
   sendStateCheck: pvpSendStateCheck,
   joinLobby: pvpJoinLobby,
+  createLobby: pvpCreateLobby,
   checkInviteFromUrl,
   returnToLobby: pvpReturnToLobby,
-  leavePvP
+  leavePvP,
+  pendingInviteHost: pvpPendingInviteHost,
+  matchKind: pvpMatchKind,
+  opponentProfile: pvpOpponent,
+  registerBotMatchStart: pvpRegisterBotMatchStart
 } = usePVP()
 
 // ─── Global leaderboard ──────────────────────────────────────
@@ -328,6 +341,28 @@ const {
 // between `advanceStage()` and `recordPlayerStage()`, so take the larger.
 const leaderboardModalOpen: Ref<boolean> = ref(false)
 const bestStage = computed(() => Math.max(currentStageId.value, playerMaxStage.value))
+/** The HUD leaderboard button appears once stage 6 is won (the stage to play is 7). */
+const LEADERBOARD_MIN_STAGE = 7
+
+// ─── Team size (src/data/teamSize.ts, use/useTeamSize.ts) ──────────────────
+// Slot 2 opens after winning stage 3, slot 3 after winning stage 10; the
+// player picks 1, 2 or 3 in the team modal. Persist newly opened slots (and
+// the slots an older save already earned) as the best stage grows.
+// #G1: the moment slot 2 opens a 2nd smasher joins automatically
+// (useTeamSize.syncTeamSlots); announce it with a HUD toast once the result
+// screen is out of the way (the Team button's "!" badge stays until the modal
+// shows the new slot).
+const secondSmasherJoined: Ref<boolean> = ref(false)
+watch(bestStage, (s) => {
+  if (secondSlotJustOpened(syncTeamSlots(s))) secondSmasherJoined.value = true
+  // Premium smashers (Tuskar onwards): the ownership record follows the best
+  // stage, and a save from before the rule keeps what it had (premiumSmashers.ts).
+  settlePremiumSmashers(s)
+}, { immediate: true })
+/** Smashers per side in a campaign / cheat-stage battle (the player's pick). */
+const battleTeamSize = computed(() => teamSizeAt(bestStage.value))
+/** A team slot opened that the team modal has not shown yet → Team button badge. */
+const teamSlotBadge = computed(() => hasUnseenTeamSlot(bestStage.value))
 
 /** The board's tie-break column: summed smasher levels across the whole
  *  roster. Monotonic (upgrades never refund) and it is what actually separates
@@ -361,7 +396,10 @@ const teamPower = computed(() => rosterPower.value)
 const reportLeaderboardRun = () => {
   void reportRun(bestStage.value, teamPower.value, { force: gameResult.value === 'lose' })
 }
-setPlayerBuildSource(() => ({ team: playerTeamWithUpgrades(), skills: sk.value?.battleSkillOptions('campaign').skillLoadout ?? [] }))
+// The posted build is the RANKED team (always two smashers — the build
+// format, league ghosts and gatekeepers are two-smasher teams), not the
+// campaign team size the player picked.
+setPlayerBuildSource(() => ({ team: rankedTeamWithUpgrades(), skills: sk.value?.battleSkillOptions('campaign').skillLoadout ?? [] }))
 
 const pvpModalOpen: Ref<boolean> = ref(false)
 const pvpMode: Ref<boolean> = ref(false)
@@ -388,6 +426,8 @@ const clearTipCycle = () => {
 }
 
 const { showHint, startHintTimer, clearHint } = useHint(2500)
+// Mouse players are told to click, touch players (phones AND tablets) to tap.
+const isTouchUi = mobileCheck() || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)
 const { shakeStyle } = useScreenshake()
 const { t, locale } = useI18n()
 const { playSound } = useSounds()
@@ -418,17 +458,25 @@ const beginBattle = async () => {
     if (phase.value !== 'tap_to_start') return
   }
 
-  if (shouldShowMidgameAdNow()) {
-    phase.value = 'ad_break'
-    await runMidgameAdBeforeBattle()
-    // Restore the phase that startMatch's guard expects, then proceed.
-    // The window between this assignment and startMatch's own phase
-    // change is synchronous, so the player can't tap into a duplicate
-    // beginBattle here.
-    phase.value = 'tap_to_start'
-  }
+  await playDueInterstitial()
+  // The window between the restored 'tap_to_start' and startMatch's own
+  // phase change is synchronous, so the player can't tap into a duplicate
+  // beginBattle here. (Anything that re-initialised the board during the ad
+  // left it at 'tap_to_start' too.)
+  if (phase.value !== 'tap_to_start') return
 
   startBattleMusic()
+  // The VS screen (src/use/vsIntro.ts) plays right before the meteor shower
+  // and the 3-2-1 — once per new matchup; the match starts on its hand-off,
+  // never on its own. A retry goes straight to the meteors.
+  const vsMode = singlePlayerVsMode()
+  const matchup = vsMatchupFor(vsMode)
+  if (shouldShowVsIntro(matchup, readVsSeen(), vsBotSeen)) {
+    noteVsShown(matchup)
+    const ok = await playVsIntro(singlePlayerVsData(vsMode))
+    if (!ok || phaseNow() !== 'vs_intro') return
+    phase.value = 'tap_to_start'
+  }
   startMatch()
 }
 
@@ -441,7 +489,7 @@ const {
   awardLoss: bpAwardLoss
 } = useBattlePass()
 
-const { recordPvpWin, recordPvpLoss, awardHonor } = usePvpStats()
+const { recordPvpWin, recordPvpLoss, awardHonor, recordBotResult } = usePvpStats()
 
 const PVP_COIN_REWARD = 20
 /** Honor points earned in the last PvP match — shown on the reward overlay. */
@@ -494,11 +542,15 @@ const CHEAT_PLAYER_BONUS_LEVELS = 25
  *  fight gives the player the cheat bonus above (level mode "matched"). */
 let bossLabStage: Stage | null = null
 let bossLabBoost = true
+/** The first `size` team picks (padded when fewer are stored) at their roster
+ *  levels, each with its slot's colourway. */
+const teamWithUpgrades = (size: number): SpinnerConfig[] =>
+  teamConfigs(fieldTeam(playerTeam.value, size, bestStage.value), (c, i) => getSelectedSkin(c.topPartId, i))
 const playerTeamWithUpgrades = (): SpinnerConfig[] => {
   // A Boss Lab fight at campaign levels fights with the real team (no boost).
   const labUnboosted = bossLabStage !== null && !bossLabBoost && toRaw(cheatStage.value) === bossLabStage
+  const configs = teamWithUpgrades(battleTeamSize.value)
   if (cheatStage.value && !labUnboosted) {
-    const configs = teamConfigs(playerTeam.value, (c, i) => getSelectedSkin(c.topPartId, i))
     const peak = Math.max(0, ...configs.map(c => c.topLevel ?? 0))
     return configs.map(c => ({
       ...c,
@@ -506,8 +558,11 @@ const playerTeamWithUpgrades = (): SpinnerConfig[] => {
       bottomLevel: peak + CHEAT_PLAYER_BONUS_LEVELS
     }))
   }
-  return teamConfigs(playerTeam.value, (c, i) => getSelectedSkin(c.topPartId, i))
+  return configs
 }
+/** League ranked fights, leaderboard ghosts and the posted build: always the
+ *  first two picks (RANKED_TEAM_SIZE), whatever the campaign team size is. */
+const rankedTeamWithUpgrades = (): SpinnerConfig[] => teamWithUpgrades(RANKED_TEAM_SIZE)
 
 // ─── Hint Timer ───────────────────────────────────────────────────────────
 
@@ -562,6 +617,12 @@ watch(stageReinitSignal, () => {
 
 const isGameOver = computed(() => phase.value === 'game_over')
 const showReward: Ref<boolean> = ref(false)
+// #G1 "2nd smasher joined!" toast, held until the result screen closes.
+watch([secondSmasherJoined, showReward], ([joined, reward]) => {
+  if (!joined || reward) return
+  secondSmasherJoined.value = false
+  showHudToast(t('sfc.SmasherTeamModal.secondSmasherJoined'), 'sun', HUD_TOAST_MS * 1.5)
+})
 
 // Boss peek — "Next boss · Stage N" teaser on the campaign win screen. Set by
 // the game-over watcher from the stage the battle was FOUGHT on (before
@@ -572,8 +633,6 @@ const bossPeek: Ref<BossPeek | null> = ref(null)
 // ─── Boss Roulette ──────────────────────────────────────────────────────────
 const showRoulette = ref(false)
 
-// The roulette jackpot's diamond payouts are rendered per grant with
-// `displayDiamondReward` in the template.
 const pendingBossReward = ref(false)
 // "BOSS DEFEATED" title card between the boss kill and the roulette.
 const showBossDefeated = ref(false)
@@ -790,6 +849,10 @@ const bladeStats = computed(() => {
   })
 })
 
+/** Team size 3 outside phone portrait: two card columns at the corners (the
+ *  third card above the first) instead of a middle card over the player's tree. */
+const bladeStatsStacked = computed(() => bladeStats.value.length > 2 && !isMobilePortrait.value)
+
 const onSurrender = () => {
   stopPhysics()
   clearBattleVfx()
@@ -976,24 +1039,6 @@ const fireCoinExplosion = (sourceEl: HTMLElement | null) => {
   }
 }
 
-/**
- * Fire a diamond explosion from any source element toward the HUD badge's
- * diamond row — or, while that row is hidden, the badge itself — and pop
- * "+amount" there on arrival (see `flyDiamondsToBadge`).
- *
- * On a single-currency build the payout IS coins, so the burst has to be coins
- * flying to the coin row — a diamond VFX landing on a row that does not exist
- * would be the one place the collapsed economy leaks visually.
- */
-const fireDiamondExplosion = (sourceEl: HTMLElement | null, amount: number) => {
-  if (!sourceEl) return
-  if (isSingleCurrency) {
-    fireCoinExplosion(sourceEl)
-    return
-  }
-  flyDiamondsToBadge(sourceEl, coinBadgeRef.value, amount)
-}
-
 let speedBoostIntervalId: number | null = null
 
 // ─── Canvas Sizing ─────────────────────────────────────────────────────────
@@ -1039,10 +1084,62 @@ let canvasDpr = 1
 
 const { bottomGapPx, scheduleBottomMeasure } = useBottomSafe()
 
+// Arena fit (presentation only): the opaque HUD over the canvas — every
+// `data-arena-hud` element — is measured and the board is fitted around it
+// (@/use/arenaFit, @/use/useArenaHudFit).
+useArenaHudFit(canvasRef, setArenaFitHud, [
+  phase, isBattleActive, showConfigButton, showReward, currentStageId,
+  () => bladeStats.value.length, () => bladeStatsStacked.value, bottomGapPx
+])
+
 // The drag hint measures the stat cards / combat-log pill and lifts itself
 // clear of them (they share its bottom strip; which one it hits depends on
 // the spinner count, the HUD scale and the locale).
 const dragHintRef = ref<HTMLElement | null>(null)
+// Never over the player's tree / gauge: off portrait the hint moves into the
+// free strip RIGHT of the board when it is wide enough (the joystick and the
+// stacked stat cards live on the left), else it sits just above the tree.
+// Re-placed when the turn starts (the fit has settled by then) and on resize.
+const DRAG_HINT_SIDE_MIN = 104
+const dragHintSide = ref<{ left: number; width: number } | null>(null)
+const dragHintAboveTree = ref<number | null>(null)
+const placeDragHint = () => {
+  const w = canvasWidth.value
+  const h = canvasHeight.value
+  if (!w || !h) return
+  const { board, playerTree } = arenaScreenLayout(w, h)
+  dragHintSide.value = null
+  dragHintAboveTree.value = null
+  if (w <= h || playerTree === null) return
+  const gap = w - board.x1 - 16
+  if (gap >= DRAG_HINT_SIDE_MIN) dragHintSide.value = { left: Math.round(board.x1 + 8), width: Math.round(Math.min(gap, 320)) }
+  // + the gauge's HP label riding on top of the arc
+  else dragHintAboveTree.value = Math.round(h - playerTree.y0 + 22)
+}
+watch([phase, canvasWidth, canvasHeight], () => {
+  if (phase.value !== 'player_turn') return
+  placeDragHint()
+  // again once the HUD re-measure (useArenaHudFit: 120 / 700 ms) settled the fit
+  for (const ms of [350, 900]) setTimeout(placeDragHint, ms)
+}, { flush: 'post' })
+const dragHintStyle = computed(() => {
+  const side = dragHintSide.value
+  if (side) {
+    return {
+      left: `${side.left}px`,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      maxWidth: `min(${side.width}px, calc(100vw - ${side.left}px - env(safe-area-inset-right, 0px) - 0.5rem))`
+    }
+  }
+  const above = dragHintAboveTree.value
+  return {
+    bottom: above !== null
+      ? `${above}px`
+      : `calc(4rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx.value + dragHintLiftPx.value}px)`,
+    maxWidth: 'min(28rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem))'
+  }
+})
 const { liftPx: dragHintLiftPx } = useDragHintPlacement(dragHintRef, computed(() => phase.value === 'player_turn'))
 
 // The "tap to start" title stays on one line and shrinks to the room between
@@ -1198,6 +1295,8 @@ watch(phase, (p) => {
   bossIntroShown.value = p === 'meteor_intro'
     && bossIntro.value !== null
     && !pvpMode.value && !ghostMode.value
+    // The VS screen already showed the boss (crown, name, trait glyphs).
+    && !vsPlayedThisBattle.value
 })
 
 // ─── Boss trophies (§3.5) ──────────────────────────────────────────────────
@@ -1279,7 +1378,7 @@ watch(isGameOver, (over) => {
       })
     })
     playSound(gameResult.value === 'win' ? 'win' : 'lose')
-    if (gameResult.value === 'win') spawnMeteorShower(80, 50, 65)
+    if (gameResult.value === 'win') spawnMeteorShower('celebrate')
     // A fresh result screen: nothing from the last one's 3x ad carries over.
     lastWinWasBoss.value = false
     lastResultWasLab.value = false
@@ -1309,6 +1408,9 @@ watch(isGameOver, (over) => {
           recordPvpLoss()
           lastHonorEarned.value = 0
         }
+        // A random-search bot: casual local result (above) + the bot tally and
+        // the skill staircase toward 50 % (pvpBots.ts "RATING").
+        if (pvpMatchKind.value === 'bot') recordBotResult(gameResult.value === 'win' ? 'win' : 'lose')
       } catch (e) {
         console.warn('[PvP] Stats recording failed:', e)
         lastHonorEarned.value = 0
@@ -1437,9 +1539,8 @@ watch(isGameOver, (over) => {
  */
 const onRouletteResult = (result: RouletteResult) => {
   // Boss win uses the multiplied reward; a skin pays the 1x coins beside it;
-  // the ultra-rare jackpot pays diamonds INSTEAD of coins.
+  // the ultra-rare jackpot pays its fixed coins.
   const grant = rouletteGrantFor(result, rouletteBaseCoins.value)
-  if (grant.diamonds > 0) addDiamonds(grant.diamonds)
   if (grant.coins > 0) addCoins(grant.coins)
   rouletteGrants.value = [...rouletteGrants.value, grant]
   coinsAwarded.value = true
@@ -1460,7 +1561,7 @@ const onRouletteDone = () => {
   // branch would under-report exactly the runs that advance a player furthest.
   reportLeaderboardRun()
   playSound('happy')
-  spawnMeteorShower(60, 40, 50) // warm star burst
+  spawnMeteorShower('celebrate') // celebratory meteor shower
   // Signal a "happy moment" to the CrazyGames SDK alongside the reward VFX —
   // the platform uses these events to time featured-game highlights.
   // No-op outside a crazy-web build thanks to the isSdkActive guard inside.
@@ -1469,8 +1570,7 @@ const onRouletteDone = () => {
   nextTick(() => {
     rouletteGrants.value.forEach((g, i) => {
       const el = rouletteRewardRowRefs.value[i] ?? null
-      if (g.diamonds > 0) fireDiamondExplosion(el, g.diamonds)
-      else fireCoinExplosion(el)
+      fireCoinExplosion(el)
     })
   })
   // Enable "tap to continue" after VFX settles
@@ -1575,33 +1675,37 @@ watch(showReward, async (show) => {
 // State + persistence live in `@/use/midgameCadence` (shared with the
 // rewarded-ad seam in `useAds`: a completed rewarded ad resets the counter).
 
-/**
- * Pure predicate — does the current cadence + provider state warrant a
- * midgame ad before the next battle? Split out from `runMidgameAdBeforeBattle`
- * so `beginBattle` can decide whether to enter the 'ad_break' phase at all
- * (no point parking in ad_break if no ad will ever fire).
- *
- * Threshold:
- *   • first ad ever  → 2  (fresh user with counter starting at 1 fires
- *                          before battle 2)
- *   • subsequent ads → 3  (every 3 battles, ghost or campaign)
- */
-const shouldShowMidgameAdNow = (): boolean => {
-  if (!isInterstitialReady.value) return false
-  return isMidgameAdDue()
-}
+// #UX100 — the pre-battle interstitial is paced by ACTIVE PLAYTIME (first
+// after 240 s, then at most one per 121 s; none in the tutorial or around
+// PvP), and 20 quick taps on the coin badge trigger one (at once on this
+// screen, else at the next pre-battle break). Rules: interstitialPacing.ts;
+// knobs + per-build flags: ads/interstitialConfig.ts; arena glue:
+// arenaAdBreaks.ts. With the playtime pacing switched off for a build, the
+// battle-count cadence above decides instead.
+const PVP_LIVE_STATES: readonly string[] = ['searching', 'found', 'creating', 'waiting', 'connecting', 'lobby', 'ready', 'playing']
+const arenaAds = useArenaAdBreaks({
+  phase,
+  pvpActive: () => pvpMode.value || pvpModalOpen.value || PVP_LIVE_STATES.includes(pvpStatus.value),
+  tutorial: () => !hasFirstWin.value,
+  arenaClear: () => {
+    const b = skillGateBlockers()
+    return !b.pvp && !b.adActive && !b.cutscene && !b.modalOpen && !isForcedDarkBlocking.value
+  },
+  getBadge: () => coinBadgeEl.value
+})
 
 /**
- * Resets the cadence counter (so a no-fill ad doesn't get retried on
- * the very next battle), marks the first-ad fast-path as consumed, then
- * delegates to the active ad provider's `showMidgameAd`. The provider's
- * promise resolves once the ad closed OR errored — either way we proceed
- * to the meteor-shower intro afterwards.
+ * The one interstitial placement: at the pre-battle break ('tap_to_start'),
+ * if the pacing says one is due. The board parks at 'ad_break' while the ad
+ * runs (no tap can start a battle under it) and comes back to
+ * 'tap_to_start' whether the ad played, did not fill or failed.
  */
-const runMidgameAdBeforeBattle = async (): Promise<void> => {
-  resetAdCounter()
-  if (!firstMidgameAdShown()) markFirstMidgameAdShown()
-  await showMidgameAd()
+const playDueInterstitial = async (): Promise<void> => {
+  const reason = arenaAds.preBattleAd()
+  if (!reason) return
+  phase.value = 'ad_break'
+  await arenaAds.runAdBreak(reason)
+  if (phase.value === 'ad_break') phase.value = 'tap_to_start'
 }
 
 const onRewardContinue = async () => {
@@ -1626,7 +1730,11 @@ const onRewardContinue = async () => {
   if (wasPvp) {
     pvpMode.value = false
     gamePvpMode.value = false
-    // Return to PvP lobby (keep connection alive) instead of destroying it
+    // A bot match ran on the ghost path: clear it like one.
+    ghostMode.value = false
+    ghostEnemy.value = null
+    // Return to PvP lobby (keep connection alive) instead of destroying it;
+    // after a bot match, to the PvP start screen.
     pvpReturnToLobby()
     pvpModalOpen.value = true
   } else if (wasGhost) {
@@ -1651,13 +1759,33 @@ const onRewardContinue = async () => {
   void armLeagueUnlockAfterWin(closedResult, closedMode)
 }
 
+// ─── Invites (link, CrazyGames launch params, CrazyGames join listener) ──────
+
+let stopCrazyMultiplayer: () => void = () => {}
+
+/** Join a queued invite once the arena is on its menu. A friend's invite skips
+ *  the first-launch cutscene (CG: no onboarding scene for joining players). */
+function joinPendingInvite () {
+  if (!pendingInviteCode.value || pvpMode.value) return
+  if (phase.value !== 'tap_to_start' && phase.value !== 'idle') return
+  const friendName = pvpPendingInviteHost.value ?? ''
+  const code = checkInviteFromUrl()
+  if (!code) return
+  noteIntroBattleStarted()
+  pvpModalOpen.value = true
+  // Small delay so the modal renders before we trigger join
+  setTimeout(() => pvpJoinLobby(code, { friendName }), 100)
+}
+
 // ─── Leaderboard / Ghost Fight ────────────────────────────────────────────
 
 const onGhostFight = (entry: LeaderboardEntry) => {
   ghostEnemy.value = entry
   ghostMode.value = true
   markGhostFought(entry.id)
-  const myTeam = playerTeamWithUpgrades()
+  // A ghost is a two-smasher team (blade + blade2; rows from before team
+  // sizes are 2 by construction): the fight is 2v2 with the ranked team.
+  const myTeam = rankedTeamWithUpgrades()
   if (!myTeam.length) return
   const toConfig = (b: SpinnerConfig): SpinnerConfig => ({
     topPartId: b.topPartId,
@@ -1669,10 +1797,10 @@ const onGhostFight = (entry: LeaderboardEntry) => {
   const enemies = [toConfig(entry.blade), toConfig(entry.blade2)]
   // The ghost fights with its derived loadout (§9.1) — none on a skills-off build.
   lastBattleInit = () => {
-    initGame(playerTeamWithUpgrades(), enemies, false, 'default', 0, false, undefined, null, 'circle',
+    initGame(rankedTeamWithUpgrades(), enemies, false, 'default', false, undefined, null, 'circle',
       { ...battleSkillOptions('ghost', entry), terrain: { layout: layoutForSeed(hashString(String(entry.id))), towers: true } })
   }
-  initGame(myTeam, enemies, false, 'default', 0, false, undefined, null, 'circle',
+  initGame(myTeam, enemies, false, 'default', false, undefined, null, 'circle',
     { ...battleSkillOptions('ghost', entry), terrain: { layout: layoutForSeed(hashString(String(entry.id))), towers: true } })
 }
 
@@ -1682,6 +1810,8 @@ const onOpenConfig = () => {
     localStorage.setItem(CONFIG_OPENED_KEY, '1')
   }
   configModalOpen.value = true
+  // The modal shows the team-size picker with every open slot: seen.
+  markTeamSlotsSeen(bestStage.value)
 }
 
 const onConfigSave = (team: SpinnerConfig[]) => {
@@ -1797,7 +1927,6 @@ function initCampaignGame() {
     stageNpcTeam(),
     !hasFirstWin.value,
     currentStage.value.arenaType,
-    currentStage.value.bouncers ?? 0,
     currentStageId.value >= 2,
     undefined,
     null,
@@ -1805,17 +1934,271 @@ function initCampaignGame() {
     {
       ...battleSkillOptions(battleModeOf({ cheat: !!cheatStage.value })),
       // Tree Smashers: layouts cycle by stage; towers from stage 2 on
-      // (stages 1–2 are the tutorial and stay pure).
-      terrain: { layout: layoutForStage(currentStageId.value), towers: currentStageId.value >= TOWERS_FROM_STAGE }
+      // (stages 1–2 are the tutorial and stay pure). 1–3 trees per side,
+      // seeded by the stage id (treeCountForStage: one through the tutorial
+      // arc; PvP / league / ghosts keep one).
+      terrain: { layout: layoutForStage(currentStageId.value), towers: currentStageId.value >= TOWERS_FROM_STAGE, trees: treeCountForStage(currentStageId.value) }
     }
   )
 }
 
-// ── PvP VS card ─────────────────────────────────────────────────────────────
-const pvpVsShow = ref(false)
+/** The opponent's name on the VS screen (hello / bot profile). */
+const pvpOpponentName = computed(() => pvpOpponent.value?.name ?? '')
+
+// ─── VS intro (src/use/vsIntro.ts, components/organisms/VsIntro.vue) ───────
+//
+// A 5-second face-off in front of every NEW matchup, right before the meteor
+// shower and the 3-2-1: campaign, boss, leaderboard ghost and league fights
+// (from the tap-to-start, after any due interstitial), the random-search bot
+// match and the human PvP match. Retries go straight to the meteors (the
+// once-per-matchup rules: vsIntro.ts header; the save key `smashers_vs_seen`). While it plays the board sits in the
+// view-managed 'vs_intro' phase (like 'ad_break'): no menu surface, ad gate or
+// board rebuild keyed on 'tap_to_start' can fire under it.
+//
+//   - Single-player: its own clock (pauses with the game), skippable from
+//     0.8 s; `startMatch()` runs on its hand-off at 4.8 s.
+//   - Human PvP: a fixed wall-clock timeout, no pause, no skip: both peers
+//     build the board exactly VS_HANDOFF_MS after receiving the match start,
+//     the same relative timing as before (the lock-step sim only advances on
+//     launches). The bot match poses as PvP: no skip either.
+//   - Campaign stage 1 (the tutorial after the intro cutscene): no VS.
+//
+// It replaces the old PvP VS card (deciding_turn) and the bot / league cards
+// inside the meteor intro, and a stage-101+ boss no longer re-introduces
+// itself with the intro card during the meteors when the VS just did.
+const VsIntroUi = defineAsyncComponent(() => import('@/components/organisms/VsIntro.vue'))
+const vsIntro = shallowRef<VsIntroData | null>(null)
+/** The battle being started played a VS screen (suppresses the boss card). */
+const vsPlayedThisBattle = ref(false)
+let vsGen = 0
+let vsResolve: ((ok: boolean) => void) | null = null
+let vsTimers: number[] = []
+let vsMounted = false
+
+const clearVsTimers = () => {
+  for (const id of vsTimers) clearTimeout(id)
+  vsTimers = []
+}
+
+/** Close the VS screen; a pending start resolves false (the board is gone). */
+const cancelVsIntro = () => {
+  clearVsTimers()
+  const r = vsResolve
+  vsResolve = null
+  vsIntro.value = null
+  r?.(false)
+}
+
+/**
+ * Put the VS screen up and resolve once the battle should start (true), or
+ * false when something took the board away meanwhile (a reinit, a PvP
+ * disconnect, leaving the arena). Parks the board at 'vs_intro'.
+ */
+const playVsIntro = (data: VsIntroData): Promise<boolean> => {
+  cancelVsIntro()
+  const gen = ++vsGen
+  vsMounted = false
+  vsPlayedThisBattle.value = true
+  phase.value = 'vs_intro'
+  vsIntro.value = data
+  return new Promise<boolean>((resolve) => {
+    vsResolve = (ok) => {
+      if (gen !== vsGen) return
+      vsResolve = null
+      resolve(ok)
+    }
+    if (vsUsesWallClock(data.mode)) {
+      // PvP: time-boxed on the wall clock (see above).
+      vsTimers.push(window.setTimeout(() => vsResolve?.(true), VS_HANDOFF_MS))
+      vsTimers.push(window.setTimeout(() => {
+        if (gen === vsGen) vsIntro.value = null
+      }, VS_TOTAL_MS))
+    } else {
+      // Fail-safe: the screen's chunk never arrived (offline): start anyway.
+      vsTimers.push(window.setTimeout(() => {
+        if (gen === vsGen && !vsMounted) {
+          vsIntro.value = null
+          vsResolve?.(true)
+        }
+      }, 2000))
+    }
+  })
+}
+const onVsStart = () => {
+  vsMounted = true
+}
+const onVsHandoff = () => {
+  if (vsIntro.value && !vsUsesWallClock(vsIntro.value.mode)) vsResolve?.(true)
+}
+const onVsDone = () => {
+  if (vsIntro.value && !vsUsesWallClock(vsIntro.value.mode)) {
+    clearVsTimers()
+    vsIntro.value = null
+  }
+}
+// Whatever takes the board out of 'vs_intro' before the hand-off cancels it.
 watch(phase, (p) => {
-  if (p !== 'deciding_turn') pvpVsShow.value = false
+  if (p !== 'vs_intro' && vsResolve) cancelVsIntro()
+  if (p === 'tap_to_start' || p === 'idle') vsPlayedThisBattle.value = false
 })
+
+/** The phase right now (a plain read: no narrowing across an await). */
+const phaseNow = (): string => phase.value
+
+// ── Once per matchup (vsIntro.ts header) ──
+/** Bot opponents met in this session. */
+const vsBotSeen = new Set<string>()
+/** Human PvP matches started in the current pairing (both peers count the
+ *  same sequence, so both decide the same). */
+let pvpPairingMatches = 0
+watch(pvpStatus, (st) => {
+  if (!['lobby', 'waiting', 'found', 'playing'].includes(st)) pvpPairingMatches = 0
+})
+const readVsSeen = (): VsSeen => {
+  try {
+    return parseVsSeen(localStorage.getItem(VS_SEEN_KEY))
+  } catch {
+    return emptyVsSeen()
+  }
+}
+/** Remember that this matchup had its VS screen (the save / the session). */
+const noteVsShown = (m: VsMatchup) => {
+  if (m.mode === 'bot' && m.opponent) vsBotSeen.add(m.opponent)
+  const prev = readVsSeen()
+  const next = recordVsSeen(m, prev)
+  if (next === prev) return
+  try {
+    localStorage.setItem(VS_SEEN_KEY, JSON.stringify(next))
+  } catch { /* storage full / blocked: the VS just shows again next time */
+  }
+}
+const vsMatchupFor = (mode: VsMode): VsMatchup => {
+  let opponent: string | undefined
+  if (mode === 'ghost' && ghostEnemy.value) opponent = `ghost:${ghostEnemy.value.id}`
+  else if (mode === 'league' && leagueSession.value) {
+    const vs = leagueSession.value.vs
+    opponent = `league:${vs.opponentNameKey ?? vs.opponentName}`
+  } else if (mode === 'bot') opponent = `bot:${pvpOpponentName.value}`
+  return { mode, stageId: currentStageId.value, lab: !!cheatStage.value, opponent, pairingMatches: pvpPairingMatches }
+}
+
+/** Which single-player battle this is (the tap-to-start paths). */
+const singlePlayerVsMode = (): VsMode => {
+  if (leagueSession.value !== null) return 'league'
+  if (ghostMode.value) return 'ghost'
+  return npcBlades.value.some(b => b.isBoss) ? 'boss' : 'campaign'
+}
+
+/** VS cards per side: the field's starting blades (at most four). */
+const VS_MAX_UNITS = 4
+const bladeUnits = (blades: readonly SpinnerState[]): VsUnitInput[] =>
+  blades.slice(0, VS_MAX_UNITS).map((b) => {
+    const s = statsFor(b)
+    return { config: b.config, maxHp: b.maxHp, damageMul: s.damageMultiplier, defenseMul: s.defenseMultiplier }
+  })
+const configUnits = (team: readonly SpinnerConfig[]): VsUnitInput[] =>
+  team.slice(0, VS_MAX_UNITS).map((c) => {
+    const s = computeStats(c, c.topLevel ?? 0, c.bottomLevel ?? 0)
+    return { config: c, maxHp: s.maxHp, damageMul: s.damageMultiplier, defenseMul: s.defenseMultiplier }
+  })
+const playerModel = (c: SpinnerConfig) => getSelectedSkin(c.topPartId)
+
+/** The VS screen of the battle on the board (tap-to-start paths + the bot). */
+const singlePlayerVsData = (mode: VsMode): VsIntroData => {
+  const mine = playerBlades.value
+  const theirs = npcBlades.value
+  // Skills exactly as the engine equipped them: a side whose blades carry no
+  // skills (campaign NPCs, skills-off builds) shows no skill row.
+  const mySkills = SKILLS_BUILD && mine.some(b => b.skills !== undefined)
+  const theirSkills = SKILLS_BUILD && theirs.some(b => b.skills !== undefined)
+  let label = ''
+  let kicker: string | undefined
+  if (mode === 'bot') label = pvpOpponentName.value || t('pvp.guest')
+  else if (mode === 'league' && leagueSession.value) {
+    const vs = leagueSession.value.vs
+    label = vs.opponentNameKey ? t(vs.opponentNameKey) : vs.opponentName
+  } else if (mode === 'ghost') {
+    label = ghostEnemy.value?.name ?? ''
+    if (ghostEnemy.value) kicker = t('stageN', { n: ghostEnemy.value.maxStage })
+  } else {
+    const st = currentStage.value
+    const name = t(`stages.${st.name}`, st.name)
+    label = st.cycleSuffix ? `${name} ${st.cycleSuffix}` : name
+    kicker = cheatStage.value ? t('labBadge') : mode === 'boss' ? t('bossStage') : t('stageN', { n: currentStageId.value })
+  }
+  const enemyLoadout = mode === 'league' ? leagueSession.value?.vs.skills.opponent ?? null : null
+  return {
+    mode,
+    me: buildVsSide(t('you'), 'player', bladeUnits(mine), { skillsOn: mySkills, modelFallback: playerModel }),
+    them: buildVsSide(label, 'npc', bladeUnits(theirs), { skillsOn: theirSkills, sideLoadout: enemyLoadout }),
+    kicker
+  }
+}
+
+/** The human PvP match's VS screen (the board is built at its hand-off). */
+const pvpVsData = (myTeam: SpinnerConfig[], enemyTeam: SpinnerConfig[]): VsIntroData => {
+  const guest = pvpRole.value === 'guest'
+  return {
+    mode: 'pvp',
+    me: buildVsSide(t('you'), 'player', configUnits(myTeam), {
+      skillsOn: SKILLS_BUILD, sideLoadout: guest ? pvpGuestSkills.value : pvpHostSkills.value, modelFallback: playerModel
+    }),
+    them: buildVsSide(pvpOpponentName.value || t(guest ? 'pvp.host' : 'pvp.guest'), 'npc', configUnits(enemyTeam), {
+      skillsOn: SKILLS_BUILD, sideLoadout: guest ? pvpHostSkills.value : pvpGuestSkills.value
+    })
+  }
+}
+
+// ── Random-search bot match (src/use/pvpBots.ts) ─────────────────────────────
+// Presented exactly like a human match — PvP HUD, "Opponent's turn", the VS
+// card with its name, 1× speed, the PvP result screen — but it runs locally on
+// the single-player path: the campaign NPC AI with the bot's human-like style
+// (`npcPlay`), no network, the ghost-path flags so no campaign rule (difficulty
+// HP, stage advance, boss peek, tips) applies. usePVP holds the teams (host =
+// this player, guest = the bot), so the PvP game-over branch credits it as a
+// casual PvP result; `recordBotResult` adds the bot tally + skill staircase.
+const startBotMatch = (bot: BotOpponent) => {
+  try {
+    const myTeam = pvpHostTeam.value.map(c => ({ ...c }))
+    if (!myTeam.length || !bot.team.length) {
+      leavePvP()
+      return
+    }
+    pvpModalOpen.value = false
+    pvpMode.value = true
+    ghostEnemy.value = null
+    ghostMode.value = true
+    coinsAwarded.value = false
+    lastBattleInit = null
+    startBattleMusic()
+    initGame(myTeam, bot.team.map(c => ({ ...c })), false, pvpGameConfig.value.arenaType, false, undefined, null, 'circle', {
+      ...(sk.value?.battleSkillOptions('pvp') ?? {}),
+      seed: bot.seed,
+      firstTurn: bot.firstTurn,
+      terrain: { layout: layoutForSeed(bot.seed), towers: true },
+      npcPlay: botPlayStyle(bot.skill, bot.seed)
+    })
+    // Presented like a human match: the VS screen (no skip), then the meteors.
+    const matchup = vsMatchupFor('bot')
+    if (!shouldShowVsIntro(matchup, readVsSeen(), vsBotSeen)) {
+      startMatch()
+      return
+    }
+    noteVsShown(matchup)
+    void playVsIntro(singlePlayerVsData('bot')).then((ok) => {
+      if (!ok || phaseNow() !== 'vs_intro') return
+      phase.value = 'tap_to_start'
+      startMatch()
+    })
+  } catch (e) {
+    console.error('[PvP] Bot match start failed:', e)
+    leavePvP()
+    pvpMode.value = false
+    ghostMode.value = false
+    pvpModalOpen.value = false
+    initCampaignGame()
+  }
+}
 
 /** Any FModal on screen (Daily Rewards, Battle Pass, the rewarded-ad intro,
  *  the fake leaderboard, …) — those own their open state internally, but
@@ -1867,8 +2250,6 @@ const leagueSeasonReward = shallowRef<LeagueSeasonRewardView | null>(null)
 const leagueBusy = ref(false)
 /** Why the last start failed — a `league.notice.*` key for the hub. */
 const leagueNotice = ref<string | null>(null)
-/** VS card inside the league fight's meteor intro. */
-const leagueVsShow = ref(false)
 let leagueUnmounted = false
 
 /** HUD button / hub / popups allowed right now (CrazyGames guests: never). */
@@ -1880,10 +2261,11 @@ const measureLeague = (what: string, action: string) => {
   if (LEAGUE_BUILD) leagueBridge.value?.['measureLeague'](what, action)
 }
 
-/** The player's side as the league sees it: the board team and the loadout
- *  this fight would use ([] on a skills-off build / before the glue loads). */
+/** The player's side as the league sees it: the ranked two-smasher team
+ *  (league fights are always 2v2, whatever the campaign team size) and the
+ *  loadout this fight would use ([] on a skills-off build / before the glue loads). */
 const leagueSide = (): LeaguePlayerSide => ({
-  team: playerTeamWithUpgrades(),
+  team: rankedTeamWithUpgrades(),
   skills: sk.value?.battleSkillOptions('league').skillLoadout ?? []
 })
 
@@ -1917,11 +2299,10 @@ const initLeagueBoard = () => {
   if (!s) return
   const o = s.initOptions
   initGame(
-    playerTeamWithUpgrades(),
+    rankedTeamWithUpgrades(),
     o.enemyTeam.map(c => ({ ...c })),
     false,
     o.arenaType,
-    o.bouncers,
     false,
     undefined,
     null,
@@ -1967,15 +2348,6 @@ const onLeagueFight = async (payload: { target: LeagueFightTarget; card: Opponen
   }
 }
 
-// VS card: both teams inside the league fight's meteor intro (skills builds
-// ship the card; elsewhere it is null and the intro plays as ever).
-const LEAGUE_VS_MS = 1600
-if (LEAGUE_BUILD) {
-  watch(phase, (p) => {
-    leagueVsShow.value = p === 'meteor_intro' && leagueSession.value !== null && PvpVsCard !== null
-  })
-}
-
 // ── Unlock popup + season reward: the reveal gate's rules (G13) ─────────────
 // Only on tap_to_start, never mid-battle, over an ad, the cutscene or any
 // modal, never on a league board, and at least LEAGUE_SURFACE_GAP_MS after
@@ -2011,11 +2383,7 @@ const armLeagueUnlockAfterWin = async (result: unknown, mode: string): Promise<v
   if (!LEAGUE_BUILD || result !== 'win' || (mode !== 'campaign' && mode !== 'cheat')) return
   const st = league.value?.state.value
   if (!st || !st.unlocked || st.unlockSeen || !leagueMounted.value) return
-  if (phase.value === 'tap_to_start' && shouldShowMidgameAdNow()) {
-    phase.value = 'ad_break'
-    await runMidgameAdBeforeBattle()
-    if (phase.value === 'ad_break') phase.value = 'tap_to_start'
-  }
+  if (phase.value === 'tap_to_start') await playDueInterstitial()
   leagueUnlockArmed.value = true
 }
 
@@ -2075,11 +2443,35 @@ const onLeagueSeasonClaim = () => {
   if (r.diamonds > 0) addDiamonds(r.diamonds)
   measureLeague('season', 'claim')
   void revealRewards([{ kind: 'coins', amount: r.coins }, { kind: 'diamonds', amount: r.diamonds }], { tone: '#ffc93c' })
+    .then(() => flySeasonReward(r))
 }
 
-/** The hub hosted the claim (and already credited the wallet). */
-const onLeagueSeasonClaimed = () => {
+/** #UX1b: a league season reward flies to the badge like every other grant —
+ *  from where the reveal showed it, once the player has seen it. */
+const flySeasonReward = (r: { coins: number, diamonds: number }) => {
+  const origin = lastRevealOrigin
+  if (!origin || !coinBadgeEl.value) return
+  if (r.coins > 0) spawnCoinExplosion({ sourceRect: origin, targetEl: coinBadgeEl.value })
+  if (r.diamonds > 0) {
+    if (isSingleCurrency) spawnCoinExplosion({ sourceRect: origin, targetEl: coinBadgeEl.value })
+    else {
+      const badge = coinBadgeRef.value
+      spawnCoinExplosion({
+        sourceRect: origin,
+        targetEl: badge?.diamondRowEl ?? coinBadgeEl.value,
+        count: 14,
+        variant: 'diamond',
+        onArrive: () => badge?.celebrateDiamonds?.(r.diamonds)
+      })
+    }
+  }
+}
+
+/** The hub hosted the claim (and already credited the wallet). It opens the
+ *  reveal right after this event, so wait for that reveal to be dismissed. */
+const onLeagueSeasonClaimed = (r: { coins: number, diamonds: number }) => {
   measureLeague('season', 'claim')
+  void Promise.resolve().then(whenRevealIdle).then(() => flySeasonReward(r))
 }
 
 if (LEAGUE_BUILD) {
@@ -2202,6 +2594,7 @@ const onViewportChange = () => {
 }
 
 onMounted(() => {
+  arenaAds.mount()
   updateCanvasSize()
   scheduleBottomMeasure()
   window.addEventListener('resize', onViewportChange)
@@ -2291,6 +2684,9 @@ onMounted(() => {
   const { preloadRemainingSkins, preloadSkinsByIds } = useAssets()
   const kick = () => {
     preloadRemainingSkins()
+    // The VS screen's chunk, so the first face-off never waits on a download
+    // (its skill icons pop in from 0.88 s, time enough for their own chunk).
+    void import('@/components/organisms/VsIntro.vue').catch(() => { /* fail-safe in playVsIntro */ })
   }
   // Warm the next stage's enemy skins while the reward overlay is up.
   // `advanceStage()` already fired inside the game-over watcher above, so
@@ -2315,13 +2711,23 @@ onMounted(() => {
     setTimeout(kick, 500)
   }
 
-  // Check URL for incoming PvP invite — open modal and auto-join
-  const pendingPvpHost = checkInviteFromUrl()
-  if (pendingPvpHost) {
-    pvpModalOpen.value = true
-    // Small delay so the modal renders before we trigger join
-    setTimeout(() => pvpJoinLobby(pendingPvpHost), 100)
-  }
+  // Invites: a `#/battle?pvp=` link, the CrazyGames invite params this
+  // session opened with, or a friend accepting while the game runs (the CG
+  // join-room listener) all queue on `pendingInviteCode`; the watcher joins as
+  // soon as the arena is on its menu (never mid-battle — after it).
+  stopCrazyMultiplayer = startCrazyMultiplayer({
+    // CG `isInstantMultiplayer`: straight into a new private room, joinable
+    // at once (CrazyGames multiplayer requirements).
+    onInstantMultiplayer: () => {
+      if (!canShowPvP.value || pvpMode.value || pvpStatus.value !== 'idle') return
+      noteIntroBattleStarted()
+      pvpModalOpen.value = true
+      void pvpCreateLobby({ arenaType: 'default', teamSize: PVP_DEFAULT_TEAM_SIZE, levelOne: false })
+    }
+  })
+  watch([pendingInviteCode, phase, pvpMode], joinPendingInvite, { immediate: true })
+
+  pvpRegisterBotMatchStart(startBotMatch)
 
   // Register PvP game event callbacks
   pvpRegisterCallbacks(
@@ -2343,20 +2749,48 @@ onMounted(() => {
         // Both loadouts come from the player-ready exchange (usePVP, already
         // sanitised); `role` + the host's broadcast seed keep both peers on the
         // same streams (WP0/WP4). Skills off → no loadouts, pre-skills engine.
+        // Everything the board needs is read NOW, at the match start; the
+        // board itself is built at the VS screen's hand-off, a fixed
+        // VS_HANDOFF_MS later on both peers (see the VS intro block).
         const pvpSkillOptions = sk.value?.pvpBattleSkillOptions() ?? {}
+        const seed = currentMatchSeed()
+        const role = pvpRole.value ?? undefined
+        const arenaType = pvpGameConfig.value.arenaType
+        const mine = myTeam.map(c => ({ ...c }))
+        const theirs = enemyTeam.map(c => ({ ...c }))
         lastBattleInit = null
-        initGame(myTeam, enemyTeam, false, pvpGameConfig.value.arenaType, 0, false, undefined, {
-          enabled: true,
-          myTurnFirst: isMyTurn,
-          role: pvpRole.value ?? undefined
-        }, 'circle', {
-          seed: currentMatchSeed(),
-          ...pvpSkillOptions,
-          // Both peers derive the layout from the host's shared seed.
-          terrain: { layout: layoutForSeed(currentMatchSeed()), towers: true }
+        const buildBoard = () => {
+          try {
+            initGame(mine, theirs, false, arenaType, false, undefined, {
+              enabled: true,
+              myTurnFirst: isMyTurn,
+              role
+            }, 'circle', {
+              seed,
+              ...pvpSkillOptions,
+              // Both peers derive the layout from the host's shared seed.
+              terrain: { layout: layoutForSeed(seed), towers: true }
+            })
+          } catch (e) {
+            console.error('[PvP] Game start failed:', e)
+            leavePvP()
+            pvpMode.value = false
+            pvpModalOpen.value = false
+            initCampaignGame()
+          }
+        }
+        // The VS screen on the pairing's first match only (rematches in the
+        // same pairing skip it on BOTH peers — see vsIntro.ts).
+        const matchup = vsMatchupFor('pvp')
+        pvpPairingMatches++
+        if (!shouldShowVsIntro(matchup, readVsSeen(), vsBotSeen)) {
+          buildBoard()
+          return
+        }
+        void playVsIntro(pvpVsData(mine, theirs)).then((ok) => {
+          if (!ok || phaseNow() !== 'vs_intro' || !pvpMode.value) return
+          buildBoard()
         })
-        // VS card inside the engine's 1200 ms deciding_turn window (no timing change).
-        pvpVsShow.value = PvpVsCard !== null
       } catch (e) {
         console.error('[PvP] Game start failed:', e)
         leavePvP()
@@ -2407,6 +2841,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  arenaAds.unmount()
+  cancelVsIntro()
   window.removeEventListener('resize', onViewportChange)
   window.removeEventListener('orientationchange', onViewportChange)
   window.visualViewport?.removeEventListener('resize', onViewportChange)
@@ -2440,6 +2876,8 @@ onUnmounted(() => {
   stopGameplayLifecycle()
 
   setOnLocalLaunch(null)
+  stopCrazyMultiplayer()
+  pvpRegisterBotMatchStart(null)
   // Clean up PvP if active
   if (pvpMode.value || pvpStatus.value !== 'idle') {
     leavePvP()
@@ -2490,19 +2928,18 @@ onUnmounted(() => {
         }"
       )
         //- Stage indicator (fancy themed badge) — hidden during ghost fights and PvP
-        StageBadge(
-          v-if="!ghostMode && !pvpMode"
-          :stage-id="currentStageId"
-          :name="currentStage.name"
-          :cycle-suffix="currentStage.cycleSuffix"
-          :is-boss="currentStage.isBoss"
-          :arena-type="currentStage.arenaType"
-          :lab="!!cheatStage"
-        )
-        //- Spacer to keep coins right-aligned when StageBadge is hidden
-        div(v-else)
+        div.flex.flex-col.items-start.gap-2(data-arena-hud="stage")
+          StageBadge(
+            v-if="!ghostMode && !pvpMode"
+            :stage-id="currentStageId"
+            :name="currentStage.name"
+            :cycle-suffix="currentStage.cycleSuffix"
+            :is-boss="currentStage.isBoss"
+            :arena-type="currentStage.arenaType"
+            :lab="!!cheatStage"
+          )
         //- Coin counter + Chest + Surrender
-        div.flex.items-start.gap-2
+        div.flex.items-start.gap-2(data-arena-hud="top-right")
           //- Surrender icon — visible only during active battle
           SurrenderIcon(
             v-if="isBattleActive"
@@ -2535,7 +2972,7 @@ onUnmounted(() => {
               class="text-3xl sm:text-5xl mb-2"
             ) {{ t('spinner.tapToStart') }}
           div.tap-start-hint.ui-tag.ui-tag--ink(class="text-sm sm:text-lg")
-            span.ui-outline-sm.font-black {{ t('spinner.startHint') }}
+            span.ui-outline-sm.font-black {{ t(isTouchUi ? 'spinner.startHintTap' : 'spinner.startHintClick') }}
 
         //- Every-10th-game countdown — rendered inside the meteor shower ring
         div(
@@ -2549,17 +2986,15 @@ onUnmounted(() => {
 
         //- Turn Announcement
         div(
-          v-else-if="phase === 'deciding_turn' && turnAnnouncement && !pvpVsShow"
+          v-else-if="phase === 'deciding_turn' && turnAnnouncement"
           class="text-center"
         )
-          //- Turn banner: a skewed plate that slams in — leaf for the
-          //- player's turn, berry for the opponent's.
-          div.turn-banner.ui-tag.ui-slam(
-            :class="turnAnnouncement === t('spinner.yourTurn') ? 'ui-tag--leaf' : 'ui-tag--berry'"
-          )
-            span.ui-outline-lg.font-black.uppercase.whitespace-nowrap(
-              class="text-2xl sm:text-4xl"
-            ) {{ turnAnnouncement }}
+          //- Turn banner: the game's ribbon (FRibbon, #UX1c) slamming in —
+          //- leaf for the player's turn, berry for the opponent's.
+          FRibbon.turn-banner.ui-slam.uppercase(
+            :tone="turnAnnouncement === t('spinner.yourTurn') ? 'leaf' : 'berry'"
+            class="text-2xl sm:text-4xl"
+          ) {{ turnAnnouncement }}
 
         //- Opponent's turn label (PvP only — shown at top so player knows to wait)
         div(
@@ -2567,10 +3002,11 @@ onUnmounted(() => {
           class="absolute text-center top-4 left-0 right-0"
           :style="{ top: `calc(1rem + env(safe-area-inset-top, 0px))` }"
         )
-          span.opp-turn-tag.ui-tag.ui-tag--berry.ui-drop-in
-            span.font-black.uppercase.ui-outline.opp-turn-text(
-              class="text-lg sm:text-2xl"
-            ) {{ t('pvp.opponentTurn') }}
+          FRibbon.opp-turn-tag.ui-drop-in.uppercase(
+            tone="berry"
+            tag="span"
+            class="text-lg sm:text-2xl"
+          ) {{ t('pvp.opponentTurn') }}
 
         //- Player turn hint
         //- Capped to the width between the safe areas and allowed to wrap
@@ -2581,10 +3017,7 @@ onUnmounted(() => {
           v-else-if="phase === 'player_turn'"
           ref="dragHintRef"
           class="absolute text-center pointer-events-none"
-          :style="{\
-            bottom: `calc(4rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx + dragHintLiftPx}px)`,\
-            maxWidth: 'min(28rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem))'\
-          }"
+          :style="dragHintStyle"
         )
           //- A tap on a frozen spinner swaps the hint for why (Frost Lock).
           div.drag-hint-text.drag-hint-frozen.game-text.leading-tight.font-bold(
@@ -2596,33 +3029,6 @@ onUnmounted(() => {
           div.drag-hint-text.drag-hint-plate.text-cream-50.game-text.leading-tight(v-else class="text-xs sm:text-sm")
             | {{ t('spinner.dragHint') }}
 
-        //- PvP VS card — both teams + skill loadouts, inside the engine's
-        //- 1200 ms deciding_turn window (it never changes that timing).
-        component(
-          v-if="PvpVsCard && pvpVsShow && phase === 'deciding_turn'"
-          :is="PvpVsCard"
-          :host-team="pvpHostTeam"
-          :guest-team="pvpGuestTeam"
-          :host-skills="pvpHostSkills"
-          :guest-skills="pvpGuestSkills"
-          :my-role="pvpRole === 'guest' ? 'guest' : 'host'"
-          :announcement="turnAnnouncement"
-          @done="pvpVsShow = false"
-        )
-        //- League VS card — player vs the opponent card / gatekeeper, inside
-        //- the league fight's meteor intro (never changes its timing).
-        component(
-          v-if="PvpVsCard && leagueVsShow && leagueSession && phase === 'meteor_intro'"
-          :is="PvpVsCard"
-          :host-team="leagueSession.vs.teams.player"
-          :guest-team="leagueSession.vs.teams.opponent"
-          :host-skills="leagueSession.vs.skills.player"
-          :guest-skills="leagueSession.vs.skills.opponent"
-          my-role="host"
-          :opponent-name="leagueSession.vs.opponentNameKey ? t(leagueSession.vs.opponentNameKey) : leagueSession.vs.opponentName"
-          :duration-ms="LEAGUE_VS_MS"
-          @done="leagueVsShow = false"
-        )
 
       //- Boss intro card — stage-101+ encounters, inside the meteor intro.
       component(
@@ -2636,9 +3042,25 @@ onUnmounted(() => {
         @done="bossIntroShown = false"
       )
 
+      //- VS intro — the 5 s face-off before a new matchup (src/use/vsIntro.ts).
+      //- Mounted for its own lifetime (it outlives the hand-off by the wipe).
+      component(
+        v-if="vsIntro"
+        :is="VsIntroUi"
+        :data="vsIntro"
+        :paused="isGamePaused"
+        @start="onVsStart"
+        @handoff="onVsHandoff"
+        @done="onVsDone"
+      )
+
       //- Blade Stats HUD — bottom corners during active battle
-      div(
+      //- Three cards (team size 3): in portrait they share the row under the
+      //- arena; anywhere wider the middle card would sit on the player's
+      //- tree, so the third card stacks above the first (bladeStatsStacked).
+      div.blade-stats-hud(
         v-if="isBattleActive && bladeStats.length > 0"
+        :class="{ 'blade-stats--stacked': bladeStatsStacked }"
         class="fixed bottom-0 left-0 right-0 flex justify-between pointer-events-none z-[5]"
         :style="{\
           paddingBottom: `calc(0.375rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx}px)`,\
@@ -2650,6 +3072,7 @@ onUnmounted(() => {
           v-for="(bs, idx) in bladeStats"
           :key="bs.id"
           class="blade-stat-card relative"
+          :data-arena-hud="`card${idx}`"
           :class="{ 'blade-stat-dead': bs.dead, 'blade-stat-frozen': bs.trait.frozen, 'blade-stat-chilled': bs.trait.chill > 0, 'blade-stat-shake': frozenShakeIdx === idx }"
           :role="bs.trait.frozen || bs.trait.chill > 0 ? 'group' : undefined"
           :aria-label="bs.trait.frozen ? t('bosses.frozenAria') : (bs.trait.chill > 0 ? t('bosses.chillAria', { pct: bs.trait.chillPct }) : undefined)"
@@ -2657,7 +3080,7 @@ onUnmounted(() => {
           :data-trait-chill="bs.trait.chill > 0 ? bs.trait.chill : undefined"
           :style="{\
             transform: `scale(${uiStatScale})`,\
-            transformOrigin: idx === 0 ? 'bottom left' : 'bottom right'\
+            transformOrigin: idx === 0 || (bladeStatsStacked && idx % 2 === 0) ? 'bottom left' : 'bottom right'\
           }"
         )
           //- Combat log — minimised, pinned directly above the Spinner 2
@@ -2711,6 +3134,7 @@ onUnmounted(() => {
       //- have been ~8px. 1rem clears it at the scale ceiling of 2.
       div(
         v-if="showConfigButton && !showReward && !showConfigSpotlight"
+        data-arena-hud="stack-bl"
         class="ui-stack-bl fixed pointer-events-auto z-50 flex flex-col items-start gap-1"
         :style="{\
           bottom: `calc(0.5rem + env(safe-area-inset-bottom, 0px) + ${bottomGapPx}px)`,\
@@ -2720,13 +3144,15 @@ onUnmounted(() => {
         }"
       )
         FMuteButton
-        FIconButton(
+        FIconButton.ui-hit-44(
           class="sm:mb-4"
           type="secondary"
           size="md"
-          :img-src="prependBaseUrl('images/icons/gears_128x128.webp')"
+          :aria-label="t('options')"
+          data-testid="hud-options"
           @click="showOptions = true"
         )
+          UiIcon(name="settings")
         div.flex.items-end(class="gap-0 sm:gap-2")
           DailyRewards(v-if="currentStageId >= 3" @coins-awarded="fireCoinExplosion")
           component(
@@ -2734,13 +3160,14 @@ onUnmounted(() => {
             :is="HudCoinsAdButton"
             @coins-awarded="fireCoinExplosion"
           )
-          BattlePass(v-if="currentStageId >= 6" @coins-awarded="fireCoinExplosion" @diamonds-awarded="fireDiamondExplosion")
+          BattlePass(v-if="currentStageId >= 6" @coins-awarded="fireCoinExplosion")
 
       //- Bottom-right buttons — two stacked rows:
       //-   row 1: 1x/2x speed switch
       //-   row 2: pvp → leaderboard → team config
       div(
         v-if="showConfigButton && !showReward"
+        data-arena-hud="stack-br"
         class="ui-stack-br fixed pointer-events-auto flex flex-col items-end gap-2"
         :class="showConfigSpotlight ? 'z-[60]' : 'z-50'"
         :style="{\
@@ -2785,7 +3212,7 @@ onUnmounted(() => {
               //- earned AND the first-time gift is spent (else: FREE badge)
               img.absolute.object-contain.pointer-events-none(
                 v-if="!IS_COIN_SPEED_BOOST_BUILD && option.value === 2 && simSpeed === 1 && !is2xAvailable && !hasAnyFreeSpeedGift"
-                src="/images/icons/movie_128x96.webp"
+                :src="movieIconSrc()"
                 class="right-0 top-1/2 -translate-y-[50%] h-3 w-3 mr-1.5"
               )
           //- Free boost (useFreeSpeedGift — first-time gift or today's daily
@@ -2837,23 +3264,30 @@ onUnmounted(() => {
           //- neither must lose the button entirely rather than open an empty
           //- modal. On CrazyGames the same flag also hides the button from a
           //- signed-out guest, per QA: guests get no board at all.
-          FIconButton(
-            v-if="leaderboardVisible && !ghostMode && !pvpMode && !showConfigSpotlight"
+          FIconButton.ui-hit-44(
+            v-if="leaderboardVisible && currentStageId >= LEADERBOARD_MIN_STAGE && !ghostMode && !pvpMode && !showConfigSpotlight"
             type="secondary"
             size="md"
-            :img-src="prependBaseUrl('images/icons/trophy_128x128.webp')"
+            :aria-label="t('leaderboard.title')"
+            data-testid="hud-leaderboard"
             @click="leaderboardModalOpen = true"
           )
+            UiIcon(name="leaderboard")
           //- flex: no inline line box under the button (its descender gap
           //- lifted this button above the rest of the row).
           div.relative.flex(v-if="(hasFirstWin || currentStageId >= 2) && !leagueSession")
-            FIconButton(
+            //- Smasher upgrade / team: the disc + paw + up-arrow icon.
+            FIconButton.ui-hit-44(
               type="secondary"
               :class="{ 'instant-bounce': showConfigSpotlight }"
               size="md"
-              :img-src="prependBaseUrl('images/icons/team_128x128.webp')"
+              :aria-label="t('sfc.SmasherTeamModal.team')"
+              data-testid="hud-team"
               @click="onOpenConfig"
             )
+              UiIcon(name="upgrade")
+            //- A team slot just opened (stage 3 / 10 won): "!" until the modal shows it.
+            span.ui-notify.team-slot-notify(v-if="teamSlotBadge" aria-hidden="true" data-testid="team-slot-badge") !
 
     //- First-config spotlight — darkens everything except the team button
     Transition(name="fade")
@@ -2878,11 +3312,10 @@ onUnmounted(() => {
       //- child now (see FReward), so the strip is no longer needed — and on a
       //- short landscape viewport those 96px were pushing the result text off
       //- the top of the scroll area. A small gap is all that's left.
-      div.reward-column.flex.flex-col.items-center.gap-4(class="mb-2 sm:mb-3")
+      div.reward-column.flex.flex-col.items-center(class="mb-2 sm:mb-3")
         //- The verdict SLAMS in (big → overshoot → settle) with the XL stroke;
         //- a win also gets a slow victory wobble afterwards.
         div.reward-result-text.font-black.uppercase.ui-slam(
-          class="text-3xl sm:text-5xl"
           :class="gameResult === 'win' ? 'text-sun-300 is-win' : 'text-berry-400 is-lose'"
           :style="{ '--slam-delay': '120ms' }"
         ) {{ resultText }}
@@ -2891,7 +3324,6 @@ onUnmounted(() => {
           div.reward-coin-row.flex.items-center.gap-3(ref="rewardCoinRef")
             IconCoin.reward-coin-icon(class="w-8 h-8 text-sun-400")
             FCountUp.reward-coin-amount.text-sun-300.font-black(
-              class="text-2xl sm:text-4xl"
               :value="PVP_COIN_REWARD + winAdExtra"
               prefix="+"
               :delay="380"
@@ -2920,7 +3352,6 @@ onUnmounted(() => {
               div.reward-coin-row.flex.items-center.gap-3(ref="rewardCoinRef")
                 IconCoin.reward-coin-icon(class="w-8 h-8 text-sun-400")
                 FCountUp.reward-coin-amount.text-sun-300.font-black(
-                  class="text-2xl sm:text-4xl"
                   :value="grantedCoins + winAdExtra"
                   prefix="+"
                   :delay="380"
@@ -2936,7 +3367,7 @@ onUnmounted(() => {
             //- stages after each boss (and stages 1-2). `bossPeek` is null for
             //- every other result, so this never shows on a lose screen, a
             //- ghost fight or a boss's own win (that one is the roulette).
-            BossPeekBadge(v-if="bossPeek && gameResult === 'win'" :peek="bossPeek")
+            BossPeekBadge.reward-peek(v-if="bossPeek && gameResult === 'win'" :peek="bossPeek")
         //- "[movie] 3x [coin]" — non-boss win screens, ad builds only. Pays
         //- the base twice more so the label above ends on 3x of it.
         component(
@@ -2945,6 +3376,7 @@ onUnmounted(() => {
           :base-coins="winAdBaseCoins"
           @coins-awarded="onWinAdCoins"
           @busy="onWinAdBusy"
+          class="reward-ad"
         )
         //- Player tip — kept in the flex column so it always renders
         //- BELOW the reward (no chance of covering it) and ABOVE the
@@ -2953,7 +3385,7 @@ onUnmounted(() => {
         //- shrinks via its own responsive padding/text classes; the
         //- centered column never sits flush against the bottom because
         //- the click-to-continue strip reserves its own band.
-        TipBadge(
+        TipBadge.reward-tip(
           v-if="currentTip"
           :text-key="`tips.${currentTip}`"
         )
@@ -3019,18 +3451,14 @@ onUnmounted(() => {
               v-if="i > 0"
               class="text-xs sm:text-sm tracking-[0.04em]"
             ) {{ t('spinner.spinAgain') }}
-            //- Jackpot (ultra-rare). Denominated in whichever currency the build
-            //- actually pays — `addDiamonds` did the conversion already.
-            template(v-if="g.type === 'diamonds'")
+            //- Jackpot (ultra-rare): a fixed coin prize (it paid diamonds
+            //- until 2026-10-21 — see rouletteGrants.ts).
+            template(v-if="g.type === 'jackpot'")
               div.roulette-reward-glow.flex.flex-col.items-center.gap-2
-                IconDiamond.roulette-grant-icon(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'")
-                IconCoin.roulette-grant-icon.text-sun-400(v-else)
+                IconCoin.roulette-grant-icon.text-sun-400
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
-                IconDiamond(v-if="displayDiamondReward(g.diamonds).currency === 'diamonds'" class="w-8 h-8")
-                IconCoin(v-else class="w-8 h-8 text-sun-400")
-                span.roulette-grant-amount.font-black.game-text(
-                  :class="displayDiamondReward(g.diamonds).currency === 'diamonds' ? 'text-plum-300' : 'text-sun-300'"
-                ) +{{ displayDiamondReward(g.diamonds).amount }}
+                IconCoin(class="w-8 h-8 text-sun-400")
+                span.roulette-grant-amount.font-black.game-text.text-sun-300 +{{ g.coins }}
             //- Skin reward (plus the 1x coins that come with it)
             template(v-else-if="g.skin")
               div.roulette-reward-glow.flex.flex-col.items-center.gap-3
@@ -3137,6 +3565,7 @@ onUnmounted(() => {
       v-model="configModalOpen"
       :initial-team="playerTeam"
       :best-stage="bestStage"
+      :ads-allowed="!pvpMode"
       @save="onConfigSave"
     )
 
@@ -3192,6 +3621,8 @@ onUnmounted(() => {
       @claim="onLeagueSeasonClaim"
     )
 
+    //- One-line confirmations ("Rewards claimed: 7") — #UX1c.
+    HudToast
     //- First-launch intro cutscene — above every HUD element, lazily loaded.
     IntroCutscene(v-if="introPlaying" @done="onIntroDone")
 
@@ -3212,6 +3643,14 @@ onUnmounted(() => {
   box-shadow: 0 0 0 2px var(--color-ink), inset 0 0 0 2px var(--color-sun-200)
   pointer-events: none
   z-index: 1
+
+// ── New team slot badge on the Team button ──────────────────────────────
+.team-slot-notify
+  position: absolute
+  top: -0.5rem
+  right: -0.5rem
+  z-index: 3
+  pointer-events: none
 
 // ── First-Config Spotlight ──────────────────────────────────────────────
 .config-spotlight
@@ -3393,7 +3832,7 @@ onUnmounted(() => {
   border-radius: var(--radius-ui-sm)
   border: 3px solid var(--color-ink)
   background-color: var(--color-plum-700)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 3px 0 var(--color-plum-500), 0 4px 0 var(--color-ink)
   animation: ui-pop-in 0.34s var(--ui-back-out) 0.5s both
 
@@ -3423,6 +3862,49 @@ onUnmounted(() => {
     animation: none
 
 // ── Result: verdict + coin row ───────────────────────────────────────────
+// ─── Reward overlay — fluid fit ──────────────────────────────────────────
+// Everything on the win / lose screen is sized from the viewport HEIGHT (dvh,
+// clamped), not from breakpoints, so the whole column fits the screen at any
+// size without scrolling. Priority when space runs short: verdict, coins, the
+// 3x coin ad (always above the boss peek), then the boss peek, then the tip
+// (hidden on short screens).
+.reward-column
+  --ru: 1dvh
+  gap: clamp(0.3rem, calc(var(--ru) * 1.8), 1rem)
+  max-height: 100%
+  min-height: 0
+
+.reward-result-text
+  // height-led, but never wider than the screen: one line at 360 px wide too
+  font-size: clamp(1.4rem, min(calc(var(--ru) * 8), 8.2vw), 3.4rem)
+
+.reward-coin-row
+  gap: clamp(0.35rem, calc(var(--ru) * 1.6), 0.75rem)
+
+  .reward-coin-amount
+    font-size: clamp(1.35rem, calc(var(--ru) * 6.4), 2.4rem)
+
+  .reward-coin-icon
+    width: clamp(1.5rem, calc(var(--ru) * 6.4), 2.3rem)
+    height: clamp(1.5rem, calc(var(--ru) * 6.4), 2.3rem)
+
+.reward-ad
+  order: 1
+  flex: none
+
+.reward-column .reward-peek
+  order: 2
+  // the boss portrait takes the height the rest leaves over, never more
+  --frame-w: clamp(4.5rem, calc(var(--ru) * 15), 8rem)
+  flex: none
+
+.reward-tip
+  order: 3
+
+@media (max-height: 560px)
+  .reward-tip
+    display: none
+
 .reward-result-text
   text-shadow: var(--ui-stroke-xl)
   letter-spacing: 0.02em
@@ -3449,15 +3931,9 @@ onUnmounted(() => {
   .reward-result-text.is-win, .reward-coin-row .reward-coin-icon
     animation: none
 
-// ── Turn banners ─────────────────────────────────────────────────────────
-.turn-banner
-  padding: 0.25em 1.2em 0.4em
-
-.opp-turn-tag
-  padding: 0.2em 1em 0.32em
-
-.opp-turn-text
-  color: var(--color-sun-300)
+// ── Turn banners (FRibbon) ──────────────────────────────────────────────
+.turn-banner, .opp-turn-tag
+  letter-spacing: 0.03em
 
 // ── Tap to start ─────────────────────────────────────────────────────────
 // A double thump, then rest: reads as "go!" rather than a fading prompt.
@@ -3529,6 +4005,25 @@ onUnmounted(() => {
 .blade-stat-dead
   opacity: 0.35
 
+// Team size 3 off phone portrait: card 1 bottom-left, card 2 bottom-right,
+// card 3 above card 1.
+.blade-stats-hud.blade-stats--stacked
+  display: grid
+  grid-template-columns: auto 1fr auto
+  align-items: end
+  row-gap: 0.4rem
+  > .blade-stat-card:nth-child(1)
+    grid-column: 1
+    grid-row: 2
+  > .blade-stat-card:nth-child(2)
+    grid-column: 3
+    justify-self: end
+    grid-row: 2
+  > .blade-stat-card:nth-child(3)
+    grid-column: 1
+    justify-self: start
+    grid-row: 1
+
 // ── Boss traits on the stat card (bosses-100-feature.md §7.3) ─────────────
 // Frozen: ice-blue tint + frosted rim; an ice-block glyph on the corner.
 .blade-stat-card.blade-stat-frozen
@@ -3590,7 +4085,7 @@ onUnmounted(() => {
   margin: -0.2rem -0.4rem 0.2rem
   padding: 0.12rem 0.3rem 0.15rem
   background-color: var(--color-royal-600)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   border-bottom: 2px solid var(--color-ink)
   border-radius: calc(var(--radius-ui-sm) - 2px) calc(var(--radius-ui-sm) - 2px) 0 0
   text-shadow: var(--ui-stroke-sm)

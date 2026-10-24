@@ -126,7 +126,9 @@ export const getBgSkin = (id: string): BgSkinDef => BG_SKINS.find(s => s.id === 
 export const isBgSkinOwned = (id: string): boolean => ownedBgSkins.value.has(id)
 
 /** The currently equipped skin — read by the canvas renderer each frame. */
-export const selectedBgSkin = computed(() => getBgSkin(selectedBgSkinId.value))
+// Background skins are retired (owner, 2026-10-21): every arena shows its
+// theme backdrop + props. A stored pick is ignored; ownership is kept.
+export const selectedBgSkin = computed(() => getBgSkin(DEFAULT_BG_SKIN_ID))
 
 const selectBgSkin = (id: string) => {
   if (!isBgSkinOwned(id)) return

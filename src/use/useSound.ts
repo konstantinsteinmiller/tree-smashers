@@ -1,6 +1,7 @@
 import { prependBaseUrl } from '@/utils/function'
 import useUser, { isMobilePortrait, isMobileLandscape } from '@/use/useUser'
 import { getAudioContext, loadAudioBuffer, resourceCache } from '@/use/useAssets'
+import { isNewSlotSfx, sfxPath } from '@/audio/audioVersions'
 
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
@@ -327,7 +328,9 @@ const useSounds = () => {
     // still wake the audio graph), so we just skip playback entirely.
     if (isMobileMutedNow()) return null
 
-    const src = prependBaseUrl(`audio/sfx/${effect}.ogg`)
+    // New-slot SFX (only a v2 file exists, e.g. #UX3 balloon-pop) resolve
+    // through the audio switchboard; every other name keeps its v1 path.
+    const src = prependBaseUrl(isNewSlotSfx(effect) ? sfxPath(effect) : `audio/sfx/${effect}.ogg`)
 
     // Fast path: preloaded AudioBuffer + Web Audio.
     const buffer = resourceCache.audioBuffers.get(src)

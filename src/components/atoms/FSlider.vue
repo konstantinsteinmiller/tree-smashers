@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
   min: 0,
   max: 100,
   step: 1,
-  // Lime fill with flat stripes in a deep navy well — see DESIGN.md.
+  // Lime fill with a two-tone facet in a deep navy well — see DESIGN.md.
   colorFrom: 'var(--color-leaf-400)',
   colorTo: 'var(--color-leaf-500)',
   trackColor: 'var(--color-royal-900)'
@@ -58,7 +58,7 @@ const updateValue = (event: Event) => {
         class="slider-well absolute inset-x-0 h-6 my-auto rounded-full border-[3px] border-[var(--color-ink)] overflow-hidden"
         :style="{ backgroundColor: trackColor }"
       )
-        //- Lime fill (flat, a hard light lip, flat diagonal stripes)
+        //- Lime fill (flat, a hard light lip, a two-tone facet)
         div(
           class="slider-fill h-full relative rounded-full"
           :style="{ width: `${progress}%`, backgroundColor: colorFrom }"
@@ -95,7 +95,7 @@ const updateValue = (event: Event) => {
   box-shadow: inset 0 3px 0 var(--color-ink), 0 2px 0 var(--color-ink)
 
 .slider-fill
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
 
 .thumb-body

@@ -187,8 +187,12 @@ describe('trophy skins — excluded from every pool', () => {
     'src/use/loadoutSanitizer.ts': 'validates a PvP peer\'s model ids',
     'src/components/organisms/PvpVsPreview.vue': 'falls back to a class default skin',
     'src/keys.ts': 'comment only',
+    'src/data/smasherSkinCatalog.ts': 'the per-smasher skin ids (never a reward pool, no trophies)',
     'src/utils/save/SaveMergePolicy.ts': 'comment only (progress score)',
-    'src/smashers/smasherSkins.ts': 'reads only the default (signature) skin of a top to pick a palette'
+    'src/smashers/smasherSkins.ts': 'reads only the default (signature) skin of a top to pick a palette',
+    'src/data/smasherRarity.ts': 'presentation-only rarity tier of a skin (trophy skins read as legendary); hands nothing out',
+    'src/dev/UiKitPage.vue': 'DEV-only UI kit sheet: shows one portrait in the composites block; hands nothing out',
+    'src/dev/UiScreensPage.vue': 'DEV-only composite screens: previews two skins in a sample gift reveal; grants nothing'
   }
 
   const ROOT = resolve(__dirname, '..')

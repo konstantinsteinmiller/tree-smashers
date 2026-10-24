@@ -77,6 +77,10 @@ onBeforeUnmount(() => clearTimeout(tingTimer))
     :style="{ '--lrp-accent': accent }"
     :aria-label="t('league.title')"
   )
+    //- Promotion (#UX1c): twinkles on the sun card's corners.
+    template(v-if="status && status.tone === 'gold' && !isLowQuality")
+      span.ui-sparkle.lrp__sp.is-a(aria-hidden="true")
+      span.ui-sparkle.ui-sparkle--sun.lrp__sp.is-b(aria-hidden="true")
     //- Beat sheet: the rank SLAMS in, the delta chip slams a beat later and
     //- counts, the bar charges, the status tag slams last, the coins count up
     //- and land with a ting. A promotion or division-up also plays `reward`.
@@ -123,11 +127,25 @@ onBeforeUnmount(() => clearTimeout(tingTimer))
   color: var(--ui-text)
   text-align: left
 
-// Promotion: a sun card with flat stripes that lands with a double bump.
+// Promotion: a sun card with a two-tone facet (#UX1c, was stripes) and
+// twinkles on its corners; it lands with a double bump.
 .lrp--promoted
   background-color: var(--color-sun-200)
-  background-image: repeating-linear-gradient(300deg, rgba(255, 255, 255, 0.45) 0 8px, transparent 8px 18px)
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.5) 0 44%, transparent 44%)
   animation: lrp-bump 0.42s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 2
+
+.lrp__sp
+  z-index: 2
+  &.is-a
+    top: -0.55rem
+    left: -0.45rem
+    --sp-size: 1.3rem
+    --sp-delay: 0.9s
+  &.is-b
+    bottom: -0.4rem
+    right: -0.4rem
+    --sp-size: 1rem
+    --sp-delay: 1.6s
 
 @keyframes lrp-bump
   40%
@@ -181,7 +199,7 @@ onBeforeUnmount(() => clearTimeout(tingTimer))
     border: 2px solid var(--color-ink)
     border-radius: 0.4rem
     background-color: var(--lrp-tag, var(--color-royal-500))
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(22, 26, 64, 0.35), 0 3px 0 var(--color-ink)
     transform: skewX(-10deg)
 

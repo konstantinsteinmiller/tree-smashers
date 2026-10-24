@@ -192,11 +192,14 @@ describe('SpinnerArena still gates the interstitial before the battle', () => {
     expect(src).toContain('from \'@/use/midgameCadence\'')
     expect(src).not.toMatch(/const battlesSinceAd/)
     const begin = src.indexOf('const beginBattle = async')
-    const due = src.indexOf('if (shouldShowMidgameAdNow())', begin)
+    // #UX100: the decision (playtime pacing, or this cadence when the build
+    // switches the pacing off) goes through the arena ad-break glue.
+    const due = src.indexOf('await playDueInterstitial()', begin)
     const start = src.indexOf('startMatch()', begin)
     expect(due).toBeGreaterThan(begin)
     expect(due).toBeLessThan(start)
-    // Only one call site for the interstitial.
-    expect(src.match(/showMidgameAd\(\)/g)?.length).toBe(1)
+    // Only one call site for the interstitial, and none straight to the SDK.
+    expect(src.match(/arenaAds\.runAdBreak\(/g)?.length).toBe(1)
+    expect(src).not.toMatch(/showMidgameAd\(/)
   })
 })

@@ -1,5 +1,6 @@
 import { smasherPortraitUrl } from '@/smashers/smasherAtlas'
 import type { SmasherId } from '@/data/smasherCatalog'
+import { isSmasherSkin } from '@/data/smasherSkinCatalog'
 import { type Element, ELEMENTS } from '@/utils/enums'
 import { isCampaignTest, isDbInitialized, isDebug } from '@/use/useMatch'
 import useUser from '@/use/useUser'
@@ -206,12 +207,13 @@ export const grantTrophySkin = (modelId: SpinnerModelId): boolean => {
 export const grantTrophySkins = (modelIds: readonly SpinnerModelId[]): SpinnerModelId[] =>
   modelIds.filter(id => grantTrophySkin(id))
 
-/** Shop purchase with coins. On a build with rewarded ads it refuses the
- *  ad-unlock skins (`AD_UNLOCK_SKINS`) so no coin path can grant them; on a
- *  build without rewarded ads they sell for `AD_SKIN_COIN_COST` (see
- *  `skinCost`). The caller deducts the coins only after this returns true.
- *  Reward systems (chest, wheel, BP, daily) grant through `buySkin` directly
- *  and are unaffected. `adsBuild` exists for tests. */
+/** Shop purchase with coins. On a session with rewarded ads every skin is an
+ *  ad unlock (`isAdUnlockSkin`), so this refuses — no coin path can grant
+ *  one there; without rewarded ads every non-trophy skin sells for `skinCost`.
+ *  The caller deducts the coins only after this returns true. Reward systems
+ *  (chest, wheel, BP, daily) grant through `buySkin` directly and are
+ *  unaffected. `adsBuild`: the skin shop passes `rewardedUnlocksAvailable`
+ *  (useAds); omitted it is the build constant. */
 export const purchaseSkinWithCoins = (
   topPartId: TopPartId,
   modelId: SpinnerModelId,
@@ -250,13 +252,16 @@ export const settleSkinAdProgress = (): SpinnerModelId[] => {
 export const skinAdProgressFor = (modelId: SpinnerModelId): number =>
   Math.max(0, Math.min(SKIN_AD_UNLOCK_ADS, Math.floor(Number(skinAdProgress.value[modelId]) || 0)))
 
-/** Credit ONE completed rewarded ad to an ad-unlock skin. Call it only after
+/** Credit ONE completed rewarded ad to a skin. Call it only after
  *  `showRewardedAd` resolved true. Unlocks the skin on the
  *  `SKIN_AD_UNLOCK_ADS`-th watch (today: the first; legacy partial progress
- *  never delays it) and returns true then; a non-ad skin or an already-owned
- *  one is a no-op returning false. */
+ *  never delays it) and returns true then. Any shop skin qualifies (owner rule
+ *  2026-10-21: every purchasable skin is one ad); an earn-only boss trophy, a
+ *  free default, a skin not listed under `topPartId` or an already-owned one
+ *  is a no-op returning false. */
 export const recordSkinAdWatch = (topPartId: TopPartId, modelId: SpinnerModelId): boolean => {
-  if (!AD_UNLOCK_SKINS.has(modelId)) return false
+  if (!isAdUnlockSkin(modelId, true)) return false
+  if (!SKINS_PER_TOP[topPartId]?.includes(modelId) && !isSmasherSkin(modelId)) return false
   if (isSkinOwned(topPartId, modelId)) return false
   const next = skinAdProgressFor(modelId) + 1
   if (next >= SKIN_AD_UNLOCK_ADS) {

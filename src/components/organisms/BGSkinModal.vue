@@ -140,7 +140,7 @@ const swatchStyle = (skin: BgSkinDef) =>
 
 <style scoped lang="sass">
 // Backdrop cards: collectible cards — ink frame, a hard drop, the swatch as
-// the "art" window. Owned = leaf edge; equipped = sun face + stripes + ring,
+// the "art" window. Owned = leaf edge; equipped = sun face + facet + ring,
 // lifted. Cards pop in staggered (fill: backwards, so it never pins a
 // transform).
 .bg-skin-card
@@ -157,7 +157,7 @@ const swatchStyle = (skin: BgSkinDef) =>
   &.is-equipped
     --edge: var(--color-sun-500)
     background-color: var(--color-sun-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
     transform: translateY(-2px)
 

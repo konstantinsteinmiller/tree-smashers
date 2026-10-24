@@ -127,7 +127,7 @@ const accent = computed(() => (props.reward ? LEAGUE_TIER_META[props.reward.peak
   border-radius: var(--radius-ui)
   border: 3px solid var(--color-ink)
   background-color: var(--color-ice-50)
-  background-image: var(--ui-stripes-ink)
+  background-image: var(--ui-facet-ink)
   box-shadow: inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-300), 0 4px 0 var(--color-ink)
   font-size: 1.3rem
   font-weight: 900

@@ -35,6 +35,11 @@
 //
 // which reads as a jackpot without breaking the curve.
 //
+// Since 2026-10-21 (owner) the battle pass and the roulette grant no diamonds
+// on ANY build: those two jackpots pay exactly these coin amounts everywhere
+// (useBattlePass BP_JACKPOT_COINS, RouletteWheel ROULETTE_JACKPOT_COINS).
+// Diamonds remain for the shop, background skins and league season prizes.
+//
 // This module is a LEAF on purpose — no `useSpinnerConfig` import, no Vue
 // state. `useSpinnerConfig` imports it, so a dependency the other way would
 // close a cycle in a graph that already has a documented one

@@ -79,7 +79,7 @@ const sizeOf = (i: number): number => 24 + i * 6
   border-radius: var(--radius-ui)
   border: 3px solid var(--color-ink)
   background-color: var(--color-royal-600)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 3px 0 var(--color-royal-400), inset 0 -5px 0 var(--color-royal-800), 0 4px 0 var(--color-ink)
 
 .lup__step

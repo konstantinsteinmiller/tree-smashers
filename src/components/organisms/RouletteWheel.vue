@@ -1,31 +1,33 @@
 <script setup lang="ts">
-import { displayDiamondReward } from '@/use/useCurrency'
+import { movieIconSrc } from '@/use/badgeIconArt'
+import { DIAMOND_COIN_VALUE } from '@/use/useCurrency'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SKINS_PER_TOP, SPECIAL_SKINS, isModelFullyOwned, buySkin, modelImgPath } from '@/use/useModels'
 import { isEarnOnlySkin } from '@/data/skinCatalog'
 import type { SpinnerModelId } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
-import { resourceCache, getCachedImage } from '@/use/useAssets'
+import { resourceCache } from '@/use/useAssets'
 import { getCoinImage, coinImageReady } from '@/use/coinArt'
 import { isRewardedReady, showRewardedAd } from '@/use/useAds'
 import { flushSaveNow } from '@/use/persistedState'
 import { isNative } from '@/use/useUser'
 import { isLowQuality } from '@/use/useQuality'
-import { preloadRouletteArt, rouletteArtReady as art, rouletteArtSrc as artSrc } from '@/use/useRouletteArt'
+import { paintedPointer, paintedRimOpen, preloadRouletteArt, rouletteArtReady as art, rouletteArtSrc as artSrc, rouletteGeo } from '@/use/useRouletteArt'
 import { prependBaseUrl } from '@/utils/function'
 import { playUiSfx } from '@/use/uiSfx'
 
 export interface RouletteResult {
-  type: 'multiplier' | 'skin' | 'diamonds'
+  type: 'multiplier' | 'skin' | 'jackpot'
   multiplier?: number
   /** `isSpecial` is only set by the skin roulette (`mode="skins"`). */
   skin?: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial?: boolean }
-  diamonds?: number
+  /** Coins the jackpot pays (type === 'jackpot'). */
+  coins?: number
 }
 
 interface Segment {
-  kind: 'multiplier' | 'skin' | 'diamonds'
+  kind: 'multiplier' | 'skin' | 'jackpot'
   color: string
   result: RouletteResult
   imgSrc?: string
@@ -63,7 +65,7 @@ const { t } = useI18n()
 //
 // 13 segments total:
 //   2x 0.75x, 3x 1x, 2x 2x, 2x 3x           (9 multiplier)
-//   1x 5-diamond jackpot (ultra-rare)
+//   1x 15 000-coin jackpot (ultra-rare)
 //   2x normal skin, 1x special skin            (3 skin)
 //
 // `weight` is PER SEGMENT; the multiplier weights sum to 100, so each kind's
@@ -78,15 +80,14 @@ const MULTIPLIER_DEFS: { label: string; multiplier: number; color: string; count
   { label: '3x', multiplier: 3, color: '#ffa3c4', count: 2, weight: 20 / 2 }
 ]
 
-/** Diamonds granted by the jackpot segment. */
-const DIAMOND_JACKPOT = 5
-
-/** Currency + amount the jackpot segment should DISPLAY. Diamonds on a
- *  normal build; coins at the diamond rate on a single-currency one. */
-const jackpotDisplay = displayDiamondReward(DIAMOND_JACKPOT)
+/** Coins the jackpot segment pays. It used to pay 5 diamonds; diamonds are
+ *  no longer a wheel reward (owner, 2026-10-21), so it pays their value at
+ *  the game's own exchange rate (useCurrency DIAMOND_COIN_VALUE: 5 × 3 000) —
+ *  what the Poki build already paid. */
+const ROULETTE_JACKPOT_COINS = 5 * DIAMOND_COIN_VALUE
 // Weight tuned so the jackpot is ~0.25% of the wheel (total weight ≈ 111) —
 // it occupies a visible slice but practically never lands.
-const DIAMOND_JACKPOT_WEIGHT = 0.26
+const JACKPOT_WEIGHT = 0.26
 
 const getUnownedSkins = (): { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }[] => {
   const result: { topPartId: TopPartId; modelId: SpinnerModelId; isSpecial: boolean }[] = []
@@ -150,19 +151,15 @@ const buildSegments = (): Segment[] => {
     }
   }
 
-  // Ultra-rare diamond jackpot.
-  //
-  // On a single-currency build (Poki) it pays coins at the diamond rate —
-  // 5 diamonds becomes 15 000 coins, which reads as a jackpot against a
-  // campaign that pays 100–3 500 per stage. `addDiamonds` performs the
-  // conversion, so the segment keeps its diamond-denominated `result` and
-  // only the LABEL and the drawn icon change.
+  // Ultra-rare coin jackpot: 15 000 coins, which reads as a jackpot against
+  // a campaign that pays 100–3 500 per stage. Same slot, same weight and the
+  // same Math.random order as the old diamond jackpot it replaces.
   segments.push({
-    kind: 'diamonds',
-    label: String(jackpotDisplay.amount),
+    kind: 'jackpot',
+    label: String(ROULETTE_JACKPOT_COINS),
     color: '#ffd21a',
-    result: { type: 'diamonds', diamonds: DIAMOND_JACKPOT },
-    weight: DIAMOND_JACKPOT_WEIGHT
+    result: { type: 'jackpot', coins: ROULETTE_JACKPOT_COINS },
+    weight: JACKPOT_WEIGHT
   })
 
   const unowned = getUnownedSkins()
@@ -277,18 +274,38 @@ const wheelSize = ref(computeWheelSize())
 // The reference sheet in art/roulette/ asked for an opening of 0.40 and the
 // painter returned 0.357, so the face was fitted to the painting rather than
 // the other way round. A re-paint must be re-measured and these re-registered.
+// A listed toy-box rim repaint (tools/roulette-art) re-registers disk and
+// bulbRing to its own MEASURED opening (useRouletteArt rouletteGeo); the CSS
+// rim (opening r 0.36) keeps the values below. The CSS rim also stays
+// correct under a painted-rim geometry while the painting loads: the face
+// only tucks further under it.
+const RIM_GEO = rouletteGeo(paintedRimOpen())
 const GEO = {
   /** Radius of the turning segment face: just past the lip's widest point, so
    *  the canvas edge is always tucked under the rim. */
-  disk: 0.372,
-  /** Radius the bulbs sit on — the middle of the rim's filigree band. */
-  bulbRing: 0.436,
+  disk: RIM_GEO.disk,
+  /** Radius the bulbs sit on — the middle of the rim's band. */
+  bulbRing: RIM_GEO.bulbRing,
   /** Bulb diameter (the band is 0.048 wide). */
   bulb: 0.052,
   /** Hub diameter. */
   hub: 0.21
 } as const
 const BULB_COUNT = 20
+
+/** Box of the painted pointer: 13 % wide, its own aspect, the cap centre on
+ *  the SVG pointer's pivot (top -2 % + 28.3 % × 20 % = 3.66 % of the wheel). */
+const PAINTED_POINTER = paintedPointer()
+const POINTER_BOX = PAINTED_POINTER
+  ? (() => {
+      const h = 13 * PAINTED_POINTER.aspect
+      return {
+        height: `${h.toFixed(3)}%`,
+        top: `${(3.66 - PAINTED_POINTER.pivotY * h).toFixed(3)}%`,
+        transformOrigin: `50% ${(PAINTED_POINTER.pivotY * 100).toFixed(2)}%`
+      }
+    })()
+  : undefined
 const TAU = Math.PI * 2
 
 const pct = (n: number) => `${(n * 100).toFixed(3)}%`
@@ -392,11 +409,6 @@ const preloadImages = () => {
   }
 }
 
-// The shipped diamond painting, same file every other diamond in the UI uses.
-const diamondImg = jackpotDisplay.currency === 'diamonds'
-  ? getCachedImage(prependBaseUrl('images/icons/diamond_256x256.webp'))
-  : null
-if (diamondImg) whenLoaded(diamondImg)
 // The currency coin painting (`@/use/coinArt`); `drawCoin` is its fallback.
 const coinImg = getCoinImage()
 if (coinImg) whenLoaded(coinImg)
@@ -435,7 +447,7 @@ const faceColors = (segs: Segment[], skinMode: boolean): string[] => {
   const n = segs.length
   const fixed = segs.map(seg => {
     if (skinMode) return seg.color
-    if (seg.kind === 'diamonds') return C.sun400
+    if (seg.kind === 'jackpot') return C.sun400
     if (seg.kind === 'skin') return C.plum300
     return null
   })
@@ -490,23 +502,6 @@ const drawCoin = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('$', x, y + r * 0.06)
-}
-
-const drawDiamondFallback = (ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) => {
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.beginPath()
-  ctx.moveTo(0, -size)
-  ctx.lineTo(size * 0.8, -size * 0.15)
-  ctx.lineTo(0, size)
-  ctx.lineTo(-size * 0.8, -size * 0.15)
-  ctx.closePath()
-  ctx.fillStyle = C.plum300
-  ctx.fill()
-  ctx.strokeStyle = C.ink
-  ctx.lineWidth = 1.5
-  ctx.stroke()
-  ctx.restore()
 }
 
 /** Four-point glint, for the rare segments. */
@@ -657,26 +652,14 @@ const drawFace = () => {
       ctx.fillText(seg.label, 0, 1, labelMaxW)
       ctx.restore()
 
-      // The jackpot segment keeps `kind: 'diamonds'` (that is what the result
-      // handler and `addDiamonds` key off); only the drawn icon follows the
-      // DISPLAY currency, which is coins on a single-currency build.
+      // The jackpot pays coins, so every label wedge draws the coin.
       const iconR = R * 0.46
       ctx.save()
       ctx.translate(iconR, 0)
       ctx.rotate(Math.PI / 2)
-      if (seg.kind === 'diamonds' && jackpotDisplay.currency === 'diamonds') {
-        if (diamondImg?.complete && diamondImg.naturalWidth > 0) {
-          const s = R * 0.2
-          ctx.drawImage(diamondImg, -s / 2, -s / 2, s, s)
-        } else {
-          drawDiamondFallback(ctx, 0, 0, R * 0.075)
-        }
-        drawGlint(ctx, R * 0.07, -R * 0.06, R * 0.035)
-      } else {
-        const coinR = Math.min(R * 0.08, halfChord(iconR) * 0.8)
-        if (coinImageReady(coinImg)) ctx.drawImage(coinImg, -coinR, -coinR, coinR * 2, coinR * 2)
-        else drawCoin(ctx, 0, 0, coinR)
-      }
+      const coinR = Math.min(R * 0.08, halfChord(iconR) * 0.8)
+      if (coinImageReady(coinImg)) ctx.drawImage(coinImg, -coinR, -coinR, coinR * 2, coinR * 2)
+      else drawCoin(ctx, 0, 0, coinR)
       ctx.restore()
     }
     ctx.restore()
@@ -932,8 +915,8 @@ onUnmounted(() => {
       )
         path.win-glow(:d="winWedgePath")
         path.win-edge(:d="winWedgePath")
-      //- Rim: flat wooden ring (CSS). A painted rim is used only if one is
-      //- listed in useRouletteArt (none is, since the cozy restyle).
+      //- Rim: the toy-box painting when listed + loaded (useRouletteArt),
+      //- else the flat CSS ring.
       img.wheel-rim(
         v-if="art.rim"
         :src="artSrc.rim"
@@ -967,7 +950,7 @@ onUnmounted(() => {
             :key="b.i"
             :style="b.style"
           )
-            span.bulb-lit
+            span.bulb-lit(:class="{ 'is-painted': art.bulbOn }")
               img.bulb-lit-img(
                 v-if="art.bulbOn"
                 :src="artSrc.bulbOn"
@@ -983,7 +966,7 @@ onUnmounted(() => {
       div.wheel-hub(v-else aria-hidden="true")
         div.wheel-hub-fallback
       //- Pointer, pivoting on its cap; the spin loop knocks it per peg.
-      div.wheel-pointer(ref="pointerRef" aria-hidden="true")
+      div.wheel-pointer(ref="pointerRef" aria-hidden="true" :style="art.pointer ? POINTER_BOX : undefined")
         img.pointer-img(
           v-if="art.pointer"
           :src="artSrc.pointer"
@@ -1001,7 +984,7 @@ onUnmounted(() => {
           )
           path(d="M50 70 L50 128" stroke="#6f95ff" stroke-width="5" stroke-linecap="round")
           circle(cx="50" cy="44" r="38" fill="#2f4fd6" stroke="#161a40" stroke-width="6")
-          circle(cx="50" cy="44" r="26" fill="none" stroke="#eef5ff" stroke-width="3" stroke-dasharray="7 6")
+          circle(cx="50" cy="44" r="26" fill="none" stroke="#eef5ff" stroke-width="3")
           circle(cx="50" cy="44" r="11" fill="#eef5ff" stroke="#161a40" stroke-width="4")
       //- One-shot burst when the wheel stops.
       div.wheel-burst(v-if="showWin && !isLowQuality" aria-hidden="true")
@@ -1028,7 +1011,7 @@ onUnmounted(() => {
         )
           span(v-if="isNative") {{ t('spinner.ad') }}
           img.object-contain(
-            :src="prependBaseUrl('images/icons/movie_128x96.webp')"
+            :src="movieIconSrc()"
             alt=""
             class="h-5 w-5"
           )
@@ -1158,7 +1141,8 @@ onUnmounted(() => {
 
 // Flat wooden ring from the face lip (r 0.36) to the outer edge (r 0.5), ink
 // outlines on both edges and a darker inner lip; the face canvas (r 0.372)
-// tucks under it. A stitched cream dash runs round the outer band.
+// tucks under it. A solid cream bevel line runs round the outer band (#UX1c:
+// a wheel is a hard object — no stitch dashes).
 .wheel-rim-fallback
   border-radius: 50%
   border: calc(var(--ws) * 0.14) solid var(--color-wood-600)
@@ -1169,8 +1153,8 @@ onUnmounted(() => {
     position: absolute
     inset: calc(var(--ws) * -0.122)
     border-radius: 50%
-    border: 2px dashed var(--color-cream-200)
-    opacity: 0.7
+    border: 2px solid var(--color-cream-200)
+    opacity: 0.55
 
 // ─── Bolts (the former marquee bulbs) ───────────────────────────────────────
 
@@ -1203,6 +1187,10 @@ onUnmounted(() => {
   border-radius: 50%
   background: var(--color-sun-300)
   box-shadow: 0 0 0 1.5px var(--color-ink)
+
+.bulb-lit.is-painted
+  background: none
+  box-shadow: none
 
 .bulb-lit-img
   position: absolute
@@ -1264,7 +1252,7 @@ onUnmounted(() => {
   pointer-events: none
   user-select: none
 
-// Flat wooden hub: wood disc, ink outline, stitched cream ring, cream bolt.
+// Flat wooden hub: wood disc, ink outline, a solid cream ring, cream bolt.
 .wheel-hub-fallback
   position: relative
   width: 100%
@@ -1279,7 +1267,7 @@ onUnmounted(() => {
     position: absolute
     inset: 16%
     border-radius: 50%
-    border: 2px dashed var(--color-cream-200)
+    border: 2px solid var(--color-cream-200)
 
   &::after
     content: ''
@@ -1330,7 +1318,7 @@ onUnmounted(() => {
   height: 120px
   margin: -60px 0 0 -60px
   border-radius: 50%
-  border: 3px dashed var(--color-cream-50)
+  border: 3px solid var(--color-cream-50)
   opacity: 0
   animation: burst-ring 0.6s ease-out forwards
 

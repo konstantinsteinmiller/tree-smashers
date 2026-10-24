@@ -4,15 +4,17 @@
 // reusable shapes every screen is built from:
 //
 //   .ui-btn  (+ --primary / --secondary / --royal / --danger / --premium / --plum / --ad)
-//   .ui-btn--hero      the ONE hero CTA per screen (uppercase, thick lip, stripes)
+//   .ui-btn--hero      the ONE hero CTA per screen (uppercase, thick lip, 2 speed slashes)
 //   .ui-shine          idle double-strip shine sweep (hero CTA, claimable rewards)
 //   .ui-breathe        idle heartbeat for the hero CTA (put it on a WRAPPER)
-//   .ui-card           bold game card: ink outline, rarity edge, corner stripes
+//   .ui-card           bold game card: ink outline, rarity edge, corner notch
+//   .ui-sparkle        flat four-point twinkle (titles, claimable rewards)
+//   .ui-faceted        two-tone facet finish on any coloured surface
 //   .ui-tag            skewed display plate (titles, stage label, "NEW!")
 //   .ui-panel          ice-white card, navy text: modal content
 //   .ui-wood/.ui-plate royal-blue plate (white text): HUD plates, badges
 //   .ui-inset          recessed ice well inside a panel (rows, list items)
-//   .ui-banner         bold ribbon with notched tails (result banner)
+//   (ribbons)          FRibbon.vue — straight face + folded SVG tails
 //   .ui-chip           small pill (badges, counters, tags)
 //   .ui-notify         berry "!" / count dot that bobs
 //   .ui-title / .ui-label / .ui-body / .ui-num   typography scale
@@ -49,9 +51,23 @@
   --ui-press-down: 70ms
   --ui-spring: cubic-bezier(0.22, 1.9, 0.45, 1)
   --ui-back-out: cubic-bezier(0.34, 1.56, 0.64, 1)
-  // Diagonal accent stripes ("/" lean), hard stops — a flat texture, not a ramp.
-  --ui-stripes: repeating-linear-gradient(300deg, rgba(255, 255, 255, 0.16) 0 7px, transparent 7px 16px)
-  --ui-stripes-ink: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.08) 0 7px, transparent 7px 16px)
+  // ── Surface finishes (#UX1c: no stripes on plates, badges or panels) ──
+  // FACET: a flat two-tone split — the upper-left facet one step lighter,
+  // one hard edge. The cut-gem / toy-plastic read of a premium plate.
+  --ui-facet: linear-gradient(160deg, rgba(255, 255, 255, 0.17) 0 46%, transparent 46%)
+  // Facet for LIGHT (ice / sun) surfaces: the lower-right facet a hair darker.
+  --ui-facet-ink: linear-gradient(160deg, transparent 0 56%, rgba(22, 26, 64, 0.055) 56%)
+  // HATCH: diagonal stripes now mean ONE thing — "off": disabled buttons,
+  // locked cards / tiers / slots. Nowhere else (tests/uiStyleRules.test.ts).
+  --ui-hatch: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.08) 0 7px, transparent 7px 16px)
+  // The same hatch for "off" on a DARK well (a disabled switch option).
+  --ui-hatch-light: repeating-linear-gradient(300deg, rgba(255, 255, 255, 0.06) 0 4px, transparent 4px 8px)
+  // SEGMENTS: vertical notch ticks over a progress track, in fifths.
+  --ui-segments: repeating-linear-gradient(90deg, transparent 0 calc(20% - 2px), rgba(22, 26, 64, 0.42) calc(20% - 2px) 20%)
+  // SPARKLE: a flat four-point twinkle, white with a navy keyline (inline SVG,
+  // crisp at any DPR). `.ui-sparkle` places one; reward moments scatter them.
+  --ui-sparkle-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5C12.9 8 16 11.1 22.5 12C16 12.9 12.9 16 12 22.5C11.1 16 8 12.9 1.5 12C8 11.1 11.1 8 12 1.5Z' fill='%23ffffff' stroke='%23161a40' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")
+  --ui-sparkle-sun-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5C12.9 8 16 11.1 22.5 12C16 12.9 12.9 16 12 22.5C11.1 16 8 12.9 1.5 12C8 11.1 11.1 8 12 1.5Z' fill='%23ffeb3b' stroke='%23161a40' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")
   // Rarity edges (Brawl-style colour code). UI presentation only.
   --rarity-common: var(--color-sky-300)
   --rarity-rare: var(--color-leaf-500)
@@ -187,7 +203,7 @@
     cursor: not-allowed
     transform: translateY(3px)
     text-shadow: var(--ui-stroke-sm)
-    background-image: var(--ui-stripes-ink)
+    background-image: var(--ui-hatch)
 
 .ui-btn--primary
   --btn-bg: var(--color-leaf-500)
@@ -257,6 +273,15 @@
   padding: 0.45rem
   border-radius: var(--radius-ui)
 
+// Touch target ≥ 44 px for the HUD icon squares: they draw at ~40 px on a
+// phone (scale-80), so an invisible ::before reaches 6 px past the outline
+// (scaled with the button: 50 + 12 = 62 css px × 0.8 ≈ 50 px on screen).
+// Paint-free; the element must be positioned (.ui-btn is).
+.ui-hit-44::before
+  content: ''
+  position: absolute
+  inset: -6px
+
 // The ONE hero CTA per screen: thicker outline, a deeper lip, uppercase with
 // the heavy stroke, and two flat diagonal accent stripes at the right end.
 .ui-btn--hero
@@ -318,8 +343,9 @@
 // ─── Cards ───────────────────────────────────────────────────────────────────
 //
 // The collectible look: ice face, 3px ink outline, a RARITY edge (inner ring
-// + a thicker base band in the rarity colour), flat diagonal stripes in the
-// top-right corner, a hard 4px drop. Hover lifts and tilts a degree; press
+// + a thicker base band in the rarity colour), a solid rarity-coloured
+// dog-ear NOTCH in the top-right corner (#UX1c: was a stripe triangle), a
+// faint two-tone facet on the face, a hard 4px drop. Hover lifts and tilts a degree; press
 // sinks. Rarity: add .ui-rarity--common / rare / super / epic / mythic /
 // legendary (or set --card-edge yourself).
 .ui-card
@@ -328,6 +354,7 @@
   --card-drop: 4px
   position: relative
   background-color: var(--card-face)
+  background-image: var(--ui-facet-ink)
   color: var(--ui-text)
   border: var(--ui-border-w) solid var(--ui-outline)
   border-radius: var(--radius-ui)
@@ -335,16 +362,18 @@
   transition: transform 0.24s var(--ui-spring), box-shadow 0.24s var(--ui-spring)
   -webkit-tap-highlight-color: transparent
 
-  // Corner stripes: a triangle of flat diagonal bars in the rarity colour.
+  // Corner notch: a solid dog-ear in the rarity colour (clip-path, so the
+  // diagonal is anti-aliased) with a light bevel along its top edge.
   &::before
     content: ''
     position: absolute
     top: 0
     right: 0
-    width: 2.4rem
-    height: 2.4rem
-    background-image: repeating-linear-gradient(315deg, var(--card-edge) 0 4px, transparent 4px 9px)
-    clip-path: polygon(35% 0, 100% 0, 100% 65%)
+    width: 1.55rem
+    height: 1.55rem
+    background-color: var(--card-edge)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45)
+    clip-path: polygon(0 0, 100% 0, 100% 100%)
     border-top-right-radius: calc(var(--radius-ui) - 3px)
     pointer-events: none
     z-index: 1
@@ -380,10 +409,60 @@
 .ui-rarity--legendary
   --card-edge: var(--rarity-legendary)
 
+// Rarity NAME ("RARE", "EPIC"…, i18n `rarity.<tier>`): a small skewed plate in
+// the rarity colour with a two-tone facet, white stroked caps on top. Readable on
+// every tier (the navy stroke carries the light sky / sun tiers). Used on the
+// roster / team cards, the detail panel, the skin picker and the gift reveal.
+.ui-rarity-name
+  --rarity-bg: var(--rarity-common)
+  position: relative
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  max-width: 100%
+  padding: 0.24em 0.75em 0.3em
+  isolation: isolate
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  font-weight: 900
+  font-size: 0.62rem
+  line-height: 1.15
+  letter-spacing: 0.05em
+  text-transform: uppercase
+  white-space: nowrap
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    background-color: var(--rarity-bg)
+    background-image: var(--ui-facet)
+    border: 2px solid var(--ui-outline)
+    border-radius: 0.3rem
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 2px 0 var(--ui-outline)
+    transform: skewX(-12deg)
+
+.ui-rarity-name--common
+  --rarity-bg: var(--rarity-common)
+.ui-rarity-name--rare
+  --rarity-bg: var(--rarity-rare)
+.ui-rarity-name--super
+  --rarity-bg: var(--rarity-super)
+.ui-rarity-name--epic
+  --rarity-bg: var(--rarity-epic)
+.ui-rarity-name--legendary
+  --rarity-bg: var(--rarity-legendary)
+.ui-rarity-name--mythic
+  --rarity-bg: var(--rarity-mythic)
+
 // ─── Tag: a skewed display plate (titles, stage label, "NEW!") ───────────────
 //
 // The PLATE is the ::before (skewed), the content stays upright on top. Tones
-// as for buttons via --tag-bg / --tag-lip / --tag-band.
+// as for buttons via --tag-bg / --tag-lip / --tag-band. Finish (#UX1c): a
+// solid fill with a two-tone FACET, a hard top bevel and a thin light inner
+// keyline — no stripes. (No glint dash here: next to the first letter of a
+// short title it read as an apostrophe.)
 .ui-tag
   --tag-bg: var(--color-sun-400)
   --tag-lip: var(--color-sun-200)
@@ -402,10 +481,10 @@
     inset: 0
     z-index: -1
     background-color: var(--tag-bg)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     border: var(--ui-border-w) solid var(--ui-outline)
     border-radius: var(--radius-ui-sm)
-    box-shadow: inset 0 3px 0 var(--tag-lip), inset 0 -5px 0 var(--tag-band), 0 5px 0 var(--ui-outline)
+    box-shadow: inset 0 3px 0 var(--tag-lip), inset 0 0 0 4px rgba(255, 255, 255, 0.12), inset 0 -5px 0 var(--tag-band), 0 5px 0 var(--ui-outline)
     transform: skewX(var(--tag-skew))
 
 .ui-tag--leaf
@@ -464,88 +543,56 @@
   background-color: var(--color-royal-900)
   box-shadow: inset 0 3px 0 var(--color-royal-700), 0 4px 0 var(--ui-outline)
 
-// Flat diagonal stripe texture on any coloured surface (frames, plates).
-.ui-striped
-  background-image: var(--ui-stripes)
+// Two-tone facet finish on any coloured surface (frames, plates).
+.ui-faceted
+  background-image: var(--ui-facet)
 
-// Stitched edge: the plush motif, now a white dashed seam.
-.ui-stitch
-  outline: 2px dashed rgba(255, 255, 255, 0.5)
-  outline-offset: -7px
-
-.ui-stitch-dark
-  outline: 2px dashed rgba(35, 56, 168, 0.3)
-  outline-offset: -7px
-
-// ─── Banner (bold ribbon with notched tails) ────────────────────────────────
-//
-// ART-DESK SEAM: `.ui-banner` is the slot a painted ribbon can replace.
-.ui-banner
-  --banner-bg: var(--color-royal-500)
-  --banner-lip: var(--color-royal-300)
-  --banner-band: var(--color-royal-700)
-  position: relative
-  display: inline-flex
-  align-items: center
-  justify-content: center
-  padding: 0.35em 1.4em 0.5em
-  min-width: 8rem
-  border: var(--ui-border-w) solid var(--ui-outline)
-  border-radius: var(--radius-ui-sm)
-  background-color: var(--banner-bg)
-  background-image: var(--ui-stripes)
-  box-shadow: inset 0 3px 0 var(--banner-lip), inset 0 0.95em 0 rgba(255, 255, 255, 0.14), inset 0 -5px 0 var(--banner-band), 0 5px 0 var(--ui-outline)
-  z-index: 0
-
-  &::before, &::after
-    content: ''
-    position: absolute
-    top: 0.45em
-    bottom: -0.5em
-    width: 1.6em
-    background-color: var(--banner-band)
-    z-index: -1
-
-  &::before
-    left: -1.25em
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 38% 50%)
-
-  &::after
-    right: -1.25em
-    clip-path: polygon(0 0, 100% 0, 62% 50%, 100% 100%, 0 100%)
-
-.ui-banner__tail
+// Sparkle: one flat four-point twinkle (white + navy keyline). Absolutely
+// placed by the caller (top / left / right / bottom); size with --sp-size,
+// offset the loop with --sp-delay. Idle: pops in, quarter-turns, pops out,
+// rests — scale / rotate / opacity only. Reduced motion: shown still.
+.ui-sparkle
   position: absolute
+  width: var(--sp-size, 0.9rem)
+  height: var(--sp-size, 0.9rem)
+  background: var(--ui-sparkle-svg) center / contain no-repeat
+  pointer-events: none
+  scale: 0
+  animation: ui-twinkle 2.6s ease-in-out infinite
+  animation-delay: var(--sp-delay, 0s)
 
-.ui-banner--leaf
-  --banner-bg: var(--color-leaf-500)
-  --banner-lip: var(--color-leaf-300)
-  --banner-band: var(--color-leaf-700)
+.ui-sparkle--sun
+  background-image: var(--ui-sparkle-sun-svg)
 
-.ui-banner--berry
-  --banner-bg: var(--color-berry-500)
-  --banner-lip: var(--color-berry-300)
-  --banner-band: var(--color-berry-700)
+@keyframes ui-twinkle
+  0%, 52%, 100%
+    scale: 0
+    rotate: 0deg
+  64%
+    scale: 1.15
+    rotate: 45deg
+  74%
+    scale: 0.85
+    rotate: 70deg
+  86%
+    scale: 0
+    rotate: 90deg
 
-.ui-banner--sun
-  --banner-bg: var(--color-sun-400)
-  --banner-lip: var(--color-sun-200)
-  --banner-band: var(--color-sun-600)
+// STITCHES (#UX1c owner rule): a dashed seam belongs only to things that are
+// FABRIC — the plush smashers, plush trees / props, felt disc rims (drawn in
+// their own art / rig). Hard UI objects (buttons, cards, badges, panels,
+// gauges, bars, chests, the roulette wheel) use solid hard bevels and
+// outlines instead; the old `.ui-stitch` / `.ui-stitch-dark` classes are gone
+// (tests/uiStyleRules.test.ts fails on a dashed border / outline in UI CSS).
 
-.ui-banner--wood, .ui-banner--royal
-  --banner-bg: var(--color-royal-500)
-  --banner-lip: var(--color-royal-300)
-  --banner-band: var(--color-royal-700)
-
-.ui-banner--sky
-  --banner-bg: var(--color-sky-500)
-  --banner-lip: var(--color-sky-300)
-  --banner-band: var(--color-sky-700)
-
-.ui-banner--plum
-  --banner-bg: var(--color-plum-500)
-  --banner-lip: var(--color-plum-300)
-  --banner-band: var(--color-plum-700)
+// ─── Banner / ribbon ─────────────────────────────────────────────────────────
+// #UX1c: the title banner is the FRibbon component (src/components/atoms/
+// FRibbon.vue) — a straight faceted face with crisp FOLDED TAILS drawn as SVG
+// (navy-stroked, same em geometry at every size). The old CSS `.ui-banner`
+// (pseudo-element tails, no outline on the notch) is gone; modal titles,
+// result / reward ribbons, the reveal kicker, the turn banners and the boss
+// trophy label all use FRibbon. ART-DESK SEAM: a painted ribbon replaces
+// FRibbon's face + caps (keep the slot / text box).
 
 // ─── Chips / badges ──────────────────────────────────────────────────────────
 .ui-chip
@@ -634,7 +681,9 @@
   90%
     transform: translateY(-1px) scale(1.04) rotate(0)
 
-// ─── Progress bar (navy well, lime fill, gloss lip, moving stripes) ─────────
+// ─── Progress bar (navy well, lime fill, gloss lip, segment notches) ───────
+// #UX1c: the fill is solid with hard bevels; five SEGMENT notches sit on the
+// track above it (vertical ticks, not stripes), so progress reads in fifths.
 .ui-bar
   position: relative
   height: 0.95rem
@@ -644,15 +693,28 @@
   box-shadow: 0 2px 0 var(--ui-outline)
   overflow: hidden
 
+  &::after
+    content: ''
+    position: absolute
+    inset: 0
+    background-image: var(--ui-segments)
+    pointer-events: none
+
 .ui-bar__fill
   height: 100%
   background-color: var(--color-leaf-400)
-  background-image: var(--ui-stripes)
   box-shadow: inset 0 3px 0 var(--color-leaf-300), inset 0 -3px 0 var(--color-leaf-600)
   border-radius: 999px
   transition: width 0.45s var(--ui-back-out)
 
 // ─── One-shot motion ─────────────────────────────────────────────────────────
+// Built on the INDIVIDUAL `translate` / `rotate` / `scale` properties, never
+// on `transform`: they compose with whatever transform the element already
+// wears — a skewed plate (`.lv-badge`, `.ui-chip--angled`), a centring
+// translate(-50%), a hover lift or a press sink — instead of replacing it for
+// the length of the animation. (CSS applies translate → rotate → scale →
+// transform, so a skewX plate keeps its lean while it bumps.)
+//
 // Pop-in for cards / rows (staggered by --i).
 .ui-pop-in
   animation: ui-pop-in 0.34s var(--ui-back-out) backwards
@@ -660,10 +722,12 @@
 
 @keyframes ui-pop-in
   0%
-    transform: translateY(10px) scale(0.6)
+    translate: 0 10px
+    scale: 0.6
     opacity: 0
   100%
-    transform: none
+    translate: 0 0
+    scale: 1
     opacity: 1
 
 // Slam: a title or a number crashes in from big and settles (overshoot).
@@ -673,13 +737,16 @@
 
 @keyframes ui-slam
   0%
-    transform: scale(2.1) rotate(-6deg)
+    scale: 2.1
+    rotate: -6deg
     opacity: 0
   55%
-    transform: scale(0.9) rotate(1deg)
+    scale: 0.9
+    rotate: 1deg
     opacity: 1
   100%
-    transform: none
+    scale: 1
+    rotate: 0deg
     opacity: 1
 
 // Drop-in: a ribbon / plate falls into place with a little swing.
@@ -689,12 +756,16 @@
 
 @keyframes ui-drop-in
   0%
-    transform: translateY(-70%) rotate(-7deg) scale(0.9)
+    translate: 0 -70%
+    rotate: -7deg
+    scale: 0.9
     opacity: 0
   60%
     opacity: 1
   100%
-    transform: none
+    translate: 0 0
+    rotate: 0deg
+    scale: 1
     opacity: 1
 
 // Bump: a value just changed (count-up landed, coin badge gained).
@@ -703,11 +774,26 @@
 
 @keyframes ui-bump
   0%
-    transform: scale(1)
+    scale: 1
   35%
-    transform: scale(1.22)
+    scale: 1.22
   100%
-    transform: scale(1)
+    scale: 1
+
+// Punch: a bigger bump with a twist (level up, a rarity stamp landing).
+.ui-bump--punch
+  animation: ui-bump-punch 0.45s var(--ui-spring)
+
+@keyframes ui-bump-punch
+  0%
+    scale: 1
+    rotate: 0deg
+  40%
+    scale: 1.5
+    rotate: -4deg
+  100%
+    scale: 1
+    rotate: 0deg
 
 // Deny: a refused tap shakes sideways. Uses the individual `translate`
 // property so it composes with a button's own press transform.
@@ -747,9 +833,14 @@
 // Press feedback stays (it is a state change, and it is short), but loses the
 // overshoot.
 @media (prefers-reduced-motion: reduce)
-  .ui-shine::after, .ui-notify, .ui-pop-in, .ui-slam, .ui-drop-in, .ui-bump, .ui-deny, .ui-breathe, .attention-bounce, .attention-5, .hint-bounce, .hint-bounce-2, .instant-bounce, .animate-pulse
+  .ui-shine::after, .ui-notify, .ui-sparkle, .ui-pop-in, .ui-slam, .ui-drop-in, .ui-bump, .ui-bump--punch, .ui-deny, .ui-breathe, .attention-bounce, .attention-5, .hint-bounce, .hint-bounce-2, .instant-bounce, .animate-pulse
     animation: none !important
 
   .ui-btn, .ui-card
     transition-timing-function: ease-out !important
     transition-duration: 0.08s !important
+
+  // A still sparkle (the twinkle's peak), so reward moments keep their shapes.
+  .ui-sparkle
+    scale: 0.85
+    rotate: 45deg

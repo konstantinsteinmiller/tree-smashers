@@ -12,8 +12,26 @@
 import { reactive } from 'vue'
 import { prependBaseUrl } from '@/utils/function'
 import type { PowerupStat } from '@/types/spinner'
+import type { UiIconName } from '@/use/paintedUiIcons'
+import { paintedUiIconSrc, type PaintedUiIconSrc } from '@/use/uiIconArt'
+import { badgeIconPath } from '@/use/badgeIconArt'
 
 export type StatArtId = 'attack' | 'defense' | 'speed' | 'hp' | 'weight' | 'level-up'
+export type StatId = Exclude<StatArtId, 'level-up'>
+
+/**
+ * The five stats' icons are the toy-style UI icon family (tools/ui-icons,
+ * `stat-*`: painted sprites in public/images/ui-icons/, drawn SVG fallbacks
+ * IconStat*.vue). The older art/ui sheet's stat files (images/stats/) are
+ * superseded and never requested; only its level-up arrow is still used.
+ */
+export const STAT_UI_ICON: Readonly<Record<StatId, UiIconName>> = {
+  hp: 'stat-hp',
+  attack: 'stat-atk',
+  defense: 'stat-def',
+  speed: 'stat-spd',
+  weight: 'stat-weight'
+}
 
 /** Painted files that ship (paths under public/). Add a file here only once
  *  art/ui/slice-return.mjs has written it (tests/uiArt.test.ts checks). */
@@ -43,9 +61,18 @@ export const markUiArtFailed = (path: string): void => {
   failed.add(path)
 }
 
-/** URL of a stat icon painting, or null → draw the fallback. Reactive. */
-export const statIconSrc = (id: StatArtId): string | null =>
-  uiArtAvailable(statIconPath(id)) ? prependBaseUrl(statIconPath(id)) : null
+/** URL of the level-up arrow painting, or null → draw the fallback. Reactive. */
+export const levelUpIconSrc = (): string | null =>
+  uiArtAvailable(statIconPath('level-up')) ? prependBaseUrl(badgeIconPath('level-up', statIconPath('level-up'))) : null
+
+/** The stat family's painted sprite (srcset), or null → the drawn SVG.
+ *  Reactive: a failed load (markStatIconFailed) drops it for the session. */
+export const statIconSrc = (id: StatId): PaintedUiIconSrc | null =>
+  failed.has(STAT_UI_ICON[id]) ? null : paintedUiIconSrc(STAT_UI_ICON[id])
+
+export const markStatIconFailed = (id: StatId): void => {
+  failed.add(STAT_UI_ICON[id])
+}
 
 const images = new Map<string, HTMLImageElement>()
 
@@ -67,6 +94,26 @@ export const uiArtImage = (path: string): HTMLImageElement | null => {
   }
 }
 
+/** The stat family's largest painted sprite as a shared bitmap for canvas
+ *  stamps (power-up box plate, pick-up label), or null → draw the glyph. */
+export const statIconImage = (id: StatId): HTMLImageElement | null => {
+  const p = statIconSrc(id)
+  if (!p || typeof Image === 'undefined') return null
+  const key = `stat:${id}`
+  let img = images.get(key)
+  if (img) return img
+  try {
+    img = new Image()
+    img.addEventListener('error', () => markStatIconFailed(id), { once: true })
+    img.src = p.srcMax
+    images.set(key, img)
+    return img
+  } catch {
+    markStatIconFailed(id)
+    return null
+  }
+}
+
 export const uiArtReady = (img: HTMLImageElement | null): img is HTMLImageElement =>
   !!img && img.complete && img.naturalWidth > 0
 
@@ -75,13 +122,13 @@ export const uiArtReady = (img: HTMLImageElement | null): img is HTMLImageElemen
 export const preloadPowerupArt = (): void => {
   for (const s of ['attack', 'defense', 'speed'] as const) {
     uiArtImage(powerupBoxPath(s))
-    uiArtImage(statIconPath(s))
+    statIconImage(s)
   }
 }
 
 /**
  * Where the painted box's round face plate sits, as fractions of the box
  * image (measured on the sliced 256x256 files: the plate's centre and
- * radius). The game stamps the painted stat icon there.
+ * radius). The game stamps the stat icon (statIconImage) there.
  */
-export const POWERUP_PLATE = { cx: 0.5, cy: 0.56, r: 0.24 } as const
+export const POWERUP_PLATE = { cx: 0.5, cy: 0.575, r: 0.21 } as const

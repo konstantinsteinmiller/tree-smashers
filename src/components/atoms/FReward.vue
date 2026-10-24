@@ -18,17 +18,21 @@
 
       //- ── The frame: everything the player reads ──
       div.reward-frame(:style="framePadding")
-        //- Fabric banner header — flat CSS (design.sass `.ui-banner`), no
-        //- painted image. ART-DESK SEAM: a painted cozy fabric/wood ribbon can
-        //- replace `.reward-banner`'s background (keep the content box).
+        //- The result RIBBON (FRibbon, #UX1c: straight face, folded tails —
+        //- the same banner as every modal title).
         div.ribbon-wrap.relative.mb-6.shrink-0(
           v-if="$slots.ribbon"
           :class="{ '!mb-2': isMobileLandscape, 'is-desktop': !isMobileLandscape && !isMobilePortrait, 'is-celebrate': celebrate }"
         )
-          div.reward-banner.ui-banner(:class="`ui-banner--${ribbonTone}`")
-            span.ribbon-content.ui-outline
+          FRibbon.reward-banner(:tone="ribbonTone === 'wood' ? 'royal' : ribbonTone")
+            span.ribbon-content
               slot(name="ribbon")
                 span {{ t('spinner.rewards') }}
+            //- Celebration twinkles on the ribbon's ends (#UX1c).
+            template(v-if="celebrate && !isLowQuality" #decor)
+              span.ui-sparkle.ribbon-sp.is-a(aria-hidden="true")
+              span.ui-sparkle.ui-sparkle--sun.ribbon-sp.is-b(aria-hidden="true")
+              span.ui-sparkle.ribbon-sp.is-c(aria-hidden="true")
 
         //- Defensive scroll — see `.reward-body`.
         div.reward-body.relative.w-full.flex.flex-col.items-center.justify-center(
@@ -57,6 +61,7 @@ import { isMobileLandscape, isMobilePortrait } from '@/use/useUser'
 import { isLowQuality } from '@/use/useQuality'
 import RewardStage from '@/components/atoms/RewardStage.vue'
 import RewardConfetti from '@/components/atoms/RewardConfetti.vue'
+import FRibbon from '@/components/atoms/FRibbon.vue'
 
 /**
  * ─── The reward overlay (after glyphyx's FReward) ───────────────────────────
@@ -212,7 +217,7 @@ onBeforeUnmount(() => {
   height: 100%
   min-height: 0
 
-// The continue hint: a royal plate with flat stripes and a double chevron,
+// The continue hint: a royal plate with a two-tone facet and a double chevron,
 // deliberately neutral (royal, not sun/leaf) so it reads as the way onward
 // rather than as another thing that was won. It pops in, then nudges forward
 // every 1.4 s — the chevrons kick right, the plate gives a small squash — a
@@ -224,7 +229,7 @@ onBeforeUnmount(() => {
   padding: 0.35em 0.9em 0.35em 1.15em
   border-radius: 999px
   background-color: var(--color-royal-500)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   border: 3px solid var(--color-ink)
   box-shadow: inset 0 3px 0 var(--color-royal-300), inset 0 -4px 0 var(--color-royal-700), 0 5px 0 var(--color-ink)
   color: var(--color-ice-50)
@@ -290,13 +295,14 @@ onBeforeUnmount(() => {
   &::-webkit-scrollbar
     display: none
 
-// Backdrops: a warm dark wash (cozy dusk), deeper behind a celebration so
-// the sunburst reads. Flat fills only.
+// Backdrops: a navy wash, deeper behind a celebration so the sunburst reads.
+// #UX1c: the celebration stage is deep ROYAL navy (was a dark olive green
+// that read muddy under the sun rays). Flat fills only.
 .reward-bg
   background-color: rgba(10, 14, 44, 0.78)
 
 .reward-bg--celebrate
-  background-color: rgba(30, 46, 24, 0.94)
+  background-color: rgba(14, 20, 70, 0.94)
 
 // ─── Fabric banner ───────────────────────────────────────────────────────────
 
@@ -340,20 +346,35 @@ onBeforeUnmount(() => {
     animation: none
 
 .reward-banner
-  min-width: min(16rem, 70vw)
   max-width: 100%
-  padding: 0.3em 1.6em 0.4em
-  font-size: clamp(1.25rem, 5vmin, 2.25rem)
+  font-size: clamp(1.2rem, 4.6vmin, 2.1rem)
+  :deep(.f-ribbon__face)
+    min-width: min(12em, 60vw)
 
 .ribbon-content
-  display: block
-  font-weight: 900
-  text-align: center
-  line-height: 1.1
-  overflow-wrap: anywhere
+  text-transform: uppercase
+  letter-spacing: 0.03em
+
+// Ribbon twinkles: they start after the slam has landed (~0.5 s).
+.ribbon-sp
+  z-index: 3
+  &.is-a
+    left: 0.7em
+    top: -0.5em
+    --sp-size: 0.8em
+    --sp-delay: 0.45s
+  &.is-b
+    right: 1.6em
+    top: -0.35em
+    --sp-size: 0.55em
+    --sp-delay: 1.1s
+  &.is-c
+    right: 0.6em
+    top: 1.5em
+    --sp-size: 0.75em
+    --sp-delay: 1.7s
 
 @media (orientation: landscape) and (max-height: 500px)
   .reward-banner
-    min-width: 12rem
-    font-size: 1.15rem
+    font-size: 1.1rem
 </style>

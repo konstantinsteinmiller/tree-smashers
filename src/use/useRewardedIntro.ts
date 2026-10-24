@@ -62,9 +62,10 @@ export const isRewardedIntroOpen = ref(false)
  */
 export type RewardedIntroReward = {
   /** Quantity, for the currency kinds and 'fights' (extra league fights).
-   *  Ignored by 'speed', 'respin' and 'skinAd' (one ad unlocks one skin). */
+   *  Ignored by 'speed', 'respin', 'skinAd' (one ad unlocks one skin) and
+   *  'smasherAd' (one ad unlocks one premium smasher). */
   amount?: number
-  kind: 'coins' | 'diamonds' | 'speed' | 'respin' | 'skinAd' | 'fights'
+  kind: 'coins' | 'diamonds' | 'speed' | 'respin' | 'skinAd' | 'smasherAd' | 'fights'
 }
 
 export const rewardedIntroReward = ref<RewardedIntroReward | null>(null)

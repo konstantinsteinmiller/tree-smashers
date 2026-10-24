@@ -72,7 +72,7 @@ const setupCinematic = () => {
   isPaused.value = false
   statusText.value = 'Cinematic — blades launching…'
 
-  initGame(PLAYER_TEAM, NPC_TEAM, false, 'boss', 0, false)
+  initGame(PLAYER_TEAM, NPC_TEAM, false, 'boss', false)
 
   // Position blades in a radial pattern around center
   const all = [...playerBlades.value, ...npcBlades.value]
@@ -165,7 +165,7 @@ const setupBattle = () => {
   isPaused.value = false
   statusText.value = 'Battle — starting…'
 
-  initGame(PLAYER_TEAM, NPC_TEAM, false, 'boss', 2, false)
+  initGame(PLAYER_TEAM, NPC_TEAM, false, 'boss', false)
 
   // Arm counter so the 3-2-1-GO countdown always fires (triggers every 3rd game)
   gameStartCount.value = 2

@@ -7,3 +7,23 @@
 // and is kept tiny so excluding it costs no protection. (Same pattern as
 // `utils/playgamaBridgeLoader.ts`.)
 export const loadIntroCutscene = () => import('@/components/organisms/IntroCutscene.vue')
+
+/**
+ * Warm the intro for a probable first-timer while the splash is still up:
+ * the cutscene chunk, then every painted file it draws (team trees, thorns,
+ * tree-hit FX, the meadow backdrop / props / floor, the five smasher sheets,
+ * the intro paintings). Nothing here blocks the splash; the cutscene waits
+ * (capped) for the files it still lacks.
+ */
+export const warmIntroCutscene = (): void => {
+  void loadIntroCutscene().catch(() => { /* the arena skips the intro then */
+  })
+  void import('@/use/introRender')
+    .then((m) => {
+      m.preloadIntroCanvasArt()
+      return import('@/use/introArt')
+    })
+    .then(m => m.preloadIntroArt())
+    .catch(() => { /* best-effort */
+    })
+}

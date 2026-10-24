@@ -1,4 +1,4 @@
-import { sdf, type ArenaShape } from '@/use/arenaShapes'
+import { sdf, TERRAIN_SHAPES, type ArenaShape } from '@/use/arenaShapes'
 // ─── Arena terrain: layouts (islands, speed boosters, pot holes …) + team towers ──
 //
 // Pure geometry / physics helpers for the Tree Smashers arena. The engine
@@ -12,7 +12,7 @@ import { sdf, type ArenaShape } from '@/use/arenaShapes'
 //
 // Feature kinds (each one = one draw function in arenaTerrainDraw.ts = one
 // sprite seam for the paint pipeline):
-//  · islands  (stump / rock / pond) — static discs, the bouncer ricochet;
+//  · islands  (stump / rock / pond) — static discs, a wall-like ricochet;
 //  · boosters — speed ×BOOSTER_MUL along the blade's own velocity;
 //  · holes    — mud (drag) or deep (stop dead in the core);
 //  · arrows   — leaf ramps: one-way directional boosters (turn toward the
@@ -127,8 +127,46 @@ export const SOLID_KEEP = 0.85
 export const TOWER_RADIUS_MUL = 1.35
 /** Distance of each tower centre from the arena centre, × arena radius. */
 export const TOWER_Y_RATIO = 0.8
-/** Tower HP = this × the team's total blade max HP at spawn. */
-export const TOWER_HP_RATIO = 0.6
+// ── Tree tuning (tower pass 2026-10, roadmap "Tree towers: a real objective")
+// Measured with scripts/balance-sim.mjs camp (tools/balance-sim/towerstats.mjs,
+// tunings tw-*.json): before, felling the tree was the easy route — a
+// "tree rush" policy (aim at the tree 70 % of launches) beat brawling on
+// normal stages (80 vs 74 %) and above all on boss stages (38 vs 26 %, 74 %
+// of rush wins by the tree; 39 % of all boss wins came from the tree). Now:
+// every tree 0.75 × team HP (was 0.6); the boss's tree × 1.5 on top and
+// spiked; the player's own tree × 1.3 on a boss stage; the campaign boss
+// blade's HP × 1.75 (was 2, CAMPAIGN_NPC_TUNING.bossHpMul) so the knock-out
+// route gives back what the tree route lost. A lone boss's tree has
+// 0.75·1.5·1.75 / (0.6·2) = 1.64 × its old HP. Boss stages (16 seeds): brawl
+// 26 → 27 %, rush 38 → 24 % (the tree still decides a third of rush wins).
+
+/** Tower HP = this × the team's total blade max HP at spawn (both sides,
+ *  every mode — campaign, ghost, league, PvP). Was 0.6. */
+export const TOWER_HP_RATIO = 0.75
+/** Boss stages: the BOSS's tree gets this × its normal HP on top (the boss
+ *  blade's own HP, CAMPAIGN_NPC_TUNING.bossHpMul, already counts into the
+ *  team HP). */
+export const BOSS_TOWER_HP_MUL = 1.5
+/** Boss stages: the PLAYER's tree gets this × its normal HP (the boss AI
+ *  rushes it too; keeps a boss fight about the fight, both ways). */
+export const BOSS_STAGE_OWN_TREE_HP_MUL = 1.3
+/** Spiked front cover: share of a damaging hit's impact damage (before Tower
+ *  Breaker's bonus) that pricks the attacker. Owner's number. */
+export const TOWER_SPIKE_RECOIL = 0.15
+/** Which trees wear the spiked front cover: 'boss' = the boss's tree on a
+ *  boss stage only, 'all' = every tree (both sides, every mode), 'none'. */
+export type TowerSpikeRule = 'boss' | 'all' | 'none'
+export const TOWER_SPIKES: TowerSpikeRule = 'boss'
+/** Live tower tuning (the shipped values above; the balance sim overrides it
+ *  in place — tests/balance.sim.test.ts BALANCE_TUNING). Read at createTower
+ *  and on every tower hit, never cached. */
+export const TOWER_TUNING: { hpRatio: number; bossHpMul: number; ownBossStageHpMul: number; spikeRecoil: number; spikes: TowerSpikeRule } = {
+  hpRatio: TOWER_HP_RATIO,
+  bossHpMul: BOSS_TOWER_HP_MUL,
+  ownBossStageHpMul: BOSS_STAGE_OWN_TREE_HP_MUL,
+  spikeRecoil: TOWER_SPIKE_RECOIL,
+  spikes: TOWER_SPIKES
+}
 /** Damage scale for blade → tower hits (on top of the engine's DAMAGE_SCALE). */
 export const TOWER_DAMAGE_MUL = 1
 
@@ -385,17 +423,178 @@ const DEF: [string, TerrainTheme, Feat][] = [
   }]
 ]
 
+/** At most this many solid obstacles (islands, mushrooms, logs) per arena.
+ *  The terrain solids are the arena's ONLY floor obstacles (no bumpers). */
+export const MAX_SOLID_OBSTACLES = 2
+/** The rare centre barrier: one bigger island to fling around. Capped so the
+ *  spawn rows stay clear. */
+const BIG_ISLAND_R = 22
+
+/**
+ * Obstacles are a RARE feature (owner, 2026-10-22). Per layout (= campaign
+ * stage − 1): most clearings are open; every 4th has ONE obstacle (never in
+ * the middle); every 9th has TWO (the outermost mirrored pair); every 12th
+ * (offset) has one bigger centre island instead.
+ */
+export const solidBudgetFor = (id: number): { count: 0 | 1 | 2, bigCentre: boolean } => {
+  if (id % 9 === 8) return { count: 2, bigCentre: false }
+  if (id % 12 === 6) return { count: 1, bigCentre: true }
+  if (id % 4 === 3) return { count: 1, bigCentre: false }
+  return { count: 0, bigCentre: false }
+}
+
+/** The central lane a non-centre obstacle must leave clear: |x| - r >= this
+ *  (the largest disc, 1.35 x the 28 blade radius, passes down the middle). */
+export const CENTRE_LANE_HALF = 38
+
+type SolidSet = Pick<TerrainLayout, 'islands' | 'mushrooms' | 'logs'>
+type FloorSet = Pick<TerrainLayout, 'boosters' | 'holes' | 'arrows' | 'honey'>
+/** Nearest |x| of an obstacle's footprint edge (0 if it spans x = 0). */
+const laneEdge = (x0: number, x1: number, r: number): number =>
+  (x0 <= 0 && x1 >= 0 ? 0 : Math.min(Math.abs(x0), Math.abs(x1))) - r
+
+/** Every spawn the engine can produce on a terrain arena (R 200, the largest
+ *  disc 38, NPC jitter box ±11.2) — see tests/arenaLayouts.test.ts. */
+const SPAWN_BOXES: readonly [number, number, number][] = [
+  ...[1, 2, 3, 4].flatMap(n => Array.from({ length: n }, (_, i) => (n === 1 ? 0 : (i / (n - 1) - 0.5) * 140))
+    .flatMap(x => [[x, 80, 0], [x, -80, 0]] as [number, number, number][])),
+  ...([[0, -0.4], [-0.4, -0.4], [0.4, -0.4], [-0.4, -0.55], [0.4, -0.55], [0, -0.3], [-0.4, -0.65], [0.4, -0.65], [-0.4, -0.3], [0.4, -0.3]]
+    .map(([x, y]) => [x! * 200, y! * 200, 11.2] as [number, number, number]))
+]
+const clearOfSpawns = (d: TerrainDisc): boolean => [d.y].every(y => SPAWN_BOXES.every(([sx, sy, j]) => {
+  const nx = Math.max(sx - j, Math.min(sx + j, d.x))
+  const ny = Math.max(sy - j, Math.min(sy + j, y))
+  return Math.hypot(d.x - nx, y - ny) >= d.radius + 38 + 6
+}))
+
+const logDiscs = (l: TerrainLog): TerrainDisc[] => {
+  const n = Math.max(1, Math.ceil(Math.hypot(l.bx - l.ax, l.by - l.ay) / l.radius))
+  return Array.from({ length: n + 1 }, (_, i) => ({ x: l.ax + ((l.bx - l.ax) * i) / n, y: l.ay + ((l.by - l.ay) * i) / n, radius: l.radius }))
+}
+
+const capSolids = (id: number, f: SolidSet, floor: FloorSet): SolidSet & FloorSet => {
+  const { count, bigCentre } = solidBudgetFor(id)
+  if (bigCentre) {
+    const kind = f.islands.find(o => Math.abs(o.x) < 12)?.kind ?? f.islands[0]?.kind ?? 'stump'
+    const big = I(0, 15, BIG_ISLAND_R, kind)
+    // Floor features under / against the island are dropped (deterministic);
+    // the rest of the layout keeps its character.
+    const clear = <T extends { x: number; y: number; radius: number }>(a: T[]) =>
+      a.filter(o => Math.hypot(o.x - big.x, o.y - big.y) >= o.radius + big.radius + 2)
+    return {
+      islands: [big], mushrooms: [], logs: [],
+      boosters: clear(floor.boosters), holes: clear(floor.holes), arrows: clear(floor.arrows), honey: clear(floor.honey)
+    }
+  }
+  const all = [
+    ...f.islands.map(o => ({ edge: laneEdge(o.x, o.x, o.radius), cx: o.x, island: o as TerrainIsland | null, mush: null as TerrainDisc | null, log: null as TerrainLog | null })),
+    ...f.mushrooms.map(o => ({ edge: laneEdge(o.x, o.x, o.radius), cx: o.x, island: null, mush: o, log: null })),
+    ...f.logs.map(o => ({ edge: laneEdge(Math.min(o.ax, o.bx), Math.max(o.ax, o.bx), o.radius), cx: (o.ax + o.bx) / 2, island: null, mush: null, log: o }))
+  ]
+  // outermost first and never in the central lane: an obstacle in the middle
+  // of the clearing blocks the main lane, so only side ones are kept
+  const keep = all.filter(o => o.edge >= CENTRE_LANE_HALF)
+    .sort((p, q) => Math.abs(q.cx) - Math.abs(p.cx) || p.cx - q.cx).slice(0, count)
+  // A layout whose only solids sit in the middle: move its innermost solid
+  // (same kind, radius capped) out to a free side spot, so the schedule holds.
+  const src = all.filter(o => !keep.includes(o)).sort((p, q) => Math.abs(p.cx) - Math.abs(q.cx) || p.cx - q.cx)[0]
+    ?? { edge: 0, cx: 0, island: I(0, 15, 14, 'stump') as TerrainIsland | null, mush: null as TerrainDisc | null, log: null as TerrainLog | null }
+  if (keep.length < count) {
+    const shape = TERRAIN_SHAPES[id % TERRAIN_SHAPES.length]!
+    const placed = keep.flatMap(o => (o.log ? logDiscs(o.log) : [(o.island ?? o.mush)!]))
+    const others = [...floor.boosters, ...floor.holes, ...floor.arrows, ...floor.honey]
+    const need = count - keep.length
+    const signs = need === 2 ? [-1, 1] : [keep[0] ? -Math.sign(keep[0].cx) || 1 : id % 2 ? 1 : -1]
+    const r = Math.min(14, (src.island ?? src.mush ?? src.log)!.radius)
+    const fits = (d: TerrainDisc) => sdf(shape, d.x, d.y, 200) <= -(d.radius + 6) && sdf(shape, d.x, -d.y, 200) <= -(d.radius + 6)
+      && [...others, ...placed].every(o => Math.hypot(o.x - d.x, o.y - d.y) >= o.radius + d.radius + 4)
+      && Math.abs(d.x) - d.radius >= CENTRE_LANE_HALF && clearOfSpawns(d)
+    // mirrored pairs share one spot (x ↔ −x), so a pair is always symmetric
+    search: for (const y of [15, -5, 35, -20, 50, -35, 65]) for (let ax = 160; ax >= CENTRE_LANE_HALF + r; ax--) {
+      const cands = signs.map(sign => {
+        const x = sign * ax
+        return src.log ? { x, disc: null, log: G(x, y - 15, x, y + 15, Math.min(9, r)) } : { x, disc: { x, y, radius: r }, log: null }
+      })
+      if (!cands.every(c => (c.log ? logDiscs(c.log) : [c.disc!]).every(fits))) continue
+      for (const c of cands) {
+        keep.push({ edge: ax - r, cx: c.x, island: src.island && c.disc ? { ...c.disc, kind: src.island.kind } : null, mush: src.mush && c.disc ? c.disc : null, log: c.log })
+      }
+      break search
+    }
+  }
+  return {
+    ...floor,
+    islands: keep.flatMap(o => (o.island ? [o.island] : [])),
+    mushrooms: keep.flatMap(o => (o.mush ? [o.mush] : [])),
+    logs: keep.flatMap(o => (o.log ? [o.log] : []))
+  }
+}
+
+/**
+ * Spread the floor hazards (boosters, pot holes, leaf arrows, honey) over the clearing
+ * (owner 2026-10-23): the hand-authored layouts put nearly all of them on the middle
+ * line (y ≈ 15), so every arena played like a horizontal corridor. Each feature keeps
+ * its authored column (± a little) but gets a deterministic random HEIGHT (seeded by the
+ * layout key, so both PvP peers and every run agree), re-rolled until it sits inside the
+ * clearing, clear of every spawn box, solid obstacle, tree row and earlier hazard; if no
+ * spot is found it keeps the authored one.
+ */
+const SPREAD_Y = 105
+const SPREAD_X_JITTER = 36
+const spreadFloor = (id: number, key: string, l: SolidSet & FloorSet): SolidSet & FloorSet => {
+  let s = 0x9e3779b9
+  for (let i = 0; i < key.length; i++) s = Math.imul(s ^ key.charCodeAt(i), 16777619) >>> 0
+  const rnd = (): number => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0
+    return s / 4294967296
+  }
+  const shape = TERRAIN_SHAPES[id % TERRAIN_SHAPES.length]!
+  const solids: TerrainDisc[] = [
+    ...l.islands, ...l.mushrooms, ...l.logs.flatMap(logDiscs)
+  ]
+  const placed: TerrainDisc[] = []
+  // Features not re-placed yet still stand where they were authored: a moved one must keep
+  // clear of those too, or it can land on a neighbour that then stays put.
+  const pending = new Set<TerrainDisc>([...l.boosters, ...l.holes, ...l.arrows, ...l.honey])
+  const free = (d: TerrainDisc): boolean =>
+    sdf(shape, d.x, d.y, 200) <= -(d.radius + 8) && sdf(shape, d.x, -d.y, 200) <= -(d.radius + 8)
+    && clearOfSpawns(d)
+    && solids.every(o => Math.hypot(o.x - d.x, o.y - d.y) >= o.radius + d.radius + 6)
+    && placed.every(o => Math.hypot(o.x - d.x, o.y - d.y) >= o.radius + d.radius + 10)
+    && [...pending].every(o => Math.hypot(o.x - d.x, o.y - d.y) >= o.radius + d.radius + 10)
+  const move = <T extends TerrainDisc>(f: T): T => {
+    pending.delete(f)
+    for (let n = 0; n < 60; n++) {
+      // Half the tries stay near the authored column, half roam the full width: the spawn
+      // rows block the middle of the clearing, so the roaming ones reach the open flanks.
+      const x = rnd() < 0.5
+        ? Math.max(-170, Math.min(170, f.x + (rnd() - 0.5) * 2 * SPREAD_X_JITTER))
+        : (rnd() * 2 - 1) * 170
+      const y = (rnd() * 2 - 1) * SPREAD_Y
+      const cand = { ...f, x, y }
+      if (free(cand)) {
+        placed.push(cand)
+        return cand
+      }
+    }
+    placed.push(f)
+    return f
+  }
+  return {
+    ...l,
+    boosters: l.boosters.map(move),
+    holes: l.holes.map(move),
+    arrows: l.arrows.map(move),
+    honey: l.honey.map(move)
+  }
+}
+
 const LAYOUTS: readonly TerrainLayout[] = DEF.map(([key, theme, f], id) => ({
   id,
   nameKey: `terrain.layout.${key}`,
   theme,
-  islands: f.islands ?? [],
-  boosters: f.boosters ?? [],
-  holes: f.holes ?? [],
-  arrows: f.arrows ?? [],
-  honey: f.honey ?? [],
-  mushrooms: f.mushrooms ?? [],
-  logs: f.logs ?? []
+  ...spreadFloor(id, key, capSolids(id, { islands: f.islands ?? [], mushrooms: f.mushrooms ?? [], logs: f.logs ?? [] },
+    { boosters: f.boosters ?? [], holes: f.holes ?? [], arrows: f.arrows ?? [], honey: f.honey ?? [] }))
 }))
 
 export const TERRAIN_LAYOUT_COUNT = LAYOUTS.length
@@ -451,12 +650,78 @@ export interface TeamTower {
   maxHp: number
   /** Hit flash 0..1 (VFX only). */
   flash: number
+  /** Wears the spiked front cover: an enemy hit on its front pricks the
+   *  attacker for TOWER_TUNING.spikeRecoil × the impact (towerSpikeRecoil). */
+  spiked: boolean
 }
 
-/** Share of a tower's outline inside the arena. Towers are SET INTO THE
- *  BORDER: only this much of the tree bulges into the clearing and can be hit
- *  by a smasher, the rest is behind the wall. */
+/** Legacy share of a tower's outline inside the arena (the trees used to be
+ *  SET INTO THE BORDER, 45 % bulging into the clearing): the furthest OUT a
+ *  tree may still stand (towerPosition). */
 export const TOWER_INSIDE_SHARE = 0.45
+
+/** Trees stand INSIDE the clearing (owner 2026-10-22: "move the player tree
+ *  more inside the arena, so that it doesn't look so out of the arena"): the
+ *  tree's whole collision outline sits this many arena units inside the wall,
+ *  its back just touching it (no lane behind it, no border gap at it). Both
+ *  sides alike, every clearing shape. */
+export const TOWER_WALL_GAP = 1
+
+/** Trees per side, campaign only (owner 2026-10-22): about 64 % of stages
+ *  one tree, 28 % two, 8 % three — all of a side's trees must fall to win by
+ *  trees. */
+export const MAX_TREES_PER_SIDE = 3
+/** Cumulative thresholds of the seeded tree count (one, two; else three). */
+export const TREE_COUNT_ODDS: readonly [number, number] = [0.64, 0.92]
+/** The tutorial arc (stages 1–5, the first boss at 5) keeps one tree. */
+export const MULTI_TREES_FROM_STAGE = 6
+/** Tree radius × this per tree count (several trees share the wall). */
+export const TREE_COUNT_RADIUS_MUL: readonly number[] = [1, 0.85, 0.75]
+/** Each tree's HP share of the single-tree HP per tree count (in total 1,
+ *  1.1, 1.2 × — the extra trees are smaller targets too). Balance-sim
+ *  pending (roadmap "Batched balance simulations"). */
+export const TREE_COUNT_HP_SHARE: readonly number[] = [1, 0.55, 0.4]
+/** Minimum centre distance between two neighbouring trees of a side, × tree
+ *  radius (painted sprite half width 1.2 r: the crowns do not overlap). */
+export const TREE_SPACING = 2.5
+
+/** Deterministic hash of a campaign stage id → [0, 1) (no Math.random). */
+const stageUnit = (stageId: number): number => {
+  let h = Math.imul(Math.floor(stageId) ^ 0x7ee5, 0x9e3779b1) >>> 0
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b) >>> 0
+  h ^= h >>> 13
+  h = Math.imul(h, 0xc2b2ae35) >>> 0
+  h ^= h >>> 16
+  return (h >>> 0) / 4294967296
+}
+
+/** Trees per side on a campaign stage, seeded by the stage id (a stage always
+ *  gives the same count; both sides get the same count). PvP, league and
+ *  ghost matches stay at one tree (their seeds are shared across peers and
+ *  replays; see the roadmap). */
+export const treeCountForStage = (stageId: number): number => {
+  if (!Number.isFinite(stageId) || stageId < MULTI_TREES_FROM_STAGE) return 1
+  const u = stageUnit(stageId)
+  return u < TREE_COUNT_ODDS[0] ? 1 : u < TREE_COUNT_ODDS[1] ? 2 : 3
+}
+
+const clampTreeCount = (n: number): number => Math.max(1, Math.min(MAX_TREES_PER_SIDE, Math.floor(n) || 1))
+
+/** Tree collision radius for a blade radius and a tree count. */
+export const treeRadiusFor = (bladeRadius: number, count = 1): number =>
+  Math.round(bladeRadius * TOWER_RADIUS_MUL * TREE_COUNT_RADIUS_MUL[clampTreeCount(count) - 1]!)
+
+/** Largest outline SDF of a disc (> 0: part of it is outside the wall). */
+const outlineMaxSdf = (shape: ArenaShape, R: number, x: number, y: number, r: number): number => {
+  const N = 48
+  let m = -Infinity
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2
+    m = Math.max(m, sdf(shape, x + Math.cos(a) * r, y + Math.sin(a) * r, R))
+  }
+  return m
+}
 
 const insideShare = (shape: ArenaShape, R: number, x: number, y: number, r: number): number => {
   const N = 96
@@ -468,14 +733,94 @@ const insideShare = (shape: ArenaShape, R: number, x: number, y: number, r: numb
   return n / N
 }
 
-/** Tower centre: on the y axis at the team's own wall (player bottom, NPC
- *  top), slid along the axis until TOWER_INSIDE_SHARE of its outline is inside
- *  the arena. Bisection on the shape's SDF, so it fits every clearing shape
- *  whatever the wall's curvature there. */
+/** The row a team launches from (initGame: y = ±0.4 R, 1–4 smashers spread
+ *  over ±0.35 R). A tree never stands on it. */
+const SPAWN_ROW_Y = 0.4
+const SPAWN_ROW_XS: readonly number[] = [0, -0.35, 0.35, -0.35 / 3, 0.35 / 3]
+/** Clearance between a tree and a row spawn of a regular disc (a bigger
+ *  disc is pushed clear at spawn — useSpinnerGame settleSpawnOverlaps). */
+const SPAWN_CLEAR_GAP = 2
+
+/** A tree at angle `theta` off the team's axis (player bottom, NPC top),
+ *  on that ray: as far IN as it can stand — its whole outline TOWER_WALL_GAP
+ *  inside the wall — unless the team's spawn row (regular disc `disc`) needs
+ *  the room; never further out than the legacy set-into-the-wall spot
+ *  (TOWER_INSIDE_SHARE of the outline inside). */
+const treeOnRay = (dir: number, theta: number, R: number, r: number, shape: ArenaShape, disc: number): { x: number; y: number } => {
+  const ux = Math.sin(theta)
+  const uy = dir * Math.cos(theta)
+  const bis = (ok: (m: number) => boolean, lo: number, hi: number): number => {
+    // ok(lo) true, ok(hi) false → the boundary.
+    for (let i = 0; i < 36; i++) {
+      const m = (lo + hi) / 2
+      if (ok(m)) lo = m
+      else hi = m
+    }
+    return lo
+  }
+  const top = R * 1.5
+  const mIn = bis(m => outlineMaxSdf(shape, R, ux * m, uy * m, r) <= -TOWER_WALL_GAP, 0, top)
+  const mLegacy = bis(m => insideShare(shape, R, ux * m, uy * m, r) > TOWER_INSIDE_SHARE, mIn, top)
+  const need = r + disc + SPAWN_CLEAR_GAP
+  const clear = (m: number): boolean => {
+    for (const sx of SPAWN_ROW_XS) if (Math.hypot(ux * m - sx * R, uy * m - dir * SPAWN_ROW_Y * R) < need) return false
+    return true
+  }
+  // Smallest m (from mIn outward) that clears the row.
+  let m = mIn
+  if (!clear(m)) m = clear(mLegacy) ? bis(q => !clear(q), mIn, mLegacy) + 0.01 : mLegacy
+  m = Math.min(m, mLegacy)
+  return { x: ux * m + 0, y: uy * m + 0 }
+}
+
+/** Every tree centre of a side: 1 on the axis, 2 either side of it, 3 = the
+ *  axis plus one either side — spread until neighbours are TREE_SPACING × r
+ *  apart, each standing just inside its own wall. */
+export const towerPositions = (
+  side: 'player' | 'npc', arenaRadius: number, towerRadius: number, shape: ArenaShape = 'circle', count = 1,
+  /** Regular smasher disc of the spawn row the trees keep clear of. */
+  discRadius = Math.round(towerRadius / TOWER_RADIUS_MUL)
+): { x: number; y: number }[] => {
+  const key = `${side}:${arenaRadius}:${towerRadius}:${shape}:${count}:${discRadius}`
+  const hit = treePosCache.get(key)
+  if (hit !== undefined) return hit.map(p => ({ ...p }))
+  const out = computeTowerPositions(side, arenaRadius, towerRadius, shape, count, discRadius)
+  if (treePosCache.size > 4096) treePosCache.clear()
+  treePosCache.set(key, out)
+  return out.map(p => ({ ...p }))
+}
+
+/** Pure function of its arguments — memoised (props / fit / engine ask often). */
+const treePosCache = new Map<string, { x: number; y: number }[]>()
+
+const computeTowerPositions = (
+  side: 'player' | 'npc', arenaRadius: number, towerRadius: number, shape: ArenaShape, count: number, discRadius: number
+): { x: number; y: number }[] => {
+  const dir = side === 'player' ? 1 : -1
+  const n = clampTreeCount(count)
+  if (towerRadius <= 0) return [towerPosition(side, arenaRadius, 0, shape)]
+  const at = (thetas: number[]) => thetas.map(t => treeOnRay(dir, t, arenaRadius, towerRadius, shape, discRadius))
+  if (n === 1) return at([0])
+  const need = TREE_SPACING * towerRadius
+  const spread = (d: number) => at(n === 2 ? [-d, d] : [-d, 0, d])
+  const apart = (p: { x: number; y: number }[]): boolean => {
+    for (let i = 0; i + 1 < p.length; i++) if (Math.hypot(p[i]!.x - p[i + 1]!.x, p[i]!.y - p[i + 1]!.y) < need) return false
+    return true
+  }
+  // Coarse steps, then back off in fine steps to the smallest spread.
+  let d = 0.02
+  while (d < 1.2 && !apart(spread(d))) d += 0.05
+  for (let f = Math.max(0.02, d - 0.05); f < d; f += 0.005) if (apart(spread(f))) return spread(f)
+  return spread(d)
+}
+
+/** The single tree's centre: on the y axis just inside the team's own wall
+ *  (player bottom, NPC top). `towerRadius` 0 = the wall point itself. */
 export const towerPosition = (
   side: 'player' | 'npc', arenaRadius: number, towerRadius = 0, shape: ArenaShape = 'circle'
 ): { x: number; y: number } => {
   const dir = side === 'player' ? 1 : -1
+  if (towerRadius > 0) return treeOnRay(dir, 0, arenaRadius, towerRadius, shape, Math.round(towerRadius / TOWER_RADIUS_MUL))
   let lo = 0
   let hi = arenaRadius * 1.5
   for (let i = 0; i < 40; i++) {
@@ -483,26 +828,74 @@ export const towerPosition = (
     if (sdf(shape, 0, dir * m, arenaRadius) <= 0) lo = m
     else hi = m
   }
-  if (towerRadius <= 0) return { x: 0, y: dir * lo }
-  // Slide outward until the inside share drops to the target.
-  let inner = lo - towerRadius
-  let outer = lo + towerRadius
-  for (let i = 0; i < 30; i++) {
-    const m = (inner + outer) / 2
-    if (insideShare(shape, arenaRadius, 0, dir * m, towerRadius) > TOWER_INSIDE_SHARE) inner = m
-    else outer = m
-  }
-  return { x: 0, y: dir * ((inner + outer) / 2) }
+  return { x: 0, y: dir * lo }
 }
+
+/** Per-tree extras: `hpMul` on top of the team-HP share (boss trees), and
+ *  the spiked front cover. Both PvP peers derive the same spec. */
+export interface TowerSpec {
+  hpMul?: number
+  spiked?: boolean
+}
+
+/** The spec of a team's tree under TOWER_TUNING. `role`: 'boss' = the boss
+ *  side of a boss stage (campaign: the NPC team carries a boss), 'bossFoe' =
+ *  the team facing a boss, 'plain' = every other tree (PvP, league, ghosts,
+ *  normal stages). */
+export type TowerRole = 'boss' | 'bossFoe' | 'plain'
+export const towerSpecFor = (role: TowerRole): TowerSpec => ({
+  hpMul: role === 'boss' ? TOWER_TUNING.bossHpMul : role === 'bossFoe' ? TOWER_TUNING.ownBossStageHpMul : 1,
+  spiked: TOWER_TUNING.spikes === 'all' || (TOWER_TUNING.spikes === 'boss' && role === 'boss')
+})
 
 export const createTower = (
   side: 'player' | 'npc', arenaRadius: number, bladeRadius: number, teamMaxHp: number,
-  shape: ArenaShape = 'circle'
-): TeamTower => {
-  const radius = Math.round(bladeRadius * TOWER_RADIUS_MUL)
-  const p = towerPosition(side, arenaRadius, radius, shape)
-  const maxHp = Math.max(1, Math.round(teamMaxHp * TOWER_HP_RATIO))
-  return { side, x: p.x, y: p.y, radius, hp: maxHp, maxHp, flash: 0 }
+  shape: ArenaShape = 'circle', spec: TowerSpec = {}
+): TeamTower => createTowers(side, arenaRadius, bladeRadius, teamMaxHp, shape, spec, 1)[0]!
+
+/** All `count` trees of a side (1–3): smaller and with a share of the HP each
+ *  when there are several (TREE_COUNT_RADIUS_MUL / TREE_COUNT_HP_SHARE). */
+export const createTowers = (
+  side: 'player' | 'npc', arenaRadius: number, bladeRadius: number, teamMaxHp: number,
+  shape: ArenaShape = 'circle', spec: TowerSpec = {}, count = 1
+): TeamTower[] => {
+  const n = clampTreeCount(count)
+  const radius = treeRadiusFor(bladeRadius, n)
+  const maxHp = Math.max(1, Math.round(teamMaxHp * TOWER_TUNING.hpRatio * (spec.hpMul ?? 1) * TREE_COUNT_HP_SHARE[n - 1]!))
+  return towerPositions(side, arenaRadius, radius, shape, n, bladeRadius)
+    .map(p => ({ side, x: p.x, y: p.y, radius, hp: maxHp, maxHp, flash: 0, spiked: spec.spiked === true }))
+}
+
+/** Has every tree of `side` fallen? (false when the side has no trees). */
+export const allTreesDown = (towers: readonly Pick<TeamTower, 'side' | 'hp'>[], side: 'player' | 'npc'): boolean => {
+  let any = false
+  for (const t of towers) {
+    if (t.side !== side) continue
+    if (t.hp > 0) return false
+    any = true
+  }
+  return any
+}
+
+/** The tree an attacker at (x, y) goes for among `side`'s LIVING trees: the
+ *  weakest one (HP share), ties → the nearest. null = none standing. */
+export const pickTargetTree = <T extends Pick<TeamTower, 'side' | 'hp' | 'maxHp' | 'x' | 'y'>>(
+  towers: readonly T[], side: 'player' | 'npc', x: number, y: number
+): T | null => {
+  let best: T | null = null
+  let bestK = Infinity
+  let bestD = Infinity
+  for (const t of towers) {
+    if (t.side !== side || t.hp <= 0) continue
+    const k = t.hp / t.maxHp
+    const d = Math.hypot(t.x - x, t.y - y)
+    if (k < bestK - 1e-9 || (Math.abs(k - bestK) <= 1e-9 && d < bestD)) {
+      best = t
+      bestK = k
+      bestD = d
+    }
+  }
+  return best
 }
 
 /** Damage of one blade → tower contact (static target: defense 1, the
@@ -511,8 +904,34 @@ export const createTower = (
 export const towerHitDamage = (closingSpeed: number, damageMultiplier: number, damageScale: number): number =>
   Math.max(0, closingSpeed) * damageMultiplier * damageScale * TOWER_DAMAGE_MUL
 
+/** Half-angle of a tree's FRONT — the arc of its outline a smasher can
+ *  reach. The trees stand inside the clearing now (only their back touches
+ *  the wall), so the front wraps everything but the back; the spiked cover
+ *  spans it. (Was π × TOWER_INSIDE_SHARE while the trees sat in the wall.) */
+export const TOWER_FRONT_HALF_ARC = Math.PI * 0.75
+
+/** Direction the tree's front faces (radians, towards the arena centre). */
+export const towerFrontAngle = (t: Pick<TeamTower, 'x' | 'y'>): number => Math.atan2(-t.y, -t.x)
+
+/** Is the contact normal (unit, tower → blade) on the tree's front arc? */
+export const onTowerFront = (t: Pick<TeamTower, 'x' | 'y'>, nx: number, ny: number): boolean => {
+  const len = Math.hypot(t.x, t.y)
+  if (len < 1e-9) return true
+  return (nx * -t.x + ny * -t.y) / len >= Math.cos(TOWER_FRONT_HALF_ARC)
+}
+
+/**
+ * Spiked front cover: HP the ATTACKER loses for a hit that dealt `impactDmg`
+ * to a spiked tree's front (0 for a bare tree or a hit off the front).
+ * `impactDmg` is the plain impact (towerHitDamage) — Tower Breaker's bonus is
+ * not spiked. Gameplay: deterministic, applied by the engine as a 'reflect'
+ * HP loss (Guard Shell absorbs it, it never procs a skill).
+ */
+export const towerSpikeRecoil = (t: Pick<TeamTower, 'x' | 'y' | 'spiked'>, nx: number, ny: number, impactDmg: number): number =>
+  t.spiked && impactDmg > 0 && onTowerFront(t, nx, ny) ? impactDmg * TOWER_TUNING.spikeRecoil : 0
+
 /** Game result with towers: a side loses when all its smashers are dead OR
- *  its tower falls. The player wins ties (matches the legacy all-dead rule). */
+ *  ALL its trees have fallen (allTreesDown). The player wins ties (matches the legacy all-dead rule). */
 export const decideResult = (
   playerAlive: number, npcAlive: number, playerTowerDown: boolean, npcTowerDown: boolean,
   /** Who takes a SIMULTANEOUS loss (both teams wiped / both towers down on

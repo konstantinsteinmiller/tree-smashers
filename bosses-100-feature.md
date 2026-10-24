@@ -96,7 +96,7 @@ backlog item (§13.2), not needed for the cadence.
   in 1.8× radius, per-target 1 s cooldown). Skin `teleporter` passes walls.
 - **Hazards.** Lava wall `ceil(2.5 % maxHp)` per bounce + the painted flame-burn strip
   (`borderFx.ts triggerBurn`, capped by `burnCap()`: 2 on `FX.low`, 3 on Firefox); shock
-  wall/bouncer keeps 10 % speed (250 ms per-blade gate `lastShockMs`, currently
+  wall keeps 10 % speed (250 ms per-blade gate `lastShockMs`, currently
   `performance.now()` — skills WP0 moves it to game time); ice arena decay `1 − (1 − d)·0.35`.
 - **Turns.** One launch per side; a turn ends when the launched blade stops
   (`STOP_THRESHOLD 0.25`). A resting blade deals no damage. Contacts deal damage once per
@@ -437,7 +437,6 @@ counter or Static Charge — the skills spec's no-recursion list gains `'burn'`.
 | **ice** (190)  | —                                                                                         | frozen blades slide further when pushed (decay unchanged) | ice's low friction partly cancels the slow — deliberate: the Blizzard Twins are an ice fight where chill *feels* like mud on ice |
 | shock          | not used in the table; if combined, the Warden's touch and the wall share the 250 ms gate | same                                                      | —                                                                                                                                |
 | forest         | heals +1 per bounce as usual                                                              | —                                                         | —                                                                                                                                |
-| bouncers       | no interaction                                                                            | bouncer hits are not boss contacts                        | —                                                                                                                                |
 
 ### 6.3 Existing boss abilities and systems
 
@@ -871,7 +870,6 @@ export interface BossEncounter {
   slot: 110 | 120 | 130 | 140 | 150 | 160 | 170 | 180 | 190 | 200
   nameKey: `boss_${BossEncounterId}`        // under `stages.`
   arenaType: ArenaType
-  bouncers?: number
   enemyTeam: StageBladeConfig[]             // cycle-1 levels, bossTrait set on carriers
   trophySkins: SpinnerModelId[]
 }
@@ -929,7 +927,7 @@ path. `STAGES` (legacy, 200 entries) picks the new encounters up automatically.
 6. **`applyHpLoss`** (skills WP4 item 9) — kind `'burn'` joins `'lava'` for Hazard Ward.
 7. **`statsFor`** — `spd *= chillSpeedMul(blade)` (the per-tick cache is cleared every tick,
    so a new stack is seen next tick).
-8. **`bounceOffWalls` / `bounceOffBouncers`** — unchanged except that `lastShockMs` is game
+8. **`bounceOffWalls`** — unchanged except that `lastShockMs` is game
    time (skills WP0).
 9. **`computeStateHash`** — adds the fields listed in §9.
 10. **`clearBattleVfx`** — clears nova rings, ice shells, shard particles.

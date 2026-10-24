@@ -203,21 +203,30 @@ describe('IntroCutscene — side-effect free', () => {
     })
     const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
     const wrapper = mount(IntroCutscene, { global: { plugins: [i18n] }, attachTo: document.body })
-    // onMounted awaits the (already-settled) skin decodes.
+    // onMounted draws the held first frame at once, then awaits the gated
+    // skill layer and the (instant, in jsdom) stage wait before the clock runs.
     for (let i = 0; i < 10 && rafQueue.length === 0; i++) await new Promise(r => setTimeout(r, 5))
     expect(rafQueue.length).toBeGreaterThan(0)
-
+    // Run frames (yielding between them) until the clock has started.
     let now = 1000
-    for (let f = 0; f < 60 * 16 && !wrapper.emitted('done'); f++) {
+    const seam = () => (window as unknown as { __intro?: { T: number } }).__intro
+    for (let i = 0; i < 200 && !(seam() && seam()!.T > 0); i++) {
+      for (const cb of rafQueue.splice(0)) cb(now)
+      now += 1000 / 60
+      await new Promise(r => setTimeout(r, 15))
+    }
+    expect(seam()!.T).toBeGreaterThan(0)
+    now = 1000 + (seam()!.T * 1000)
+    for (let f = 0; f < 60 * 20 && !wrapper.emitted('done'); f++) {
       const cbs = rafQueue.splice(0)
       for (const cb of cbs) cb(now)
       now += 1000 / 60
     }
     expect(wrapper.emitted('done')).toBeTruthy()
-    // ~14 s of screen time at 60 fps.
+    // ~16 s of screen time at 60 fps (storyboard: 12–18 s).
     const seconds = (now - 1000) / 1000
-    expect(seconds).toBeGreaterThan(12)
-    expect(seconds).toBeLessThan(16)
+    expect(seconds).toBeGreaterThan(14)
+    expect(seconds).toBeLessThan(18)
     wrapper.unmount()
     getCtx.mockRestore()
     raf.mockRestore()
@@ -246,8 +255,8 @@ describe('IntroCutscene — side-effect free', () => {
 
   it('no cutscene module touches storage or the economy (source scan)', () => {
     const files = [
-      'src/use/introFight.ts', 'src/use/introTimeline.ts', 'src/use/introRender.ts',
-      'src/use/introAudio.ts', 'src/components/organisms/IntroCutscene.vue'
+      'src/use/introStory.ts', 'src/use/introArena.ts', 'src/use/introRender.ts', 'src/use/introArt.ts',
+      'src/use/introAudio.ts', 'src/use/skills/introSkills.ts', 'src/components/organisms/IntroCutscene.vue'
     ]
     for (const f of files) {
       const src = readFileSync(resolve(__dirname, '..', f), 'utf8')

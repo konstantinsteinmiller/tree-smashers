@@ -12,10 +12,14 @@
 // multiply its level table, so two skills on the same effect have different
 // strengths and weaknesses (e.g. a stronger dodge with a longer cooldown).
 //
-// Levels: 1 … SMASHER_MAX_LEVEL, bought with coins. A level counts as one
-// upgrade of BOTH archetype parts in the old system, so a level-L smasher has
-// the stats a spinner had with its top and bottom upgraded L − 1 times.
-// Skill slot 1 is ready at level 1, slot 2 unlocks at level 10, slot 3 at 20.
+// Levels: 1, 2, 3 … with no gameplay cap, bought with coins. A level counts as
+// one upgrade of BOTH archetype parts in the old system, so a level-L smasher
+// has the stats a spinner had with its top and bottom upgraded L − 1 times —
+// up to SMASHER_TAPER_LEVEL (30); past it the per-level stat gain tapers
+// (`smasherUpgradeLevel`) and every level costs ~8 % more on top of the
+// quadratic curve (`smasherLevelCost`), so going deep gets ever harder without
+// ever being walled off. Skill slot 1 is ready at level 1, slot 2 unlocks at
+// level 10, slot 3 at 20; skill levels stop at 10 (the skill engine's table).
 
 import type { BottomPartId, SpinnerConfig, TopPartId } from '@/types/spinner'
 import type { SkillLoadout } from '@/types/skills'
@@ -44,7 +48,21 @@ export const SMASHER_IDS = [...BASE_SMASHER_IDS, ...BATCH_A_IDS, ...BATCH_B_IDS,
 
 export type SmasherId = (typeof SMASHER_IDS)[number]
 
-export const SMASHER_MAX_LEVEL = 30
+/** NOT a gameplay cap: a technical ceiling against corrupted / tampered saves
+ *  and hostile PvP peers, so levels, costs and stats always stay finite. An
+ *  honest player never gets near it (see `smasherLevelCost`). */
+export const SMASHER_LEVEL_SANITY_MAX = 9999
+
+/** Last level of the original (pre-uncap) curve: costs and stats up to here
+ *  are unchanged; past it costs grow exponentially and stat gains taper. */
+export const SMASHER_TAPER_LEVEL = 30
+
+/** Per-level cost growth past SMASHER_TAPER_LEVEL (on top of the quadratic). */
+export const SMASHER_COST_GROWTH = 1.08
+
+/** Taper scale (upgrades) of the stat gain past SMASHER_TAPER_LEVEL: the
+ *  marginal gain of a level is 1 / √(1 + x / S) of a pre-30 level. */
+export const SMASHER_TAPER_SCALE = 5
 
 /** Smasher level at which skill slot i (0-based) becomes ready. */
 export const SKILL_SLOT_LEVELS = [1, 10, 20] as const
@@ -185,18 +203,99 @@ export const SMASHER_LIST: readonly SmasherDef[] = SMASHER_IDS.map(id => SMASHER
 export const isSmasherId = (v: unknown): v is SmasherId =>
   typeof v === 'string' && (SMASHER_IDS as readonly string[]).includes(v)
 
-export const clampSmasherLevel = (level: unknown): number => {
-  const n = typeof level === 'number' && Number.isFinite(level) ? Math.floor(level) : 1
-  return Math.min(SMASHER_MAX_LEVEL, Math.max(1, n))
+// ─── Release gate ───────────────────────────────────────────────────────────
+//
+// Owner (2026-10-22): "put emphasis on smashers 1–24 for now and put the other
+// smashers for a later release". The catalog keeps all 48 (data, art, skills
+// stay for the later release); the gate says which of them exist for a
+// PLAYER. The ONE source of truth: the first RELEASED_SMASHER_COUNT ids of
+// SMASHER_IDS (unlock order) — Bramble … Gastro by default.
+//
+// Rules every player-facing place follows (roadmap "Smasher release gate"):
+//   • roster / team modal: only released smashers (+ a "coming soon" teaser),
+//     EXCEPT an unreleased smasher a save already owns (grandfathered: nothing
+//     is taken away, it stays in that player's roster and team);
+//   • campaign: reaching an unreleased smasher's stage recruits nothing and
+//     offers no premium unlock; legendary unlock list = released premiums only;
+//   • enemies (campaign NPC looks, bosses, PvP bots, league NPCs / ghosts,
+//     skin portraits) use released smashers only — unreleased ids in old
+//     server data map to `releasedSmasherFallback` at the load boundary.
+// `VITE_APP_SMASHERS_RELEASED` ("all" or 1–48, validated in vite.config.ts)
+// overrides the count for dev / testing the later release.
+
+export const DEFAULT_RELEASED_SMASHER_COUNT = 24
+
+/** The flag value → released count (unset / invalid → the default). */
+export const parseReleasedSmasherCount = (raw: unknown): number => {
+  if (raw === 'all') return SMASHER_IDS.length
+  const n = typeof raw === 'string' && /^[1-9]\d*$/.test(raw) ? Number(raw) : NaN
+  return Number.isInteger(n) ? Math.min(SMASHER_IDS.length, n) : DEFAULT_RELEASED_SMASHER_COUNT
 }
 
-/** Coins to go from `level` to `level + 1`; null at max. One smasher level is
- *  one upgrade of both archetype parts, so it costs about two part upgrades. */
+const releasedFlag = (): unknown => {
+  try {
+    return import.meta.env?.VITE_APP_SMASHERS_RELEASED
+  } catch {
+    return undefined
+  }
+}
+
+/** How many smashers (catalog order) this build releases. */
+export const RELEASED_SMASHER_COUNT: number = parseReleasedSmasherCount(releasedFlag())
+
+/** The released smashers, in unlock order. */
+export const RELEASED_SMASHER_IDS: readonly SmasherId[] = Object.freeze(SMASHER_IDS.slice(0, RELEASED_SMASHER_COUNT))
+
+/** Held back for the later release (empty when the flag opens all). */
+export const UNRELEASED_SMASHER_IDS: readonly SmasherId[] = Object.freeze(SMASHER_IDS.slice(RELEASED_SMASHER_COUNT))
+
+const RELEASED_SET: ReadonlySet<string> = new Set<string>(RELEASED_SMASHER_IDS)
+
+export const isReleasedSmasher = (id: unknown): boolean => typeof id === 'string' && RELEASED_SET.has(id)
+
+export const RELEASED_SMASHER_LIST: readonly SmasherDef[] = RELEASED_SMASHER_IDS.map(id => SMASHERS[id])
+
+/** A released stand-in for any smasher (itself when released): same top +
+ *  bottom archetype, else same top, else Bramble — deterministic by id, so
+ *  both sides of a lockstep match map an old ghost the same way. */
+export const releasedSmasherFallback = (id: SmasherId): SmasherId => {
+  if (RELEASED_SET.has(id)) return id
+  const { top, bottom } = SMASHERS[id].archetype
+  const exact = RELEASED_SMASHER_LIST.filter(s => s.archetype.top === top && s.archetype.bottom === bottom)
+  const pool = exact.length ? exact : RELEASED_SMASHER_LIST.filter(s => s.archetype.top === top)
+  if (pool.length === 0) return 'bramble'
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return pool[h % pool.length]!.id
+}
+
+export const clampSmasherLevel = (level: unknown): number => {
+  const n = typeof level === 'number' && Number.isFinite(level) ? Math.floor(level) : 1
+  return Math.min(SMASHER_LEVEL_SANITY_MAX, Math.max(1, n))
+}
+
+/** Coins to go from `level` to `level + 1`; null only at the technical
+ *  sanity ceiling. One smasher level is one upgrade of both archetype parts,
+ *  so it costs about two part upgrades. Levels 2 … 30 keep the original
+ *  quadratic prices; every level past 30 multiplies by SMASHER_COST_GROWTH. */
 export const smasherLevelCost = (level: number): number | null => {
-  if (!Number.isInteger(level) || level < 1 || level >= SMASHER_MAX_LEVEL) return null
+  if (!Number.isInteger(level) || level < 1 || level >= SMASHER_LEVEL_SANITY_MAX) return null
   const to = level + 1
   const extra = to > 10 ? 3 * (to - 10) * (to - 10) : 0
-  return Math.round((100 + (to - 1) * 20 + extra) * 1.6)
+  const base = (100 + (to - 1) * 20 + extra) * 1.6
+  const steep = to > SMASHER_TAPER_LEVEL ? SMASHER_COST_GROWTH ** (to - SMASHER_TAPER_LEVEL) : 1
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.round(base * steep))
+}
+
+/** Effective part-upgrade count of a smasher whose parts are upgraded `n`
+ *  times: `n` up to SMASHER_TAPER_LEVEL − 1, then diminishing returns
+ *  (√ taper — unbounded but ever slower; Math.sqrt is exactly rounded, so
+ *  lock-step PvP stays bit-identical across engines). */
+export const smasherUpgradeLevel = (n: number): number => {
+  const knee = SMASHER_TAPER_LEVEL - 1
+  if (!(n > knee)) return n
+  const x = n - knee
+  return knee + 2 * SMASHER_TAPER_SCALE * (Math.sqrt(1 + x / SMASHER_TAPER_SCALE) - 1)
 }
 
 /** Number of skill slots ready at this level (1 … 3). */
@@ -204,7 +303,9 @@ export const unlockedSkillCount = (level: number): number =>
   SKILL_SLOT_LEVELS.filter(l => clampSmasherLevel(level) >= l).length
 
 /** Skill-engine level (1 … 10) of slot `slot` for a smasher at `level`: L1
- *  when the slot opens, +1 every two smasher levels after that. */
+ *  when the slot opens, +1 every two smasher levels after that, capped at 10
+ *  (the skill tables end there — slot 3 maxes at smasher level 38; deeper
+ *  levels only add tapered stats). */
 export const smasherSkillLevel = (level: number, slot: number): number => {
   const open = SKILL_SLOT_LEVELS[slot] ?? Infinity
   const lv = clampSmasherLevel(level)
@@ -216,8 +317,9 @@ export const smasherSkillLevel = (level: number, slot: number): number => {
  *  archetype top, picked deterministically by its model id so a stage's
  *  enemy team always looks the same. */
 export const smasherForParts = (top: TopPartId, bottom: BottomPartId, seedKey = ''): SmasherId => {
-  const exact = SMASHER_LIST.filter(s => s.archetype.top === top && s.archetype.bottom === bottom)
-  const pool = exact.length ? exact : SMASHER_LIST.filter(s => s.archetype.top === top)
+  // Released smashers only (release gate): no enemy the player can't get.
+  const exact = RELEASED_SMASHER_LIST.filter(s => s.archetype.top === top && s.archetype.bottom === bottom)
+  const pool = exact.length ? exact : RELEASED_SMASHER_LIST.filter(s => s.archetype.top === top)
   if (pool.length === 0) return 'bramble'
   let h = 0
   for (let i = 0; i < seedKey.length; i++) h = (h * 31 + seedKey.charCodeAt(i)) >>> 0

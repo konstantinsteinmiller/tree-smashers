@@ -8,6 +8,8 @@ import useSounds from '@/use/useSound.ts'
 import { playUiSfx } from '@/use/uiSfx'
 import { spawnCoinExplosion } from '@/use/useCoinExplosion'
 import IconCoin from '@/components/icons/IconCoin.vue'
+import UiIcon from '@/components/icons/UiIcon.vue'
+import { paintedUiIconSrc } from '@/use/uiIconArt'
 
 interface Props {
   /** Element where the coin explosion VFX should fly to (e.g. the coin badge). */
@@ -22,6 +24,16 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const { addCoins } = useSpinnerConfig()
+
+// The cooldown darkening is clipped to the chest's own silhouette: the painted
+// sprite's alpha when there is one (the 2× file — it is the one a HiDPI screen
+// already fetched for the icon), else a rounded box that hugs the drawn chest.
+const chestMaskStyle = (() => {
+  const p = paintedUiIconSrc('chest')
+  if (!p) return { borderRadius: '22%' }
+  const url = `url("${p.src2x}")`
+  return { WebkitMaskImage: url, maskImage: url }
+})()
 
 // ─── Reward / cooldown configuration ───────────────────────────────────────
 //
@@ -193,11 +205,7 @@ const collectChest = () => {
     :style="scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'center' } : undefined"
   )
     div.chest-icon.relative(ref="chestRef" class="w-10 h-10 sm:w-12 sm:h-12")
-      img.object-contain.w-full.h-full(
-        src="/images/icons/chest_128x128.webp"
-        alt=""
-        draggable="false"
-      )
+      UiIcon(name="chest")
       //- Ready: the berry "!" notify dot on the lid corner.
       span.chest-notify.ui-notify(v-if="isReady" aria-hidden="true") !
       //- Circular cooldown overlay — only during the pre-small cooldown phase.
@@ -214,6 +222,7 @@ const collectChest = () => {
       //- stays pixel-aligned with the chest image.
       div.absolute.inset-0.w-full.h-full.cooldown-mask-chest(
         v-if="phase === 'cooldown'"
+        :style="chestMaskStyle"
       )
         svg.w-full.h-full(
           viewBox="0 0 40 40"
@@ -302,7 +311,7 @@ const collectChest = () => {
   font-variant-numeric: tabular-nums
   box-shadow: 0 2px 0 var(--color-ink)
 
-// Ready amounts on a sun chip; the big payout on an angled, striped one.
+// Ready amounts on a sun chip; the big payout on an angled, faceted one.
 .chest-amount
   padding: 0.05rem 0.4rem 0.1rem
   border: 2px solid var(--color-ink)
@@ -313,7 +322,7 @@ const collectChest = () => {
   &.is-big
     color: var(--color-ink)
     background-color: var(--color-sun-400)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     border-radius: 0.35rem
     box-shadow: inset 0 -2px 0 var(--color-sun-600), 0 2px 0 var(--color-ink)
 
@@ -324,13 +333,14 @@ const collectChest = () => {
 // Clip the cooldown SVG overlay to the chest icon's alpha channel so
 // the darkening follows the chest silhouette instead of leaving a
 // visible black square in the corner gaps. Both the WebKit prefix and
-// the unprefixed property are set for Safari < 17 / older mobile WebViews.
+// the unprefixed property are set for Safari < 17 / older mobile WebViews;
+// the image itself is bound per build (`chestMaskStyle`: painted sprite or a
+// rounded box round the drawn fallback).
 .cooldown-mask-chest
-  -webkit-mask-image: url('/images/icons/chest_128x128.webp')
+  overflow: hidden
   -webkit-mask-size: contain
   -webkit-mask-repeat: no-repeat
   -webkit-mask-position: center
-  mask-image: url('/images/icons/chest_128x128.webp')
   mask-size: contain
   mask-repeat: no-repeat
   mask-position: center

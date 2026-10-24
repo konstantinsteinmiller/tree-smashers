@@ -18,7 +18,7 @@ Outstanding work after the Chaos Arena → Tree Smashers rename & reskin.
 ## Leaderboard / backend
 - [x] Create the D1 database (2026-10-21, on the Konstantinsteinmiller@googlemail.com account f7f5…e1, id 17e8181b-…; the old account was at its 10-database limit)
 - [x] Apply `worker/schema.sql` + `worker/migrations/*` to the new DB (`--remote`)
-- [x] `npx wrangler deploy` (https://leaderboard-tree-smashers.playtest-circle.workers.dev), then `wrangler secret put SCORE_SECRET` and `wrangler secret put LEAGUE_SECRET`; set the matching `VITE_LEADERBOARD_SECRET` in `.env`
+- [x] `npx wrangler deploy` (was playtest-circle; moved 2026-10-23 to https://leaderboard-tree-smashers.hyperg8.workers.dev), then `wrangler secret put SCORE_SECRET` and `wrangler secret put LEAGUE_SECRET`; set the matching `VITE_LEADERBOARD_SECRET` in `.env`
 - [x] Deploy the new Worker together with (or before) the new client — the build digest now includes smasher id + level, so an old Worker rejects build-carrying score posts
 - [ ] `pnpm leaderboard:snapshot` once real players have posted scores (the Worker is live but empty; the committed snapshot is a synthetic placeholder, scaled to 3,578 players on 2026-10-21)
 - [ ] Regenerate `data/league-pool.json` from real Tree Smashers builds once there are players (current pool = old part-only builds, mapped to smashers by parts)
@@ -277,3 +277,54 @@ Held back by the release gate (Humphrey, Boxa, Howler, Snapjaw, Leon, Antlo, Gro
   - [ ] Meteor-shower redesign (2026-10-22, presentation only — no balance change, so no sim of its own): in the same batch, one PvP / league determinism replay (`scripts/balance-sim.mjs` PvP pairs + league ghosts from a meteor-intro start) to confirm outcomes and state hashes are identical to before; the shower never touches the match RNG (unit-tested in `tests/meteorShower.test.ts`), this only re-proves it end to end
 - [x] Owner request: reset a full Battle Pass by rewarded ad. Once all 100 tiers are reached AND claimed (Claim all stays the CTA while any wait), a sky "[movie] Reset Battle Pass" button (placement `bp_reset`, `BattlePassResetAdButton`, NOT green — Play Store forbids green rewarded buttons) shows on ad builds only (module-scope `HAS_REWARDED_ADS` pick), disabled + "ad not ready" until a rewarded ad loads, busy-locked per tap; only a completed ad (`showRewardedAd` → true) wipes xp/tiers/claims/skin offers (season clock + honor track kept). `resetCount` analytics counter persisted in `smashers_battle_pass`, sanitized on load, survives season resets. Copy in 39 locales (`sfc.BattlePass.resetPass*`). Tests: `tests/battlePassAdReset.test.ts`
 - [x] Owner request: replace the stoat smasher (Gemini refused "Slinky" as a brand, drew bears/photo felt). Same slot, same stats and skills: now **Kip, a koala** — round silver-lilac plush, big round fluffy ears with pink insides, big dark oval nose, cream belly, boxing paws up, a eucalyptus leaf on its head, stub tail. Internal id stays `slinky` (saves, ownership, unlocks, leaderboards key on it). Name/species and the "Weasel Dash" skill name (now "Koala Dash") retranslated in 39 locales; rig model, bare references and prompts regenerated (prompt name "Kip"); repainted via the paint queue. Fixed `tools/smasher-sheets/export.mjs` crashing on `BASE_URL.slice` (bundle env had no BASE_URL)
+
+## 2026-10-23 additions
+- [x] Meteor shower out of the game (`METEOR_SHOWER_ENABLED = false` in `useSpinnerGame.ts`); modules, painted art and tests kept for other projects; the `meteor_intro` phase (3-2-1, boss intro card, 1.6 s timing) is unchanged
+- [x] Front armour LOOK split: `armor.look` = `'blade'` (sharp riveted steel plate — damage-scaling smashers, profile damage ≥ 1.1 by default) or `'bulwark'` (chunky oak-and-stone shield wall — tanks); vector bulwark shipped, painted tile via `node tools/armor-art/paint-queue.mjs --only armor-bulwark` (→ `pack-bulwark.mjs` → `paintedBulwark.ts`)
+- [x] Bunker tanks hit hard only from the sides: Brock (front 0.7 / back 0.7), Buford (0.65 / 0.7), Blubbo (0.75 / 0.75), all `look: 'bulwark'`
+  - [ ] Balance sim for the three bunker tanks (back used to be 1.3 / 1.3 / 1.05): batch it with the next balance pass
+  - [ ] Paint the bulwark tile and check it on Brock / Buford / Blubbo at phone 3× (sharpness probe)
+- [x] Next-stage arena art (backdrop tile + props, floor, wall border) warms in the background while the network is quiet (`src/use/nextStageArt.ts`: no resource finished in 1.2 s, tab visible, not save-data / 2g), and the three loaders now DECODE each image before they settle (`imageDecode.ts`) so the first draw never decodes on the main thread
+- [x] Boss portrait frame v2: crown seated on the ring (`art-sheets/painted/boss-frame-b.png`); v1 stays as fallback — `node tools/boss-frame-art/pack.mjs --in art-sheets/painted/boss-frame-a.png`
+
+## Paint queue — ABSOLUTE LOWEST PRIORITY (after everything above)
+- [ ] **Smasher skins — one painted skin per smasher (48)**, painted LAST, after every other paint item on this page. Each skin is a **cocky, a funny or an elemental variant of that smasher's own design** (same silhouette and proportions, so it reads as the same smasher in a new costume — NOT a recolour): the kind and the paint brief for every smasher are in `src/data/smasherSkinCatalog.ts` (`SMASHER_SKINS[id].kind` / `.concept`, e.g. Thumper = cocky champion rabbit with sunglasses + gold chain, Bramble = elemental ember-spined hedgehog, Grizzle = funny bear cub in a honey-pot hat). Later maybe 2–3 skins per smasher.
+  - Shipped now (2026-10-23): the skin picker shows only the free default + this ONE locked skin per smasher; unlock = one rewarded ad (MovieIcon "Unlock") on ad builds, **1000 coins** without rewarded ads (`SMASHER_SKIN_COIN_COST`); owned under the smasher's top part in the existing owned-skins save key, so cloud save / merge need no change. Until painted, a skin wears a placeholder colourway (`theme` in the catalog).
+  - Painting pipeline (when its turn comes): 3 × 3 parts a/b like the signature sheets (`tools/smasher-sheets`), registered as an alternate look keyed by the skin id; keep the 'signature look only' rule in `smasherAtlas.ts` in mind — it must learn the skin id.
+  - Open: old colourway skins are no longer in the picker but chests / roulette / battle pass / daily rewards can still hand them out — decide whether to stop that.
+
+- [ ] #HOT-PATH-1 let's do another round of optimizing hot-path loading during start up, postponing non-critical assets to lazy loading after all critical assets were loaded for the current scene based on player progress and level position.  
+  That should make the game startup faster and happier players (should not create asset pop-ins and preload assets that will be needed shortly after the gameplay started or in foresight of the next stage assets that will be needed lazily with pre-caching the web cache when loading queue is empty)
+  Opening the upgrade modal is having a ~2 seconds load pop-in, which is bad UX, preload it after stage 1 started or the player is ready to play the game after the FLogoProgress after loading the game.
+  Do short simulations for whether pop-in and loading delays still happens afterwards, test 3-5 scenarios of a cold-loading a fresh player, cold-loading an progressed player and hot-loading, opening upgrade modal and other menus.
+  DON'T START WITHOUT MY OWN INITIATED REQUEST TO START IT.
+
+- [ ] #Consistency-1 Check all assets and game mechanics and visual style of the game for consistency. Does the game asset assembly makes sense in most of the situations? Are non-seemless texture cuts visible? How likely can this game be identified as an AI slop by human eyes without knowing about weather the games art is done by AI or not.
+  write all found inconsistencies as new bullet points #Consistency-3...XXX
+- [ ] #Consistency-2 The tree stump of the cut down/defeated tree model is ~2.5x as big as the tree log of the actual tree model. The explosion vfx doesnt fit well with the smashers, create an "Watte explosion"(german wording) vfx effect instead as the stuffed animals die, their insides are flowing out. On the first stage, show the drag indicator from the beginning until the player does a backwards drag on the first smasher as some are trying to drag from the players smasher to the enemies one.
+
+
+- [ ] #Perf-1 The game showed 13 fps on this tablet device.
+  WebGL Renderer:  Mali-G68
+  navigator.hardwareConcurrency:  8
+  window.devicePixelRatio: 1.5
+  User Agent:  Mozilla/5.0 (Linux; Android 16; SM-X400 Build/BP4A.251205.006; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Safari/537.36
+
+  On the following machine, it was 22, then 50, then 3, the 13 fps, a lot of loading based lag I guess
+  WebGL Renderer:  ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)
+  navigator.hardwareConcurrency:  8
+  window.devicePixelRatio:  2.8125
+  User Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36
+## 2026-10-23 (evening) — owner list
+- [x] Leaderboard HUD button appears from stage 7 on (after stage 6 is won) — `LEADERBOARD_MIN_STAGE` in `SpinnerArena.vue`
+- [x] Arena wall runs unbroken: no gap at each tree any more (`BORDER_TREE_GAPS = false` in `arenaBorderArt.ts`; geometry still supports gaps)
+- [x] #Consistency-2: the felled stump is drawn at 0.4× (`FELLED_STUMP_SCALE`, `towerArt.ts`) — it was ~2.5× the healthy trunk
+- [x] Tree HP bars: the white-flash + black-digit bug was ONE gauge state shared by every tree of a side (each frame read another tree's HP as a hit) — now one state per tree (`towerGauges`); arcs also shorter / slimmer / tighter to the trunk base
+- [x] Props: explicit rotation policy (`propTurn`, `arenaBackdrop.ts`) — trees / flowers / bushes / toys fixed, rocks / gravestones / honeycombs / logs mirror, rifts / cracks turn freely (the old `/flow/` regex also spun "flowers")
+- [x] Floor hazards (boosters, pot holes, leaf arrows, honey) re-placed per layout over the clearing, not just the middle line (`spreadFloor`, `arenaTerrain.ts`); the spawn rows leave only the middle band and the flanks free, so ~60 % stay central — `tests/arenaSpread.test.ts`
+- [x] Win / lose screen: all sizes follow the viewport height (`--ru`, dvh clamps), nothing scrolls at 640×360 / 844×390 / 390×844 / 1080×608; the 3× coin ad button now sits ABOVE the boss portrait and the tip hides on short screens; ad MovieIcon +25 % and may overflow its line
+- [x] Surrender dialog: flag medallion on the card edge, struck-out coin "no rewards" well, two equal buttons
+- [x] Armor: one continuous rim band around the whole disc; the plate / bulwark / weak patch are the thick stretches of it (neutral cream rim between them). Painted neutral rim tile still to do (vector for now)
+- [x] Pull-next arrows: ornamented (gold head, ruby gem, leaf wings) — vector `pullArrowArt.ts` + painted sprite `art-sheets/painted/pull-arrow.png` → `public/images/ui/pull-arrow_146x96.webp` (`tools/pull-arrow`)
+- [x] Terrain features repainted in the flat toy style (booster speed pad + leaf arrow, stump, rock, pond, mushroom, mud, hole, honey) — old sheet in `art-sheets/painted/stale/terrain-features.v1-*.png`; `slice-painted.mjs --max-aspect 1.6` accepted the squat leaf
+- [ ] Wavedash leaderboard: the SDK init now finds `window.Wavedash` and failed SDK calls warn in the console (`[Wavedash leaderboard]`); NOT yet confirmed on a live `wavedash dev` — rebuild `wavedash-dist` first (`dev:wavedash` serves the last build)

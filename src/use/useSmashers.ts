@@ -3,7 +3,9 @@
 // Singleton state of the player's smashers: their levels (persisted under
 // ROSTER_KEY, rides the cloud save) and which ones are recruited. A smasher is
 // recruited once the campaign has reached its `unlockStage` — no purchase, the
-// roster simply grows with progress. Levels are bought with coins
+// roster simply grows with progress — except the premium smashers from Tuskar
+// onwards, which then still need their rewarded-ad (or coin) unlock
+// (`isSmasherRecruited`, src/use/premiumSmashers.ts). Levels are bought with coins
 // (`smasherLevelCost`); skill slots 2 and 3 open at levels 10 and 20.
 //
 // The team itself (which smashers fight) lives in useSpinnerConfig's
@@ -15,8 +17,9 @@ import type { Ref } from 'vue'
 import { ROSTER_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import {
+  RELEASED_SMASHER_IDS,
   SMASHER_IDS,
-  SMASHER_MAX_LEVEL,
+  isReleasedSmasher,
   SMASHERS,
   clampSmasherLevel,
   isSmasherId,
@@ -25,6 +28,7 @@ import {
   type SmasherId
 } from '@/data/smasherCatalog'
 import type { SpinnerConfig } from '@/types/spinner'
+import { isPremiumOwned } from '@/use/premiumSmashers'
 
 export type RosterLevels = Partial<Record<SmasherId, number>>
 
@@ -68,23 +72,63 @@ const persist = () => {
 
 export const smasherLevel = (id: SmasherId): number => clampSmasherLevel(levels.value[id] ?? 1)
 
-/** Recruited at this best-ever stage? */
+/** Recruited at this best-ever stage? Released smashers only (release gate,
+ *  src/data/smasherCatalog.ts): a held-back smasher's stage recruits nothing. */
 export const isSmasherUnlocked = (id: SmasherId, bestStage: number): boolean =>
-  bestStage >= SMASHERS[id].unlockStage
+  isReleasedSmasher(id) && bestStage >= SMASHERS[id].unlockStage
 
 /** The smashers recruited at `bestStage`, in catalog order. */
 export const unlockedSmashers = (bestStage: number): SmasherId[] =>
   SMASHER_IDS.filter(id => isSmasherUnlocked(id, bestStage))
 
+/** In the PLAYER's roster: stage reached AND — for a premium smasher (Tuskar
+ *  onwards, src/data/premiumSmashers.ts) — unlocked with its rewarded ad or
+ *  coins. `isSmasherUnlocked` stays the stage-only answer (bot pools, "could a
+ *  player around this stage field it"). */
+export const isSmasherRecruited = (id: SmasherId, bestStage: number): boolean =>
+  isReleasedSmasher(id)
+    ? isSmasherUnlocked(id, bestStage) && isPremiumOwned(id, bestStage)
+    // Unreleased (release gate): only a save that already OWNS it keeps it —
+    // grandfathered, nothing is taken away. Never newly recruited.
+    : bestStage >= SMASHERS[id].unlockStage && isPremiumOwned(id, bestStage)
+
+/** The smashers in the player's roster at `bestStage`, in catalog order. */
+export const recruitedSmashers = (bestStage: number): SmasherId[] =>
+  SMASHER_IDS.filter(id => isSmasherRecruited(id, bestStage))
+
 /** Raise a smasher one level. The caller checks and spends the coins
  *  (`smasherLevelCost(level)`) — this only writes the roster. Returns the new
- *  level, or null at max. */
+ *  level, or null at the technical sanity ceiling (SMASHER_LEVEL_SANITY_MAX). */
 export const levelUpSmasher = (id: SmasherId): number | null => {
   const current = smasherLevel(id)
-  if (current >= SMASHER_MAX_LEVEL || smasherLevelCost(current) === null) return null
+  // No gameplay cap: only the technical sanity ceiling (cost null) stops it.
+  if (smasherLevelCost(current) === null) return null
   levels.value = { ...levels.value, [id]: current + 1 }
   persist()
   return current + 1
+}
+
+/** The first `size` smasher ids of a team, padded when the stored picks are
+ *  fewer (an old two-smasher save that just opened slot 3, a PvP lobby with a
+ *  bigger team size): recruited smashers first, in catalog order, then any —
+ *  never a duplicate. Deterministic. */
+export const fieldTeamIds = (picks: readonly SmasherId[], size: number, bestStage = Infinity): SmasherId[] => {
+  const out: SmasherId[] = []
+  for (const id of picks) if (out.length < size && !out.includes(id)) out.push(id)
+  for (const pool of [recruitedSmashers(bestStage), RELEASED_SMASHER_IDS]) {
+    for (const id of pool) if (out.length < size && !out.includes(id)) out.push(id)
+  }
+  return out
+}
+
+/** `fieldTeamIds` over stored team configs → smasher configs (level 1: the
+ *  battle level is refilled by `teamConfigs`), each kept pick with its skin. */
+export const fieldTeam = (team: readonly SpinnerConfig[], size: number, bestStage = Infinity): SpinnerConfig[] => {
+  const picks = team.map(c => (isSmasherId(c.smasherId) ? c.smasherId : 'bramble'))
+  return fieldTeamIds(picks, size, bestStage).map(id => {
+    const kept = team.find(c => c.smasherId === id)
+    return smasherConfig(id, 1, kept?.modelId)
+  })
 }
 
 /** Battle configs of `team` at the roster's current levels. `skinFor` picks
@@ -119,7 +163,11 @@ const useSmashers = () => ({
   levelUpSmasher,
   isSmasherUnlocked,
   unlockedSmashers,
+  isSmasherRecruited,
+  recruitedSmashers,
   teamConfigs,
+  fieldTeam,
+  fieldTeamIds,
   rosterPower
 })
 

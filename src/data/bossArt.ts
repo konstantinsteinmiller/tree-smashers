@@ -12,6 +12,8 @@
 
 import type { BossEncounterId, BossTrophySkinId } from '@/data/bossEncounters'
 import { prependBaseUrl } from '@/utils/function'
+import { badgeIconPath } from '@/use/badgeIconArt'
+import type { BadgeIconName } from '@/use/paintedBadgeIcons'
 
 /** The three bosses that have a badge of their own. */
 export type BadgedBossId = Extract<BossEncounterId, 'cinder_tyrant' | 'glacier_warden' | 'frostbite_yeti'>
@@ -29,9 +31,11 @@ export const BOSS_ART: Readonly<Record<BadgedBossId, BossArt>> = {
   frostbite_yeti: { skin: 'yeti', badgeFile: 'frostbite-yeti' }
 }
 
-/** Path (under `public/`) of a boss badge file. */
+/** Path (under `public/`) of a boss badge file: the toy-box repaint
+ *  (tools/badge-icons → PAINTED_BADGE_ICONS) when it ships, else the
+ *  procedural crest bake. */
 export const bossBadgeFile = (boss: BadgedBossId): string =>
-  `images/boss-badges/${BOSS_ART[boss].badgeFile}_256x256.webp`
+  badgeIconPath(`boss-${BOSS_ART[boss].badgeFile}` as BadgeIconName, `images/boss-badges/${BOSS_ART[boss].badgeFile}_256x256.webp`)
 
 /** Badge URL of one of the three new bosses. */
 export const bossBadgeImgPath = (boss: BadgedBossId): string => prependBaseUrl(bossBadgeFile(boss))

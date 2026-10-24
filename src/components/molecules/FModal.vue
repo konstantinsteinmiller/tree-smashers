@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import FTabs, { type TabOption } from '@/components/atoms/FTabs.vue'
+import FRibbon from '@/components/atoms/FRibbon.vue'
 import { useI18n } from 'vue-i18n'
 import { isMobileLandscape, isMobilePortrait } from '@/use/useUser'
 import { playUiSfx } from '@/use/uiSfx'
@@ -200,14 +201,10 @@ onBeforeUnmount(() => {
   //- which would otherwise promote the stack to a containing block and
   //- pin the modal inside it.
   Teleport(to="body")
-    Transition(
-      name="pop"
-      appear
-      enter-active-class="transition-all duration-[400ms] ease-[cubic-bezier(0.18,0.89,0.32,1.28)]"
-      leave-active-class="transition-all duration-[200ms] ease-[cubic-bezier(0.6,-0.28,0.735,0.045)]"
-      enter-from-class="opacity-0 scale-50 translate-y-12"
-      leave-to-class="opacity-0 scale-50 translate-y-12"
-    )
+    //- #UX1c choreography: the DIM fades (it never scales — a shrinking
+    //- backdrop read as a glitch), the modal itself pops in from below with a
+    //- back-out overshoot and drops away on close (see .fm-* in <style>).
+    Transition(name="fm" appear)
       //- The overlay's safe-area padding lives in <style>, NOT in an inline
       //- :style. Inline styles beat stylesheet rules, so while it was inline
       //- the landscape media query's tighter `padding: 0.25rem` silently
@@ -276,12 +273,13 @@ onBeforeUnmount(() => {
             @click="close"
           )
             div(class="flex justify-center scale-85 sm:scale-100")
-              //- Skewed sun title plate (design.sass `.ui-tag`) that drops in
-              //- with a swing. ART-DESK SEAM: a painted plate can replace the
-              //- tag's ::before (keep the content box).
-              div(class="ribbon-header ui-tag ui-drop-in relative" @click.stop)
-                span(class="ui-outline-lg modal-title-text whitespace-nowrap")
-                  | {{ title }}
+              //- The sun title RIBBON (FRibbon: straight face, folded tails)
+              //- drops in with a swing and twinkles on two corners.
+              FRibbon.ribbon-header.ui-drop-in.modal-ribbon(tone="sun" :tails="false" :class="{ 'is-long': (title ?? '').length > 13, 'is-xlong': (title ?? '').length > 18 }" @click.stop)
+                span.modal-title-text {{ title }}
+                template(#decor)
+                  span.ui-sparkle.modal-title-sp.is-a(aria-hidden="true")
+                  span.ui-sparkle.ui-sparkle--sun.modal-title-sp.is-b(aria-hidden="true")
 
           //- The Main Frame
           div(class="modal-frame-wrap relative modal-swing")
@@ -292,10 +290,12 @@ onBeforeUnmount(() => {
             //- <style> as `--modal-close-band`, because it has to stay in
             //- lockstep with the height of the absolutely-positioned X. See
             //- the `.modal-frame` rule for why.
-            //- Wooden frame (planks + stitched edge) around a cream
-            //- parchment card: the content is ALWAYS dark ink on cream, the
-            //- strongest-contrast surface in the game.
+            //- Royal frame around an ice card: the content is ALWAYS navy
+            //- ink on ice, the strongest-contrast surface in the game.
             div(class="modal-frame relative pb-2 px-2 sm:px-3 md:px-4")
+              div.modal-sparkles(aria-hidden="true")
+                span.ui-sparkle
+                span.ui-sparkle.ui-sparkle--sun
 
               //- Close Button (X) — wrapper is purely a layout spacer for
               //- the absolutely-positioned X button; it must NOT also close
@@ -353,36 +353,43 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="sass">
-.pop-enter-active
-  animation: bounce-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)
-
-.pop-leave-active
-  animation: bounce-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) reverse
-
-@keyframes bounce-in
-  0%
-    transform: scale(0.5)
-    opacity: 0
-  100%
-    transform: scale(1)
-    opacity: 1
-
 .modal-backdrop
   background-color: var(--ui-backdrop)
 
 // ─── Wooden frame + cream parchment card ────────────────────────────────────
-// The frame is a flat wood plank with a stitched (dashed) inner edge; the
-// content slot is the parchment card. Flat fills + hard inset bands only.
+// The frame is a solid royal plate (no stitches: a hard UI object); the
+// content slot is the ice card. Flat fills + hard inset bands only.
 .modal-frame
-  background-color: var(--color-wood-600)
-  // Flat diagonal stripes on the royal frame: energy without noise (they
-  // only show in the frame band around the ice card).
-  background-image: var(--ui-stripes)
+  // #UX1c (no stripes): a solid royal frame with a flat TWO-TONE split — a
+  // lighter header band over the close-X row, ended by one hard dark bevel
+  // line — plus a bright top lip, a thin light inner keyline and a dark
+  // bottom slab. Two sparkles twinkle in the header band's left corner.
+  background-color: var(--color-royal-600)
+  background-image: linear-gradient(180deg, var(--color-royal-500) 0 calc(var(--modal-close-band, 2.4rem) - 0.35rem), var(--color-royal-800) calc(var(--modal-close-band, 2.4rem) - 0.35rem) calc(var(--modal-close-band, 2.4rem) - 0.35rem + 3px), transparent calc(var(--modal-close-band, 2.4rem) - 0.35rem + 3px))
   border: 4px solid var(--color-ink)
   border-radius: 1.25rem
-  box-shadow: inset 0 4px 0 var(--color-royal-400), inset 0 2.2rem 0 var(--color-royal-500), inset 0 -6px 0 var(--color-royal-800)
+  box-shadow: inset 0 4px 0 var(--color-royal-400), inset 0 0 0 6px rgba(255, 255, 255, 0.08), inset 0 -6px 0 var(--color-royal-800)
   @media (min-width: 640px)
     border-radius: 2rem
+
+// Header-band twinkles (decorative, behind the title plate's column).
+.modal-sparkles
+  position: absolute
+  top: 0
+  left: 0
+  width: 5rem
+  height: var(--modal-close-band, 2.4rem)
+  pointer-events: none
+  .ui-sparkle:nth-child(1)
+    left: 1.1rem
+    top: 0.55rem
+    --sp-size: 0.95rem
+    --sp-delay: 0.4s
+  .ui-sparkle:nth-child(2)
+    left: 2.4rem
+    top: 1.05rem
+    --sp-size: 0.6rem
+    --sp-delay: 1.6s
 
 // The frame swings into place inside the overlay's pop (a degree of tilt,
 // settling with an overshoot) — the modal lands rather than appears.
@@ -397,16 +404,99 @@ onBeforeUnmount(() => {
   100%
     transform: none
 
-// Title plate: bigger, uppercase, heavy stroke.
+// HIT TESTING: the header box (title ribbon or tab heads) spans the frame's
+// full width and hangs over / above its top edge — over the close X's corner. It sits above the frame's
+// stacking context (the frame swings in with a transform), so as a hit
+// target it swallowed the X's hover / cursor. It is decoration: it never
+// catches the pointer; only the ribbon itself does (its @click.stop keeps a
+// tap on the title from closing). Taps beside the ribbon fall through to the
+// backdrop (closes) or the frame (stays). Guarded by tests/fmodalHitTarget.test.ts.
+.modal-header-title, .modal-header-tabs
+  pointer-events: none
+
+.modal-header-title .ribbon-header, .modal-header-tabs > *
+  pointer-events: auto
+
+// Title ribbon: its font size IS its scale (FRibbon is built in em).
+.modal-ribbon
+  font-size: 1.35rem
+  max-width: calc(100% - 0.5rem)
+  @media (min-width: 768px)
+    font-size: 1.7rem
+  // Long titles ("Tägliche Belohnungen") step the scale down instead of
+  // ending in "…" on a phone.
+  &.is-long
+    font-size: 1.1rem
+    @media (min-width: 768px)
+      font-size: 1.5rem
+  &.is-xlong
+    font-size: 0.95rem
+    @media (min-width: 768px)
+      font-size: 1.3rem
+
 .modal-title-text
-  display: block
-  font-size: 1.6rem
-  font-weight: 900
   text-transform: uppercase
   letter-spacing: 0.03em
-  line-height: 1.05
-  @media (min-width: 768px)
-    font-size: 2rem
+
+// Title-plate twinkles: top-right and bottom-left corners, out of phase.
+.modal-title-sp
+  z-index: 3
+  &.is-a
+    right: 0.7em
+    top: -0.45em
+    --sp-size: 0.85em
+    --sp-delay: 0.7s
+  &.is-b
+    left: 0.75em
+    top: 1.45em
+    --sp-size: 0.6em
+    --sp-delay: 1.9s
+
+// ── Open / close choreography (#UX1c) ────────────────────────────────────────
+// Overlay: opacity only. The container: pops up from 60 % with a back-out
+// overshoot (transform on the container; its header is measured with
+// offsetTop, which ignores transforms). Close: a quick drop + shrink.
+.fm-enter-active
+  transition: opacity 0.22s ease-out
+  .model-container
+    animation: fm-pop-in 0.42s cubic-bezier(0.18, 0.89, 0.32, 1.28) both
+.fm-leave-active
+  transition: opacity 0.2s ease-in 0.04s
+  .model-container
+    animation: fm-pop-out 0.2s cubic-bezier(0.6, -0.28, 0.735, 0.045) both
+.fm-enter-from, .fm-leave-to
+  opacity: 0
+
+@keyframes fm-pop-in
+  0%
+    transform: translateY(3rem) scale(0.6)
+    opacity: 0
+  60%
+    opacity: 1
+  100%
+    transform: none
+    opacity: 1
+
+@keyframes fm-pop-out
+  0%
+    transform: none
+    opacity: 1
+  100%
+    transform: translateY(2.5rem) scale(0.7)
+    opacity: 0
+
+@media (prefers-reduced-motion: reduce)
+  .fm-enter-active .model-container, .fm-leave-active .model-container
+    animation: none
+  .fm-enter-active, .fm-leave-active
+    transition-duration: 0.12s
+
+// Keyboard focus on the X: the sun ring sits on its visible 3D body.
+.modal-close:focus-visible
+  outline: none
+  .ui-btn
+    outline: 3px solid var(--ui-focus)
+    outline-offset: 3px
 
 // Close X: the glyph turns a quarter on hover; the ui-btn inside sinks.
 .modal-close-x
@@ -532,39 +622,15 @@ onBeforeUnmount(() => {
 // definite height, so it silently falls back to `auto` and the panel grows to
 // its content instead (the leaderboard's pagination row ended up ~700px below
 // the bottom of the modal that way).
-// ─── Scroll edge fades ──────────────────────────────────────────────────────
-// A soft gradient of the frame's own background colour, pinned to whichever
-// edge has more content behind it. `sticky` keeps them glued to the viewport
-// of the scroller while the content moves underneath, and negative margins
-// stop them from occupying layout space.
-.modal-content-slot
-  &::before, &::after
-    content: ''
-    display: block
-    position: sticky
-    left: 0
-    right: 0
-    height: 1.25rem
-    pointer-events: none
-    opacity: 0
-    transition: opacity 0.18s ease
-    z-index: 2
-
-  &::before
-    top: 0
-    margin-bottom: -1.25rem
-    background: linear-gradient(to bottom, var(--ui-surface) 15%, rgba(238, 245, 255, 0))
-
-  &::after
-    bottom: 0
-    margin-top: -1.25rem
-    background: linear-gradient(to top, var(--ui-surface) 15%, rgba(238, 245, 255, 0))
-
-  &.scroll-fade-top::before
-    opacity: 1
-
-  &.scroll-fade-bottom::after
-    opacity: 1
+// ─── No scroll edge overlay (#UX1c, owner: "a bad line when scrolling") ─────
+// The body used to pin a sticky 1.25rem fade of the card colour to the edge
+// with more content. Painted at z-index 2 inside the scroller, it washed the
+// plain content under it while every positioned child above z 2 (name plates,
+// rarity names, level chips) punched through — so its bottom edge read as a
+// hard seam cutting across the team-size picker and the slot cards while
+// scrolling. Content now passes cleanly under the card's own clipped edge;
+// the always-visible game scrollbar is the "there is more" cue, and the
+// `scroll-fade-*` classes stay as state hooks only (no paint).
 
 // ─── Game-styled scrollbar ──────────────────────────────────────────────────
 // Matches the FSelect dropdown so every scrollable surface in the game reads

@@ -175,16 +175,22 @@ describe('CrazyGames build — bundle purity', () => {
     expect(leaks, `PeerJS leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
   })
 
-  it('does NOT ship the PvP module at all (stubbed on a PvP-disabled build)', () => {
-    // Stronger than the hot-path check above, and about our OWN code rather
-    // than the PeerJS library: `usePVP.ts` and the lobby modal are statically
-    // imported by the arena, so before the `resolve.alias` stubs they shipped
-    // in full on every portal build — the WhatsApp invite link and the
-    // STUN / TURN relay hosts included. Every chunk, not just the hot path.
-    const leaks = [...chunkContents.entries()]
-      .filter(([, content]) => /wa\.me\/|relay\.metered\.ca|stun\.l\.google\.com/.test(content))
+  it('ships PvP with CrazyGames invites, but no external share link', () => {
+    // The CrazyGames full build has PvP (2026-10-21): private rooms invite
+    // through the platform (Room Data, the invite button, the join-room
+    // listener) and the random search falls back to bots. So the lobby and
+    // its relay hosts ship — but no outbound share target: the WhatsApp link
+    // is folded out by its `VITE_APP_CRAZY_WEB` literal (CG invites go
+    // through the platform). Every chunk, not just the hot path.
+    const shareLeaks = [...chunkContents.entries()]
+      .filter(([, content]) => /wa\.me\//.test(content))
       .map(([name]) => name)
-    expect(leaks, `PvP module code shipped in: ${leaks.join(', ')}`).toEqual([])
+    expect(shareLeaks, `WhatsApp share link shipped in: ${shareLeaks.join(', ')}`).toEqual([])
+    // Positive control: the invite plumbing is really there.
+    const all = [...chunkContents.values()].join('\n')
+    expect(all).toMatch(/updateRoom/)
+    expect(all).toMatch(/addJoinRoomListener/)
+    expect(all).toMatch(/showInviteButton/)
   })
 
   it('does NOT emit a vConsole chunk on a web (non-native) build', () => {
@@ -318,6 +324,21 @@ describe('CrazyGames build — bundle purity', () => {
     // (Plain `"wavedash"` string is a build-flag label and OK.)
     const leaks = findInHotPath(/@wvdsh\/sdk-js|wvdsh\b|WavedashSDK\b/)
     expect(leaks, `Wavedash SDK code leaked into hot-path: ${JSON.stringify(leaks)}`).toEqual([])
+  })
+
+  it('does NOT ship the Wavedash leaderboard module in ANY chunk', () => {
+    // `src/platforms/wavedash/wavedashLeaderboard.ts` is reached only through
+    // an `import.meta.env.VITE_APP_WAVEDASH`-gated dynamic import in main.ts.
+    // A lazy chunk would still be EMITTED (and shipped) if that gate stopped
+    // folding, so this checks every chunk, not just the hot path.
+    const files = [...chunkContents.keys()].filter((n) => /wavedashLeaderboard/i.test(n))
+    expect(files, `Wavedash leaderboard chunk emitted: ${files.join(', ')}`).toEqual([])
+    // SDK method names only the Wavedash module calls. (Not the tab's i18n
+    // key: every locale carries it as data.)
+    const leaks = [...chunkContents.entries()]
+      .filter(([, c]) => /uploadLeaderboardScore|getOrCreateLeaderboard/.test(c))
+      .map(([n]) => n)
+    expect(leaks, `Wavedash leaderboard code in: ${leaks.join(', ')}`).toEqual([])
   })
 
   it('does include the CrazyGames Strategy + provider markers (positive control)', () => {

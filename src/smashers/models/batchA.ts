@@ -14,7 +14,7 @@ export const BATCH_A_PALETTES: Readonly<Record<BatchAId, SmasherPalette>> = Obje
   brock: { fur: '#8e909c', belly: '#f4f1e8', accent: '#25242b', accent2: '#f4ead8', nose: '#1b1a20', iris: '#5a3216', outline: '#18171d' },
   bandit: { fur: '#8f8e9a', belly: '#f1ede4', accent: '#2a2830', accent2: '#c9c3b6', nose: '#1a1a1f', iris: '#7a4412', outline: '#1b1a20' },
   croaky: { fur: '#86b64c', belly: '#f2e9a8', accent: '#5b8a2e', accent2: '#ef7b3a', nose: '#2d4a1a', iris: '#d08a0c', outline: '#1e3010' },
-  slinky: { fur: '#c97d3c', belly: '#fff4e0', accent: '#2a1a12', accent2: '#ffffff', nose: '#3a1e12', iris: '#2a1a10', outline: '#22140a' },
+  slinky: { fur: '#a7a3bd', belly: '#f6f2ea', accent: '#f2b8c6', accent2: '#5fae4e', nose: '#2b2733', iris: '#241d2c', outline: '#1d1a24' },
   digger: { fur: '#5d5070', belly: '#9d8fae', accent: '#f4c430', accent2: '#f6a3b8', nose: '#e2708e', iris: '#2a1f33', outline: '#1c1624' },
   snooze: { fur: '#e2a24a', belly: '#fff0d2', accent: '#c7843a', accent2: '#9a5a2a', nose: '#e78a8a', iris: '#2a1608', outline: '#2a1606' },
   pongo: { fur: '#2e2c3a', belly: '#f4f1ea', accent: '#f4f1ea', accent2: '#ff9fb8', nose: '#ff8fa8', iris: '#7a3ab0', outline: '#121118' },
@@ -124,31 +124,29 @@ export const BATCH_A_BUILDERS: Record<BatchAId, Builder> = {
     return body
   },
 
-  // Stoat — slim, standing tall with boxing paws up, long neck, white
-  // bib, long tail with a black tip.
+  // Koala — tiny round silver-lilac plush: a big head with huge round
+  // fluffy ears (pink inside), a big dark oval nose, cream belly, boxing
+  // paws up, a eucalyptus leaf on top of its head, a stub tail.
   slinky: (p, o) => {
-    const body = E([0, 0, 0.6], [0.36, 0.34, 0.6], p.fur)
-    body.decals.push(bellyPatch(p.belly, stitchOf(p, p.belly), 0, 0.1, 0.5, 0.75), seam(stitchOf(p, p.fur), Math.PI, -0.6, 0.9))
-    const neck = E([0, 0.08, 1.18], [0.24, 0.22, 0.3], p.fur, { sd: [0, 0, 1] })
-    neck.decals.push({ t: 'disc', at: [0, 0], size: [0.55, 0.9], fill: p.belly })
-    const head = E([0, 0.14, 1.56], [0.38, 0.34, 0.3], p.fur, { sd: [0, 0, 1] })
-    head.decals.push({ t: 'disc', at: [0, -0.42], size: [0.5, 0.32], fill: p.belly })
-    head.decals.push(...face({ iris: p.iris, outline: p.outline, eyeAz: 0.4, eyeEl: 0.1, eyeSize: 0.22, mouth: 'fangs', mouthEl: -0.36, mouthW: 0.2 }))
-    head.decals.push({ t: 'disc', at: [0, -0.16], size: [0.1, 0.07], fill: p.nose })
-    const ear = E([0.28, 0.02, 1.8], [0.11, 0.05, 0.1], p.fur, { sd: [0.3, -0.2, 1] })
-    ear.decals.push({ t: 'disc', at: [0, 0], size: [0.5, 0.45], fill: p.belly })
-    head.kids.push(...pair(ear))
-    neck.kids.push(head)
-    const tail = chain(
-      [[0.04, -0.34, 0.28], [0.2, -0.62, 0.24], [0.42, -0.8, 0.34], [0.56, -0.82, 0.56], [0.6, -0.7, 0.78]],
-      0.12, 0.13, i => (i >= 3 ? p.accent : p.fur), i => [0.3, -1, 0.1 * i]
-    )
-    body.kids.push(tail, neck)
+    const body = E([0, 0, 0.5], [0.46, 0.42, 0.5], p.fur)
+    body.decals.push(bellyPatch(p.belly, stitchOf(p, p.belly), 0, -0.05, 0.5, 0.6), seam(stitchOf(p, p.fur), Math.PI, -0.6, 0.9))
+    const head = E([0, 0.08, 1.24], [0.5, 0.42, 0.42], p.fur, { sd: [0, 0, 1] })
+    head.decals.push({ t: 'disc', at: [0, -0.5], size: [0.42, 0.26], fill: p.belly })
+    head.decals.push(...face({ iris: p.iris, outline: p.outline, eyeAz: 0.44, eyeEl: 0.2, eyeSize: 0.19, mouth: 'fangs', mouthEl: -0.46, mouthW: 0.22 }))
+    const nose = E([0, 0.46, 1.18], [0.12, 0.08, 0.16], p.nose, { sd: [0, 1, 0] })
+    const ear = E([0.48, 0.0, 1.56], [0.24, 0.17, 0.23], p.fur, { sd: [0.4, 1, 0.3] })
+    ear.decals.push({ t: 'disc', at: [0, 0], size: [0.6, 0.62], fill: p.accent })
+    head.kids.push(nose, ...pair(ear))
+    // eucalyptus leaf on the head, beside one ear (one side only)
+    const leaf = E([0.2, -0.1, 1.8], [0.07, 0.035, 0.22], p.accent2, { rot: [0.3, 0.55, 0], sd: [0.3, -0.4, 1] })
+    head.kids.push(leaf)
+    body.kids.push(head)
+    body.kids.push(E([0, -0.42, 0.34], [0.1, 0.09, 0.09], p.fur, { sd: [0, -1, 0] }))
     // boxing paws, raised in front of the chest
-    body.kids.push(...pair(E([0.22, 0.4, 1.0], [0.1, 0.11, 0.11], p.fur, { sd: [0.2, 1, 0.2] })))
-    body.kids.push(...pair(E([0.3, 0.2, 0.86], [0.08, 0.16, 0.08], p.fur, { rot: [0.9, 0, 0], sd: [0.6, 0.6, 0] })))
-    body.kids.push(...pair(E([0.22, 0.36, 0.08], [0.12, 0.2, 0.08], p.fur, { sd: [0, 1, 0] })))
-    if (o.boss) { head.kids.push(crownOn(head, 1.86, 0.22, p.outline)); head.decals.push(...warPaint(1)) }
+    body.kids.push(...pair(E([0.26, 0.42, 0.82], [0.12, 0.12, 0.12], p.fur, { sd: [0.2, 1, 0.2] })))
+    body.kids.push(...pair(E([0.36, 0.24, 0.7], [0.1, 0.18, 0.1], p.fur, { rot: [0.9, 0, 0], sd: [0.6, 0.6, 0] })))
+    body.kids.push(...pair(E([0.24, 0.36, 0.08], [0.14, 0.2, 0.08], p.fur, { sd: [0, 1, 0] })))
+    if (o.boss) { head.kids.push(crownOn(head, 1.66, 0.24, p.outline)); head.decals.push(...warPaint(1)) }
     return body
   },
 

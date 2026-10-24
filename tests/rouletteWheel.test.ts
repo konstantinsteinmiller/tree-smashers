@@ -439,8 +439,9 @@ describe('roulette grants: a respin ADDS to the first spin', () => {
     expect(skin.coins).toBe(base) // the skin comes with the 1x coins
     expect(skin.skin).toEqual({ topPartId: 'alpha', modelId: 'n1' })
 
-    const jackpot = rouletteGrantFor({ type: 'diamonds', diamonds: 5 }, base)
-    expect(jackpot).toMatchObject({ diamonds: 5, coins: 0 })
+    // The jackpot pays its fixed coins (it paid 5 diamonds until 2026-10-21).
+    const jackpot = rouletteGrantFor({ type: 'jackpot', coins: 15000 }, base)
+    expect(jackpot).toEqual({ type: 'jackpot', multiplier: 1, skin: null, coins: 15000 })
   })
 })
 

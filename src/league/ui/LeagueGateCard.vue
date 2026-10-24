@@ -101,7 +101,7 @@ const onFight = () => {
   border-radius: var(--radius-ui-lg)
   background: var(--color-ink)
 
-// Boss card: ice face, ink outline, a BERRY edge (danger) with corner stripes.
+// Boss card: ice face, ink outline, a BERRY edge (danger) with corner notches.
 .lgc__body
   position: relative
   display: flex
@@ -120,19 +120,19 @@ const onFight = () => {
     position: absolute
     // Above the 8px base band so the bars never cross it.
     bottom: 8px
-    width: 2.6rem
-    height: 2.6rem
-    background-image: repeating-linear-gradient(315deg, var(--color-berry-500) 0 4px, transparent 4px 9px)
+    width: 1.6rem
+    height: 1.6rem
+    // Corner notches (#UX1c): solid berry dog-ears, no stripes.
+    background-color: var(--color-berry-500)
     pointer-events: none
 
   &::before
     right: 0
-    clip-path: polygon(100% 25%, 100% 100%, 25% 100%)
+    clip-path: polygon(100% 0, 100% 100%, 0 100%)
 
   &::after
     left: 0
-    background-image: repeating-linear-gradient(45deg, var(--color-berry-500) 0 4px, transparent 4px 9px)
-    clip-path: polygon(0 25%, 75% 100%, 0 100%)
+    clip-path: polygon(0 0, 100% 100%, 0 100%)
 
 // Skewed sun-on-ink header plate.
 .lgc__ribbon
@@ -140,7 +140,7 @@ const onFight = () => {
   margin: -1px -1.2rem 0
   padding: 0.35rem 0.5rem 0.45rem
   background-color: var(--color-royal-900)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 -3px 0 var(--color-ink)
   border-bottom: 3px solid var(--color-ink)
   transform: skewY(-3deg)
@@ -184,7 +184,7 @@ const onFight = () => {
   border-radius: 999px
   border: 4px solid var(--color-ink)
   background-color: var(--color-berry-400)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 -7px 0 var(--color-berry-600), 0 5px 0 var(--color-ink)
   display: flex
   align-items: center

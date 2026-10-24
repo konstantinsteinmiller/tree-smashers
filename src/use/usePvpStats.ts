@@ -12,6 +12,7 @@ import type { Ref } from 'vue'
 import { crazyPlayerName } from '@/use/useCrazyGames'
 import type { SpinnerModelId } from '@/use/useModels'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { BOT_SKILL_DEFAULT, clampBotSkill, nextBotSkill } from '@/use/pvpBots'
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -48,6 +49,13 @@ interface PvpStatsState {
   claimedHonorSkins: Record<number, SpinnerModelId>
   /** Maps honor stage number → skin model id previewed (persisted). */
   offeredHonorSkins: Record<number, SpinnerModelId>
+  /** Of `wins` / `losses`: the ones against a random-search BOT (pvpBots.ts).
+   *  Bot matches are casual local results; the split lets any future
+   *  server-side PvP rating leave them out without a migration. */
+  botWins: number
+  botLosses: number
+  /** The next bot's skill — a staircase toward a 50 % win rate (pvpBots). */
+  botSkill: number
 }
 
 const generateUUID = (): string =>
@@ -64,7 +72,10 @@ const defaultState = (): PvpStatsState => ({
   honorStages: 0,
   claimedHonorStages: [],
   claimedHonorSkins: {},
-  offeredHonorSkins: {}
+  offeredHonorSkins: {},
+  botWins: 0,
+  botLosses: 0,
+  botSkill: BOT_SKILL_DEFAULT
 })
 
 const loadState = (): PvpStatsState => {
@@ -85,7 +96,10 @@ const loadState = (): PvpStatsState => {
             )
             : [],
           claimedHonorSkins: p.claimedHonorSkins ?? {},
-          offeredHonorSkins: p.offeredHonorSkins ?? {}
+          offeredHonorSkins: p.offeredHonorSkins ?? {},
+          botWins: Math.max(0, Number(p.botWins) || 0),
+          botLosses: Math.max(0, Number(p.botLosses) || 0),
+          botSkill: clampBotSkill(p.botSkill ?? BOT_SKILL_DEFAULT)
         }
       }
     }
@@ -176,6 +190,19 @@ const recordPvpLoss = () => {
   saveState()
 }
 
+/**
+ * A finished match against a random-search bot. The win / loss itself goes
+ * through `recordPvpWin` / `recordPvpLoss` like any PvP match (the casual
+ * result screen); this adds the bot tally and moves the bot skill staircase
+ * (a player win makes the next bot sharper, a loss looser).
+ */
+const recordBotResult = (result: 'win' | 'lose') => {
+  if (result === 'win') state.value.botWins++
+  else state.value.botLosses++
+  state.value.botSkill = nextBotSkill(state.value.botSkill, result)
+  saveState()
+}
+
 // ─── Honor Track Claims ────────────────────────────────────────────────────
 
 const isHonorStageClaimed = (stage: number): boolean =>
@@ -243,6 +270,9 @@ export default function usePvpStats() {
     // actions
     recordPvpWin,
     recordPvpLoss,
+    recordBotResult,
+    /** Skill for the next random-search bot (pvpBots `botPlayStyle`). */
+    botSkill: computed(() => state.value.botSkill),
     /** Honour without a PvP win/loss record (league wins earn half, LG6). */
     awardHonor: (amount: number) => addHonor(Math.max(0, Math.round(amount))),
     calcHonorPoints,

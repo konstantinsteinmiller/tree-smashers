@@ -7,7 +7,8 @@
 //
 //   multiplier → coins = base × multiplier
 //   skin       → the skin (granted by the wheel via `buySkin`) + 1x coins
-//   diamonds   → the jackpot's diamonds INSTEAD of coins
+//   jackpot    → the jackpot's fixed coins (not base-scaled). It paid
+//                diamonds until 2026-10-21; diamonds are no wheel reward now.
 //
 // Skin segments are only ever built from skins the player does not own yet,
 // and the respin wheel is rebuilt AFTER the first spin's skin was granted, so
@@ -20,22 +21,19 @@ export interface RouletteGrant {
   type: RouletteResult['type']
   multiplier: number
   skin: RouletteResult['skin'] | null
-  /** Diamond-denominated jackpot (0 unless type === 'diamonds'). */
-  diamonds: number
-  /** Coins this spin paid (0 on the diamond jackpot). */
+  /** Coins this spin paid (the jackpot's fixed amount on type === 'jackpot'). */
   coins: number
 }
 
 export const rouletteGrantFor = (result: RouletteResult, baseCoins: number): RouletteGrant => {
-  if (result.type === 'diamonds') {
-    return { type: 'diamonds', multiplier: 1, skin: null, diamonds: result.diamonds ?? 0, coins: 0 }
+  if (result.type === 'jackpot') {
+    return { type: 'jackpot', multiplier: 1, skin: null, coins: result.coins ?? 0 }
   }
   const multiplier = result.type === 'multiplier' ? result.multiplier ?? 1 : 1
   return {
     type: result.type,
     multiplier,
     skin: result.type === 'skin' ? result.skin ?? null : null,
-    diamonds: 0,
     coins: Math.round(baseCoins * multiplier)
   }
 }

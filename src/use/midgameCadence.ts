@@ -1,5 +1,11 @@
 // ─── Midgame interstitial cadence ───────────────────────────────────────────
 //
+// #UX100: on builds with PLAYTIME_INTERSTITIALS_BUILD (the default) the
+// pre-battle interstitial is paced by active playtime instead
+// (interstitialPacing.ts); this battle-count cadence is the fallback for a
+// build that switches the playtime pacing off, and keeps its bookkeeping
+// either way.
+//
 // Midgame interstitials fire BEFORE the next battle's meteor-shower intro
 // (see `beginBattle` in SpinnerArena.vue), never between a battle and its
 // result screen. `battlesSinceAd` counts completed battle attempts since the
@@ -30,6 +36,8 @@
 // SaveManager hydrates, and `ca_*` keys are cloud payload, so a load-time
 // snapshot would read the pre-hydration default. The in-memory values only
 // back up a storage that throws.
+
+import { noteAdBreak } from '@/use/interstitialPacing'
 
 export const AD_BATTLES_KEY = 'ca_battles_since_ad'
 export const AD_FIRST_KEY = 'ca_first_midgame_ad_shown'
@@ -96,6 +104,9 @@ export const noteRewardedAdCompleted = (): void => {
   // time literal (not a runtime flag) so every other build folds this away.
   if (import.meta.env.VITE_APP_POKI === 'true') return
   resetAdCounter()
+  // Same for the playtime pacing (#UX100, interstitialPacing.ts): the 121 s
+  // cooldown restarts from this video.
+  noteAdBreak()
   // A new player's first ad break was this rewarded video: it satisfies the
   // early first-interstitial slot (the fast-path before battle 2), so the
   // regular every-3 cadence applies from here on.

@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
+import { diamondsToCoins } from '@/use/useCurrency'
 import {
   SKINS_PER_TOP,
   buySkin,
@@ -23,7 +24,8 @@ import { isGamePaused } from '@/use/useGamePause'
  * Rewards are mostly coins on a linear ramp (30 at stage 1 → 300 at
  * stage 50, rounded to nearest 5), with a handful of "skin" slots that
  * grant an unowned skin at claim time — falling back to coins if no
- * unowned skin remains in the catalog.
+ * unowned skin remains in the catalog. Three "jackpot" tiers pay a fixed
+ * coin prize (they paid a diamond until 2026-10-21).
  *
  * Persisted in localStorage so progression survives reloads. Implemented
  * as a module-singleton composable so multiple components can read and
@@ -47,11 +49,14 @@ export const BP_XP_LOSS = 12.5              // 1/8 of a stage
  *  stage version. */
 export const BP_SKIN_STAGES = new Set<number>([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
 
-/** Normal-track stages that award a diamond instead of coins. Spaced so the
- *  premium currency trickles in a few times per season. */
-export const BP_DIAMOND_STAGES = new Set<number>([15, 35, 55])
-/** Diamonds granted per diamond stage. */
-export const BP_DIAMOND_AMOUNT = 1
+/** Normal-track "jackpot" stages: a fixed coin prize instead of the ramp.
+ *  Until 2026-10-21 they paid 1 diamond; diamonds are no battle-pass reward
+ *  now (owner), so they pay that diamond's value at the game's own exchange
+ *  rate (useCurrency DIAMOND_COIN_VALUE = 3 000 coins) — exactly what the
+ *  single-currency Poki build already paid on these tiers. */
+export const BP_JACKPOT_STAGES = new Set<number>([15, 35, 55])
+/** Coins granted per jackpot stage (= 1 diamond at DIAMOND_COIN_VALUE). */
+export const BP_JACKPOT_COINS = diamondsToCoins(1)
 
 const STORAGE_KEY = 'smashers_battle_pass'
 
@@ -72,6 +77,9 @@ interface BattlePassState {
   /** UTC day key ('YYYY-MM-DD', see utils/dayKey) of the current season's
    *  first XP gain. */
   seasonStartedAt: string | null
+  /** How many times the player has reset a full, fully-claimed pass by
+   *  watching a rewarded ad (analytics; survives season resets). */
+  resetCount: number
 }
 
 const defaultState = (): BattlePassState => ({
@@ -80,8 +88,13 @@ const defaultState = (): BattlePassState => ({
   claimedStages: [],
   claimedSkins: {},
   offeredSkins: {},
-  seasonStartedAt: null
+  seasonStartedAt: null,
+  resetCount: 0
 })
+
+/** Sanitize a persisted reset counter: a non-negative integer, else 0. */
+export const sanitizeResetCount = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0
 
 /** Days remaining until the current season resets (null if no season active). */
 const daysUntilSeasonReset = (startedAt: string | null): number | null => {
@@ -115,12 +128,13 @@ const loadState = (): BattlePassState => {
           ),
           claimedSkins: parsed.claimedSkins ?? {},
           offeredSkins: parsed.offeredSkins ?? {},
-          seasonStartedAt: parsed.seasonStartedAt ?? null
+          seasonStartedAt: parsed.seasonStartedAt ?? null,
+          resetCount: sanitizeResetCount(parsed.resetCount)
         }
-        // Season expired — reset everything
+        // Season expired — reset everything (the analytics counter stays)
         if (isSeasonExpired(loaded.seasonStartedAt)) {
           seasonResetPending = true
-          return defaultState()
+          return { ...defaultState(), resetCount: loaded.resetCount }
         }
         return loaded
       }
@@ -163,7 +177,7 @@ export const bpCoinReward = (stage: number): number => {
 
 export const bpIsSkinStage = (stage: number): boolean => BP_SKIN_STAGES.has(stage)
 
-export const bpIsDiamondStage = (stage: number): boolean => BP_DIAMOND_STAGES.has(stage)
+export const bpIsJackpotStage = (stage: number): boolean => BP_JACKPOT_STAGES.has(stage)
 
 // ─── Skin helpers ──────────────────────────────────────────────────────────
 
@@ -177,7 +191,7 @@ const unlockSkinEverywhere = (modelId: SpinnerModelId) => {
 
 // ─── XP accrual ─────────────────────────────────────────────────────────────
 
-const { addCoins, addDiamonds } = useSpinnerConfig()
+const { addCoins } = useSpinnerConfig()
 
 /** End the current season: wipe the pass and the honor track together and
  *  persist. The eager reset (addXp, the open-screen clock below) runs this
@@ -185,7 +199,7 @@ const { addCoins, addDiamonds } = useSpinnerConfig()
  *  `seasonResetPending` because `resetHonorTrack` cannot be called while the
  *  modules are still being evaluated. */
 const resetSeason = () => {
-  state.value = defaultState()
+  state.value = { ...defaultState(), resetCount: state.value.resetCount }
   resetHonorTrack()
   saveState()
 }
@@ -221,7 +235,6 @@ export interface ClaimResult {
   stage: number
   coins: number
   skin: SpinnerModelId | null
-  diamonds: number
 }
 
 const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimResult | null => {
@@ -231,12 +244,11 @@ const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimRe
 
   let coins = 0
   let skin: SpinnerModelId | null = null
-  let diamonds = 0
 
-  if (bpIsDiamondStage(stage)) {
-    // Diamond stages pay premium currency instead of coins.
-    diamonds = BP_DIAMOND_AMOUNT
-    addDiamonds(diamonds)
+  if (bpIsJackpotStage(stage)) {
+    // Jackpot stages pay a fixed coin prize instead of the ramp.
+    coins = BP_JACKPOT_COINS
+    addCoins(coins)
   } else if (bpIsSkinStage(stage)) {
     const pool = getOfferableSkinPool()
     // Prefer the skin that was previewed to the player, fall back to random
@@ -261,7 +273,36 @@ const claimStage = (stage: number, offeredSkin?: SpinnerModelId | null): ClaimRe
 
   state.value.claimedStages = [...state.value.claimedStages, stage]
   saveState()
-  return { stage, coins, skin, diamonds }
+  return { stage, coins, skin }
+}
+
+// ─── Rewarded-ad reset (full pass → earn it again) ─────────────────────────
+
+/** True when every tier is reached AND every tier is claimed — the only
+ *  state in which the "[movie] Reset Battle Pass" offer exists. */
+export const bpCanAdReset = (s: Pick<BattlePassState, 'unlockedStages' | 'claimedStages'>): boolean => {
+  if (s.unlockedStages < BP_TOTAL_STAGES) return false
+  const claimed = new Set(s.claimedStages)
+  for (let i = 1; i <= BP_TOTAL_STAGES; i++) if (!claimed.has(i)) return false
+  return true
+}
+
+/**
+ * Wipe the pass back to stage 0 (xp, tiers, claimed flags, claimed/offered
+ * skins) so it can be earned again. Call ONLY after the rewarded ad
+ * resolved true. The season clock and the honor track are left alone — this
+ * restarts the track, not the season. Returns false (no-op) unless the pass
+ * is full and fully claimed.
+ */
+const resetPassByAd = (): boolean => {
+  if (!bpCanAdReset(state.value)) return false
+  state.value = {
+    ...defaultState(),
+    seasonStartedAt: state.value.seasonStartedAt,
+    resetCount: state.value.resetCount + 1
+  }
+  saveState()
+  return true
 }
 
 // ─── Derived ────────────────────────────────────────────────────────────────
@@ -282,6 +323,9 @@ const pendingClaimCount = computed(() => {
 })
 
 const hasUnclaimedReward = computed(() => pendingClaimCount.value > 0)
+
+const canAdReset = computed(() => bpCanAdReset(state.value))
+const resetCount = computed(() => state.value.resetCount)
 
 // ─── Season clock ───────────────────────────────────────────────────────────
 //
@@ -403,12 +447,16 @@ export default function useBattlePass() {
     isStageUnlocked,
     bpCoinReward,
     bpIsSkinStage,
-    bpIsDiamondStage,
+    bpIsJackpotStage,
     // xp events (called by game-over handlers)
     awardCampaignWin,
     awardLeaderboardWin,
     awardLoss,
     // claiming
-    claimStage
+    claimStage,
+    // rewarded-ad reset of a full pass
+    canAdReset,
+    resetCount,
+    resetPassByAd
   }
 }

@@ -45,7 +45,7 @@ const setupScene = () => {
   const npcCfgB: SpinnerConfig = { topPartId: 'triangle', bottomPartId: 'speedy' }
 
   // 5-second spawn cadence (vs production 10–15s) so testers see crates fast.
-  initGame([playerCfg], [npcCfgA, npcCfgB], false, 'default', 0, true, [5000, 5000])
+  initGame([playerCfg], [npcCfgA, npcCfgB], false, 'default', true, [5000, 5000])
 
   // Drop both NPCs into a slow drift so they wander through powerups
   // without needing the turn machinery.

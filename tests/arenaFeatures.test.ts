@@ -245,7 +245,7 @@ const start = async (layout: number, towers: boolean, seed = 0x7e44a1, mathSeed 
   rs = mathSeed
   frameClock = 1000
   const e = game.useSpinnerGame()
-  e.initGame(PLAYER, ENEMY, false, 'default', 0, false, undefined, null, 'circle',
+  e.initGame(PLAYER, ENEMY, false, 'default', false, undefined, null, 'circle',
     { seed, firstTurn: 'player', terrain: { layout, towers } })
   e.startMatch()
   return { game, e }
@@ -264,8 +264,10 @@ describe('engine — every new feature kind ends the turn', () => {
   const cases: [string, number, (t: TerrainLayout) => { x: number; y: number }][] = [
     ['leaf arrow', 9, t => t.arrows[0]!],
     ['honey', 11, t => t.honey[0]!],
-    ['mushroom cap', 4, t => t.mushrooms[0]!],
-    ['log', 5, t => logClosest(t.logs[0]!, 0, 15)]
+    // obstacles are rare (solidBudgetFor): 17 keeps a mirrored mushroom pair,
+    // 31 one side log
+    ['mushroom cap', 17, t => t.mushrooms[0]!],
+    ['log', 31, t => logClosest(t.logs[0]!, 0, 15)]
   ]
   for (const [name, layout, target] of cases) {
     for (const pull of [0.35, 1]) {

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isGamePaused } from '@/use/useGamePause'
 import { isLowQuality } from '@/use/useQuality'
+import FlatRays from '@/components/atoms/FlatRays.vue'
 import {
   BOSS_DEFEATED_SKIP_AFTER_MS,
   BOSS_DEFEATED_TOTAL_MS,
@@ -114,7 +115,14 @@ onUnmounted(() => {
     @pointerdown="onTap"
   )
     div.boss-defeated__vignette.absolute.inset-0.pointer-events-none(aria-hidden="true")
+    //- Flat sun wedges burst out behind the slash as the title lands (#UX1c:
+    //- replaces the striped band texture). Static on low quality.
+    div.boss-defeated__rays.absolute(aria-hidden="true")
+      FlatRays.w-full.h-full(:delay="420" :still="isLowQuality" :count="18" :spin="false")
     div.boss-defeated__band.absolute.inset-x-0.pointer-events-none(aria-hidden="true")
+    //- Twinkles around the title once it has landed (delays in the style).
+    div.boss-defeated__sparkles.absolute.inset-0.pointer-events-none(v-if="!isLowQuality" aria-hidden="true")
+      span.ui-sparkle(v-for="n in 6" :key="n" :class="['bd-sp-' + n, { 'ui-sparkle--sun': n % 2 === 0 }]")
     div.boss-defeated__row.relative.w-full.flex.items-center.justify-center(ref="rowRef")
       //- Invisible measuring copies at the BASE size: the whole phrase and,
       //- for the two-line fallback, each balanced half.
@@ -175,34 +183,80 @@ $track: 0.04em
   // One line: 2.1em tall; each extra line adds its 1.05em line box.
   height: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)))
   margin-top: calc(var(--bd-size) * (1.05 + 1.05 * var(--bd-lines)) / -2)
-  // A tilted berry slash across the screen with hard diagonal stripes and a
-  // sun edge underneath — a finisher stamp, not a ribbon. The tilt is the
-  // individual 'rotate' property so the keyframes' scale stays separate.
+  // A tilted berry slash across the screen — a finisher stamp, not a ribbon.
+  // #UX1c finish (no stripes): a flat TWO-TONE split (berry over a deeper
+  // berry lower half, one hard edge), bold hard bevel lines inside both
+  // edges, a sun edge and a navy drop underneath. The tilt is the individual
+  // 'rotate' property so the keyframes' scale stays separate.
   left: -6%
   right: -6%
   rotate: -3deg
   background-color: var(--color-berry-500)
-  background-image: var(--ui-stripes)
+  background-image: linear-gradient(180deg, transparent 0 56%, var(--color-berry-600) 56%)
   border-top: 4px solid var(--color-ink)
   border-bottom: 4px solid var(--color-ink)
   box-shadow: inset 0 4px 0 var(--color-berry-300), inset 0 -6px 0 var(--color-berry-700), 0 6px 0 var(--color-sun-400), 0 10px 0 var(--color-ink)
   transform-origin: 50% 50%
   animation: bd-band $total cubic-bezier(0.2, 0.8, 0.2, 1) both
 
-  // Stitched seams along the ribbon (plush motif).
+  // Hard inner bevel lines along both edges (solid, not stitched).
   &::before, &::after
     content: ''
     position: absolute
     left: 0
     right: 0
-    height: 0
-    border-top: 2px dashed rgba(255, 255, 255, 0.6)
+    height: 3px
 
   &::before
-    top: 10%
+    top: 9%
+    background-color: rgba(255, 255, 255, 0.4)
 
   &::after
-    bottom: 10%
+    bottom: 11%
+    background-color: var(--color-berry-700)
+
+// Rays: a square centred on the slash, wider than the screen.
+.boss-defeated__rays
+  left: 50%
+  top: 50%
+  width: 150vmax
+  height: 150vmax
+  margin-left: -75vmax
+  margin-top: -75vmax
+  animation: bd-fade $total ease-out both
+
+// Twinkles around the title: they wait for the landing (≈0.6 s), then loop.
+.boss-defeated__sparkles
+  animation: bd-fade $total ease-out both
+
+.boss-defeated__sparkles .ui-sparkle
+  --sp-size: clamp(1rem, 4.5vmin, 2.2rem)
+  animation-duration: 1.8s
+
+.bd-sp-1
+  left: 14%
+  top: 30%
+  --sp-delay: 0.55s
+.bd-sp-2
+  left: 26%
+  top: 64%
+  --sp-delay: 0.85s
+.bd-sp-3
+  left: 47%
+  top: 24%
+  --sp-delay: 1.15s
+.bd-sp-4
+  left: 63%
+  top: 68%
+  --sp-delay: 0.7s
+.bd-sp-5
+  left: 80%
+  top: 30%
+  --sp-delay: 1s
+.bd-sp-6
+  left: 88%
+  top: 60%
+  --sp-delay: 1.3s
 
 // Invisible twin at the BASE size with the FINAL tracking — the measurement.
 .boss-defeated__measure

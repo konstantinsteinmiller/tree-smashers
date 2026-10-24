@@ -21,6 +21,45 @@
 import { prependBaseUrl } from '@/utils/function'
 import { FX } from '@/use/useQuality'
 import { coinArtFailed, coinArtSrc, markCoinArtFailed } from '@/use/coinArt'
+import { playUiSfx } from '@/use/uiSfx'
+
+// ─── Landing feedback (#UX1b) ───────────────────────────────────────────────
+//
+// Every particle that reaches its target plays a soft `tick` whose pitch
+// rises with the arrival order (the uiSfx throttle turns a 20-coin shower
+// into ~7 ticks, never a pile-up), and — when the target is the HUD coin
+// badge — tells the badge, so its number counts WHILE the coins land instead
+// of before they fly (see CoinBadge.vue).
+
+/** What the HUD coin badge registers so bursts aimed at it can drive it. */
+export interface CoinBadgeLandingHooks {
+  /** The badge root; a burst whose target is this element (or inside it) lands on the badge. */
+  el: HTMLElement
+  /** A coin burst is on its way: first and last arrival, ms from now. */
+  coinsInbound: (firstMs: number, lastMs: number) => void
+  /** One particle landed (`k` of `n`, 1-based) — a coin or a diamond. */
+  landed: (k: number, n: number, variant: CoinExplosionVariant) => void
+}
+
+let badgeHooks: CoinBadgeLandingHooks | null = null
+
+/** CoinBadge registers on mount; returns the unregister. */
+export const registerCoinBadge = (hooks: CoinBadgeLandingHooks): (() => void) => {
+  badgeHooks = hooks
+  return () => {
+    if (badgeHooks === hooks) badgeHooks = null
+  }
+}
+
+const landsOnBadge = (targetEl: HTMLElement): CoinBadgeLandingHooks | null => {
+  const h = badgeHooks
+  if (!h) return null
+  return h.el === targetEl || h.el.contains(targetEl) || targetEl.contains(h.el) ? h : null
+}
+
+/** Tick pitch for the k-th of n landings: 1 → 1.5 across the shower. */
+export const landingPitch = (k: number, n: number): number =>
+  1 + 0.5 * (n <= 1 ? 1 : (k - 1) / (n - 1))
 
 /** Fallback coin drawing, used only once the painting failed to load. */
 const COIN_SVG =
@@ -79,7 +118,7 @@ const createParticle = (variant: CoinExplosionVariant): HTMLDivElement => {
   el.innerHTML = particleHtml(variant)
   if (variant === 'coin') guardCoinImage(el)
   el.style.cssText =
-    'position:absolute;left:0;top:0;pointer-events:none;z-index:100;will-change:transform,opacity;'
+    'position:absolute;left:0;top:0;pointer-events:none;z-index:120;will-change:transform,opacity;'
   return el
 }
 
@@ -99,8 +138,11 @@ export const particleBudget = (requested: number): number => {
 }
 
 export interface CoinExplosionOptions {
-  /** Element the particles burst out of. */
-  sourceEl: HTMLElement
+  /** Element the particles burst out of (or pass `sourceRect`). */
+  sourceEl?: HTMLElement | null
+  /** A screen rect to burst out of instead of an element (e.g. where the
+   *  gift reveal's prize plate stood). */
+  sourceRect?: DOMRect | null
   /** Element the particles fly toward (e.g. CoinBadge). */
   targetEl: HTMLElement
   /** Number of particles to spawn at full quality (default 20). */
@@ -117,7 +159,8 @@ export interface CoinExplosionOptions {
 export function spawnCoinExplosion(opts: CoinExplosionOptions) {
   const { sourceEl, targetEl, count = 20, burstRadius = 120, variant = 'coin', onArrive } = opts
 
-  const sourceRect = sourceEl.getBoundingClientRect()
+  const sourceRect = opts.sourceRect ?? sourceEl?.getBoundingClientRect()
+  if (!sourceRect) return
   const cx = sourceRect.left + sourceRect.width / 2 - HALF
   const cy = sourceRect.top + sourceRect.height / 2 - HALF
   // The target is a static HUD element, so its position is read once here
@@ -129,7 +172,15 @@ export function spawnCoinExplosion(opts: CoinExplosionOptions) {
   const container = document.getElementById('app') || document.body
   const n = particleBudget(count)
   let firstStagger = MAX_STAGGER_MS
+  let lastStagger = 0
   const start = `translate(${cx}px,${cy}px)`
+  const badge = landsOnBadge(targetEl)
+  let landedCount = 0
+  const onLand = () => {
+    landedCount++
+    playUiSfx('tick', { pitch: landingPitch(landedCount, n) * (variant === 'diamond' ? 1.25 : 1) })
+    badge?.landed(landedCount, n, variant)
+  }
 
   for (let i = 0; i < n; i++) {
     const el = pools[variant].pop() ?? createParticle(variant)
@@ -137,6 +188,7 @@ export function spawnCoinExplosion(opts: CoinExplosionOptions) {
     const distance = 40 + Math.random() * (burstRadius - 40)
     const stagger = Math.random() * MAX_STAGGER_MS
     if (stagger < firstStagger) firstStagger = stagger
+    if (stagger > lastStagger) lastStagger = stagger
     const burst = `translate(${cx + Math.cos(angle) * distance}px,${cy + Math.sin(angle) * distance}px)`
     const total = EXPLODE_MS + stagger + FLY_MS
 
@@ -157,11 +209,20 @@ export function spawnCoinExplosion(opts: CoinExplosionOptions) {
       anim.onfinish = () => {
         releaseParticle(el, variant)
         anim.cancel()
+        onLand()
       }
     } else {
       // No Web Animations (jsdom): keep the node for its lifetime, no motion.
-      setTimeout(() => releaseParticle(el, variant), total)
+      setTimeout(() => {
+        releaseParticle(el, variant)
+        onLand()
+      }, total)
     }
+  }
+
+  if (badge && variant === 'coin') {
+    const first = EXPLODE_MS + (n > 0 ? firstStagger : 0) + FLY_MS
+    badge.coinsInbound(first, EXPLODE_MS + (n > 0 ? lastStagger : 0) + FLY_MS)
   }
 
   if (onArrive) setTimeout(onArrive, EXPLODE_MS + (n > 0 ? firstStagger : 0) + FLY_MS)

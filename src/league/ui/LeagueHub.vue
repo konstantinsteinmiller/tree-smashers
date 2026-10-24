@@ -383,7 +383,7 @@ const onGranted = () => emit('fights-granted')
   gap: 0.6rem
   min-width: 0
 
-// ── Standing: royal plate with flat stripes, the tier accent as a thick top
+// ── Standing: royal plate with a two-tone facet, the tier accent as a thick top
 // edge, and the badge breaking out of the plate's left edge ──
 .lh__standing
   position: relative
@@ -394,7 +394,7 @@ const onGranted = () => emit('fights-granted')
   border-radius: var(--radius-ui-lg)
   border: 3px solid var(--color-ink)
   background-color: var(--color-royal-600)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 6px 0 var(--lh-accent), inset 0 9px 0 var(--color-ink), inset 0 -5px 0 var(--color-royal-800), 0 5px 0 var(--color-ink)
   color: var(--color-ice-50)
 
@@ -481,7 +481,7 @@ const onGranted = () => emit('fights-granted')
     border: 2px solid var(--color-ink)
     border-radius: 0.35rem
     background-color: var(--chip-bg)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 var(--chip-band), 0 3px 0 var(--color-ink)
     transform: skewX(-12deg)
 
@@ -587,7 +587,7 @@ const onGranted = () => emit('fights-granted')
     border: 2px solid var(--color-ink)
     border-radius: 0.35rem
     background-color: var(--color-royal-900)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 -3px 0 var(--color-ink), 0 3px 0 var(--color-ink)
     transform: skewX(-12deg)
 
@@ -614,8 +614,7 @@ const onGranted = () => emit('fights-granted')
   border-radius: var(--radius-ui-lg)
   border: 3px solid var(--color-ice-400)
   background-color: var(--color-ice-200)
-  outline: 2px dashed rgba(35, 56, 168, 0.25)
-  outline-offset: -7px
+  box-shadow: inset 0 3px 0 var(--color-ice-50), inset 0 -4px 0 var(--color-ice-300)
   animation: lh-pulse 1.4s ease-in-out infinite
 
 @keyframes lh-pulse
@@ -640,8 +639,10 @@ const onGranted = () => emit('fights-granted')
   gap: 0.35rem
   padding: 1.4rem 0.8rem
   border-radius: var(--radius-ui-lg)
-  border: 2px dashed var(--color-wood-500)
-  background-color: var(--color-cream-200)
+  // Solid bevelled well (#UX1c: no stitch dashes on hard UI).
+  border: 2px solid var(--color-ice-400)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
   text-align: center
 
 .lh__quietIcon

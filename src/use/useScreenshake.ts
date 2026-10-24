@@ -23,8 +23,11 @@ export const useScreenshake = () => {
         const progress = elapsed / duration
         const currentForce = (force * (1 - progress)) + 4
 
-        const x = (Math.random() - 0.5) * currentForce
-        const y = (Math.random() - 0.5) * currentForce
+        // Whole CSS px only: a fractional translate makes the compositor
+        // resample the canvas, and every hit's shake reads soft / doubled
+        // (render-sharpness rule — blur-probe flagged it on a tree hit).
+        const x = Math.round((Math.random() - 0.5) * currentForce) // vfx-rng
+        const y = Math.round((Math.random() - 0.5) * currentForce) // vfx-rng
 
         shakeStyle.value = {
           transform: `translate(${x}px, ${y}px)`,
@@ -33,10 +36,10 @@ export const useScreenshake = () => {
 
         requestAnimationFrame(shake)
       } else {
-        // Reset position with a slight transition to snap back smoothly
+        // Snap back (an eased return would pass through fractional px).
         shakeStyle.value = {
           transform: 'translate(0px, 0px)',
-          transition: 'transform 0.1s ease-out'
+          transition: 'none'
         }
       }
     }

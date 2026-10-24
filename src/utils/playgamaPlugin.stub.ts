@@ -27,6 +27,7 @@ type MusicControls = { pauseMusic: () => void; continueMusic: () => void }
 export const isPlaygamaSdkActive: Ref<boolean> = ref(false)
 export const isPlaygamaAdsBlocked: Ref<boolean> = ref(false)
 export const isPlaygamaAdShowing: Ref<boolean> = ref(false)
+export const isPlaygamaRewardedSupported: Ref<boolean> = ref(true)
 export const playgamaLocale: Ref<string | null> = ref(null)
 export const playgamaDetectedId: Ref<string | null> = ref(null)
 export const isPlaygamaAudioEnabled: Ref<boolean> = ref(true)

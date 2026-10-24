@@ -12,7 +12,7 @@ import { computed } from 'vue'
  * Press feel (sink into the lip, springy release, ticks) comes from the
  * `.ui-btn` recipe + the global press handler (useUiPress.ts) — nothing to
  * wire here. `variant="brawl"` is the ONE hero CTA per screen: uppercase,
- * thick lip, stripes, shine sweep, and an idle heartbeat on the wrapper.
+ * thick lip, two speed slashes, shine sweep, and an idle heartbeat on the wrapper.
  */
 interface Props {
   label?: string

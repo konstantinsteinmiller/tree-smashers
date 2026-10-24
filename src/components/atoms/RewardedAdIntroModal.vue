@@ -63,6 +63,8 @@ const rewardText = computed(() => {
       return t('rewardedIntro.rewardRespin')
     case 'skinAd':
       return t('rewardedIntro.rewardSkinAd')
+    case 'smasherAd':
+      return t('rewardedIntro.rewardSmasherAd')
     case 'fights':
       // League top-up (placement `league_fights`): extra ranked fights today.
       return t('rewardedIntro.rewardFights', { count }, count)
@@ -94,7 +96,7 @@ const rewardText = computed(() => {
         div.absolute.inset-0(class="bg-[var(--ui-backdrop)]")
 
         //- Card
-        div.ui-panel.ui-stitch-dark.ui-pop-in.relative.w-full.max-w-md.text-center(
+        div.ui-panel.ui-pop-in.relative.w-full.max-w-md.text-center(
           class="p-6 !border-4 !border-ink shadow-[0_6px_0_var(--color-ink)]"
           @click.stop
         )

@@ -79,7 +79,7 @@ const { t, n } = useI18n()
 
 .ltl__row--podium
   border: 3px solid var(--color-ink)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.5), inset 0 -4px 0 rgba(22, 26, 64, 0.18), 0 3px 0 var(--color-ink)
 
 .ltl__row--p1

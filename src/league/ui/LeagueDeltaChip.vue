@@ -84,7 +84,7 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
 <style scoped lang="sass">
 // Angled tag (a parallelogram, not a pill): the plate is skewed, the number
 // stays upright. It SLAMS in (big → overshoot → settle) while the number
-// counts, each step a tiny pitched tick. Hard ink edge + drop, flat stripes.
+// counts, each step a tiny pitched tick. Hard ink edge + drop, two-tone facet.
 .ldc
   --ldc-bg: var(--color-royal-500)
   --ldc-lip: var(--color-royal-300)
@@ -110,7 +110,7 @@ const aria = computed(() => t('league.lp', { n: signed(value.value) }))
     border: 2px solid var(--color-ink)
     border-radius: 0.35rem
     background-color: var(--ldc-bg)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 2px 0 var(--ldc-lip), inset 0 -3px 0 var(--ldc-band), 0 3px 0 var(--color-ink)
     transform: skewX(-12deg)
 

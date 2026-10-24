@@ -53,8 +53,11 @@ describe('boss art — registry', () => {
     for (const boss of Object.keys(BOSS_ART) as BadgedBossId[]) {
       const d = DRAWABLES.find((x: { key: string }) => x.key === `badge/${boss}`)
       expect(d, boss).toBeTruthy()
-      expect(bossBadgeFile(boss)).toBe(d.target)
-      expect(bossBadgeImgPathForSkin(BOSS_ART[boss].skin)).toContain(d.target)
+      // the procedural crest bake, or — once tools/badge-icons has painted it — the toy-box repaint
+      const painted = `images/boss-badges/painted-boss-${BOSS_ART[boss].badgeFile}_`
+      const file = bossBadgeFile(boss)
+      expect(file === d.target || file.startsWith(painted), file).toBe(true)
+      expect(bossBadgeImgPathForSkin(BOSS_ART[boss].skin)).toContain(file)
     }
     expect(bossBadgeImgPathForSkin('boulder')).toBeNull()
   })

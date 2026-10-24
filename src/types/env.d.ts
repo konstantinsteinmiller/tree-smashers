@@ -17,5 +17,7 @@ interface WavedashSDK {
 declare global {
   interface Window {
     WavedashJS: Promise<WavedashSDK>;
+    /** Current host: the SDK singleton itself. */
+    Wavedash?: WavedashSDK;
   }
 }

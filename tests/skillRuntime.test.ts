@@ -295,7 +295,7 @@ describe('outgoingSkillMul (Lucky Edge → Momentum → clamp)', () => {
     expect(a.skills!.stacks).toBe(0)
   })
 
-  it('Momentum: wall/bouncer rebounds stack during own launch only, cap 3, reset on beginLaunch', () => {
+  it('Momentum: wall/island rebounds stack during own launch only, cap 3, reset on beginLaunch', () => {
     const a = bearer('player', ['momentum'], 10)
     onOwnBounce(a, 999)
     expect(a.skills!.stacks).toBe(0)

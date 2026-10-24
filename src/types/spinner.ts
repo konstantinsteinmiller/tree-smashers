@@ -79,7 +79,7 @@ export interface SpinnerConfig {
    *  on the blade itself. NPC blades without it look like the smasher of their
    *  parts (`smasherForParts`) and fight on their part stats only. */
   smasherId?: SmasherId
-  /** Smasher level (1 … SMASHER_MAX_LEVEL); only meaningful with smasherId. */
+  /** Smasher level (1, 2, 3 …; no gameplay cap — clamped only to SMASHER_LEVEL_SANITY_MAX); only meaningful with smasherId. */
   level?: number
   topPartId: TopPartId
   bottomPartId: BottomPartId
@@ -147,10 +147,11 @@ export interface SpinnerState {
    *  any armour is in play). */
   hx?: number
   hy?: number
-  /** Disc radius multiplier of the smasher (absent = 1). */
+  /** Radius multiplier of the blade: the smasher's catalog disc × its side's
+   *  team-size multiplier (src/data/teamSize.ts); absent = 1. */
   disc?: number
   /** Directional armour (damage-taken multipliers); absent = neutral. */
-  armor?: { front: number; back: number }
+  armor?: { front: number; back: number; look: 'blade' | 'bulwark' }
   // ── Boss ability state ────────────────────────────────────────────────
   /** Blades sharing a groupId treat each other as allies (no FF damage). */
   groupId?: number
@@ -250,17 +251,7 @@ export interface Powerup {
   radius: number
 }
 
-// ─── Meteor Shower Particle ──────────────────────────────────────────────────
-
-export interface MeteorParticle {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  life: number
-  maxLife: number
-  hue: number
-}
+// (The meteor shower's pooled state lives in src/use/meteorShower.ts.)
 
 // ─── Spritesheet Animation ──────────────────────────────────────────────────
 
@@ -284,6 +275,9 @@ export type GamePhase =
   | 'idle'
   | 'tap_to_start'
   | 'ad_break'
+  // The VS screen before the meteor intro (SpinnerArena-managed, like
+  // 'ad_break'; src/use/vsIntro.ts). The engine treats it as idle.
+  | 'vs_intro'
   | 'meteor_intro'
   | 'deciding_turn'
   | 'player_turn'

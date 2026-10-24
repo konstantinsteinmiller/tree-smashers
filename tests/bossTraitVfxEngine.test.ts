@@ -85,7 +85,7 @@ const until = (cond: () => boolean, max = 60 * 30) => {
 
 const sandbox = (p: SpinnerConfig[], n: SpinnerConfig[]): Engine => {
   const e = useSpinnerGame()
-  e.initGame(p, n, false, 'boss', 0, false, undefined, null, 'circle', { seed: 99 })
+  e.initGame(p, n, false, 'boss', false, undefined, null, 'circle', { seed: 99 })
   e.startPhysics()
   return e
 }

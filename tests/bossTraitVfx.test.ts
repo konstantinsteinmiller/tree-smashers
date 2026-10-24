@@ -139,6 +139,11 @@ class RecCtx {
     this.hit('drawImage')
   }
 
+  lineDashOffset = 0
+
+  setLineDash() {
+  }
+
   fillText() {
     this.hit('fillText')
   }
@@ -348,7 +353,7 @@ describe('boss trait vfx — FX.low fallback set and primitive budget', () => {
     const ctx = new RecCtx()
     renderFrame(ctx, fx, c, 0, false)
     expect(ctx.primitives()).toBeLessThanOrEqual(BOSS_TRAIT_MAX_PRIMITIVES)
-    expect(ctx.counts.drawImage).toBe(3 + 2) // 3 auras + 2 ice shells
+    expect(ctx.counts.drawImage).toBe(2) // 2 ice shells (the carrier auras are flat dashed rings now)
     const per = (fn: (x: CanvasRenderingContext2D) => void) => {
       const r = new RecCtx()
       fn(asCtx(r))
@@ -437,7 +442,7 @@ describe('boss trait vfx — FX.low fallback set and primitive budget', () => {
     renderIceShell(asCtx(ctx), fx, c.victims[0]!, 0, false)
     renderBossAura(asCtx(ctx), fx, c.carriers[0]!, 0, false)
     expect(ctx.counts.drawImage ?? 0).toBe(0)
-    expect(ctx.counts.stroke).toBe(1)
+    expect(ctx.counts.stroke).toBe(2) // hexagon shell + the flat carrier ring (needs no canvas)
   })
 })
 

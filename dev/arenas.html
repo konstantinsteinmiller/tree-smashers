@@ -4,7 +4,7 @@
   clearing shape, floor theme, decor, features, towers and the spawn rows
   (largest disc). Also the reference the paint pipeline works from.
 
-    pnpm dev   →   http://localhost:5173/dev/arenas.html[?id=12][&spawns=0]
+    pnpm dev   →   http://localhost:5173/dev/arenas.html[?id=12][&spawns=0][&cell=390][&art=procedural]
 
   Vite serves every .html under the root in dev; a production build only
   bundles index.html, so nothing here ships.
@@ -14,6 +14,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tree Smashers — arenas (dev)</title>
+  <!-- painted art URLs are root-relative in dev (prependBaseUrl) -->
+  <base href="/">
+  <!-- ?art=procedural shows the vector fallback -->
   <style>
       html, body { margin: 0; background: #2b2420; color: #f3ead8; font: 13px system-ui, sans-serif; }
       #root { padding: 12px; }

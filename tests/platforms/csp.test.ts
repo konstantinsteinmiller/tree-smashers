@@ -269,4 +269,25 @@ describe('buildCsp', () => {
       }
     })
   })
+
+  describe('wavedash (leaderboard)', () => {
+    // The Wavedash SDK runs in OUR document, so our CSP governs it. Its
+    // backend is Convex behind `convex-api.wavedash.com` (https + wss), the
+    // board writes go there, and the Worker must stay reachable for the
+    // cross-portal board. No new origin is needed — pin that it stays so.
+    const env = {
+      VITE_APP_WAVEDASH: 'true',
+      VITE_LEADERBOARD_URL: 'https://leaderboard-tree-smashers.hyperg8.workers.dev'
+    }
+    const connect = (): string[] => buildCsp(env).match(/connect-src ([^;]+)/)![1]!.split(/\s+/)
+
+    it('lets the SDK reach the Wavedash backend over https and wss', () => {
+      expect(connect()).toContain('https://*.wavedash.com')
+      expect(connect()).toContain('wss://*.wavedash.com')
+    })
+
+    it('still allows the global leaderboard Worker', () => {
+      expect(connect()).toContain('https://leaderboard-tree-smashers.hyperg8.workers.dev')
+    })
+  })
 })

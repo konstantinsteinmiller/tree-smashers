@@ -66,7 +66,7 @@ export interface StaticChargeParams {
 }
 
 /** Bank Shot: the first enemy hit of a launch after a rebound (wall, island,
- *  bumper, tower) deals +pct. */
+ *  tower) deals +pct. */
 export interface BankShotParams {
   pct: number
 }

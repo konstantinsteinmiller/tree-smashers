@@ -336,7 +336,7 @@ export const resolveWall = (
 /**
  * Pull a point back inside the arena so a circle of `radius` (plus optional
  * `extra` clearance) fits. No-op when already inside. Used for placing
- * bouncers / power-ups / spawned blades on non-circular floors.
+ * power-ups / spawned blades on non-circular floors.
  */
 export const clampInside = (
   shape: ArenaShape,

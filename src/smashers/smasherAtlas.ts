@@ -20,7 +20,8 @@ import {
   DISC_SQUASH, DISC_THICKNESS, FRAME_BOX, FRAME_H, FRAME_W, YAW_COLS, YAW_FRAMES, drawSmasher, frameYaw, mixHex
 } from '@/smashers/smasherRig'
 import { lookKey, smasherForSkin, smasherPalette } from '@/smashers/smasherSkins'
-import { PAINTED_SMASHERS } from '@/smashers/paintedSmashers'
+import { PAINTED_SMASHERS, type PaintedSmasherSheet } from '@/smashers/paintedSmashers'
+import { PAINTED_PORTRAITS, type PaintedPortrait } from '@/smashers/paintedPortraits'
 
 const BUCKETS = [12, 16, 20, 26, 32, 40, 50, 64, 80, 100, 128, 160, 200]
 const COLS = YAW_COLS
@@ -130,45 +131,102 @@ interface PaintedSheet {
   ready: boolean
   cell: number
   ppu: number
+  /** Yaw frames this image holds, in cell order (null = all 32 on the 8 × 4 sheet). */
+  frames: readonly number[] | null
 }
 const painted = new Map<SmasherId, PaintedSheet | null>()
+const paintedHi = new Map<SmasherId, PaintedSheet | null>()
 
-const paintedSheet = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null => {
-  if (PAINTED_OFF || boss || lookKey(id, modelId, false) !== `${id}||`) return null
-  let p = painted.get(id)
+/** Pixels per model unit of a painted cell on the rig's lattice (FRAME_BOX at 0.94 of a cell). */
+export const paintedLatticePpu = (cell: number): number => (cell * 0.94) / Math.max(FRAME_W, FRAME_H)
+
+/**
+ * The hi-res portrait of `id` (tools/smasher-sheets/portraits.mjs), only while
+ * the sheet it was cut with still ships: no sheet line, or a re-cut sheet (a
+ * different hash), and the portrait is ignored — it can never outlive or
+ * disagree with the painted sheet the battle draws.
+ */
+export const paintedPortraitFor = (
+  id: string,
+  sheets: Readonly<Record<string, PaintedSmasherSheet>> = PAINTED_SMASHERS,
+  portraits: Readonly<Record<string, PaintedPortrait>> = PAINTED_PORTRAITS
+): PaintedPortrait | null => {
+  const p = portraits[id]
+  const s = sheets[id]
+  return p && s && p.sheet === s.v ? p : null
+}
+
+// Redraw hooks: a portrait drawn before its painting decoded asks to be redrawn.
+const artListeners = new Set<() => void>()
+/** Call `cb` whenever a painted sheet / portrait finishes loading. Returns the unsubscribe. */
+export const onPaintedArtReady = (cb: () => void): (() => void) => {
+  artListeners.add(cb)
+  return () => { artListeners.delete(cb) }
+}
+
+const noImages = () => typeof Image === 'undefined' || (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))
+
+const loadPainted = (
+  cache: Map<SmasherId, PaintedSheet | null>, id: SmasherId,
+  meta: { file: string, cell: number, v: string } | null | undefined, dir: string, frames: readonly number[] | null
+): PaintedSheet | null => {
+  let p = cache.get(id)
   if (p === undefined) {
-    const meta = PAINTED_SMASHERS[id]
-    if (!meta || typeof Image === 'undefined' || (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))) {
-      painted.set(id, null)
+    if (!meta || noImages()) {
+      cache.set(id, null)
       return null
     }
     const img = new Image()
-    const sheet: PaintedSheet = { img, ready: false, cell: meta.cell, ppu: (meta.cell * 0.94) / Math.max(FRAME_W, FRAME_H) }
+    const sheet: PaintedSheet = { img, ready: false, cell: meta.cell, ppu: paintedLatticePpu(meta.cell), frames }
     img.decoding = 'async'
     img.onload = () => {
       sheet.ready = true
       for (const k of [...portraits.keys()]) if (k.startsWith(`${id}|`)) portraits.delete(k)
+      for (const cb of [...artListeners]) cb()
     }
-    img.onerror = () => painted.set(id, null)
-    img.src = prependBaseUrl(`images/smashers/${meta.file}?v=${meta.v}`)
-    painted.set(id, sheet)
+    img.onerror = () => cache.set(id, null)
+    img.src = prependBaseUrl(`images/smashers/${dir}${meta.file}?v=${meta.v}`)
+    cache.set(id, sheet)
     p = sheet
   }
   return p && p.ready ? p : null
 }
 
-/** Start fetching the painted sheets of these smashers (e.g. both teams before a battle). */
-export const preloadPaintedSmashers = (ids: readonly SmasherId[]) => {
-  for (const id of ids) paintedSheet(id, undefined, false)
+const paintedLook = (id: SmasherId, modelId: string | undefined, boss: boolean) =>
+  !PAINTED_OFF && !boss && lookKey(id, modelId, false) === `${id}||`
+
+const paintedSheet = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null =>
+  paintedLook(id, modelId, boss) ? loadPainted(painted, id, PAINTED_SMASHERS[id], '', null) : null
+
+/** The hi-res portrait frames (VS screen, DOM portraits), when loaded and still matching the shipped sheet. */
+const paintedPortrait = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null => {
+  if (!paintedLook(id, modelId, boss)) return null
+  const meta = paintedPortraitFor(id)
+  return loadPainted(paintedHi, id, meta, 'portraits/', meta ? meta.frames : null)
+}
+
+/** Start fetching the painted sheets (and hi-res portraits) of these smashers (e.g. both teams before a battle). */
+export const preloadPaintedSmashers = (ids: readonly SmasherId[], withPortraits = true) => {
+  for (const id of ids) {
+    paintedSheet(id, undefined, false)
+    if (withPortraits) paintedPortrait(id, undefined, false)
+  }
+}
+
+const hasFrame = (p: PaintedSheet, frame: number) => {
+  const f = ((frame % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
+  return !p.frames || p.frames.includes(f)
 }
 
 /** Draw the painted frame with the disc centre at (x, y); `scale` css px per model unit. */
 const drawPainted = (ctx: CanvasRenderingContext2D, p: PaintedSheet, frame: number, x: number, y: number, scale: number) => {
   const f = ((frame % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
   const c = p.cell
+  const idx = p.frames ? Math.max(0, p.frames.indexOf(f)) : f
+  const cols = p.frames ? p.frames.length : COLS
   const k = scale / p.ppu
   const mid = (FRAME_BOX.top + FRAME_BOX.bottom) / 2
-  ctx.drawImage(p.img, (f % COLS) * c, Math.floor(f / COLS) * c, c, c,
+  ctx.drawImage(p.img, (idx % cols) * c, Math.floor(idx / cols) * c, c, c,
     x - (c / 2) * k, y - (c / 2 - mid * p.ppu) * k, c * k, c * k)
 }
 
@@ -345,7 +403,8 @@ export const smasherPortraitUrl = (smasherId?: SmasherId, modelId?: string, boss
   const ox = PORTRAIT_PX / 2
   const oy = PORTRAIT_PX / 2 - ((FRAME_BOX.top + FRAME_BOX.bottom) / 2) * ppu
   drawSmasherDisc(ctx, ox, oy, ppu, 0.4, '#e0b04a', 1)
-  const p = paintedSheet(id, modelId, boss)
+  const hi = paintedPortrait(id, modelId, boss)
+  const p = hi && hasFrame(hi, PORTRAIT_FRAME) ? hi : paintedSheet(id, modelId, boss)
   if (p) drawPainted(ctx, p, PORTRAIT_FRAME, ox, oy, ppu)
   else drawSmasher(ctx, id, smasherPalette(id, modelId), frameYaw(PORTRAIT_FRAME), ox, oy, ppu, { boss })
   let url: string
@@ -356,4 +415,126 @@ export const smasherPortraitUrl = (smasherId?: SmasherId, modelId?: string, boss
   }
   portraits.set(key, url)
   return url
+}
+
+// ─── Large portraits (VS intro) ──────────────────────────────────────────────
+//
+// The VS screen shows each smasher big — up to ~270 css px wide, on a 3×
+// phone ~800 device px — far above the battle sheets' 64 ppu. Art, best first:
+//  1. the hi-res PORTRAIT frames (portraits.mjs: the paintings' own ~254 px
+//     cells, ~78 ppu) — at full layout size when they have the device px,
+//  2. the battle SHEET frame, same rule,
+//  3. otherwise the painting with the most px is drawn SMALLER — at exactly
+//     its own ppu / dpr, i.e. 1:1 device px, never upscaled — as long as that
+//     keeps ≥ PORTRAIT_MIN_FIT of the layout size (a 3× phone card needs
+//     ~140–160 device ppu at a 168 css card: the portrait fits at ~0.5–0.6). Showing the
+//     painted look a bit smaller beats falling back to the rig: the rig is a
+//     different drawing from the one the battle then shows;
+//  4. below that, the rig as vectors straight into the (css × dpr) canvas.
+// The disc shrinks with the character, centred in the same box. Never drawn
+// below the display's own pixel ratio.
+
+/** Smallest fraction of the layout size the painted art may shrink to before the rig takes over. */
+export const PORTRAIT_MIN_FIT = 0.4
+
+export interface PortraitArtChoice<T> {
+  art: T
+  /** Drawn size / layout size (1, or < 1 when the art would otherwise be upscaled). */
+  fit: number
+}
+
+/**
+ * Pick the art for a portrait needing `cssPpu × deviceScale` device px per
+ * unit from `candidates` (best first; null = not available): the first with
+ * enough px at full size, else the one with the most px shrunk to 1:1 if that
+ * keeps ≥ PORTRAIT_MIN_FIT, else null (draw the rig). Pure.
+ */
+export const choosePortraitArt = <T extends { ppu: number }>(
+  candidates: readonly (T | null | undefined)[], cssPpu: number, deviceScale: number
+): PortraitArtChoice<T> | null => {
+  const need = cssPpu * deviceScale
+  const avail = candidates.filter((c): c is T => !!c)
+  for (const c of avail) if (c.ppu >= need) return { art: c, fit: 1 }
+  let best: T | null = null
+  for (const c of avail) if (!best || c.ppu > best.ppu) best = c
+  if (!best || need <= 0) return null
+  const fit = best.ppu / need
+  return fit >= PORTRAIT_MIN_FIT ? { art: best, fit } : null
+}
+
+export interface PortraitDraw {
+  kind: 'painted' | 'rig'
+  /** Which art: the hi-res portrait, the battle sheet, or the rig. */
+  art: 'portrait' | 'sheet' | 'rig'
+  /** Drawn size / layout size. */
+  fit: number
+}
+
+/**
+ * Draw a smasher standing on its disc, disc centre at (x, y), `ppu` css px per
+ * model unit, on a context already scaled by `deviceScale`. When the painted
+ * art is drawn smaller (fit < 1) the whole portrait shrinks about the centre
+ * of its frame box. Returns what was drawn (for the QA seam).
+ */
+export const drawSmasherPortrait = (
+  ctx: CanvasRenderingContext2D, id: SmasherId, modelId: string | undefined, boss: boolean,
+  frame: number, x: number, y: number, ppu: number, deviceScale: number, rim: string
+): PortraitDraw => {
+  const hi = paintedPortrait(id, modelId, boss)
+  const pick = choosePortraitArt([hi && hasFrame(hi, frame) ? hi : null, paintedSheet(id, modelId, boss)], ppu, deviceScale)
+  const fit = pick ? pick.fit : 1
+  const mid = (FRAME_BOX.top + FRAME_BOX.bottom) / 2
+  const u = ppu * fit
+  y += mid * (ppu - u)
+  const sq = DISC_SQUASH
+  const side = u * DISC_THICKNESS * Math.sqrt(1 - sq * sq)
+  ctx.fillStyle = 'rgba(20, 12, 6, 0.28)'
+  ctx.beginPath()
+  ctx.ellipse(x + u * 0.1, y + side + u * 0.12, u * 1.06, u * sq * 1.06, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = mixHex(rim, '#1a0e08', 0.45)
+  ctx.strokeStyle = '#2a1a10'
+  ctx.lineWidth = Math.max(1, u * 0.06)
+  ctx.beginPath()
+  ctx.ellipse(x, y + side, u * 0.97, u * sq * 0.97, 0, 0, Math.PI)
+  ctx.lineTo(x - u * 0.97, y)
+  ctx.ellipse(x, y, u * 0.97, u * sq * 0.97, 0, Math.PI, 0, true)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(1, sq)
+  ctx.rotate(0.4)
+  paintDiscTop(ctx, 0, u, rim)
+  ctx.restore()
+  if (pick) {
+    drawPainted(ctx, pick.art, frame, x, y, u)
+    return { kind: 'painted', art: pick.art === hi ? 'portrait' : 'sheet', fit }
+  }
+  drawSmasher(ctx, id, smasherPalette(id, modelId), frameYaw(frame), x, y, u, { boss })
+  return { kind: 'rig', art: 'rig', fit: 1 }
+}
+
+/**
+ * Pre-draw the not-yet-drawn yaw frames of the battle sheets made most
+ * recently (the looks on the board), until `budgetMs` of this call is spent.
+ * The battle draws a frame lazily the first time a smasher turns to it; the
+ * VS screen calls this in its quiet hold so the fight's first spins never
+ * pay for it. Returns true while frames are left.
+ */
+export const warmSmasherSheets = (budgetMs: number, maxSheets = 12): boolean => {
+  const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  const recent = [...sheets.values()].filter((s): s is Sheet => s !== null).slice(-maxSheets).reverse()
+  // `drawn` is an int32 bitmask of the 32 frames (all set = 0xffffffff).
+  const full = YAW_FRAMES >= 32 ? 0xffffffff : 2 ** YAW_FRAMES - 1
+  for (const s of recent) {
+    if ((s.drawn >>> 0) === full) continue
+    for (let f = 0; f < YAW_FRAMES; f++) {
+      if (now() - t0 >= budgetMs) return true
+      ensureFrame(s, f)
+    }
+  }
+  return false
 }

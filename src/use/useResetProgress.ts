@@ -66,6 +66,10 @@ const KEEP_KEYS = new Set<string>([
   'smashers_selected_skins',
   'smashers_skin_picker_opened',
   'smashers_skin_ad_progress',
+  // Premium smashers unlocked with a rewarded ad or coins (premiumSmashers.ts):
+  // paid for like a skin. After a reset they rejoin the roster on reaching
+  // their stage again, without a second ad.
+  'smashers_premium_smashers',
   'smashers_player_team',
   'smashers_bg_skins_owned',
   'smashers_bg_skin_selected',

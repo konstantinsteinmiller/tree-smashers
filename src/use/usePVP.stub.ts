@@ -21,19 +21,33 @@
 // here until it is mirrored. No PeerJS, STUN/TURN or share-link literal
 // anywhere in this file.
 
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, shallowRef, type Ref } from 'vue'
 import type usePVPReal from './usePVP'
-import type { PvPGameConfig, PvPMessage, PvPRole, PvPStatus } from './usePVP'
+import type { LocalPvpProfile, PvPGameConfig, PvPMatchKind, PvPMessage, PvPRole, PvPStatus } from './usePVP'
 import type { SpinnerConfig } from '@/types/spinner'
 import type { SkillLoadout } from '@/types/skills'
+import type { BotOpponent, OpponentProfile } from '@/use/pvpBots'
+import type { CrazyInvite } from '@/use/crazyMultiplayer'
+import { PVP_DEFAULT_TEAM_SIZE, type TeamSize } from '@/data/teamSize'
 
-export type { PvPGameConfig, PvPMessage, PvPRole, PvPStatus } from './usePVP'
+export type { LocalPvpProfile, PvPGameConfig, PvPMatchKind, PvPMessage, PvPRole, PvPStatus, QuickMatchOptions } from './usePVP'
+
+const noop = (): void => {
+}
 
 export const whenPvpSkillsReady = (): Promise<void> => Promise.resolve()
 export const isPvpEnabled = false
-export const PVP_PROTOCOL_VERSION = 3
+export const PVP_PROTOCOL_VERSION = 5
 export const currentPvpRole = (): PvPRole => null
 export const pendingInviteCode: Ref<string | null> = ref(null)
+export const pendingInviteHost: Ref<string | null> = ref(null)
+export const revealBots = computed(() => false)
+export const setLocalPvpProfile = (_p: LocalPvpProfile): void => {
+}
+export const queueInvite = (_invite: CrazyInvite | null): boolean => false
+export const consumeCrazyInvite = (): boolean => false
+export const startCrazyMultiplayer = (_hooks: { onInstantMultiplayer?: () => void } = {}): (() => void) => noop
+export const quickMatchSlotId = (_teamSize: TeamSize, _slot: number): string => ''
 export const receivePvpMessage = (_msg: PvPMessage): void => {
 }
 
@@ -43,7 +57,7 @@ const peerId = ref('')
 const inviteLink = ref('')
 const expirySeconds = ref(0)
 const errorMessage = ref('')
-const gameConfig: Ref<PvPGameConfig> = ref({ arenaType: 'default', teamSize: 1, levelOne: false })
+const gameConfig: Ref<PvPGameConfig> = ref({ arenaType: 'default', teamSize: PVP_DEFAULT_TEAM_SIZE, levelOne: false })
 const hostReady = ref(false)
 const guestReady = ref(false)
 const hostTeam: Ref<SpinnerConfig[]> = ref([])
@@ -51,9 +65,12 @@ const guestTeam: Ref<SpinnerConfig[]> = ref([])
 const hostSkills: Ref<SkillLoadout> = ref([])
 const guestSkills: Ref<SkillLoadout> = ref([])
 const remotePlayerName = ref('')
+const matchKind: Ref<PvPMatchKind> = ref(null)
+const searchElapsedMs = ref(0)
+const opponentProfile: Ref<OpponentProfile | null> = ref(null)
+const joiningFriendName: Ref<string | null> = ref(null)
+const botMatch = shallowRef<BotOpponent | null>(null)
 
-const noop = (): void => {
-}
 
 const usePVP: typeof usePVPReal = () => ({
   status,
@@ -73,8 +90,14 @@ const usePVP: typeof usePVPReal = () => ({
   canShowPvP: computed(() => false),
   bothReady: computed(() => false),
   whatsappShareLink: computed(() => ''),
+  matchKind,
+  searchElapsedMs,
+  opponentProfile,
+  joiningFriendName,
+  botMatch,
 
   pendingInviteCode,
+  pendingInviteHost,
   createLobby: async () => {
   },
   joinLobby: async () => {
@@ -91,7 +114,10 @@ const usePVP: typeof usePVPReal = () => ({
   sendCrazyGamesInvite: noop,
   checkInviteFromUrl: () => null,
   returnToLobby: noop,
-  leavePvP: noop
+  leavePvP: noop,
+  startQuickMatch: noop,
+  cancelQuickMatch: noop,
+  registerBotMatchStart: noop
 })
 
 export default usePVP

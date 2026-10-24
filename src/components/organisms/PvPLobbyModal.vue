@@ -3,9 +3,22 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FModal from '@/components/molecules/FModal.vue'
 import { playUiSfx } from '@/use/uiSfx'
-import usePVP, { type PvPGameConfig } from '@/use/usePVP'
+import usePVP, { revealBots, setLocalPvpProfile, type PvPGameConfig } from '@/use/usePVP'
 import usePvpStats from '@/use/usePvpStats'
-import { ARENA_TYPES, sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
+import useSpinnerCampaign, { ARENA_TYPES, sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
+// The bracket pip borrows only the shared tier palette — never the league's
+// components (a league-off build ships no league marker; leagueFlagPurity).
+import { LEAGUE_TIER_META } from '@/use/leagueTiers'
+import { playerDisplayName } from '@/use/usePlayerIdentity'
+import { unlockedSmashers } from '@/use/useSmashers'
+import {
+  bracketTier,
+  createBotOpponent,
+  rememberBotName,
+  teamDisplayLevel,
+  type BotOpponent,
+  type OpponentProfile
+} from '@/use/pvpBots'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import { getSelectedSkin } from '@/use/useModels'
 import { isSdkActive } from '@/use/useCrazyGames'
@@ -13,7 +26,8 @@ import { isCrazyGamesFullRelease } from '@/use/useMatch'
 // Skills: lazy through the skills gate — null / [] on a skills-off build,
 // where the lobby sends an empty loadout and keeps its plain ready dots.
 import { PvpReadySkillsUi } from '@/skills/skillsGate'
-import { teamConfigs } from '@/use/useSmashers'
+import { fieldTeam, teamConfigs } from '@/use/useSmashers'
+import { PVP_DEFAULT_TEAM_SIZE, TEAM_SIZES, type TeamSize } from '@/data/teamSize'
 import { smasherConfig, smasherLoadout, isSmasherId } from '@/data/smasherCatalog'
 import type { SkillLoadout } from '@/types/skills'
 
@@ -50,14 +64,22 @@ const {
   updateGameConfig,
   startMatch,
   copyInviteLink,
-  sendCrazyGamesInvite,
   leavePvP,
+  matchKind,
+  searchElapsedMs,
+  opponentProfile,
+  joiningFriendName,
+  startQuickMatch,
+  cancelQuickMatch,
 } = usePVP()
 
-const { wins, losses, honor } = usePvpStats()
+const { wins, losses, honor, botSkill } = usePvpStats()
+const { currentStageId } = useSpinnerCampaign()
 
+// Folded out of a CrazyGames build (the env literal): CG invites go through
+// the platform, and no external share target ships there.
 const whatsappShareLink = computed(() => {
-  if (!inviteLink.value) return ''
+  if (import.meta.env.VITE_APP_CRAZY_WEB === 'true' || !inviteLink.value) return ''
   const text = encodeURIComponent(`${t('pvp.shareText')}\n${inviteLink.value}`)
   return `https://wa.me/?text=${text}`
 })
@@ -67,7 +89,7 @@ const whatsappShareLink = computed(() => {
 const { playerTeam } = useSpinnerConfig()
 
 const selectedArena = ref<ArenaType>('default')
-const selectedTeamSize = ref<1 | 2>(1)
+const selectedTeamSize = ref<TeamSize>(PVP_DEFAULT_TEAM_SIZE)
 const levelOne = ref(false)
 const copied = ref(false)
 const codeCopied = ref(false)
@@ -89,6 +111,109 @@ const expiryFormatted = computed(() => {
   const m = Math.floor(expirySeconds.value / 60)
   const s = expirySeconds.value % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+})
+
+// ─── Random search, found card, invite join ──────────────────────────────────
+
+/** CrazyGames full build: the platform's invite system replaces the
+ *  WhatsApp / native share links (no external share targets on CG). */
+const isCrazyInvites = computed(() => isSdkActive.value && isCrazyGamesFullRelease)
+
+/** m:ss for the search timer. */
+const searchElapsedLabel = computed(() => {
+  const total = Math.floor(searchElapsedMs.value / 1000)
+  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, '0')}`
+})
+
+/** Found: a bot's card (status 'found'), or a human pairing from the random
+ *  search before its first match starts (auto-ready, then the host starts). */
+const showFoundCard = computed(() =>
+  opponentProfile.value !== null && (
+    (status.value === 'found' && matchKind.value === 'bot')
+    || (matchKind.value === 'quick' && (status.value === 'lobby' || status.value === 'ready'))
+  ))
+
+/** This player's own card (name from the identity — the CrazyGames username
+ *  when signed in — and the team they would field). */
+const myName = ref('')
+const myProfile = computed<OpponentProfile>(() => {
+  const level = teamDisplayLevel(buildPvpTeam())
+  return { name: myName.value || t('you'), level, tier: bracketTier(level) }
+})
+const refreshMyProfile = async () => {
+  try {
+    myName.value = await playerDisplayName()
+  } catch {
+    myName.value = ''
+  }
+  setLocalPvpProfile({ name: myName.value, level: myProfile.value.level })
+}
+
+/** Monogram avatar colour per name — the same for humans and bots. */
+const AVATAR_TINTS = ['sky', 'berry', 'leaf', 'sun', 'plum', 'royal'] as const
+const avatarTint = (name: string): string => {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_TINTS[h % AVATAR_TINTS.length] as string
+}
+const monogram = (name: string): string => (Array.from(name.trim())[0] ?? '?').toUpperCase()
+
+/** The last bot names shown (never repeated within BOT_RECENT_NAMES). */
+let recentBotNames: string[] = []
+
+/** No human in time: a bot at this player's power (src/use/pvpBots.ts). */
+const createBot = (): BotOpponent | null => {
+  const team = buildPvpTeam()
+  if (!team.length) return null
+  const bot = createBotOpponent({
+    seed: Math.floor(Math.random() * 0x100000000) >>> 0,
+    skill: botSkill.value,
+    playerTeam: team,
+    // Smashers a player around this stage could field (a little ahead).
+    pool: unlockedSmashers(currentStageId.value + 5),
+    levelOne: false,
+    recentNames: recentBotNames
+  })
+  recentBotNames = rememberBotName(recentBotNames, bot.profile.name)
+  return bot
+}
+
+/** Retry target for the failed view ("Try again" re-runs the search). */
+const lastSearchSize = ref<TeamSize | null>(null)
+
+const onFindMatch = () => {
+  lastSearchSize.value = selectedTeamSize.value
+  joiningPeerId.value = ''
+  void refreshMyProfile()
+  startQuickMatch({
+    teamSize: selectedTeamSize.value,
+    teamFor: () => buildPvpTeam(),
+    createBot
+  })
+}
+
+const onCancelSearch = () => {
+  cancelQuickMatch()
+}
+
+const onRetrySearch = () => {
+  if (lastSearchSize.value !== null) selectedTeamSize.value = lastSearchSize.value
+  onFindMatch()
+}
+
+/** Joining a friend's invite (link or CrazyGames). */
+const joiningLabel = computed(() =>
+  joiningFriendName.value ? t('pvp.joiningFriend', { name: joiningFriendName.value }) : t('pvp.joiningMatch'))
+
+/** CrazyGames: the invite link (crazygames.com) was copied for a friend. */
+const inviteSent = ref(false)
+const onCopyCrazyInvite = async () => {
+  if (await copyInviteLink()) {
+    inviteSent.value = true
+  }
+}
+watch(status, (s) => {
+  if (s !== 'waiting') inviteSent.value = false
 })
 
 const isHost = computed(() => role.value === 'host')
@@ -150,7 +275,9 @@ watch(joiningPeerId, (val) => {
 const buildPvpTeam = (): import('@/types/spinner').SpinnerConfig[] => {
   const size = gameConfig.value.teamSize
   const isLvl1 = gameConfig.value.levelOne
-  const team = teamConfigs(playerTeam.value.slice(0, size), (c, i) => getSelectedSkin(c.topPartId, i))
+  // Exactly the lobby's team size: the picks first, padded in catalog
+  // order (a 3v3 lobby works before the campaign opens slot 3).
+  const team = teamConfigs(fieldTeam(playerTeam.value, size), (c, i) => getSelectedSkin(c.topPartId, i))
   return isLvl1 ? team.map(c => smasherConfig(c.smasherId!, 1, c.modelId)) : team
 }
 
@@ -210,6 +337,7 @@ const onCreateLobby = () => {
     teamSize: selectedTeamSize.value,
     levelOne: levelOne.value
   }
+  void refreshMyProfile()
   void createLobby(config)
   joiningPeerId.value = ''
 }
@@ -234,7 +362,7 @@ const onSelectArena = (arena: ArenaType) => {
   }
 }
 
-const onSelectTeamSize = (size: 1 | 2) => {
+const onSelectTeamSize = (size: TeamSize) => {
   if (!isHost.value && status.value === 'lobby') return
   selectedTeamSize.value = size
   if (status.value === 'lobby') {
@@ -301,6 +429,7 @@ const onStartMatch = () => {
 const onClose = () => {
   if (status.value === 'playing') return // can't close during match
   leavePvP()
+  lastSearchSize.value = null
   emit('close')
 }
 
@@ -314,6 +443,7 @@ watch(gameConfig, (cfg) => {
 // Auto-read clipboard when modal opens in idle state.
 // Also populate join input from URL invite code if available.
 watch(() => props.isOpen, (open) => {
+  if (open) void refreshMyProfile()
   if (open && status.value === 'idle') {
     if (pendingInviteCode.value) {
       joiningPeerId.value = pendingInviteCode.value
@@ -344,6 +474,19 @@ watch(() => props.isOpen, (open) => {
       template(v-if="status === 'idle'")
         div.flex.flex-col.gap-4
 
+          //- Random search ("Find opponent") — the hero action; the team
+          //- size below applies to it and to a private room.
+          div.pvp-quick.flex.flex-col.items-center.gap-2.p-3
+            div.text-ink.font-black.text-center(class="text-sm") {{ t('pvp.quickMatch') }}
+            button.w-full(
+              type="button"
+              data-testid="pvp-find-match"
+              @click="onFindMatch"
+              class="ui-btn ui-btn--primary ui-btn--hero ui-shine text-base"
+            ) {{ t('pvp.findMatch') }}
+
+          div.pvp-divider.text-ink-soft.font-black.uppercase.text-center(class="text-[0.7rem]") {{ t('pvp.orPlayFriend') }}
+
           //- Arena Selection
           div
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.selectArena') }}
@@ -371,7 +514,7 @@ watch(() => props.isOpen, (open) => {
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
               button.pvp-seg(
-                v-for="size in [1, 2]"
+                v-for="size in TEAM_SIZES"
                 :key="size"
                 type="button"
                 role="radio"
@@ -428,13 +571,53 @@ watch(() => props.isOpen, (open) => {
                 class="ui-btn ui-btn--primary uppercase text-sm"
               ) {{ t('pvp.join') }}
 
+      //- ── Random search: looking for a human (a bot fills in after 15–25 s)
+      template(v-else-if="status === 'searching'")
+        div.flex.flex-col.items-center.gap-4.py-6(data-testid="pvp-searching")
+          div.pvp-radar(aria-hidden="true")
+            span.pvp-radar__ring
+            span.pvp-radar__ring.pvp-radar__ring--late
+            span.pvp-radar__dot
+          div.text-ink.font-black.text-center(class="text-lg" role="status") {{ t('pvp.searching') }}
+          div.pvp-timer.ui-inset.px-4.py-1(aria-live="off") {{ searchElapsedLabel }}
+          div.ui-chip.ui-chip--sun.uppercase(class="text-[0.7rem]") {{ gameConfig.teamSize }}v{{ gameConfig.teamSize }}
+
+      //- ── Found: the opponent's card (human pairing or bot) ───────────────
+      template(v-else-if="showFoundCard && opponentProfile")
+        div.flex.flex-col.items-center.gap-4.py-4(data-testid="pvp-found")
+          div.pvp-connected.ui-slam(role="status") {{ t('pvp.opponentFound') }}
+          div.pvp-faceoff.w-full
+            div.pvp-player(
+              v-for="(p, i) in [myProfile, opponentProfile]"
+              :key="i"
+              :class="i === 0 ? 'is-me' : 'is-them'"
+            )
+              div.pvp-avatar(:class="'tint-' + avatarTint(p.name)" aria-hidden="true") {{ monogram(p.name) }}
+              div.pvp-player__name.text-ink.font-black.truncate {{ p.name || t('pvp.guest') }}
+              div.flex.items-center.gap-1
+                span.pvp-bracket(
+                  :style="{ '--tier': LEAGUE_TIER_META[p.tier].accent }"
+                  role="img"
+                  :aria-label="t(LEAGUE_TIER_META[p.tier].nameKey)"
+                )
+                span.text-ink-soft.font-black(class="text-xs") {{ t('pvp.level', { n: p.level }) }}
+              //- Debug builds only: tag a bot (never shown in production).
+              span.ui-chip.ui-chip--sun(v-if="i === 1 && revealBots && opponentProfile.bot" class="text-[0.6rem]") BOT
+            div.pvp-vs(aria-hidden="true") {{ t('vs') }}
+          div.text-ink-soft.font-bold(class="text-sm") {{ t('pvp.startingMatch') }}
+
       //- ── Creating / Connecting ──────────────────────────────────────────
       template(v-else-if="status === 'creating' || status === 'connecting'")
         div.flex.flex-col.items-center.gap-4.py-8
           div.animate-spin.rounded-full.border-4.border-leaf-500(
             class="border-t-transparent w-10 h-10"
           )
-          div.text-ink.font-black {{ status === 'creating' ? t('pvp.creatingLobby') : t('pvp.connecting') }}
+          div.text-ink.font-black.text-center(
+            v-if="status === 'connecting' && joiningFriendName !== null"
+            data-testid="pvp-joining"
+            role="status"
+          ) {{ joiningLabel }}
+          div.text-ink.font-black(v-else) {{ status === 'creating' ? t('pvp.creatingLobby') : t('pvp.connecting') }}
 
       //- ── Waiting for Guest ──────────────────────────────────────────────
       template(v-else-if="status === 'waiting'")
@@ -457,16 +640,18 @@ watch(() => props.isOpen, (open) => {
 
           //- Invite link actions
           div.flex.flex-col.gap-2
-            //- Copy full link
+            //- Copy full link (on CrazyGames the invite button below does it)
             button.w-full(
+              v-if="!isCrazyInvites"
               @click="onCopyLink"
               class="ui-btn ui-btn--secondary text-sm"
             )
               span(v-if="copied") {{ t('pvp.copied') }}
               span(v-else) {{ t('pvp.copyLink') }}
 
-            //- WhatsApp share
+            //- WhatsApp share (off CrazyGames: there the platform invites)
             a.flex.items-center.justify-center.gap-2.w-full(
+              v-if="!isCrazyInvites"
               :href="whatsappShareLink"
               target="_blank"
               rel="noopener"
@@ -478,7 +663,7 @@ watch(() => props.isOpen, (open) => {
 
             //- Browser native share
             button.flex.items-center.justify-center.gap-2.w-full(
-              v-if="canNativeShare"
+              v-if="canNativeShare && !isCrazyInvites"
               @click="onNativeShare"
               class="ui-btn ui-btn--secondary text-sm"
             )
@@ -486,20 +671,30 @@ watch(() => props.isOpen, (open) => {
                 path(d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z")
               span {{ t('pvp.shareNative') }}
 
-            //- CrazyGames invite (only on platform)
-            button.w-full(
-              v-if="isSdkActive && isCrazyGamesFullRelease"
-              @click="sendCrazyGamesInvite"
-              class="ui-btn ui-btn--secondary text-sm"
-            ) {{ t('pvp.inviteFriend') }}
+            //- CrazyGames: the friends list invites through the platform's
+            //- Invite button (Room Data + showInviteButton, usePVP); this
+            //- copies the crazygames.com invite link for anyone else.
+            template(v-if="isCrazyInvites")
+              div.text-ink-soft.font-bold.text-center(class="text-xs") {{ t('pvp.inviteHintCg') }}
+              button.w-full(
+                data-testid="pvp-cg-invite"
+                @click="onCopyCrazyInvite"
+                class="ui-btn ui-btn--primary text-sm"
+              ) {{ t('pvp.inviteFriend') }}
+              div.pvp-sent.text-center.font-black(
+                v-if="inviteSent"
+                role="status"
+                class="text-sm"
+              ) {{ t('pvp.inviteSent') }}
 
       //- ── Lobby: Both Connected ──────────────────────────────────────────
-      template(v-else-if="status === 'lobby' || status === 'ready'")
+      template(v-else-if="(status === 'lobby' || status === 'ready') && !showFoundCard")
         div.flex.flex-col.gap-4
 
           //- Status badge
           div.text-center
             div.pvp-connected.ui-slam {{ t('pvp.connected') }}
+            div.text-ink.font-black.truncate(v-if="opponentProfile && opponentProfile.name" class="text-sm mt-1") {{ t('vs') }} {{ opponentProfile.name }}
             div.text-ink-soft.font-bold(class="text-xs mt-1")
               span(v-if="isHost") {{ t('pvp.youAreHost') }}
               span(v-else) {{ t('pvp.youAreGuest') }}
@@ -545,7 +740,7 @@ watch(() => props.isOpen, (open) => {
             div.text-ink-soft.uppercase.font-black.mb-2(class="text-xs") {{ t('pvp.teamSize') }}
             div.flex.gap-2
               button.pvp-seg(
-                v-for="size in [1, 2]"
+                v-for="size in TEAM_SIZES"
                 :key="size"
                 type="button"
                 role="radio"
@@ -626,13 +821,24 @@ watch(() => props.isOpen, (open) => {
 
     //- ── Sticky Footer Actions (always visible) ─────────────────────────
     template(#footer)
-      //- Idle: Create Lobby
+      //- Idle: Create Lobby (a private room; the random search is the hero
+      //- button in the body)
       template(v-if="status === 'idle'")
-        div.w-full.ui-breathe
-          button.w-full(
-            @click="onCreateLobby"
-            class="ui-btn ui-btn--primary ui-btn--hero ui-shine text-base"
-          ) {{ t('pvp.createLobby') }}
+        button.w-full(
+          @click="onCreateLobby"
+          class="ui-btn ui-btn--secondary text-base"
+        ) {{ t('pvp.createLobby') }}
+
+      //- Searching / joining: a way back at any time
+      template(v-else-if="status === 'searching' || status === 'connecting'")
+        button.w-full(
+          data-testid="pvp-cancel"
+          @click="status === 'searching' ? onCancelSearch() : onClose()"
+          class="ui-btn ui-btn--secondary text-sm"
+        ) {{ t('pvp.cancel') }}
+
+      //- Found: nothing to press — the match starts on its own
+      template(v-else-if="showFoundCard")
 
       //- Lobby: Ready / Start
       template(v-else-if="status === 'lobby' || status === 'ready'")
@@ -648,12 +854,19 @@ watch(() => props.isOpen, (open) => {
             :class="localReady ? 'ui-btn--secondary' : 'ui-btn--primary ui-btn--hero ui-shine'"
           ) {{ localReady ? t('pvp.ready') : t('pvp.setReady') }}
 
-      //- Error states: Back to Menu
+      //- Error states: Back to Menu (and, after a failed search, Try Again)
       template(v-else-if="status === 'disconnected' || status === 'error' || status === 'expired'")
-        button.w-full(
-          @click="onClose"
-          class="ui-btn ui-btn--secondary text-sm"
-        ) {{ t('pvp.backToMenu') }}
+        div.flex.w-full.gap-2
+          button.flex-1(
+            @click="onClose"
+            class="ui-btn ui-btn--secondary text-sm"
+          ) {{ t('pvp.backToMenu') }}
+          button.flex-1(
+            v-if="lastSearchSize !== null"
+            data-testid="pvp-retry"
+            @click="onRetrySearch"
+            class="ui-btn ui-btn--primary text-sm"
+          ) {{ t('pvp.tryAgain') }}
 </template>
 
 <style scoped lang="sass">
@@ -703,7 +916,7 @@ watch(() => props.isOpen, (open) => {
 
   &.is-picked
     border: 3px solid var(--color-ink)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 0 0 2px var(--arena), inset 0 -4px 0 rgba(22, 26, 64, 0.18), 0 4px 0 var(--color-ink)
     transform: translateY(-2px)
     animation: pvp-pick 0.34s var(--ui-spring)
@@ -834,7 +1047,7 @@ watch(() => props.isOpen, (open) => {
   &.is-ready
     border: 3px solid var(--color-ink)
     background-color: var(--color-leaf-300)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 0 0 2px var(--color-leaf-500), 0 4px 0 var(--color-ink)
     animation: pvp-ready 0.4s cubic-bezier(0.2, 1.6, 0.4, 1)
 
@@ -844,7 +1057,148 @@ watch(() => props.isOpen, (open) => {
   100%
     transform: none
 
+// ── Random search block + divider ────────────────────────────────────────
+.pvp-quick
+  border: 2px solid var(--color-ice-400)
+  border-radius: var(--radius-ui)
+  background-color: var(--color-ice-200)
+  box-shadow: inset 0 3px 0 rgba(35, 56, 168, 0.14)
+
+.pvp-divider
+  display: flex
+  align-items: center
+  gap: 0.6rem
+  letter-spacing: 0.04em
+
+  &::before, &::after
+    content: ''
+    flex: 1
+    height: 2px
+    background-color: var(--color-cream-400)
+
+// ── Searching: a radar pulse + the elapsed timer ─────────────────────────
+.pvp-radar
+  position: relative
+  width: 4.5rem
+  height: 4.5rem
+
+.pvp-radar__ring
+  position: absolute
+  inset: 0
+  border: 3px solid var(--color-leaf-500)
+  border-radius: 50%
+  opacity: 0
+  animation: pvp-radar 1.8s ease-out infinite
+
+.pvp-radar__ring--late
+  animation-delay: 0.9s
+
+.pvp-radar__dot
+  position: absolute
+  inset: 32%
+  border: 3px solid var(--color-ink)
+  border-radius: 50%
+  background-color: var(--color-leaf-500)
+  box-shadow: 0 3px 0 var(--color-ink)
+
+@keyframes pvp-radar
+  0%
+    transform: scale(0.35)
+    opacity: 0.9
+  100%
+    transform: scale(1)
+    opacity: 0
+
+.pvp-timer
+  font-size: 1.35rem
+  font-weight: 900
+  font-variant-numeric: tabular-nums
+  color: var(--color-ink)
+
+// ── Found: two player cards face to face ─────────────────────────────────
+.pvp-faceoff
+  position: relative
+  display: grid
+  grid-template-columns: 1fr 1fr
+  gap: 0.75rem
+
+.pvp-player
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 0.35rem
+  min-width: 0
+  padding: 0.75rem 0.5rem
+  border: 3px solid var(--color-ink)
+  border-radius: var(--radius-ui)
+  box-shadow: 0 4px 0 var(--color-ink)
+  animation: pvp-ready 0.4s cubic-bezier(0.2, 1.6, 0.4, 1)
+
+  &.is-me
+    background-color: var(--color-sky-200)
+
+  &.is-them
+    background-color: var(--color-berry-300)
+
+.pvp-player__name
+  max-width: 100%
+  font-size: 0.95rem
+
+.pvp-avatar
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 2.75rem
+  height: 2.75rem
+  border: 3px solid var(--color-ink)
+  border-radius: 50%
+  font-size: 1.3rem
+  font-weight: 900
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+  box-shadow: 0 3px 0 var(--color-ink)
+
+  &.tint-sky
+    background-color: var(--color-sky-400)
+  &.tint-berry
+    background-color: var(--color-berry-500)
+  &.tint-leaf
+    background-color: var(--color-leaf-500)
+  &.tint-sun
+    background-color: var(--color-sun-500)
+  &.tint-plum
+    background-color: var(--color-plum-400)
+  &.tint-royal
+    background-color: var(--color-royal-500)
+
+.pvp-vs
+  position: absolute
+  left: 50%
+  top: 50%
+  transform: translate(-50%, -50%)
+  font-size: 1.2rem
+  font-weight: 900
+  color: var(--color-sun-400)
+  text-shadow: var(--ui-stroke)
+  pointer-events: none
+
+.pvp-sent
+  color: var(--color-leaf-600)
+
+// Bracket pip: a small faceted shield in the tier's colour.
+.pvp-bracket
+  display: inline-block
+  width: 1.15rem
+  height: 1.3rem
+  border: 2px solid var(--color-ink)
+  border-radius: 0.3rem 0.3rem 50% 50%
+  background-color: var(--tier)
+  background-image: var(--ui-facet)
+  box-shadow: 0 2px 0 var(--color-ink)
+
 @media (prefers-reduced-motion: reduce)
-  .pvp-arena, .pvp-seg, .pvp-check__box, .ready-side
+  .pvp-arena, .pvp-seg, .pvp-check__box, .ready-side, .pvp-player
     animation: none !important
+  .pvp-radar__ring
+    animation-duration: 3.6s
 </style>

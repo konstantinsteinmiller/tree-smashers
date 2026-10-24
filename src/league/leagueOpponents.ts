@@ -261,7 +261,8 @@ const sanitizeBuild = (
 ): { team: SpinnerConfig[]; skills: SkillLoadout; power: number } | null => {
   const team = sanitizePvpTeam(
     build.team.map((s) => ({ topPartId: s.t, bottomPartId: s.b, topLevel: s.tl, bottomLevel: s.bl, modelId: s.m, smasherId: s.s, level: s.lv })),
-    { teamSize: 2 }
+    // Release gate: old ghosts may carry a held-back smasher → released stand-in.
+    { teamSize: 2, releasedOnly: true }
   )
   if (team.length < 2) return null
   const skills = skillsOn && sanitizeSkills ? sanitizeSkills(build.sk.map((k) => ({ id: k.id, level: k.lv }))) : []

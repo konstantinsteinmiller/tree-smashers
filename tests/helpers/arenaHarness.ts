@@ -84,7 +84,7 @@ export async function mountArena(seed: Record<string, string>): Promise<ArenaHar
       return false
     },
     openTeam: async () => {
-      const img = document.querySelector('img[src*="team_128x128"]') as HTMLElement | null
+      const img = document.querySelector('[data-testid="hud-team"]') as HTMLElement | null
       if (!img) throw new Error('no Team button on screen')
         ;
       (img.closest('button') ?? img).click()

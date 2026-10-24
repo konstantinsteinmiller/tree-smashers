@@ -34,7 +34,9 @@ describe('smasher payloads', () => {
   it('PvP sanitiser rebuilds known smashers, clamps levels, honours levelOne', () => {
     const raw = [{ smasherId: 'grizzle', level: 99, topPartId: 'star', bottomPartId: 'speedy', topLevel: 150 }]
     const [c] = sanitizePvpTeam(raw, { teamSize: 1 })
-    expect(c).toEqual(smasherConfig('grizzle', 30))
+    // No gameplay cap: 99 is honest; only absurd levels hit the sanity ceiling.
+    expect(c).toEqual(smasherConfig('grizzle', 99))
+    expect(sanitizePvpTeam([{ smasherId: 'grizzle', level: 1e9 }], { teamSize: 1 })[0]!.level).toBe(9999)
     expect(sanitizePvpTeam(raw, { teamSize: 1, levelOne: true })[0]).toEqual(smasherConfig('grizzle', 1))
     // Its own skills reach the engine via smasherLoadout.
     expect(smasherLoadout(c!).length).toBe(3)

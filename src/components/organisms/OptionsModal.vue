@@ -5,13 +5,14 @@ import { useSfcI18n } from '@/i18n/sfc'
 import useUser from '@/use/useUser'
 import { setI18nLocale } from '@/i18n'
 import FModal from '@/components/molecules/FModal.vue'
+import type { TabOption } from '@/components/atoms/FTabs.vue'
 import FButton from '@/components/atoms/FButton.vue'
+import FHoldButton from '@/components/atoms/FHoldButton.vue'
 import FSwitch from '@/components/atoms/FSwitch.vue'
 import FSlider from '@/components/atoms/FSlider.vue'
 import FSelect from '@/components/atoms/FSelect.vue'
 import FLanguagePicker from '@/components/molecules/FLanguagePicker.vue'
 import { DIFFICULTY, LANGUAGES } from '@/utils/enums'
-import { prependBaseUrl } from '@/utils/function'
 import { stopGameplay } from '@/use/useCrazyGames'
 import resetAllProgress from '@/use/useResetProgress'
 import { qualityPreference, qualityTier, setQualityPreference } from '@/use/useQuality'
@@ -98,20 +99,20 @@ const isMobile = computed(() => {
 })
 
 const tabs = computed(() => {
-    const list = [
+    const list: TabOption[] = [
       {
         value: 'general', label: t('general'),
-        icon: prependBaseUrl('images/icons/settings-icon_128x128.webp')
+        uiIcon: 'settings'
       },
       {
         value: 'diff', label: t('difficulty'),
-        icon: prependBaseUrl('images/icons/difficulty-icon_128x128.webp')
+        uiIcon: 'difficulty'
       }
     ]
     return !isMobile.value ? list.concat({
       label: t('audio'),
       value: 'audio',
-      icon: prependBaseUrl('images/icons/sound-icon_128x128.webp')
+      uiIcon: 'sound'
     }) : list
   }
 )
@@ -248,17 +249,26 @@ const openPrivacyPolicy = () => {
         :is-disabled="isResetting"
         @click="showResetConfirm = false"
       ) {{ t('cancel') }}
-      FButton(
-        tone="danger"
-        :is-disabled="isResetting"
-        @click="confirmReset"
+      //- Irreversible: a 1.2 s hold-to-confirm ring (keyboard / AT confirm
+      //- at once — see FHoldButton).
+      FHoldButton.reset-hold(
+        :hold-ms="1200"
+        :disabled="isResetting"
+        data-testid="reset-confirm"
+        @confirm="confirmReset"
       ) {{ t('reset') }}
 </template>
 
 <style scoped lang="sass">
-// Section divider: a flat band of diagonal ink hatching (no dashed rule).
+// Section divider (#UX1c): a hard bevelled groove — a dark line over a light
+// one — instead of a hatched band.
+.reset-hold
+  font-size: 1rem
+  @media (min-width: 768px)
+    font-size: 1.5rem
+
 .opt-divider
   height: 6px
   border-radius: 999px
-  background-image: repeating-linear-gradient(300deg, rgba(22, 26, 64, 0.22) 0 4px, transparent 4px 9px)
+  background-image: linear-gradient(180deg, var(--color-ice-400) 0 3px, var(--color-ice-50) 3px 6px)
 </style>

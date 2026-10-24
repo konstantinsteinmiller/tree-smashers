@@ -24,6 +24,7 @@ import { watch, type Ref } from 'vue'
 import { isInterstitialReady, showMidgameAd } from '@/use/useAds'
 import { isForcedDarkBlocking } from '@/use/useForcedDarkModeGuard'
 import { markFirstMidgameAdShown, resetAdCounter } from '@/use/midgameCadence'
+import { noteAdBreak } from '@/use/interstitialPacing'
 
 let armed = false
 let fired = false
@@ -44,6 +45,8 @@ export const armFirstLoadInterstitial = (splashGone: Ref<boolean>): void => {
       // rate-limits ("requested too soon").
       resetAdCounter()
       markFirstMidgameAdShown()
+      // …and the playtime pacing's cooldown (#UX100) starts from it too.
+      noteAdBreak()
       // Audio and the game loop are paused on the SDK's own ad-opened edge
       // (`isGmAdShowing` in App.vue), which keeps the play intent — so music
       // resumes by itself when the ad closes, and a no-fill touches nothing.

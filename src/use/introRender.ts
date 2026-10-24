@@ -1,59 +1,52 @@
 // ─── First-launch intro: the renderer ───────────────────────────────────────
 //
-// Draws one frame of the cutscene for director time T. EVERYTHING on screen is
-// a pure function of T and of data fixed at construction (the precomputed
-// fight track, the director's time map, the baked sprites):
+// Draws one frame of the film for director time T onto the cutscene canvas.
+// Everything comes from the game's own art and draw modules:
 //
-//   • bodies come from the fight track at S = director.toS(T);
-//   • particles (sparks, shards, embers, debris, number cards) are stateless —
-//     each is derived from `hash01(event id, particle index)` and its age, so
-//     there is no pool to fill, no per-frame allocation, and a 30 fps and a
-//     144 fps render of the same T draw the same pixels;
-//   • the camera (keyframes + impact kicks) and the screen shake are sums over
-//     the same event list.
+//   • the arena: the baked stage-1 clearing (introArena.ts — painted backdrop,
+//     props, floor, rim, terrain), drawn 1 : 1 on whole device pixels on every
+//     hold (two bakes: WIDE and CLOSE — the only two zooms a hold may use);
+//   • the trees: drawPaintedTower (healthy → damaged → felled, white flash),
+//     the thorn garland (drawTowerThorns), the HP gauges (drawHpGauge);
+//   • the smashers: drawSmasherDisc + drawSmasherFrame (painted sheets / rig);
+//   • VFX: the tree-hit pool (towerHitFx: splinters, thorn shards, leaf
+//     cascades), the skill layer (via the skills gate: shield arc, rockets,
+//     bursts, flavour, callout pills).
 //
-// Performance, for the low-end devices this game already struggles on:
-//   • no `shadowBlur` anywhere (it is what kills Firefox) — every glow is a
-//     flat concentric-ring sprite baked once and blitted with globalAlpha
-//     (no radial gradients either);
-//   • no gradient is created per frame, no string is built per frame (fonts,
-//     numbers and colours are constants; text is drawn at a fixed 100px font
-//     through a context scale);
-//   • arena, background, badge bodies, number cards and skins are all baked;
-//   • FX.low (useQuality) halves particle counts, drops afterimages and the
-//     colour-grade blend, and the component caps the backing-store DPR.
+// Determinism: positions are pure functions of T (introStory.ts). The particle
+// pools are stepped on a FIXED 120 Hz FX clock from the story's timed events,
+// with a seeded random stream; a backwards seek resets them and replays from
+// 0. So any frame rate draws the same film.
+//
+// Perf: no shadowBlur, no gradients, no filters; one or two full-screen blits
+// + ~10 sprites + pooled particles per frame. FX.low: WIDE only, no tower /
+// skill particles (the game's low-tier rules), no ambient leaves.
 
-import { hash01 } from '@/use/useDeterministicRng'
-import { fillConcentric } from '@/utils/concentricFill'
+import { drawSmasherDisc, drawSmasherFrame, preloadPaintedSmashers } from '@/smashers/smasherAtlas'
+import { YAW_FRAMES, YAW_STEP } from '@/smashers/smasherRig'
+import { TOWER_FRONT_HALF_ARC, towerFrontAngle } from '@/use/arenaTerrain'
+import { THEME_LOOK } from '@/use/arenaThemes'
+import { drawHpGauge, newHpGaugeState, type HpGaugeState } from '@/use/hpGauge'
+import { introArtImage } from '@/use/introArt'
+import { arenaArtKey, bakeArena, preloadIntroArena, THEME, type ArenaBake } from '@/use/introArena'
 import {
-  BODY_R, BOSS, BOSS_HOME, BUMPER, F_ALIVE, F_HP, F_ROT, F_SPEED, F_X, F_Y,
-  FIGHT_SCRIPT, INTRO_ARENA_R, P1, P2, sampleTrack,
-  type FightEvent, type FightTrack
-} from '@/use/introFight'
+  AMBIENT_LEAVES, ARENA_R, BEAT, CAST, CHOMPER, GRIZZLE, BRAMBLE, RIM, ROCKETS, SEED, THUMPER,
+  SMASHER_R, STORY_EVENTS, TREE_MAX_HP, TREES, VIXIE, cameraAt, fxRate, hash01, overlayAt, smasherAt, treeAt,
+  INTRO_SMASHER_IDS, TREE_ROCKET_POINT, LOG_SLAM_BONUS, SLAM_CALLOUT_SPOT,
+  type CameraState, type OverlayState, type SmasherState, type StoryEvent, type TreeState
+} from '@/use/introStory'
+import type { IntroSkillFx, SkillRocketView, SkillVfxBlade, CalloutAnchor } from '@/use/skills/introSkills'
+import { drawPaintedTower, preloadTowerArt } from '@/use/towerArt'
 import {
-  LEVEL_FROM, STAGE_FROM, UNKNOWN_T, clamp01, countAt, easeInCubic, easeInOutCubic, easeOutBack,
-  easeOutCubic, envelope, fallU, ramp, stepTime,
-  type Director
-} from '@/use/introTimeline'
-
-export interface IntroAssets {
-  boss: HTMLImageElement
-  p1: HTMLImageElement
-  p2: HTMLImageElement
-  bgTile: HTMLImageElement | null
-  explosion: HTMLImageElement | null
-}
-
-export interface IntroLabels {
-  /** "BOSS STAGE" — reuses the game's `bossStage` key. */
-  bossStage: string
-  /** "STAGE" — reuses `stage`. */
-  stage: string
-  /** "Lv." — reuses `lv`. */
-  lv: string
-  /** The one line of copy: "Win it all back!" (`intro.reclaim`). */
-  tagline: string
-}
+  createTowerFx, drawTowerFx, leafCascadeCount, resetTowerFx, spawnLeaves, spawnSplinters, spawnThornShards,
+  tickTowerFx, type TowerFx
+} from '@/use/towerHitFx'
+import { preloadHitFxArt } from '@/use/towerHitFxArt'
+import { drawTowerThorns, preloadThornArt } from '@/use/towerThorns'
+import { PAINTED_TOWERS } from '@/use/paintedTowers'
+import { PAINTED_FLOORS } from '@/use/paintedFloors'
+import { FLOOR_KEY } from '@/use/introArena'
+import { createRng } from '@/use/useDeterministicRng'
 
 export interface SafeInsets {
   top: number
@@ -62,2300 +55,792 @@ export interface SafeInsets {
   left: number
 }
 
-export interface HudRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface DrawOptions {
+export interface IntroDrawOptions {
+  /** FX.low — the game's low tier. */
   low: boolean
-  /** 0..1 extra fade to the live game (skip). */
-  fade: number
+  /** prefers-reduced-motion. */
+  still: boolean
 }
 
 export interface IntroRenderer {
   resize: (w: number, h: number, dpr: number, safe: SafeInsets) => void
-  setHudTarget: (r: HudRect | null) => void
-  setLabels: (l: IntroLabels, fontFamily: string) => void
-  draw: (T: number, o: DrawOptions) => void
+  /** Draw director time T. `sound`: may skill SFX start this frame. */
+  draw: (T: number, sound: boolean) => void
+  /** Install / replace the skill layer (null on a skills-off build). */
+  setSkillFx: (fx: IntroSkillFx | null) => void
+  /** Screen position (css px) of a world point at the current camera. */
+  toScreen: (x: number, y: number) => { x: number; y: number }
+  /** The CLOSE zoom chosen for this screen (1 = no close shots). */
+  readonly closeZoom: number
+  dispose: () => void
 }
 
-type Cnv = HTMLCanvasElement
+/** Start every request the intro canvas needs (idempotent). */
+export const preloadIntroCanvasArt = (): void => {
+  preloadIntroArena()
+  preloadTowerArt()
+  preloadThornArt()
+  preloadHitFxArt()
+  preloadPaintedSmashers(INTRO_SMASHER_IDS, false)
+}
+
+/** Tree team colours of the vector fallback (useSpinnerGame TOWER_TEAM_COLORS). */
+const TREE_COLOURS = {
+  player: { leaf: '#5fc36a', leafDark: '#2f7d43' },
+  npc: { leaf: '#e3664f', leafDark: '#9c3328' }
+} as const
+const OUTLINE = '#2c2116'
+const INK = '#161a40'
+const SUN = '#ffd21a'
+const CREAM = '#fff4dc'
+
+/** Fixed FX step. */
+const FX_HZ = 120
+const FX_DT = 1 / FX_HZ
+/** The CLOSE zoom never exceeds this (storyboard). */
+const CLOSE_MAX = 1.35
+/** Painted-sprite upscale limits (towerArt MAX_UPSCALE, arenaFloorArt). */
+const TREE_MAX_UPSCALE = 1.02
+/** The painted floor is 1024 px for the whole clearing. A match allows it
+ *  1.5× (arenaFloorArt); the intro's holds must measure SHARP (blur-probe
+ *  ≥ 0.18), which a 1.34× floor did not on a 3× phone (0.17). So the WIDE fit
+ *  never upscales it and CLOSE stops at 1.12×. */
+const FLOOR_WIDE_UPSCALE = 1
+const FLOOR_MAX_UPSCALE = 1.12
+/** Props are laid out to here (arenaProps FIELD_HALF). */
+const FIELD_HALF = 600
+/** What every shot keeps in frame where it can: the clearing, both trees
+ *  with their crowns and gauges. WIDE fits this box (a little tighter than a
+ *  match's fit, so the trees read big on a phone); the camera is clamped so a
+ *  view never leaves it on an axis it can cover. */
+const CONTENT = { x0: -215, x1: 215, y0: -268, y1: 262 } as const
+
 type C2D = CanvasRenderingContext2D
 
-const TAU = Math.PI * 2
-const NUM_STR: string[] = Array.from({ length: 61 }, (_, i) => String(i))
-
-const mkCanvas = (w: number, h: number): Cnv => {
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.ceil(w))
-  c.height = Math.max(1, Math.ceil(h))
-  return c
-}
-const ctx2d = (c: Cnv): C2D => c.getContext('2d') as C2D
-
-/** A soft disc of flat concentric rings (radial-gradient look), baked once. */
-const radialSprite = (stops: [number, string][], size = 256): Cnv => {
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  const r = size / 2
-  fillConcentric(g, r, r, r, stops, 32, true)
-  return c
-}
-
-/** Skin clipped to a clean disc (removes any edge fringe of the source art). */
-const skinSprite = (img: HTMLImageElement, size = 256): Cnv => {
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  g.beginPath()
-  g.arc(size / 2, size / 2, size / 2 - 1, 0, TAU)
-  g.clip()
-  if (img.complete && img.naturalWidth > 0) g.drawImage(img, 0, 0, size, size)
-  else {
-    g.fillStyle = '#334'
-    g.fillRect(0, 0, size, size)
-  }
-  return c
-}
-
-/** The boss as the GOAL: its own art, sunk into shadow, with a red rim light —
- *  recognisably the thing that just beat you, not a generic blob. */
-const goalSprite = (img: HTMLImageElement, size = 256): Cnv => {
-  const pad = Math.round(size * 0.12)
-  const full = size + pad * 2
-  const c = mkCanvas(full, full)
-  const g = ctx2d(c)
-  const rim = mkCanvas(full, full)
-  const rg = ctx2d(rim)
-  const grow = size * 1.08
-  rg.drawImage(skinSprite(img, size), pad + (size - grow) / 2, pad + (size - grow) / 2, grow, grow)
-  rg.globalCompositeOperation = 'source-in'
-  rg.fillStyle = '#ff3b3b'
-  rg.fillRect(0, 0, full, full)
-  g.drawImage(rim, 0, 0)
-  const body = mkCanvas(full, full)
-  const bg = ctx2d(body)
-  bg.drawImage(skinSprite(img, size), pad, pad, size, size)
-  bg.globalCompositeOperation = 'source-atop'
-  bg.fillStyle = 'rgba(40,0,8,0.62)'
-  bg.fillRect(0, 0, full, full)
-  g.drawImage(body, 0, 0)
-  return c
-}
-
-/** A flat white (or any colour) cut-out of a sprite — for the two-tone
- *  impact frame. */
-const tintSprite = (src: Cnv, colour: string): Cnv => {
-  const c = mkCanvas(src.width, src.height)
-  const g = ctx2d(c)
-  g.drawImage(src, 0, 0)
-  g.globalCompositeOperation = 'source-in'
-  g.fillStyle = colour
-  g.fillRect(0, 0, c.width, c.height)
-  return c
-}
-
-/** A drained, darkened copy of a skin — the lost spinners in the fall. */
-const drainedSprite = (src: Cnv): Cnv => {
-  const c = mkCanvas(src.width, src.height)
-  const g = ctx2d(c)
-  g.drawImage(src, 0, 0)
-  g.globalCompositeOperation = 'saturation'
-  g.fillStyle = '#808080'
-  g.fillRect(0, 0, c.width, c.height)
-  g.globalCompositeOperation = 'source-atop'
-  g.fillStyle = 'rgba(10,8,14,0.45)'
-  g.fillRect(0, 0, c.width, c.height)
-  return c
-}
-
-/** The boss arena, in world units at 2 px/unit: floor, rings, neon border with
- *  a layered-stroke glow (no shadowBlur). */
-const ARENA_PX_PER_UNIT = 2
-const ARENA_PAD = 48
-const arenaSprite = (): Cnv => {
-  const half = INTRO_ARENA_R + ARENA_PAD
-  const size = half * 2 * ARENA_PX_PER_UNIT
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  g.translate(size / 2, size / 2)
-  g.scale(ARENA_PX_PER_UNIT, ARENA_PX_PER_UNIT)
-  const R = INTRO_ARENA_R
-  fillConcentric(g, 0, 0, R, [[0, '#2c1014'], [0.7, '#1f0a0d'], [1, '#150507']], 10)
-  // Floor texture: faint radial spokes + rings.
-  g.strokeStyle = 'rgba(255,80,60,0.05)'
-  g.lineWidth = 1
-  for (let i = 0; i < 24; i++) {
-    const a = (i / 24) * TAU
-    g.beginPath()
-    g.moveTo(Math.cos(a) * R * 0.2, Math.sin(a) * R * 0.2)
-    g.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97)
-    g.stroke()
-  }
-  g.strokeStyle = '#3a1518'
-  g.lineWidth = 1.2
-  for (const f of [0.3, 0.6, 0.85]) {
-    g.beginPath()
-    g.arc(0, 0, R * f, 0, TAU)
-    g.stroke()
-  }
-  // Outer halo — stacked strokes, widest and faintest first.
-  for (let i = 11; i >= 0; i--) {
-    const f = i / 11
-    g.lineWidth = 5 + 40 * 2 * f
-    g.strokeStyle = `rgba(255,60,40,${(0.035 * (1 - f) + 0.004).toFixed(3)})`
-    g.beginPath()
-    g.arc(0, 0, R, 0, TAU)
-    g.stroke()
-  }
-  g.lineWidth = 5
-  g.strokeStyle = '#ff4646'
-  g.beginPath()
-  g.arc(0, 0, R, 0, TAU)
-  g.stroke()
-  g.lineWidth = 1.5
-  g.strokeStyle = '#ffb0a0'
-  g.beginPath()
-  g.arc(0, 0, R, 0, TAU)
-  g.stroke()
-  g.lineWidth = 2
-  g.strokeStyle = 'rgba(255,90,70,0.28)'
-  g.beginPath()
-  g.arc(0, 0, R - 9, 0, TAU)
-  g.stroke()
-  return c
-}
-
-/** A spinning-vortex overlay for the tornado skin (baked, drawn rotated). */
-const swirlSprite = (size = 256): Cnv => {
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  const r = size / 2
-  g.translate(r, r)
-  g.lineCap = 'round'
-  for (let arm = 0; arm < 3; arm++) {
-    g.strokeStyle = arm === 0 ? 'rgba(210,240,255,0.55)' : arm === 1 ? 'rgba(150,205,245,0.42)' : 'rgba(110,170,230,0.32)'
-    g.lineWidth = 6 - arm
-    g.beginPath()
-    for (let s = 0; s <= 40; s++) {
-      const t = s / 40
-      const a = arm * (TAU / 3) + t * Math.PI * 2.4
-      const d = r * (0.3 + t * 0.66)
-      if (s === 0) g.moveTo(Math.cos(a) * d, Math.sin(a) * d)
-      else g.lineTo(Math.cos(a) * d, Math.sin(a) * d)
-    }
-    g.stroke()
-  }
-  return c
-}
-
-/** Radial crack decal for the boss's landing. */
-const crackSprite = (size = 256): Cnv => {
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  const r = size / 2
-  g.translate(r, r)
-  g.strokeStyle = 'rgba(10,2,4,0.85)'
-  g.lineCap = 'round'
-  for (let i = 0; i < 11; i++) {
-    let a = (i / 11) * TAU + hash01(7, i) * 0.4
-    let x = Math.cos(a) * r * 0.18
-    let y = Math.sin(a) * r * 0.18
-    g.lineWidth = 5
-    g.beginPath()
-    g.moveTo(x, y)
-    const len = r * (0.55 + hash01(8, i) * 0.4)
-    for (let k = 1; k <= 5; k++) {
-      a += (hash01(9, i * 10 + k) - 0.5) * 0.7
-      x = Math.cos(a) * len * (k / 5)
-      y = Math.sin(a) * len * (k / 5)
-      g.lineWidth = 5 - k * 0.8
-      g.lineTo(x, y)
-    }
-    g.stroke()
-  }
-  g.fillStyle = 'rgba(10,2,4,0.6)'
-  g.beginPath()
-  g.arc(0, 0, r * 0.22, 0, TAU)
-  g.fill()
-  return c
-}
-
-/** A vector skull on a red medallion — the boss marker (emoji glyphs render
- *  differently on every platform, so it is drawn). */
-const skullSprite = (size = 128): Cnv => {
-  const c = mkCanvas(size, size)
-  const g = ctx2d(c)
-  const r = size / 2
-  g.translate(r, r)
-  g.fillStyle = '#7a0d12'
-  g.beginPath()
-  g.arc(0, 0, r - 2, 0, TAU)
-  g.fill()
-  g.lineWidth = size * 0.06
-  g.strokeStyle = '#ffb3a8'
-  g.stroke()
-  g.fillStyle = '#fff4ea'
-  g.beginPath()
-  g.arc(0, -r * 0.1, r * 0.46, 0, TAU)
-  g.fill()
-  g.fillRect(-r * 0.28, r * 0.18, r * 0.56, r * 0.3)
-  g.fillStyle = '#7a0d12'
-  g.beginPath()
-  g.arc(-r * 0.19, -r * 0.1, r * 0.13, 0, TAU)
-  g.arc(r * 0.19, -r * 0.1, r * 0.13, 0, TAU)
-  g.fill()
-  g.fillRect(-r * 0.03, r * 0.1, r * 0.06, r * 0.1)
-  for (let i = -1; i <= 1; i++) g.fillRect(i * r * 0.14 - r * 0.02, r * 0.3, r * 0.04, r * 0.18)
-  return c
-}
-
-// ─── Colour tables (constants — nothing is formatted per frame) ─────────────
-
-const HP_COL: string[] = Array.from({ length: 11 }, (_, i) => `hsl(${i * 12}, 92%, 55%)`)
-
-interface Theme {
-  top: string
-  bottom: string
-  border: string
-  base: string
-  chip: string
-  chipText: string
-}
-
-const BOSS_THEME: Theme = {
-  top: '#e53030', bottom: '#7a1010', border: '#ffb3a8', base: '#3a0507', chip: '#420609', chipText: '#ffe8e3'
-}
-const SLATE_THEME: Theme = {
-  top: '#6b7788', bottom: '#2b3340', border: '#d7dee8', base: '#0c1016', chip: '#141a22', chipText: '#f4f7fb'
-}
-
-interface Tier {
-  top: string
-  bottom: string
-  border: string
-  glow: string
-}
-
-const TIERS: Tier[] = [
-  { top: '#ffe27a', bottom: '#d98200', border: '#fff6c9', glow: 'rgba(255,200,60,0.55)' }, // 21-30 legend
-  { top: '#f1f5fb', bottom: '#7f8fa6', border: '#ffffff', glow: 'rgba(200,220,255,0.4)' }, // 11-20 silver
-  { top: '#e9a867', bottom: '#8a4516', border: '#ffd2a8', glow: 'rgba(230,140,70,0.35)' }, // 4-10 bronze
-  { top: '#6f747c', bottom: '#2e3238', border: '#8d9299', glow: 'rgba(0,0,0,0)' } // 1-3 rookie
-]
-const TARGETS: readonly number[] = [P1, P2]
-/** [windS, strikeS, windS, strikeS, …] from the fight script. */
-const WIND_PAIRS: readonly number[] = ((): number[] => {
-  const out: number[] = []
-  for (let i = 0; i < FIGHT_SCRIPT.length; i++) {
-    const c = FIGHT_SCRIPT[i]!
-    if (c.op !== 'thunderWind') continue
-    const strike = FIGHT_SCRIPT.slice(i + 1).find(n => n.op === 'thunder')
-    if (strike) out.push(c.s, strike.s)
-  }
-  return out
-})()
-/** First level of each lower tier (silver, bronze, rookie). */
-const TIER_EDGES: readonly number[] = [20, 10, 3]
-const TIER_GLOW_SIZE: readonly number[] = [2.0, 1.35, 1.1, 0]
-const TIER_GLOW_ALPHA: readonly number[] = [0.85, 0.32, 0.22, 0]
-const LOCK_DASH: number[] = [7, 6]
-const NO_DASH: number[] = []
-
-/** One heartbeat thump: 0 → 1 → 0 over 0.35 s from t0. */
-const beatPulse = (T: number, t0: number): number => {
-  const a = T - t0
-  return a >= 0 && a < 0.35 ? Math.sin((a / 0.35) * Math.PI) : 0
-}
-const tierOf = (lv: number): number => (lv > 20 ? 0 : lv > 10 ? 1 : lv > 3 ? 2 : 3)
-
-const roundRect = (g: C2D, x: number, y: number, w: number, h: number, r: number): void => {
-  const rr = Math.min(r, w / 2, h / 2)
-  g.beginPath()
-  g.moveTo(x + rr, y)
-  g.lineTo(x + w - rr, y)
-  g.arcTo(x + w, y, x + w, y + rr, rr)
-  g.lineTo(x + w, y + h - rr)
-  g.arcTo(x + w, y + h, x + w - rr, y + h, rr)
-  g.lineTo(x + rr, y + h)
-  g.arcTo(x, y + h, x, y + h - rr, rr)
-  g.lineTo(x, y + rr)
-  g.arcTo(x, y, x + rr, y, rr)
-  g.closePath()
-}
-
-export const createIntroRenderer = (
-  ctx: C2D,
-  track: FightTrack,
-  director: Director,
-  assets: IntroAssets,
-  initialLabels: IntroLabels,
-  initialFont: string
-): IntroRenderer => {
-  const events = track.events
-  const B = director.beats
-  const eventT = director.eventT
-  const eventHold = director.eventHold
-
-  // ── Static sprites (viewport-independent) ────────────────────────────────
-  const skins: Cnv[] = [skinSprite(assets.boss), skinSprite(assets.p1), skinSprite(assets.p2)]
-  const goal = goalSprite(assets.boss)
-  const whiteSkins: Cnv[] = skins.map(sk => tintSprite(sk, '#ffffff'))
-  const lostSkins: Cnv[] = [drainedSprite(skins[P1]!), drainedSprite(skins[P2]!)]
-  const arena = arenaSprite()
-  const swirl = swirlSprite()
-  const cracks = crackSprite()
-  const skull = skullSprite()
-  const glowBlue = radialSprite([[0, 'rgba(110,190,255,0.62)'], [0.45, 'rgba(60,130,240,0.26)'], [1, 'rgba(40,90,220,0)']])
-  const glowIce = radialSprite([[0, 'rgba(200,245,255,0.6)'], [0.5, 'rgba(120,210,255,0.22)'], [1, 'rgba(90,180,255,0)']])
-  const glowBoss = radialSprite([
-    [0, 'rgba(255,110,50,0.85)'], [0.3, 'rgba(220,60,160,0.5)'], [0.65, 'rgba(130,50,220,0.22)'], [1, 'rgba(90,30,200,0)']
-  ])
-  const glowWhite = radialSprite([[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,250,230,0.7)'], [1, 'rgba(255,240,200,0)']])
-  const glowGold = radialSprite([[0, 'rgba(255,220,90,0.9)'], [0.4, 'rgba(255,170,40,0.45)'], [1, 'rgba(255,140,0,0)']])
-  const glowRed = radialSprite([[0, 'rgba(255,60,50,0.8)'], [0.5, 'rgba(200,20,20,0.35)'], [1, 'rgba(140,0,0,0)']])
-  const glowCyan = radialSprite([[0, 'rgba(180,250,255,0.95)'], [0.4, 'rgba(90,210,255,0.5)'], [1, 'rgba(40,160,255,0)']])
-  const scorch = radialSprite([[0, 'rgba(0,0,0,0.75)'], [0.55, 'rgba(20,4,4,0.45)'], [1, 'rgba(0,0,0,0)']], 128)
-  const vignette = radialSprite([[0, 'rgba(0,0,0,0)'], [0.55, 'rgba(0,0,0,0.08)'], [1, 'rgba(0,0,0,0.85)']], 512)
-  const vignetteRed = radialSprite([[0, 'rgba(120,0,0,0)'], [0.5, 'rgba(150,0,10,0.1)'], [1, 'rgba(170,0,10,0.75)']], 512)
-  // A proper pinball bumper — gold rim, hot core, white star — so it can
-  // never be mistaken for one of the (blue) spinners.
-  const bumperBody = ((): Cnv => {
-    const c = mkCanvas(160, 160)
-    const g = ctx2d(c)
-    g.translate(80, 80)
-    g.fillStyle = 'rgba(0,0,0,0.55)'
-    g.beginPath()
-    g.arc(4, 7, 74, 0, TAU)
-    g.fill()
-    // Flat discs (no gradients): gold rim + highlight, red core + highlight.
-    g.fillStyle = '#a35a00'
-    g.beginPath()
-    g.arc(0, 0, 76, 0, TAU)
-    g.fill()
-    g.fillStyle = '#ffc21f'
-    g.beginPath()
-    g.arc(-4, -5, 66, 0, TAU)
-    g.fill()
-    g.fillStyle = '#6a0710'
-    g.beginPath()
-    g.arc(0, 0, 52, 0, TAU)
-    g.fill()
-    g.fillStyle = '#d3202c'
-    g.beginPath()
-    g.arc(-4, -5, 42, 0, TAU)
-    g.fill()
-    g.fillStyle = '#ff9a6a'
-    g.beginPath()
-    g.arc(-14, -16, 13, 0, TAU)
-    g.fill()
-    g.lineWidth = 5
-    g.strokeStyle = '#fff6d0'
-    g.beginPath()
-    g.arc(0, 0, 76, 0, TAU)
-    g.stroke()
-    g.fillStyle = '#fff8e8'
-    g.beginPath()
-    for (let i = 0; i < 10; i++) {
-      const a = -Math.PI / 2 + (i / 10) * TAU
-      const rr = i % 2 === 0 ? 34 : 14
-      if (i === 0) g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)
-      else g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
-    }
-    g.closePath()
-    g.fill()
-    g.fillStyle = 'rgba(255,255,255,0.55)'
-    g.beginPath()
-    g.ellipse(-30, -34, 18, 10, -0.6, 0, TAU)
-    g.fill()
-    return c
-  })()
-
-  // ── Viewport state ───────────────────────────────────────────────────────
+export const createIntroRenderer = (ctx: C2D, opts: IntroDrawOptions): IntroRenderer => {
   let W = 1
   let H = 1
-  let DPR = 1
-  let MIN = 1
-  let portrait = false
-  let safe: SafeInsets = { top: 0, right: 0, bottom: 0, left: 0 }
-  let baseScale = 1
-  let unitPx = 1 // screen px per "design px" (720 short side = 1)
-  let bgBuffer: Cnv | null = null
-  /** Offscreen world layer, created lazily for the outro crossfade only. */
-  let worldLayer: Cnv | null = null
-  let hud: HudRect | null = null
-  let labels = initialLabels
-  let fontFamily = initialFont
-  let font100 = `100px ${fontFamily}`
+  let dpr = 1
+  /** css px per world unit at WIDE. */
+  let fitCss = 1
+  let closeZoom = 1
+  let wide: ArenaBake | null = null
+  let close: ArenaBake | null = null
+  let bakeKey = ''
+  let skill: IntroSkillFx | null = null
 
-  // Badge art baked at the hero size for the current viewport + locale.
-  let heroH = 100
-  let chipPx = 80
-  let badgeBoss: Cnv | null = null
-  let badgeSlate: Cnv | null = null
-  let cardAtlas: Cnv | null = null
-  let levelAtlas: Cnv | null = null
-  let tierSprites: Cnv[] = []
-  let pillSprite: Cnv | null = null
-  let taglineSprite: Cnv | null = null
-  /** One floating damage number per event (null = none), baked per viewport. */
-  let dmgSprites: (Cnv | null)[] = []
-  const ATLAS_COLS = 10
-  /** Design height of the Lv. 30 pill (scaled by the short side). */
-  const PILL_H = 34
+  // ── VFX state (reset on a backwards seek) ──
+  const towerFx: TowerFx = createTowerFx()
+  const ambient: TowerFx = createTowerFx(60)
+  let rand = createRng(SEED)
+  let fxT = 0 // director time the pools are at
+  let fxMs = 0 // accumulated FX time (ms)
+  let evIdx = 0
+  let leafIdx = 0
+  let gaugeRed: HpGaugeState = newHpGaugeState(TREE_MAX_HP)
+  let gaugeBlue: HpGaugeState = newHpGaugeState(TREE_MAX_HP)
 
-  // Layout anchors (screen px, CSS)
-  const L = {
-    hudX: 12, hudY: 12, hudH: 40,
-    heroStageX: 0, heroStageY: 0,
-    heroLevelX: 0, heroLevelY: 0,
-    nameX: 0, nameY: 0, nameH: 100,
-    /** 'band' = full-width boss subtitle band; 'side' = a panel in the free
-     *  space beside the arena (wide landscape). */
-    nameMode: 'band' as 'band' | 'side',
-    goalX: 0, goalY: 0, goalSize: 100,
-    /** Where the stage badge sits in the reclaim beat (the foot of the ladder). */
-    reclaimStageY: 0,
-    tagX: 0, tagY: 0,
-    barFight: 40, barFall: 70,
-    arenaPx: 400
+  const cam: CameraState = { x: 0, y: 0, z: 0, push: 1, sx: 0, sy: 0 }
+  const ov: OverlayState = {
+    captionTree: 0, captionSkills: 0, card: -1, cardIn: 0, title: false, handoff: 0, stonesLit: 0, canopy: 0, iris: -1
+  }
+  const trees: Record<'red' | 'blue', TreeState> = {
+    red: { grow: 0, sx: 1, sy: 1, alpha: 0, hp: TREE_MAX_HP, flash: 0, thorns: 0, gauge: 0, wob: 0 },
+    blue: { grow: 0, sx: 1, sy: 1, alpha: 0, hp: TREE_MAX_HP, flash: 0, thorns: 0, gauge: 0, wob: 0 }
+  }
+  const sm: SmasherState[] = CAST.map(() => ({
+    x: 0, y: 0, h: 0, sy: 1, alpha: 0, rot: 0, yaw: 0, flash: 0, shield: 0, trail: 0, vx: 0, vy: 0
+  }))
+  const anchors: CalloutAnchor[] = CAST.map(c => ({ id: c.id + 1, x: c.home.x, y: c.home.y, radius: SMASHER_R }))
+  /** The Log Slam pill's own spot beside the felled tree (camera-relative). */
+  const slamAnchor: CalloutAnchor = { id: 98, x: 0, y: 0, radius: SMASHER_R }
+  const blades: SkillVfxBlade[] = CAST.map(c => ({
+    id: c.id + 1, x: 0, y: 0, radius: SMASHER_R, hp: 1, owner: c.side,
+    skills: { has: 0, shield: 0, shieldMax: 1, phasedUntil: 0 }
+  }))
+  const rocketTargets = ROCKETS.map(() => ({ x: 0, y: 0 }))
+  const rockets: SkillRocketView[] = ROCKETS.map((r, i) => ({
+    active: false, owner: 'player' as const, x0: 0, y0: 0, target: rocketTargets[i]!, startAt: r.at * 1000, arriveAt: r.arrive * 1000
+  }))
+  /** Landing / pop rings: start time + place (stateless draw by age). */
+  const rings: { T: number; x: number; y: number; r: number; tone: string }[] = []
+  for (const e of STORY_EVENTS) {
+    if (e.kind === 'land') rings.push({ T: e.T, x: e.x, y: e.y + SMASHER_R * 0.35, r: SMASHER_R * 1.25, tone: CREAM })
+    if (e.kind === 'treePop') rings.push({ T: e.T + 0.12, x: e.x, y: e.y + TREES.red.r * 1.1, r: TREES.red.r * 1.5, tone: CREAM })
+  }
+  /** Impact stars (flat four-point stars). */
+  const stars: { T: number; x: number; y: number; s: number }[] = []
+  for (const e of STORY_EVENTS) {
+    if (e.kind === 'shieldAbsorb') stars.push({ T: e.T, x: e.x, y: e.y, s: 18 })
+    if (e.kind === 'rocketTree') stars.push({ T: e.T, x: e.x, y: e.y, s: 16 })
+    if (e.kind === 'slam') stars.push({ T: e.T, x: e.x, y: e.y, s: 34 })
   }
 
-  const measure = (text: string): number => {
-    ctx.save()
-    ctx.font = font100
-    const w = ctx.measureText(text).width
-    ctx.restore()
-    return w
+  const resetFx = (): void => {
+    resetTowerFx(towerFx)
+    resetTowerFx(ambient)
+    skill?.reset()
+    rand = createRng(SEED)
+    fxT = 0
+    fxMs = 0
+    evIdx = 0
+    leafIdx = 0
+    gaugeRed = newHpGaugeState(TREE_MAX_HP)
+    gaugeBlue = newHpGaugeState(TREE_MAX_HP)
   }
 
-  /** Text drawn through a scale so the font string is a constant. */
-  const text = (
-    g: C2D, s: string, x: number, y: number, px: number,
-    fill: string, stroke: string | null, strokePx: number, align: CanvasTextAlign = 'center'
-  ): void => {
-    const k = px / 100
-    g.save()
-    g.translate(x, y)
-    g.scale(k, k)
-    g.font = font100
-    g.textAlign = align
-    g.textBaseline = 'middle'
-    if (stroke) {
-      g.lineJoin = 'round'
-      g.lineWidth = strokePx / k
-      g.strokeStyle = stroke
-      g.strokeText(s, 0, 0)
+  // ── Camera → device transform ──
+  const zoomOf = (c: CameraState): number => (1 + (closeZoom - 1) * c.z) * c.push
+  const devPerUnit = (z: number): number => fitCss * dpr * z
+
+  /** Keep the view inside CONTENT on each axis it can (centre it on an axis
+   *  it cannot). Shake (sx, sy) is applied on top. */
+  const clampCam = (c: CameraState): void => {
+    const u = devPerUnit(zoomOf(c))
+    const hw = (W * dpr) / 2 / u
+    const hh = (H * dpr) / 2 / u
+    c.x = 2 * hw >= CONTENT.x1 - CONTENT.x0 ? (CONTENT.x0 + CONTENT.x1) / 2 : Math.max(CONTENT.x0 + hw, Math.min(CONTENT.x1 - hw, c.x))
+    c.y = 2 * hh >= CONTENT.y1 - CONTENT.y0 ? (CONTENT.y0 + CONTENT.y1) / 2 : Math.max(CONTENT.y0 + hh, Math.min(CONTENT.y1 - hh, c.y))
+  }
+
+  const pickCloseZoom = (): number => {
+    if (opts.low || opts.still) return 1
+    const dev = fitCss * dpr
+    let zc = CLOSE_MAX
+    if (PAINTED_TOWERS) zc = Math.min(zc, (PAINTED_TOWERS.ref.halfW * TREE_MAX_UPSCALE) / (TREES.red.r * 1.2) / dev)
+    const floor = PAINTED_FLOORS[FLOOR_KEY]
+    if (floor) zc = Math.min(zc, (floor.size * FLOOR_MAX_UPSCALE) / (2 * ARENA_R) / dev)
+    return zc < 1.06 ? 1 : zc
+  }
+
+  /** World rect each bake must cover: the union of what the camera sees
+   *  while it uses that bake, sampled over the film. */
+  const bakeRects = () => {
+    const zMid = 1 + (closeZoom - 1) * 0.5
+    const r = {
+      wide: { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity },
+      close: { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
     }
-    g.fillStyle = fill
-    g.fillText(s, 0, 0)
-    g.restore()
-  }
-
-  /** Stage badge BODY (no number): 3D base, gradient body, label. Baked. */
-  const bakeBadge = (theme: Theme, label: string): Cnv => {
-    const d = DPR
-    const hh = heroH
-    const labelPx = hh * 0.34
-    const lw = measure(label) * (labelPx / 100)
-    const w = hh * 0.12 + chipPx + hh * 0.16 + lw + hh * 0.28
-    const c = mkCanvas((w + 8) * d, (hh + hh * 0.12 + 8) * d)
-    const g = ctx2d(c)
-    g.scale(d, d)
-    g.translate(4, 4)
-    g.fillStyle = theme.base
-    roundRect(g, 0, hh * 0.1, w, hh, hh * 0.22)
-    g.fill()
-    const grad = g.createLinearGradient(0, 0, 0, hh)
-    grad.addColorStop(0, theme.top)
-    grad.addColorStop(1, theme.bottom)
-    g.fillStyle = grad
-    roundRect(g, 0, 0, w, hh, hh * 0.22)
-    g.fill()
-    g.lineWidth = Math.max(2, hh * 0.045)
-    g.strokeStyle = theme.border
-    g.stroke()
-    // Gloss
-    g.fillStyle = 'rgba(255,255,255,0.14)'
-    roundRect(g, hh * 0.06, hh * 0.06, w - hh * 0.12, hh * 0.36, hh * 0.16)
-    g.fill()
-    text(g, label, hh * 0.12 + chipPx + hh * 0.16, hh * 0.52, labelPx, '#ffffff', 'rgba(0,0,0,0.65)', hh * 0.07, 'left')
-    ;(c as Cnv & { __w?: number }).__w = w
-    return c
-  }
-
-  /** One number-chip face (the "card"). */
-  const drawChipFace = (g: C2D, x: number, y: number, size: number, n: number, theme: Theme): void => {
-    g.fillStyle = theme.chip
-    roundRect(g, x, y, size, size, size * 0.2)
-    g.fill()
-    g.lineWidth = Math.max(1.5, size * 0.045)
-    g.strokeStyle = theme.border
-    g.stroke()
-    g.fillStyle = 'rgba(255,255,255,0.08)'
-    roundRect(g, x + size * 0.08, y + size * 0.07, size * 0.84, size * 0.38, size * 0.12)
-    g.fill()
-    const s = NUM_STR[n] ?? ''
-    text(g, s, x + size / 2, y + size * 0.54, size * (n >= 10 ? 0.62 : 0.72), theme.chipText, 'rgba(0,0,0,0.7)', size * 0.06)
-  }
-
-  const bakeCards = (): void => {
-    const d = DPR
-    const cell = Math.ceil(chipPx + 4)
-    const rows = Math.ceil(STAGE_FROM / ATLAS_COLS)
-    const c = mkCanvas(cell * ATLAS_COLS * d, cell * rows * d)
-    const g = ctx2d(c)
-    g.scale(d, d)
-    for (let n = 1; n <= STAGE_FROM; n++) {
-      const i = n - 1
-      drawChipFace(g, (i % ATLAS_COLS) * cell + 2, Math.floor(i / ATLAS_COLS) * cell + 2, chipPx,
-        n, n === STAGE_FROM ? BOSS_THEME : SLATE_THEME)
+    const c: CameraState = { x: 0, y: 0, z: 0, push: 1, sx: 0, sy: 0 }
+    for (let T = 0; T <= BEAT.title + 1e-9; T += 0.02) {
+      cameraAt(T, c, opts.still)
+      clampCam(c)
+      const z = zoomOf(c)
+      const u = devPerUnit(z)
+      const hw = (W * dpr) / 2 / u + 10
+      const hh = (H * dpr) / 2 / u + 10
+      const box = closeZoom > 1 && z >= zMid ? r.close : r.wide
+      box.x0 = Math.min(box.x0, c.x - hw)
+      box.x1 = Math.max(box.x1, c.x + hw)
+      box.y0 = Math.min(box.y0, c.y - hh)
+      box.y1 = Math.max(box.y1, c.y + hh)
     }
-    cardAtlas = c
-    // Level numbers — big white digits for the level medallion.
-    const lcell = Math.ceil(heroH * 0.9)
-    const lrows = Math.ceil(LEVEL_FROM / ATLAS_COLS)
-    const lc = mkCanvas(lcell * ATLAS_COLS * d, lcell * lrows * d)
-    const lg = ctx2d(lc)
-    lg.scale(d, d)
-    for (let n = 1; n <= LEVEL_FROM; n++) {
-      const i = n - 1
-      text(lg, NUM_STR[n] ?? '', (i % ATLAS_COLS) * lcell + lcell / 2, Math.floor(i / ATLAS_COLS) * lcell + lcell * 0.54,
-        lcell * 0.74, '#ffffff', 'rgba(20,10,0,0.8)', lcell * 0.08)
-    }
-    levelAtlas = lc
-  }
-
-  /** Level medallion backgrounds, one per tier, with the "Lv." caption. */
-  const bakeTiers = (): void => {
-    const d = DPR
-    const s = heroH * 1.25
-    tierSprites = TIERS.map((tier) => {
-      const c = mkCanvas((s + 16) * d, (s + 16) * d)
-      const g = ctx2d(c)
-      g.scale(d, d)
-      g.translate(8 + s / 2, 8 + s / 2)
-      // Hexagon medallion
-      const hex = (r: number): void => {
-        g.beginPath()
-        for (let i = 0; i < 6; i++) {
-          const a = -Math.PI / 2 + (i / 6) * TAU
-          if (i === 0) g.moveTo(Math.cos(a) * r, Math.sin(a) * r)
-          else g.lineTo(Math.cos(a) * r, Math.sin(a) * r)
-        }
-        g.closePath()
-      }
-      g.fillStyle = 'rgba(0,0,0,0.55)'
-      g.save()
-      g.translate(0, s * 0.05)
-      hex(s * 0.47)
-      g.fill()
-      g.restore()
-      const grad = g.createLinearGradient(0, -s / 2, 0, s / 2)
-      grad.addColorStop(0, tier.top)
-      grad.addColorStop(1, tier.bottom)
-      g.fillStyle = grad
-      hex(s * 0.47)
-      g.fill()
-      g.lineWidth = Math.max(2, s * 0.035)
-      g.strokeStyle = tier.border
-      g.stroke()
-      g.fillStyle = 'rgba(0,0,0,0.28)'
-      hex(s * 0.36)
-      g.fill()
-      text(g, labels.lv, 0, -s * 0.22, s * 0.15, '#ffffff', 'rgba(0,0,0,0.7)', s * 0.03)
-      return c
+    const clampBox = (b: typeof r.wide) => ({
+      x0: Math.max(-FIELD_HALF, b.x0), y0: Math.max(-FIELD_HALF, b.y0),
+      x1: Math.min(FIELD_HALF, b.x1), y1: Math.min(FIELD_HALF, b.y1)
     })
-    // The small "Lv. 30" pill that rides under each spinner in the fight.
-    const ph = PILL_H
-    const lvW = measure(labels.lv) * (ph * 0.5 / 100)
-    const numW = measure('30') * (ph * 0.72 / 100)
-    const pw = lvW + numW + ph * 0.75
-    const pc = mkCanvas((pw + 6) * d, (ph + 6) * d)
-    const pg = ctx2d(pc)
-    pg.scale(d, d)
-    pg.translate(3, 3)
-    const pgrad = pg.createLinearGradient(0, 0, 0, ph)
-    pgrad.addColorStop(0, '#ffe27a')
-    pgrad.addColorStop(1, '#c46f00')
-    pg.fillStyle = 'rgba(0,0,0,0.6)'
-    roundRect(pg, 0, 2, pw, ph, ph / 2)
-    pg.fill()
-    pg.fillStyle = pgrad
-    roundRect(pg, 0, 0, pw, ph, ph / 2)
-    pg.fill()
-    pg.lineWidth = 1.5
-    pg.strokeStyle = '#fff6c9'
-    pg.stroke()
-    text(pg, labels.lv, ph * 0.35, ph * 0.54, ph * 0.5, '#3a1d00', null, 0, 'left')
-    text(pg, '30', ph * 0.35 + lvW + ph * 0.12, ph * 0.54, ph * 0.72, '#ffffff', '#5a2a00', 2.2, 'left')
-    ;(pc as Cnv & { __w?: number }).__w = pw
-    pillSprite = pc
+    return { wide: clampBox(r.wide), close: Number.isFinite(r.close.x0) ? clampBox(r.close) : null }
   }
 
-  const bakeTagline = (): void => {
-    const d = DPR
-    const px = MIN * (portrait ? 0.1 : 0.088)
-    const tw = measure(labels.tagline) * (px / 100)
-    const maxW = W * 0.92
-    const k = tw > maxW ? maxW / tw : 1
-    const fpx = px * k
-    const w = tw * k + fpx
-    const c = mkCanvas((w + 20) * d, (fpx * 1.6 + 20) * d)
-    const g = ctx2d(c)
-    g.scale(d, d)
-    g.translate(10 + w / 2, 10 + fpx * 0.8)
-    text(g, labels.tagline, 0, 4, fpx, '#3a0d00', 'rgba(0,0,0,0.85)', fpx * 0.16)
-    const k2 = fpx / 100
-    g.save()
-    g.scale(k2, k2)
-    g.font = font100
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    const grad = g.createLinearGradient(0, -50, 0, 50)
-    grad.addColorStop(0, '#fff7c2')
-    grad.addColorStop(0.5, '#ffd23f')
-    grad.addColorStop(1, '#ff8a00')
-    g.lineJoin = 'round'
-    g.lineWidth = 9
-    g.strokeStyle = '#4a1300'
-    g.strokeText(labels.tagline, 0, 0)
-    g.fillStyle = grad
-    g.fillText(labels.tagline, 0, 0)
-    g.restore()
-    taglineSprite = c
-  }
-
-  /** "-12" style numbers: gold for damage the blues deal to the boss (hope),
-   *  red for what the boss's thunder does to them. Baked the first time each
-   *  event is seen (the fight is live), cached per viewport — nothing is
-   *  formatted per frame. */
-  let dmgCache = new Map<string, Cnv>()
-  const bakeDamage = (): void => {
-    // Viewport changed: start over.
-    dmgCache = new Map<string, Cnv>()
-    dmgSprites = []
-  }
-  const ensureDamageSprites = (): void => {
-    if (dmgSprites.length >= events.length) return
-    const d = DPR
-    const px = Math.round(MIN * 0.052)
-    for (let i = dmgSprites.length; i < events.length; i++) {
-      const e = events[i]!
-      let v = 0
-      let gold = true
-      if (e.kind === 'hit' && e.b === BOSS && e.dmg) v = e.dmg
-      else if (e.kind === 'thunder') {
-        v = e.power
-        gold = false
-      }
-      if (!v) {
-        dmgSprites.push(null)
-        continue
-      }
-      const key = (gold ? 'g' : 'r') + v
-      let c = dmgCache.get(key) ?? null
-      if (!c) {
-        const str = '-' + v
-        const w = measure(str) * (px / 100) + px * 0.5
-        c = mkCanvas(w * d, px * 1.5 * d)
-        const g = ctx2d(c)
-        g.scale(d, d)
-        text(g, str, w / 2, px * 0.75, px, gold ? '#ffeb3b' : '#ff6b6b', gold ? '#5a2800' : '#3a0006', px * 0.16)
-        dmgCache.set(key, c)
-      }
-      dmgSprites.push(c)
+  const ensureBakes = (): void => {
+    const key = `${W}x${H}@${dpr}:${closeZoom}:${arenaArtKey()}`
+    if (key === bakeKey) return
+    bakeKey = key
+    const rects = bakeRects()
+    const uw = devPerUnit(1)
+    wide = bakeArena(uw, rects.wide.x0, rects.wide.y0, rects.wide.x1, rects.wide.y1, wide)
+    if (rects.close && closeZoom > 1) {
+      const uc = devPerUnit(closeZoom)
+      close = bakeArena(uc, rects.close.x0, rects.close.y0, rects.close.x1, rects.close.y1, close)
+    } else if (close) {
+      close.canvas.width = 1
+      close.canvas.height = 1
+      close = null
     }
   }
 
-  const bakeViewport = (): void => {
-    heroH = Math.round(MIN * 0.17)
-    chipPx = Math.round(heroH * 0.78)
-    badgeBoss = bakeBadge(BOSS_THEME, labels.bossStage)
-    badgeSlate = bakeBadge(SLATE_THEME, labels.stage)
-    bakeCards()
-    bakeTiers()
-    bakeTagline()
-    bakeDamage()
-    // Background: the game's own floor tile, sunk into darkness.
-    const bg = mkCanvas(W * DPR, H * DPR)
-    const g = ctx2d(bg)
-    g.scale(DPR, DPR)
-    g.fillStyle = '#07080c'
-    g.fillRect(0, 0, W, H)
-    if (assets.bgTile && assets.bgTile.complete && assets.bgTile.naturalWidth > 0) {
-      const pat = g.createPattern(assets.bgTile, 'repeat')
-      if (pat) {
-        g.globalAlpha = 0.28
-        g.fillStyle = pat
-        g.fillRect(0, 0, W, H)
-        g.globalAlpha = 1
-      }
-    }
-    g.drawImage(vignette, -W * 0.1, -H * 0.1, W * 1.2, H * 1.2)
-    bgBuffer = bg
+  /** Does bake `b` cover everything the camera sees at `u`? */
+  const covers = (b: ArenaBake, c: CameraState, u: number): boolean => {
+    const hw = (W * dpr) / 2 / u
+    const hh = (H * dpr) / 2 / u
+    const x = c.x + c.sx
+    const y = c.y + c.sy
+    return x - hw >= b.x0 && y - hh >= b.y0 && x + hw <= b.x0 + b.w / b.u && y + hh <= b.y0 + b.h / b.u
   }
 
-  const layout = (): void => {
-    MIN = Math.min(W, H)
-    portrait = H > W
-    unitPx = MIN / 720
-    const minBar = Math.round(MIN * 0.075)
-    baseScale = Math.min(W, H - minBar * 2) / (INTRO_ARENA_R * 2 + 26)
-    L.arenaPx = INTRO_ARENA_R * 2 * baseScale
-    // Portrait has a lot of dead space above and below the arena: frame it
-    // with real cinema bars instead of leaving it empty.
-    L.barFight = Math.round(Math.max(minBar, portrait ? ((H - L.arenaPx * 1.06) / 2) * 0.3 : 0))
-    L.barFall = Math.round(Math.max(MIN * 0.11, L.barFight * 1.15))
-    L.hudX = 8 + safe.left
-    L.hudH = Math.max(34, Math.min(48, MIN * 0.062))
-    // The HUD badge rides the top bar when the bar is tall enough for it.
-    L.hudY = L.barFight > L.hudH + 16 ? Math.max(8 + safe.top, (L.barFight - L.hudH) / 2) : 8 + safe.top
-    L.heroStageX = W / 2
-    L.heroLevelX = W / 2
-    L.goalX = W / 2
-    L.tagX = W / 2
-    L.nameH = portrait ? heroH : Math.round(heroH * 0.82)
-    if (portrait) {
-      L.heroLevelY = H * 0.33
-      L.heroStageY = H * 0.6
-      L.goalY = H * 0.23
-      L.goalSize = MIN * 0.32
-      L.reclaimStageY = H * 0.66
-      L.tagY = H * 0.765
-      L.nameMode = 'band'
-      L.nameX = W / 2
-      // The free strip above the arena, just under the bar.
-      L.nameY = Math.max(L.barFight + heroH * 0.9, H / 2 - L.arenaPx * 0.5 - heroH * 0.2)
-    } else {
-      L.heroLevelY = H * 0.3
-      L.heroStageY = H * 0.71
-      L.goalY = H * 0.2
-      L.goalSize = MIN * 0.25
-      L.reclaimStageY = H * 0.755
-      L.tagY = H * 0.915
-      // Wide landscape has free space beside the arena: put the boss card
-      // there, sized to fit, so it never covers the fight. Too narrow (4:3
-      // tablets) → the band under the arena instead.
-      const side = (W - L.arenaPx) / 2
-      const perH = badgeWidth(badgeBoss) / heroH + 1.05 // card width per px of height (skull incl.)
-      const fitH = Math.min(heroH * 0.85, (side * 0.9) / perH)
-      if (fitH >= heroH * 0.48) {
-        L.nameMode = 'side'
-        L.nameH = Math.round(fitH)
-        L.nameX = W - side / 2 + fitH * 0.3
-        L.nameY = H * 0.46
-      } else {
-        L.nameMode = 'band'
-        L.nameX = W / 2
-        L.nameY = H * 0.8
-      }
+  const blit = (b: ArenaBake, u: number, ox: number, oy: number): void => {
+    if (Math.abs(b.u - u) < 1e-6) {
+      // 1 : 1 on whole device pixels (x0 · u is a whole number).
+      ctx.drawImage(b.canvas as CanvasImageSource, ox + Math.round(b.x0 * u), oy + Math.round(b.y0 * u))
+      return
     }
+    const k = u / b.u
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(b.canvas as CanvasImageSource, ox + b.x0 * u, oy + b.y0 * u, b.w * k, b.h * k)
   }
 
-  // ── Camera ───────────────────────────────────────────────────────────────
-  //
-  // Reactive, never predictive: the physics runs live, so the camera may only
-  // respond to what has already happened at T. A scripted base path for the
-  // reveal, then one blend per event (a charge pushes in, a KO smash-zooms
-  // during its hit-stop and lets go after it, the fall drifts in slowly).
-  // Every blend weight is a function of T and of event times ≤ T, so a frame
-  // looks the same at any frame rate.
-  interface Key {
-    T: number;
-    x: number;
-    y: number;
-    z: number
+  // ── VFX clock ──
+  const towerHitNormal = (x: number, y: number) => {
+    const d = Math.hypot(x - TREES.red.x, y - TREES.red.y) || 1
+    return { nx: (x - TREES.red.x) / d, ny: (y - TREES.red.y) / d }
   }
 
-  const REVEAL: readonly Key[] = [
-    { T: 0, x: 0, y: 105, z: 1.3 },
-    { T: 0.28, x: 0, y: 70, z: 1.26 },
-    { T: 0.55, x: 0, y: -20, z: 1.32 },
-    { T: 1.2, x: 0, y: 0, z: 1.08 }
-  ]
-  const cam = { x: 0, y: 0, z: 1, sx: 0, sy: 0 }
-
-  // Shake + kick sources, rebuilt from the KNOWN events whenever the director
-  // learns something new (never per frame).
-  let shakeT: number[] = []
-  let shakeA: number[] = []
-  let shakeD: number[] = []
-  let shakeSeed: number[] = []
-  let shakeVersion = -1
-  const rebuildShake = (): void => {
-    shakeVersion = director.version
-    const t: number[] = []
-    const a: number[] = []
-    const d: number[] = []
-    const sd: number[] = []
-    const add = (T: number, amp: number, dur: number, seed: number): void => {
-      t.push(T)
-      a.push(amp)
-      d.push(dur)
-      sd.push(seed)
-    }
-    let koCount = 0
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const T = eventT[i]!
-      switch (e.kind) {
-        case 'slam':
-          add(T, 16, 0.5, e.id)
-          break
-        case 'hit':
-          if (e.b === BOSS && e.power > 250) add(T, Math.min(10, 3 + e.power / 130), 0.24, e.id)
-          break
-        case 'thunder':
-          add(T, 9, 0.32, e.id)
-          break
-        case 'ko': {
-          const first = koCount++ === 0
-          add(T + (eventHold[i] ?? 0), first ? 18 : 26, first ? 0.55 : 0.9, e.id)
-          break
+  const fireEvent = (e: StoryEvent, sound: boolean): void => {
+    const low = opts.low
+    const nowMs = e.T * 1000
+    switch (e.kind) {
+      case 'treePop':
+        if (!low) spawnLeaves(towerFx, e.x, e.y, TREES.red.r, 9, 0, rand)
+        break
+      case 'shieldAbsorb':
+        skill?.fire({
+          kind: 'shield_absorb', effect: 'guard_shell', key: 'bear_hug', owner: 'player',
+          bladeId: GRIZZLE + 1, x: e.x, y: e.y, value: e.value
+        }, anchors[GRIZZLE]!, nowMs, sound)
+        break
+      case 'volley':
+        skill?.fire({
+          kind: 'rocket_volley', effect: 'homing_rockets', key: 'thorn_volley', owner: 'player',
+          bladeId: BRAMBLE + 1, x: e.x, y: e.y, value: e.value
+        }, anchors[BRAMBLE]!, nowMs, sound)
+        break
+      case 'rocketHit':
+        skill?.fire({
+          kind: 'rocket_hit', effect: 'homing_rockets', key: 'thorn_volley', owner: 'player',
+          bladeId: VIXIE + 1, x: sm[VIXIE]!.x, y: sm[VIXIE]!.y, value: e.value
+        }, anchors[VIXIE]!, nowMs, sound)
+        break
+      case 'rocketTree': {
+        skill?.fire({
+          kind: 'rocket_hit', effect: 'homing_rockets', key: 'thorn_volley', owner: 'player',
+          bladeId: 99, x: e.x, y: e.y, value: e.value
+        }, anchors[BRAMBLE]!, nowMs, false)
+        if (!low) {
+          const n = towerHitNormal(TREE_ROCKET_POINT.x, TREE_ROCKET_POINT.y)
+          spawnSplinters(towerFx, e.x, e.y, n.nx, n.ny, TREES.red.r, 12, rand)
+          spawnLeaves(towerFx, TREES.red.x, TREES.red.y, TREES.red.r, leafCascadeCount(1), 0.1, rand)
         }
-        case 'wall':
-          if (e.a === BOSS && e.power > 400) add(T, 12, 0.35, e.id)
-          break
-        case 'bumper':
-          if (e.a !== BOSS) add(T, 4, 0.16, e.id)
-          break
-      }
-    }
-    add(B.landT, 15, 0.45, 901)
-    add(B.badgeGoneT - 0.25, 6, 0.25, 902)
-    shakeT = t
-    shakeA = a
-    shakeD = d
-    shakeSeed = sd
-  }
-
-  /** Blend the camera toward a target by weight w. */
-  const pull = (tx: number, ty: number, tz: number, w: number): void => {
-    if (w <= 0) return
-    cam.x += (tx - cam.x) * w
-    cam.y += (ty - cam.y) * w
-    cam.z += (tz - cam.z) * w
-  }
-
-  const computeCamera = (T: number, S: number): void => {
-    if (shakeVersion !== director.version) rebuildShake()
-    // 1. The scripted reveal path.
-    let k = 0
-    while (k + 1 < REVEAL.length && REVEAL[k + 1]!.T <= T) k++
-    const a = REVEAL[k]!
-    const b = REVEAL[Math.min(k + 1, REVEAL.length - 1)]!
-    const u = b.T > a.T ? easeInOutCubic((T - a.T) / (b.T - a.T)) : 1
-    cam.x = a.x + (b.x - a.x) * u
-    cam.y = a.y + (b.y - a.y) * u
-    cam.z = a.z + (b.z - a.z) * u
-
-    // 2. A gentle follow of the action until the first charge.
-    let firstChargeT = UNKNOWN_T
-    for (let i = 0; i < events.length; i++) {
-      if (events[i]!.kind === 'charge') {
-        firstChargeT = eventT[i]!
         break
       }
-    }
-    const follow = envelope(T, 1.2, 0.5, firstChargeT + 0.3, 0.3) * 0.22
-    if (follow > 0) {
-      let cx = 0
-      let cy = 0
-      let n = 0
-      for (let i = 0; i < 3; i++) {
-        if (sampleTrack(track, S, i, F_ALIVE) < 0.5) continue
-        cx += sampleTrack(track, S, i, F_X)
-        cy += sampleTrack(track, S, i, F_Y)
-        n++
-      }
-      if (n) pull(cx / n, cy / n, cam.z, follow)
-    }
-
-    // 3. Event blends, in the order they happened.
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const te = eventT[i]!
-      if (te > T) break
-      if (e.kind === 'charge') {
-        const koT = e.b === P1 ? B.koT[0] : B.koT[1]
-        const koHold = e.b === P1 ? 0.22 : 0.3
-        const mx = (e.x + sampleTrack(track, e.s, e.b, F_X)) * 0.5
-        const my = (e.y + sampleTrack(track, e.s, e.b, F_Y)) * 0.5
-        const push = easeInOutCubic(ramp(T, te, te + (e.b === P2 ? 0.35 : 0.2)))
-        const release = e.b === P1 ? 1 - easeInOutCubic(ramp(T, koT + koHold + 0.05, koT + koHold + 0.7)) : 1
-        pull(mx * 0.5, my * 0.5, e.b === P2 ? 1.3 : 1.14, push * release)
-      } else if (e.kind === 'ko') {
-        const hold = eventHold[i] ?? 0
-        const first = e.a === P1
-        const smash = easeOutCubic(ramp(T, te, te + (first ? 0.1 : 0.12)))
-        if (first) {
-          const release = 1 - easeInOutCubic(ramp(T, te + hold + 0.05, te + hold + 0.7))
-          pull(e.x * 0.55, e.y * 0.55, 1.24, smash * release)
-        } else {
-          pull(e.x * 0.6, e.y * 0.6, 1.48, smash)
-          // …and then the long, slow pull back to the boss as the world drains.
-          pull(BOSS_HOME.x, BOSS_HOME.y * 0.5, 1.12, easeInOutCubic(ramp(T, te + hold, te + hold + 1.3)))
+      case 'slam': {
+        skill?.fire({
+          kind: 'tower', effect: 'tower_breaker', key: 'log_slam', owner: 'player',
+          bladeId: CHOMPER + 1, x: e.x, y: e.y, value: LOG_SLAM_BONUS
+        }, slamAnchor, nowMs, sound)
+        if (!low) {
+          const n = towerHitNormal(e.x, e.y)
+          spawnSplinters(towerFx, e.x, e.y, n.nx, n.ny, TREES.red.r, 24, rand)
+          spawnThornShards(towerFx, e.x, e.y, n.nx, n.ny, TREES.red.r, 10, rand)
+          spawnLeaves(towerFx, TREES.red.x, TREES.red.y, TREES.red.r, leafCascadeCount(3), 0.45, rand)
         }
+        break
       }
+      default:
+        break
     }
-    // 4. The fall: a slow push in on the boss.
-    if (T >= B.battleEndT) pull(BOSS_HOME.x, BOSS_HOME.y * 0.6, 1.2, easeInOutCubic(ramp(T, B.battleEndT, B.landT)))
-
-    // Impact kicks — a punch-in that decays in ~0.2 s — and the shake.
-    let kick = 0
-    let sx = 0
-    let sy = 0
-    for (let i = 0; i < shakeT.length; i++) {
-      const age = T - shakeT[i]!
-      if (age < 0 || age > shakeD[i]!) continue
-      const fall = 1 - age / shakeD[i]!
-      const amp = shakeA[i]! * fall * fall
-      kick += amp * 0.0022 * Math.exp(-age * 14)
-      const seed = shakeSeed[i]! * 1.618
-      sx += amp * (Math.sin(T * 91 + seed * 7) * 0.6 + Math.sin(T * 147 + seed * 3) * 0.4)
-      sy += amp * (Math.cos(T * 83 + seed * 5) * 0.6 + Math.sin(T * 131 + seed * 11) * 0.4)
-    }
-    // Portrait frames the arena edge-to-edge already; punch-ins there are
-    // gentler so a blade near the wall is never cut off.
-    if (portrait) {
-      cam.z = 1 + (cam.z - 1) * 0.5
-      // …and pans sideways less: the arena already fills the width.
-      cam.x *= 0.4
-    }
-    cam.z *= 1 + kick
-    cam.sx = sx * unitPx
-    cam.sy = sy * unitPx
   }
 
-  /** The KO event of a blue, once it has happened (null before). */
-  const koEventOf = (id: number): FightEvent | null => {
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      if (e.kind === 'ko' && e.a === id) return e
-    }
-    return null
-  }
-
-  const worldScale = (): number => baseScale * cam.z
-  const wsx = (x: number): number => W / 2 + cam.sx + (x - cam.x) * worldScale()
-  const wsy = (y: number): number => H / 2 + cam.sy + (y - cam.y) * worldScale()
-
-  // ── Lightning (deterministic, allocation-free) ───────────────────────────
-  const boltPath = (g: C2D, x0: number, y0: number, x1: number, y1: number, seed: number, segs: number, jit: number): void => {
-    const dx = x1 - x0
-    const dy = y1 - y0
-    const len = Math.hypot(dx, dy) || 1
-    const nx = -dy / len
-    const ny = dx / len
-    g.moveTo(x0, y0)
-    for (let i = 1; i < segs; i++) {
-      const t = i / segs
-      const off = (hash01(seed, i) - 0.5) * 2 * jit * (1 - Math.abs(2 * t - 1) * 0.5)
-      g.lineTo(x0 + dx * t + nx * off, y0 + dy * t + ny * off)
-    }
-    g.lineTo(x1, y1)
-    // One short branch
-    const bt = 0.3 + hash01(seed, 97) * 0.4
-    const off = (hash01(seed, Math.floor(bt * segs)) - 0.5) * 2 * jit
-    const bx = x0 + dx * bt + nx * off
-    const by = y0 + dy * bt + ny * off
-    const ba = Math.atan2(dy, dx) + (hash01(seed, 98) - 0.5) * 1.6
-    const bl = len * (0.2 + hash01(seed, 99) * 0.2)
-    g.moveTo(bx, by)
-    g.lineTo(bx + Math.cos(ba) * bl * 0.5 + nx * jit * 0.4, by + Math.sin(ba) * bl * 0.5 + ny * jit * 0.4)
-    g.lineTo(bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl)
-  }
-  const bolt = (
-    g: C2D, x0: number, y0: number, x1: number, y1: number, seed: number, segs: number, jit: number,
-    wGlow: number, wCore: number, glow: string, alpha: number
-  ): void => {
-    g.beginPath()
-    boltPath(g, x0, y0, x1, y1, seed, segs, jit)
-    g.lineCap = 'round'
-    g.lineJoin = 'round'
-    g.globalAlpha = alpha * 0.45
-    g.strokeStyle = glow
-    g.lineWidth = wGlow
-    g.stroke()
-    g.globalAlpha = alpha
-    g.strokeStyle = '#ffffff'
-    g.lineWidth = wCore
-    g.stroke()
-    g.globalAlpha = 1
-  }
-
-  // ── World layers ─────────────────────────────────────────────────────────
-
-  const drawBody = (g: C2D, id: number, S: number, T: number, low: boolean, px: number): void => {
-    if (sampleTrack(track, S, id, F_ALIVE) < 0.5) return
-    let x = sampleTrack(track, S, id, F_X)
-    let y = sampleTrack(track, S, id, F_Y)
-    const rot = sampleTrack(track, S, id, F_ROT)
-    const speed = sampleTrack(track, S, id, F_SPEED)
-    let r = BODY_R[id]!
-    let alpha = id === BOSS ? bossAlphaAt(T) : 1
-    if (alpha <= 0.01) return
-
-    if (id === BOSS) {
-      // The drop: falls out of the sky and slams down at slamT.
-      const dropA = B.slamT - 0.34
-      if (T < dropA) return
-      if (T < B.slamT) {
-        const u = easeInCubic(ramp(T, dropA, B.slamT))
-        // Shadow grows on the floor first.
-        g.globalAlpha = 0.25 + 0.55 * u
-        g.drawImage(scorch, x - r * 1.4 * (0.5 + u * 0.5), y - r * 0.9 * (0.5 + u * 0.5) + r * 0.3,
-          r * 2.8 * (0.5 + u * 0.5), r * 1.8 * (0.5 + u * 0.5))
-        g.globalAlpha = 1
-        r *= 1 + (1 - u) * 1.6
-        y -= (1 - u) * 90
-        alpha = 0.2 + 0.8 * u
+  /** Step the pools from fxT to T on the fixed clock, firing the events. */
+  const stepFx = (T: number, sound: boolean): void => {
+    if (T < fxT - 1e-6) resetFx()
+    // A long jump (seek) replays silently.
+    const catchingUp = T - fxT > 0.3
+    while (fxT < T - 1e-9) {
+      const next = Math.min(T, fxT + FX_DT)
+      while (evIdx < STORY_EVENTS.length && STORY_EVENTS[evIdx]!.T <= next + 1e-9) {
+        const e = STORY_EVENTS[evIdx]!
+        // Positions this event reads (Vixie on a rocket hit) at its own time.
+        if (e.kind === 'rocketHit') smasherAt(VIXIE, e.T, sm[VIXIE]!, opts.still)
+        fireEvent(e, sound && !catchingUp)
+        evIdx++
       }
-    }
-
-    // Afterimages from the precomputed track — the anime speed smear, free.
-    if (!low && speed > 260) {
-      const n = speed > 520 ? 5 : 3
-      for (let k = n; k >= 1; k--) {
-        const sp = S - k * 0.014
-        if (sampleTrack(track, sp, id, F_ALIVE) < 0.5) continue
-        g.globalAlpha = 0.13 * (1 - k / (n + 1)) * alpha
-        const ax = sampleTrack(track, sp, id, F_X)
-        const ay = sampleTrack(track, sp, id, F_Y)
-        g.drawImage(skins[id]!, ax - r, ay - r, r * 2, r * 2)
+      while (!opts.low && leafIdx < AMBIENT_LEAVES.length && AMBIENT_LEAVES[leafIdx]!.T <= next + 1e-9) {
+        const l = AMBIENT_LEAVES[leafIdx]!
+        spawnLeaves(ambient, l.x, l.y, 26, 1, hash01(SEED + 7, leafIdx) < 0.25 ? 1 : 0, rand)
+        leafIdx++
       }
-      g.globalAlpha = 1
-    }
-    if (speed > 200) {
-      // A single smear stroke behind the body.
-      const tail = S - 0.05
-      const tx = sampleTrack(track, tail, id, F_X)
-      const ty = sampleTrack(track, tail, id, F_Y)
-      g.globalAlpha = Math.min(0.5, (speed - 200) / 900) * alpha
-      g.strokeStyle = id === BOSS ? '#c070ff' : id === P1 ? '#9fd8ff' : '#dff7ff'
-      g.lineWidth = r * 1.3
-      g.lineCap = 'round'
-      g.beginPath()
-      g.moveTo(tx, ty)
-      g.lineTo(x, y)
-      g.stroke()
-      g.globalAlpha = 1
-    }
-
-    // Aura
-    if (id === BOSS) {
-      const windup = windupAt(S)
-      const pulse = 0.72 + 0.18 * Math.sin(T * 7) + windup * 0.5
-      const ar = r * (2.3 + windup * 0.9)
-      g.globalAlpha = Math.min(1, pulse) * alpha
-      g.drawImage(glowBoss, x - ar, y - ar, ar * 2, ar * 2)
-      g.globalAlpha = 1
-    } else {
-      const ar = r * 2
-      g.globalAlpha = 0.85 * alpha
-      g.drawImage(id === P1 ? glowBlue : glowIce, x - ar, y - ar, ar * 2, ar * 2)
-      g.globalAlpha = 1
-      if (id === P1) {
-        // Tornado vortex, rotating against the spin.
-        g.save()
-        g.translate(x, y)
-        g.rotate(-T * 5.5)
-        g.globalAlpha = 0.9 * alpha
-        g.drawImage(swirl, -r * 1.9, -r * 1.9, r * 3.8, r * 3.8)
-        g.restore()
-        g.globalAlpha = 1
+      const ms = (next - fxT) * 1000 * fxRate(fxT)
+      if (ms > 0) {
+        tickTowerFx(towerFx, ms)
+        tickTowerFx(ambient, ms)
+        skill?.tick(ms)
+        fxMs += ms
       }
-    }
-
-    // The skin
-    g.save()
-    g.translate(x, y)
-    g.rotate(rot)
-    g.globalAlpha = alpha
-    g.drawImage(skins[id]!, -r, -r, r * 2, r * 2)
-    g.restore()
-    g.globalAlpha = 1
-
-    // Diamond glints — four-point stars flaring around the rim.
-    if (id === P2 && !low) {
-      g.fillStyle = '#ffffff'
-      for (let k = 0; k < 3; k++) {
-        const ph = T * 2.2 + k * 2.1
-        const fl = Math.max(0, Math.sin(ph * 2.3))
-        if (fl < 0.2) continue
-        const a = ph * 1.3 + k
-        const gx = x + Math.cos(a) * r * 0.75
-        const gy = y + Math.sin(a) * r * 0.75
-        const gs = r * 0.42 * fl
-        g.globalAlpha = fl * alpha
-        g.beginPath()
-        g.moveTo(gx, gy - gs)
-        g.lineTo(gx + gs * 0.18, gy - gs * 0.18)
-        g.lineTo(gx + gs, gy)
-        g.lineTo(gx + gs * 0.18, gy + gs * 0.18)
-        g.lineTo(gx, gy + gs)
-        g.lineTo(gx - gs * 0.18, gy + gs * 0.18)
-        g.lineTo(gx - gs, gy)
-        g.lineTo(gx - gs * 0.18, gy - gs * 0.18)
-        g.closePath()
-        g.fill()
-      }
-      g.globalAlpha = 1
-    }
-
-    // Hit flash — white, from the most recent contact on this body.
-    const flash = hitFlashAt(id, T)
-    if (flash > 0) {
-      g.globalAlpha = flash * 0.85 * alpha
-      g.drawImage(glowWhite, x - r * 1.15, y - r * 1.15, r * 2.3, r * 2.3)
-      g.globalAlpha = 1
-    }
-
-    // HP ring
-    if (T > 0.4 && (id !== BOSS || T >= B.slamT) && alpha > 0.5) {
-      const hp = sampleTrack(track, S, id, F_HP)
-      const rr = r + 5 * px
-      g.lineWidth = (id === BOSS ? 4.2 : 3.4) * px
-      g.strokeStyle = 'rgba(0,0,0,0.55)'
-      g.beginPath()
-      g.arc(x, y, rr, 0, TAU)
-      g.stroke()
-      g.strokeStyle = id === BOSS ? '#c46bff' : HP_COL[Math.round(clamp01(hp) * 10)]!
-      g.lineCap = 'round'
-      g.beginPath()
-      g.arc(x, y, rr, -Math.PI / 2, -Math.PI / 2 + TAU * clamp01(hp))
-      g.stroke()
-      g.lineCap = 'butt'
+      fxT = next
     }
   }
 
-  /** The boss withdraws before the reclaim — it reappears up top as the goal. */
-  const bossAlphaAt = (T: number): number => 1 - ramp(T, B.holdEndT - 0.2, B.reclaimT + 0.3)
-
-  /** 0..1 boss thunder wind-up at T (rises from a wind event to its strike). */
-  /** Thunder wind-up, 0..1, from the SCRIPT's wind → strike sim times — so
-   *  the telegraph is known before the strike without peeking at physics. */
-  const windupAt = (S: number): number => {
-    let w = 0
-    for (let i = 0; i < WIND_PAIRS.length; i += 2) {
-      const s0 = WIND_PAIRS[i]!
-      const s1 = WIND_PAIRS[i + 1]!
-      if (S >= s0 && S < s1) w = Math.max(w, easeInCubic(ramp(S, s0, s1)))
-    }
-    return w
-  }
-
-  const hitFlashAt = (id: number, T: number): number => {
-    let f = 0
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const t0 = eventT[i]!
-      if (t0 > T) break
-      if (e.a !== id && !(e.kind === 'hit' && e.b === id)) continue
-      if (e.kind !== 'hit' && e.kind !== 'thunder' && e.kind !== 'bumper') continue
-      const age = T - t0
-      if (age < 0.22) f = Math.max(f, 1 - age / 0.22)
-    }
-    return f
-  }
-
-  const drawBumper = (g: C2D, T: number, am: number): void => {
-    if (am <= 0.01) return
-    let pop = 0
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      if (e.kind !== 'bumper') continue
-      const age = T - eventT[i]!
-      if (age >= 0 && age < 0.35) pop = Math.max(pop, 1 - age / 0.35)
-    }
-    const idle = 0.5 + 0.5 * Math.sin(T * 5)
-    const r = BUMPER.r * (1 + pop * 0.3)
-    g.globalAlpha = am * (0.3 + idle * 0.15 + pop * 0.65)
-    g.drawImage(glowGold, BUMPER.x - r * 2.4, BUMPER.y - r * 2.4, r * 4.8, r * 4.8)
-    g.globalAlpha = am
-    const rb = r * (160 / 152)
-    g.drawImage(bumperBody, BUMPER.x - rb, BUMPER.y - rb, rb * 2, rb * 2)
-    if (pop > 0) {
-      g.globalAlpha = am * pop
-      g.drawImage(glowWhite, BUMPER.x - r * 1.1, BUMPER.y - r * 1.1, r * 2.2, r * 2.2)
-    }
-    g.globalAlpha = 1
-  }
-
-  /** All event-driven world FX, as pure functions of age. */
-  const drawEventFx = (g: C2D, T: number, S: number, low: boolean, px: number): void => {
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const t0 = eventT[i]!
-      if (t0 > T + 1e-6) break
-      const hold = eventHold[i]!
-      // Sim-age freezes inside a hit-stop; director age keeps running.
-      const simAge = S - e.s
-      const age = T - t0
-      const id = e.id
-
-      switch (e.kind) {
-        case 'hit': {
-          if (simAge > 0.5) break
-          const strong = e.b === BOSS && e.power > 300
-          const n = low ? 6 : strong ? 14 : 8
-          const life = 0.38
-          if (simAge <= life) {
-            g.lineCap = 'round'
-            g.strokeStyle = strong ? '#fff2b0' : '#ffffff'
-            g.lineWidth = (strong ? 2.6 : 1.8) * px
-            g.beginPath()
-            for (let k = 0; k < n; k++) {
-              const a = hash01(id, k) * TAU
-              const sp = (220 + hash01(id, k + 50) * 520) * (strong ? 1 : 0.7)
-              const tl = life * (0.55 + hash01(id, k + 90) * 0.45)
-              if (simAge > tl) continue
-              const u = simAge / tl
-              const d = sp * simAge * (1 - u * 0.45)
-              const len = (1 - u) * sp * 0.028
-              const cx = e.x + Math.cos(a) * d
-              const cy = e.y + Math.sin(a) * d
-              g.moveTo(cx - Math.cos(a) * len, cy - Math.sin(a) * len)
-              g.lineTo(cx, cy)
-            }
-            g.stroke()
-          }
-          // Impact flare + ring
-          if (age < 0.16 + hold) {
-            const u = clamp01(age / (0.16 + hold))
-            const fr = (strong ? 34 : 20) * (0.6 + u * 0.8)
-            g.globalAlpha = 1 - u
-            g.drawImage(strong ? glowGold : glowWhite, e.x - fr, e.y - fr, fr * 2, fr * 2)
-            g.globalAlpha = 1
-          }
-          if (strong && simAge < 0.35 && simAge >= 0) {
-            const u = simAge / 0.35
-            g.globalAlpha = (1 - u) * 0.8
-            g.strokeStyle = '#ffe9a8'
-            g.lineWidth = (5 * (1 - u) + 1) * px
-            g.beginPath()
-            g.arc(e.x, e.y, 10 + u * 70, 0, TAU)
-            g.stroke()
-            g.globalAlpha = 1
-          }
-          break
-        }
-        case 'bumper': {
-          if (simAge > 0.4 || simAge < 0) break
-          const u = simAge / 0.4
-          g.globalAlpha = (1 - u) * 0.9
-          g.strokeStyle = '#ffe07a'
-          g.lineWidth = (4 * (1 - u) + 1) * px
-          g.beginPath()
-          g.arc(BUMPER.x, BUMPER.y, BUMPER.r + u * 46, 0, TAU)
-          g.stroke()
-          g.globalAlpha = 1
-          if (!low) {
-            g.strokeStyle = '#fff1b0'
-            g.lineWidth = 1.8 * px
-            g.beginPath()
-            for (let k = 0; k < 7; k++) {
-              const a = hash01(id, k) * TAU
-              const d = BUMPER.r + simAge * (260 + hash01(id, k + 7) * 260)
-              g.moveTo(BUMPER.x + Math.cos(a) * d, BUMPER.y + Math.sin(a) * d)
-              g.lineTo(BUMPER.x + Math.cos(a) * (d + 9 * (1 - u)), BUMPER.y + Math.sin(a) * (d + 9 * (1 - u)))
-            }
-            g.stroke()
-          }
-          break
-        }
-        case 'wall': {
-          if (simAge > 0.45 || simAge < 0) break
-          const u = simAge / 0.45
-          const a = Math.atan2(e.y, e.x)
-          const bossHit = e.a === BOSS
-          g.globalAlpha = (1 - u) * (bossHit ? 1 : 0.7)
-          g.strokeStyle = bossHit ? '#ffd0c0' : '#ff8c80'
-          g.lineWidth = ((bossHit ? 12 : 6) * (1 - u) + 2) * px
-          g.beginPath()
-          g.arc(0, 0, INTRO_ARENA_R - 1, a - 0.34 * (1 + u), a + 0.34 * (1 + u))
-          g.stroke()
-          g.globalAlpha = 1
-          break
-        }
-        case 'slam': {
-          // Crack decal (persists, fading late), dust ring, twin shockwaves,
-          // outward lightning.
-          if (age < 0.7) {
-            for (let k = 0; k < 2; k++) {
-              const u = clamp01((age - k * 0.08) / 0.6)
-              if (u <= 0 || u >= 1) continue
-              g.globalAlpha = (1 - u) * 0.85
-              g.strokeStyle = k === 0 ? '#ffffff' : '#ff9a6a'
-              g.lineWidth = (9 * (1 - u) + 1) * px
-              g.beginPath()
-              g.arc(e.x, e.y, 50 + u * 230, 0, TAU)
-              g.stroke()
-            }
-            g.globalAlpha = 1
-          }
-          if (age < 0.28) {
-            const u = age / 0.28
-            for (let k = 0; k < (low ? 3 : 6); k++) {
-              const a = (k / 6) * TAU + hash01(id, k) * 0.6
-              const len = 80 + hash01(id, k + 20) * 80
-              bolt(g, e.x + Math.cos(a) * 40, e.y + Math.sin(a) * 40,
-                e.x + Math.cos(a) * (40 + len), e.y + Math.sin(a) * (40 + len),
-                id * 31 + k + Math.floor(age * 30) * 7, 6, 12, 7 * px, 2 * px, '#b98cff', 1 - u)
-            }
-          }
-          if (age < 0.9 && !low) {
-            // Debris chips
-            g.fillStyle = '#5b2a26'
-            for (let k = 0; k < 14; k++) {
-              const a = hash01(id, k + 40) * TAU
-              const sp = 120 + hash01(id, k + 60) * 200
-              const u = age / 0.9
-              const d = 46 + sp * age * (1 - u * 0.5)
-              const s = (3 + hash01(id, k + 80) * 4) * (1 - u)
-              g.fillRect(e.x + Math.cos(a) * d - s / 2, e.y + Math.sin(a) * d - s / 2, s, s)
-            }
-          }
-          break
-        }
-        case 'thunder': {
-          // Chain lightning from the previous link (boss or the first victim)
-          // to this blade, flickering for 0.42 s of DIRECTOR time.
-          if (age > 0.55 + hold) break
-          const from = e.b
-          const fx = sampleTrack(track, e.s, from, F_X)
-          const fy = sampleTrack(track, e.s, from, F_Y)
-          const flick = Math.floor(age * 30)
-          if (flick % 5 === 4 && age > 0.12) break
-          const fade = 1 - clamp01((age - hold) / 0.55)
-          bolt(g, fx, fy, e.x, e.y, id * 101 + flick * 13, low ? 7 : 12, 24, 30 * px, 6 * px, '#a98bff', fade)
-          if (!low) bolt(g, fx, fy, e.x, e.y, id * 103 + flick * 17, 9, 34, 14 * px, 2.2 * px, '#7fd0ff', fade * 0.8)
-          const fr = BODY_R[e.a]! * 2.4
-          g.globalAlpha = fade
-          g.drawImage(glowCyan, e.x - fr, e.y - fr, fr * 2, fr * 2)
-          g.drawImage(glowWhite, fx - fr * 0.7, fy - fr * 0.7, fr * 1.4, fr * 1.4)
-          g.globalAlpha = 1
-          break
-        }
-        case 'ko': {
-          drawKo(g, e, S, age, hold, low, px)
-          break
-        }
-        default:
-          break
-      }
-    }
-  }
-
-  /** Floor decals, drawn UNDER the bodies: the landing cracks and the KO
-   *  scorch marks. */
-  const drawGroundFx = (g: C2D, T: number, S: number): void => {
-    const fade = 1 - ramp(T, B.battleEndT, B.fallStartT + 0.6)
-    if (fade <= 0) return
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const t0 = eventT[i]!
-      if (t0 > T + 1e-6) break
-      if (e.kind === 'slam') {
-        const cs = 150 * easeOutCubic(ramp(T - t0, 0, 0.12))
-        g.globalAlpha = 0.85 * fade
-        g.drawImage(cracks, e.x - cs / 2, e.y - cs / 2, cs, cs)
-      } else if (e.kind === 'ko') {
-        const simAge = S - e.s
-        if (simAge <= 0) continue
-        const sr = BODY_R[e.a]! * 2.2 * easeOutCubic(clamp01(simAge / 0.2))
-        g.globalAlpha = 0.9 * fade
-        g.drawImage(scorch, e.x - sr, e.y - sr, sr * 2, sr * 2)
-      }
-    }
-    g.globalAlpha = 1
-  }
-
-  const drawKo = (g: C2D, e: FightEvent, S: number, age: number, hold: number, low: boolean, px: number): void => {
-    const id = e.id
-    const r = BODY_R[e.a]!
-    const simAge = S - e.s
-    // During the hit-stop the blade is still there, white-hot.
-    if (age <= hold) {
-      const s = skins[e.a]!
-      g.drawImage(s, e.x - r, e.y - r, r * 2, r * 2)
-      g.globalAlpha = 0.9
-      g.drawImage(glowWhite, e.x - r * 1.6, e.y - r * 1.6, r * 3.2, r * 3.2)
-      g.globalAlpha = 1
+  // ── Drawing helpers (world units) ──
+  const vectorTree = (side: 'player' | 'npc', r: number, hp: number): void => {
+    const c = TREE_COLOURS[side]
+    ctx.strokeStyle = OUTLINE
+    if (hp <= 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+      ctx.beginPath()
+      ctx.arc(3, 4, r * 0.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = '#8a5a35'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+      ctx.fillStyle = '#e8c48a'
+      ctx.beginPath()
+      ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2)
+      ctx.fill()
       return
     }
-    const t = simAge
-    if (t > 1.6) return
-    // Core flash
-    if (t < 0.4) {
-      const u = t / 0.4
-      const fr = r * (1.4 + u * 3.2)
-      g.globalAlpha = 1 - u
-      g.drawImage(glowWhite, e.x - fr, e.y - fr, fr * 2, fr * 2)
-      g.drawImage(e.a === P1 ? glowBlue : glowCyan, e.x - fr * 1.4, e.y - fr * 1.4, fr * 2.8, fr * 2.8)
-      g.globalAlpha = 1
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+    ctx.beginPath()
+    ctx.arc(3, 5, r, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.lineWidth = 2.5
+    ctx.fillStyle = '#7a4f2c'
+    ctx.beginPath()
+    ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+    ctx.fillStyle = c.leafDark
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3 + 0.3
+      ctx.beginPath()
+      ctx.arc(Math.cos(a) * r * 0.48, Math.sin(a) * r * 0.48, r * 0.42, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
     }
-    // Explosion spritesheet (if it has loaded), 13 × 50 ms.
-    const ex = assets.explosion
-    if (ex && ex.complete && ex.naturalWidth > 0 && t < 0.65) {
-      const f = Math.min(12, Math.floor(t / 0.05))
-      const es = Math.min(r * 3.2, 118 / worldScale())
-      g.drawImage(ex, f * 160, 0, 160, 160, e.x - es, e.y - es, es * 2, es * 2)
-    }
-    // Shockwave
-    if (t < 0.6) {
-      const u = t / 0.6
-      g.globalAlpha = (1 - u) * 0.9
-      g.strokeStyle = '#e8f6ff'
-      g.lineWidth = (10 * (1 - u) + 1) * px
-      g.beginPath()
-      g.arc(e.x, e.y, r + u * 150, 0, TAU)
-      g.stroke()
-      g.globalAlpha = 1
-    }
-    // The skin SHATTERS: 7 wedges fly apart, spinning.
-    if (t < 1.1) {
-      const n = low ? 5 : 7
-      const u = t / 1.1
-      const skin = skins[e.a]!
-      for (let k = 0; k < n; k++) {
-        const a0 = (k / n) * TAU
-        const a1 = ((k + 1) / n) * TAU
-        const mid = (a0 + a1) / 2
-        const sp = 140 + hash01(id, k + 300) * 220
-        const d = sp * t * (1 - u * 0.4)
-        const rotK = (hash01(id, k + 330) - 0.5) * 14 * t
-        g.save()
-        g.globalAlpha = 1 - u * u
-        g.translate(e.x + Math.cos(mid) * d, e.y + Math.sin(mid) * d)
-        g.rotate(rotK)
-        g.beginPath()
-        g.moveTo(0, 0)
-        g.arc(0, 0, r, a0, a1)
-        g.closePath()
-        g.clip()
-        g.drawImage(skin, -r, -r, r * 2, r * 2)
-        g.restore()
+    ctx.fillStyle = c.leaf
+    ctx.beginPath()
+    ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)'
+    ctx.beginPath()
+    ctx.arc(-r * 0.22, -r * 0.24, r * 0.2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const drawTree = (key: 'red' | 'blue', nowMs: number): void => {
+    const tr = TREES[key]
+    const s = trees[key]
+    if (s.grow <= 0 || s.alpha <= 0) return
+    const groundY = tr.y + tr.r * 1.2
+    ctx.save()
+    ctx.globalAlpha = s.alpha
+    ctx.translate(tr.x + s.wob, groundY)
+    ctx.scale(s.grow * s.sx, s.grow * s.sy)
+    ctx.translate(-tr.x, -groundY)
+    if (!drawPaintedTower(ctx, tr.side, tr.x, tr.y, tr.r, s.hp, TREE_MAX_HP, s.flash)) {
+      ctx.save()
+      ctx.translate(tr.x, tr.y)
+      vectorTree(tr.side, tr.r, s.hp)
+      if (s.flash > 0.05 && s.hp > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${(s.flash * 0.45).toFixed(3)})`
+        ctx.beginPath()
+        ctx.arc(0, 0, tr.r * 0.95, 0, Math.PI * 2)
+        ctx.fill()
       }
-      g.globalAlpha = 1
+      ctx.restore()
     }
-    // Embers
-    if (!low || t < 0.8) {
-      const n = low ? 8 : 20
-      for (let k = 0; k < n; k++) {
-        const life = 0.7 + hash01(id, k + 500) * 0.8
-        if (t > life) continue
-        const a = hash01(id, k + 520) * TAU
-        const sp = 80 + hash01(id, k + 540) * 300
-        const u = t / life
-        const d = r * 0.5 + sp * t * (1 - u * 0.6)
-        const s = (1.5 + hash01(id, k + 560) * 2.5) * (1 - u) * px * 1.4
-        g.globalAlpha = 1 - u
-        g.fillStyle = k % 3 === 0 ? '#ffffff' : e.a === P1 ? '#7cc8ff' : '#b6f3ff'
-        g.fillRect(e.x + Math.cos(a) * d - s, e.y + Math.sin(a) * d - s, s * 2, s * 2)
+    if (s.thorns > 0 && s.hp > 0) {
+      ctx.save()
+      ctx.translate(tr.x, tr.y)
+      drawTowerThorns(ctx, tr.r, towerFrontAngle(tr), TOWER_FRONT_HALF_ARC * s.thorns)
+      ctx.restore()
+    }
+    ctx.restore()
+    if (s.gauge > 0.01) {
+      ctx.save()
+      ctx.globalAlpha = s.gauge
+      const r = tr.r * 1.42
+      drawHpGauge(ctx, key === 'red' ? gaugeRed : gaugeBlue, tr.x, tr.y, r, r, s.hp, TREE_MAX_HP,
+        tr.side === 'player', tr.y > 0 ? -1 : 1, nowMs)
+      ctx.restore()
+    }
+  }
+
+  const drawSmasher = (i: number, devScale: number): void => {
+    const c = CAST[i]!
+    const s = sm[i]!
+    if (s.alpha <= 0.001) return
+    const r = SMASHER_R
+    ctx.save()
+    ctx.globalAlpha = s.alpha
+    // Motion trail: three ghost discs behind the dash (flat, no blur).
+    if (s.trail > 0 && !opts.low) {
+      const d = Math.hypot(s.vx, s.vy) || 1
+      const ux = s.vx / d
+      const uy = s.vy / d
+      for (let k = 3; k >= 1; k--) {
+        ctx.globalAlpha = s.alpha * s.trail * (0.34 - k * 0.08)
+        drawSmasherDisc(ctx, s.x - ux * k * r * 0.55, s.y - uy * k * r * 0.55, r, s.rot, RIM[c.side], devScale, false)
       }
-      g.globalAlpha = 1
+      ctx.globalAlpha = s.alpha
     }
+    // Ground shadow while airborne (the disc draws its own once landed).
+    const air = s.h > 0.5
+    if (air) {
+      const k = Math.max(0.45, 1 - s.h / 120)
+      ctx.fillStyle = 'rgba(20, 12, 6, 0.24)'
+      ctx.beginPath()
+      ctx.ellipse(s.x + r * 0.1, s.y + r * 0.22, r * 1.02 * k, r * 0.56 * k, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    const y = s.y - s.h
+    ctx.translate(s.x, y)
+    if (s.sy !== 1) ctx.scale(2 - s.sy, s.sy)
+    drawSmasherDisc(ctx, 0, 0, r, s.rot, RIM[c.side], devScale, !air)
+    const frame = ((Math.round(s.yaw / YAW_STEP) % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
+    drawSmasherFrame(ctx, c.smasherId, undefined, false, frame, 0, 0, r, devScale)
+    if (s.flash > 0.02) {
+      ctx.globalAlpha = s.alpha * s.flash * 0.6
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.ellipse(0, -r * 0.55, r * 0.9, r * 1.15, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.restore()
   }
 
-  /** Thunder crackle around the boss (always a little, a lot during wind-up). */
-  const drawBossCrackle = (g: C2D, T: number, S: number, low: boolean, px: number): void => {
-    if (T < B.slamT - 0.05 || sampleTrack(track, S, BOSS, F_ALIVE) < 0.5) return
-    const x = sampleTrack(track, S, BOSS, F_X)
-    const y = sampleTrack(track, S, BOSS, F_Y)
-    const r = BODY_R[BOSS]!
-    const w = windupAt(S)
-    const am = bossAlphaAt(T)
-    if (am <= 0.01) return
-    const n = low ? 1 : 2 + Math.round(w * 4)
-    const tick = Math.floor(T * 14)
-    for (let k = 0; k < n; k++) {
-      const a = hash01(tick, k) * TAU
-      const len = r * (1.25 + hash01(tick, k + 9) * 0.8 + w * 0.9)
-      bolt(g, x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, x + Math.cos(a) * len, y + Math.sin(a) * len,
-        tick * 7 + k, 5, 7 + w * 6, 5 * px, 1.4 * px, '#9f86ff', (0.55 + w * 0.45) * am)
+  const drawRings = (T: number): void => {
+    for (const g of rings) {
+      const age = T - g.T
+      if (age < 0 || age > 0.42) continue
+      const u = age / 0.42
+      ctx.globalAlpha = (1 - u) * 0.85
+      ctx.strokeStyle = g.tone
+      ctx.lineWidth = 3 * (1 - u) + 1
+      ctx.beginPath()
+      ctx.ellipse(g.x, g.y, g.r * (0.5 + u * 0.8), g.r * 0.42 * (0.5 + u * 0.8), 0, 0, Math.PI * 2)
+      ctx.stroke()
     }
-    if (w > 0) {
-      // Telegraph: a lock-on line and a closing reticle on every blue.
-      for (const id of TARGETS) {
-        if (sampleTrack(track, S, id, F_ALIVE) < 0.5) continue
-        const tx = sampleTrack(track, S, id, F_X)
-        const ty = sampleTrack(track, S, id, F_Y)
-        const tr = BODY_R[id]!
-        g.globalAlpha = w * 0.75
-        g.strokeStyle = '#ff5a6e'
-        g.lineWidth = 2 * px
-        g.setLineDash(LOCK_DASH)
-        g.lineDashOffset = -T * 60
-        g.beginPath()
-        g.moveTo(x, y)
-        g.lineTo(tx, ty)
-        g.stroke()
-        g.setLineDash(NO_DASH)
-        g.lineWidth = 3 * px
-        g.beginPath()
-        g.arc(tx, ty, tr * (2.6 - w * 1.3), 0, TAU)
-        g.stroke()
+    ctx.globalAlpha = 1
+  }
+
+  const drawStars = (T: number): void => {
+    for (const s of stars) {
+      const age = T - s.T
+      if (age < 0 || age > 0.3) continue
+      const u = age / 0.3
+      const k = s.s * (0.6 + 0.6 * Math.sin(Math.min(1, u * 2) * Math.PI * 0.5)) * (1 - u * 0.4)
+      ctx.globalAlpha = 1 - u * u
+      ctx.save()
+      ctx.translate(s.x, s.y)
+      ctx.rotate(u * 0.6)
+      ctx.beginPath()
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        const rr = i % 2 === 0 ? k : k * 0.32
+        if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)
+        else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
       }
-      g.globalAlpha = 1
-      // Converging charge ring
-      const u = (T * 2.2) % 1
-      g.globalAlpha = w * (1 - u) * 0.8
-      g.strokeStyle = '#d4c4ff'
-      g.lineWidth = 3 * px
-      g.beginPath()
-      g.arc(x, y, r * (3.4 - u * 2.2), 0, TAU)
-      g.stroke()
-      g.globalAlpha = 1
+      ctx.closePath()
+      ctx.fillStyle = '#ffffff'
+      ctx.lineWidth = 2.2
+      ctx.strokeStyle = INK
+      ctx.fill()
+      ctx.stroke()
+      ctx.beginPath()
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        const rr = (i % 2 === 0 ? k : k * 0.32) * 0.55
+        if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)
+        else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
+      }
+      ctx.closePath()
+      ctx.fillStyle = SUN
+      ctx.fill()
+      ctx.restore()
     }
+    ctx.globalAlpha = 1
   }
 
-  // ── Screen-space layers ──────────────────────────────────────────────────
-
-  /** Radial speed lines around a focus point (manga focus lines). */
-  const speedLines = (g: C2D, fx: number, fy: number, alpha: number, T: number, low: boolean): void => {
-    if (alpha <= 0.01) return
-    const n = low ? 22 : 40
-    const tick = Math.floor(T * 24)
-    const outer = Math.hypot(W, H)
-    const inner = MIN * 0.3
-    g.globalAlpha = alpha
-    g.fillStyle = '#ffffff'
-    g.beginPath()
-    for (let k = 0; k < n; k++) {
-      const a = (k / n) * TAU + (hash01(tick, k) - 0.5) * 0.12
-      const r0 = inner * (1 + hash01(tick, k + 40) * 0.7)
-      const wdt = (0.004 + hash01(tick, k + 80) * 0.01)
-      g.moveTo(fx + Math.cos(a) * r0, fy + Math.sin(a) * r0)
-      g.lineTo(fx + Math.cos(a - wdt) * outer, fy + Math.sin(a - wdt) * outer)
-      g.lineTo(fx + Math.cos(a + wdt) * outer, fy + Math.sin(a + wdt) * outer)
-      g.closePath()
-    }
-    g.fill()
-    g.globalAlpha = 1
-  }
-
-  const badgeWidth = (c: Cnv | null): number => ((c as Cnv & { __w?: number } | null)?.__w ?? 100)
-
-  /**
-   * The stage badge at centre (cx, cy), height h. `n` is the number on top of
-   * the deck; `theme` follows it (boss red at 50, slate below).
-   */
-  const drawStageBadge = (g: C2D, cx: number, cy: number, h: number, n: number, alpha: number, squash = 0): void => {
-    if (alpha <= 0.01) return
-    const boss = n >= STAGE_FROM
-    const body = boss ? badgeBoss : badgeSlate
-    if (!body || !cardAtlas) return
-    const k = h / heroH
-    const bw = badgeWidth(body)
-    const w = bw * k
-    const x = cx - w / 2
-    const y = cy - h / 2
-    g.save()
-    g.globalAlpha = alpha
-    g.translate(cx, cy + h / 2)
-    g.scale(1 + squash * 0.12, 1 - squash * 0.16)
-    g.translate(-cx, -cy - h / 2)
-    g.drawImage(body, x - 4 * k, y - 4 * k, body.width / DPR * k, body.height / DPR * k)
-    // Skull medallion for the boss badge
-    if (boss) {
-      const ss = h * 0.9
-      g.drawImage(skull, x - ss * 0.62, cy - ss / 2, ss, ss)
-    }
-    // Number chip from the atlas
-    const cs = chipPx * k
-    const chipX = x + heroH * 0.12 * k
-    const chipY = cy - cs / 2 - h * 0.02
-    drawAtlasCard(g, n, chipX, chipY, cs)
-    g.restore()
-  }
-
-  const drawAtlasCard = (g: C2D, n: number, x: number, y: number, size: number): void => {
-    if (!cardAtlas || n < 1 || n > STAGE_FROM) return
-    const cell = Math.ceil(chipPx + 4)
-    const i = n - 1
-    const sx = ((i % ATLAS_COLS) * cell + 2) * DPR
-    const sy = (Math.floor(i / ATLAS_COLS) * cell + 2) * DPR
-    g.drawImage(cardAtlas, sx - DPR, sy - DPR, (chipPx + 2) * DPR, (chipPx + 2) * DPR, x - size / chipPx, y - size / chipPx,
-      size + (2 * size) / chipPx, size + (2 * size) / chipPx)
-  }
-
-  const drawLevelNumber = (g: C2D, n: number, cx: number, cy: number, size: number): void => {
-    if (!levelAtlas || n < 1 || n > LEVEL_FROM) return
-    const cell = Math.ceil(heroH * 0.9)
-    const i = n - 1
-    g.drawImage(levelAtlas, (i % ATLAS_COLS) * cell * DPR, Math.floor(i / ATLAS_COLS) * cell * DPR, cell * DPR, cell * DPR,
-      cx - size / 2, cy - size / 2, size, size)
-  }
-
-  /** Where the stage badge is and how big, at T. */
-  const stageBadgePose = (T: number, out: { x: number; y: number; h: number; a: number }): void => {
-    // Home: the live HUD StageBadge underneath (left edges aligned).
-    const hudH = hud ? hud.h : L.hudH
-    const hudCx = (hud ? hud.x : L.hudX) + (badgeWidth(badgeSlate) * (hudH / heroH)) / 2
-    const hudCy = hud ? hud.y + hud.h / 2 : L.hudY + L.hudH / 2
-    // Fight pose: top-left, leaving room for the skull medallion on its left.
-    const fightCx = L.hudX + L.hudH * 0.6 + (badgeWidth(badgeBoss) * (L.hudH / heroH)) / 2
-    const fightCy = L.hudY + L.hudH / 2
-    const nameH = L.nameH
-    if (T < 0.62) {
-      out.a = 0
-      return
-    }
-    if (T < 1.5) {
-      const u = easeOutBack(ramp(T, 0.62, 0.8), 2.2)
-      out.x = L.nameX + (1 - easeOutCubic(ramp(T, 0.62, 0.76))) * W * 0.7
-      out.y = L.nameY
-      out.h = nameH * (0.82 + 0.18 * u)
-      out.a = 1
-      return
-    }
-    if (T < B.battleEndT) {
-      const u = easeInOutCubic(ramp(T, 1.5, 1.85))
-      out.x = L.nameX + (fightCx - L.nameX) * u
-      out.y = L.nameY + (fightCy - L.nameY) * u
-      out.h = nameH + (L.hudH - nameH) * u
-      out.a = 1
-      return
-    }
-    const rs = easeInOutCubic(ramp(T, B.reclaimT, B.reclaimT + 0.42))
-    const heroY = L.heroStageY + (L.reclaimStageY - L.heroStageY) * rs
-    if (T < B.outroT) {
-      const u = easeInOutCubic(ramp(T, B.battleEndT, B.fallStartT))
-      out.x = fightCx + (L.heroStageX - fightCx) * u
-      out.y = fightCy + (heroY - fightCy) * u
-      out.h = L.hudH + (heroH - L.hudH) * u
-      out.a = 1
-      return
-    }
-    // Outro: home into the live HUD badge, which is identical underneath.
-    const u = easeInOutCubic(ramp(T, B.outroT, B.outroT + 0.42))
-    out.x = L.heroStageX + (hudCx - L.heroStageX) * u
-    out.y = heroY + (hudCy - heroY) * u
-    out.h = heroH + (hudH - heroH) * u
-    out.a = 1 - ramp(T, B.outroT + 0.34, B.endT)
-  }
-  const pose = { x: 0, y: 0, h: 0, a: 0 }
-
-  /** Number cards peeling off the stage deck and tumbling away. A card is on
-   *  TOP of the badge while it peels (the first PEEL_S), then falls BEHIND it
-   *  so the tumbling deck never buries the label. */
-  const PEEL_S = 0.14
-  const drawCards = (g: C2D, T: number, low: boolean, over: boolean): void => {
-    if (T < B.fallStartT || T > B.landT + 1.6) return
-    const cs = chipPx
-    const bw = badgeWidth(badgeSlate)
-    const chipCx = L.heroStageX - bw / 2 + heroH * 0.12 + cs / 2
-    const chipCy = L.heroStageY - heroH * 0.02
-    const g0 = MIN * 3.4 // gravity, px/s²
-    for (let k = 1; k < STAGE_FROM; k++) {
-      if (low && k % 2 === 0 && k < STAGE_FROM - 3) continue
-      const t0 = stepTime(k, STAGE_FROM, B.fallStartT)
-      const age = T - t0
-      if (age < 0) break
-      if ((age < PEEL_S) !== over) continue
-      const life = 1.5
-      if (age > life) continue
-      const n = STAGE_FROM - k + 1 // the number that peeled
-      const side = hash01(n, 5) < 0.62 ? -1 : 1
-      const vx = side * MIN * (0.18 + hash01(n, 1) * 0.55)
-      const vy = -MIN * (0.35 + hash01(n, 2) * 0.45)
-      const x = chipCx + vx * age
-      const y = chipCy + vy * age + 0.5 * g0 * age * age
-      if (y - cs > H) continue
-      const rot = side * (0.5 + hash01(n, 3) * 8) * age
-      // The peel: a card-flip squash, then tumbling.
-      const flip = Math.cos(Math.min(1, age / 0.55) * Math.PI * (1 + hash01(n, 4)))
-      g.save()
-      g.translate(x, y)
-      g.rotate(rot)
-      g.scale(0.3 + 0.7 * Math.abs(flip), 1)
-      g.globalAlpha = 1 - ramp(age, life * 0.6, life)
-      drawAtlasCard(g, n, -cs / 2, -cs / 2, cs)
-      g.restore()
-    }
-    g.globalAlpha = 1
-  }
-
-  /** The level medallion during the fall + its shatter. */
-  const drawLevelHero = (g: C2D, T: number, lv: number, x: number, y: number, size: number, alpha: number, squash: number): void => {
-    const tier = tierOf(lv)
-    const spr = tierSprites[tier]
-    if (!spr) return
-    // Tier change flash
-    let flash = 0
-    for (let ei = 0; ei < TIER_EDGES.length; ei++) {
-      const edge = TIER_EDGES[ei]!
-      const k = LEVEL_FROM - edge
-      const te = stepTime(k, LEVEL_FROM, B.fallStartT)
-      const a = T - te
-      if (a >= 0 && a < 0.25) flash = Math.max(flash, 1 - a / 0.25)
-    }
-    const s = size
-    g.save()
-    g.globalAlpha = alpha
-    g.translate(x, y + s / 2)
-    g.scale(1 + squash * 0.14, 1 - squash * 0.18)
-    g.translate(-x, -y - s / 2)
-    // The glow SHRINKS with every tier lost — gold blazes, rookie grey is matte.
-    const gk = TIER_GLOW_SIZE[tier]! + flash * 0.5
-    const ga = TIER_GLOW_ALPHA[tier]! + flash * 0.4
-    if (gk > 0 && ga > 0) {
-      const gs = s * gk
-      g.globalAlpha = alpha * Math.min(1, ga)
-      g.drawImage(tier === 0 ? glowGold : glowWhite, x - gs / 2, y - gs / 2, gs, gs)
-    }
-    g.globalAlpha = alpha
-    const sw = spr.width / DPR * (s / (heroH * 1.25))
-    g.drawImage(spr, x - sw / 2, y - sw / 2, sw, sw)
-    drawLevelNumber(g, lv, x, y + s * 0.08, s * 0.62)
-    g.restore()
-  }
-
-  const drawLevelShatter = (g: C2D, T: number, x: number, y: number, size: number): void => {
-    const t = T - B.holdEndT
-    if (t < 0 || t > 0.9) return
-    const spr = tierSprites[3]
-    if (!spr) return
-    const n = 9
-    const u = t / 0.9
-    const sw = spr.width / DPR * (size / (heroH * 1.25))
-    for (let k = 0; k < n; k++) {
-      const a0 = (k / n) * TAU
-      const a1 = ((k + 1) / n) * TAU
-      const mid = (a0 + a1) / 2
-      const sp = MIN * (0.35 + hash01(777, k) * 0.45)
-      const d = sp * t
-      g.save()
-      g.globalAlpha = 1 - u
-      g.translate(x + Math.cos(mid) * d, y + Math.sin(mid) * d + MIN * 0.8 * t * t)
-      g.rotate((hash01(778, k) - 0.5) * 10 * t)
-      g.beginPath()
-      g.moveTo(0, 0)
-      g.arc(0, 0, sw / 2, a0, a1)
-      g.closePath()
-      g.clip()
-      g.drawImage(spr, -sw / 2, -sw / 2, sw, sw)
-      g.restore()
-    }
-    if (t < 0.25) {
-      g.globalAlpha = 1 - t / 0.25
-      const fs = size * (1 + t * 4)
-      g.drawImage(glowWhite, x - fs / 2, y - fs / 2, fs, fs)
-      g.globalAlpha = 1
-    }
-  }
-
-  // ── The frame ────────────────────────────────────────────────────────────
-
-  /** Floating damage numbers (screen space, over the world). */
-  const drawDamageNumbers = (g: C2D, T: number): void => {
-    ensureDamageSprites()
-    for (let i = 0; i < events.length; i++) {
-      const t0 = eventT[i]!
-      if (t0 > T) break
-      const spr = dmgSprites[i]
-      if (!spr) continue
-      const age = T - t0
-      if (age > 0.8) continue
-      const e = events[i]!
-      const u = age / 0.8
-      const pop = easeOutBack(clamp01(age / 0.14), 3)
-      const k = 0.55 + 0.45 * pop
-      const w = (spr.width / DPR) * k
-      const h = (spr.height / DPR) * k
-      // Gold numbers pop off the contact; red ones rise above the struck blade.
-      const ox = e.kind === 'hit' ? (hash01(e.id, 3) - 0.5) * 30 * unitPx : 0
-      const x = wsx(e.x) + ox
-      const lift = e.kind === 'thunder' ? BODY_R[e.a]! * worldScale() + 10 * unitPx : 18 * unitPx
-      const y = wsy(e.y) - lift - u * 46 * unitPx
-      g.globalAlpha = 1 - ramp(u, 0.65, 1)
-      g.drawImage(spr, x - w / 2, y - h / 2, w, h)
-    }
-    g.globalAlpha = 1
-  }
-
-  /** The two blues that fell, drained of colour, flanking the level medallion
-   *  — the player's own team losing the levels, not an abstract number. */
-  const drawLostPortraits = (g: C2D, T: number, size: number): void => {
-    const a = ramp(T, B.fallStartT - 0.05, B.fallStartT + 0.3) * (1 - ramp(T, B.holdEndT, B.holdEndT + 0.25))
+  /** The game's aim dots, during Chomper's pull-back. */
+  const drawAim = (T: number): void => {
+    const a = Math.min((T - (BEAT.skill3 + 0.05)) / 0.3, 1 - (T - BEAT.launch) / 0.12)
     if (a <= 0) return
-    const ps = size * 0.46
-    const drop = (1 - easeOutCubic(ramp(T, B.fallStartT - 0.05, B.fallStartT + 0.3))) * -20 * unitPx
-    for (let k = 0; k < 2; k++) {
-      const side = k === 0 ? -1 : 1
-      const x = L.heroLevelX + side * size * 0.9
-      const y = L.heroLevelY + size * 0.1 + drop
-      g.save()
-      g.globalAlpha = a
-      g.translate(x, y)
-      g.rotate(side * (0.18 + (T - B.fallStartT) * 0.05))
-      g.drawImage(lostSkins[k]!, -ps / 2, -ps / 2, ps, ps)
-      // A crack across each one.
-      g.strokeStyle = 'rgba(10,6,8,0.85)'
-      g.lineWidth = Math.max(2, ps * 0.05)
-      g.lineCap = 'round'
-      g.beginPath()
-      g.moveTo(-ps * 0.42, -ps * 0.28)
-      g.lineTo(-ps * 0.06, -ps * 0.02)
-      g.lineTo(-ps * 0.14, ps * 0.14)
-      g.lineTo(ps * 0.38, ps * 0.36)
-      g.stroke()
-      g.restore()
+    const s = sm[CHOMPER]!
+    const tx = TREES.red.x
+    const ty = TREES.red.y + TREES.red.r
+    const dx = tx - s.x
+    const dy = ty - s.y
+    const d = Math.hypot(dx, dy) || 1
+    const n = 7
+    ctx.globalAlpha = Math.min(1, a)
+    for (let k = 1; k <= n; k++) {
+      const f = (k / (n + 1)) * Math.min(1, (d - SMASHER_R * 1.4) / d)
+      const x = s.x + dx * f
+      const y = s.y + dy * f
+      const rr = 3.4 - k * 0.22
+      ctx.fillStyle = INK
+      ctx.beginPath()
+      ctx.arc(x, y, rr + 1.4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.arc(x, y, rr, 0, Math.PI * 2)
+      ctx.fill()
     }
-    g.globalAlpha = 1
+    ctx.globalAlpha = 1
   }
 
-  /** Cracks spreading over the rookie medallion with each heartbeat. */
-  const drawMedallionCracks = (g: C2D, T: number, x: number, y: number, size: number): void => {
-    const level = (T >= B.landT + 0.18 ? 1 : 0) + (T >= B.landT + 0.9 ? 1 : 0) + (T >= B.holdEndT - 0.12 ? 1 : 0)
-    if (level === 0 || T >= B.holdEndT + 0.02) return
-    const n = level === 1 ? 2 : level === 2 ? 4 : 7
-    g.strokeStyle = '#0d0e11'
-    g.lineWidth = Math.max(2, size * 0.022)
-    g.lineCap = 'round'
-    g.lineJoin = 'round'
-    g.beginPath()
-    for (let k = 0; k < n; k++) {
-      let a = hash01(611, k) * TAU
-      let cx = x + (hash01(612, k) - 0.5) * size * 0.08
-      let cy = y + (hash01(613, k) - 0.5) * size * 0.08
-      g.moveTo(cx, cy)
-      const len = size * (0.2 + hash01(614, k) * 0.25) * (level === 3 ? 1.3 : 1)
-      for (let j = 1; j <= 4; j++) {
-        a += (hash01(615, k * 8 + j) - 0.5) * 0.9
-        cx += (Math.cos(a) * len) / 4
-        cy += (Math.sin(a) * len) / 4
-        g.lineTo(cx, cy)
-      }
-    }
-    g.stroke()
-  }
-
-  /** The ladder: two rails and rungs that light bottom → top. */
-  const drawLadder = (g: C2D, T: number, alpha: number): void => {
-    const top = L.goalY + L.goalSize * 0.5 + chipPx * 0.95 + 8 * unitPx
-    const bottom = L.reclaimStageY - heroH / 2 - 8 * unitPx
-    if (bottom - top < 24 * unitPx || alpha <= 0) return
-    const grow = easeOutCubic(ramp(T, B.reclaimT + 0.3, B.reclaimT + 0.55))
-    const yTop = bottom - (bottom - top) * grow
-    const half = heroH * 0.36
-    g.globalAlpha = alpha * 0.9
-    g.strokeStyle = '#8a6a1c'
-    g.lineWidth = 5 * unitPx
-    g.lineCap = 'round'
-    g.beginPath()
-    g.moveTo(L.heroStageX - half, bottom)
-    g.lineTo(L.heroStageX - half * 0.8, yTop)
-    g.moveTo(L.heroStageX + half, bottom)
-    g.lineTo(L.heroStageX + half * 0.8, yTop)
-    g.stroke()
-    const rungs = Math.max(4, Math.min(10, Math.floor((bottom - top) / (20 * unitPx))))
-    for (let k = 0; k < rungs; k++) {
-      const u = (k + 0.5) / rungs
-      const ry = bottom - (bottom - top) * u
-      if (ry < yTop) break
-      const litT = B.reclaimT + 0.55 + k * (0.5 / rungs)
-      const lit = ramp(T, litT, litT + 0.06)
-      const hw = half * (1 - u * 0.2)
-      g.globalAlpha = alpha
-      g.fillStyle = lit > 0.5 ? (k === rungs - 1 ? '#ff7a5a' : '#ffd23f') : '#4a3d22'
-      roundRect(g, L.heroStageX - hw, ry - 3.5 * unitPx, hw * 2, 7 * unitPx, 3.5 * unitPx)
-      g.fill()
-      const flash = T >= litT && T < litT + 0.25 ? 1 - (T - litT) / 0.25 : 0
-      if (flash > 0) {
-        g.globalAlpha = alpha * flash
-        g.drawImage(glowGold, L.heroStageX - hw * 1.6, ry - hw * 0.5, hw * 3.2, hw)
-      }
-    }
-    g.globalAlpha = 1
-  }
-
-  const draw = (T: number, o: DrawOptions): void => {
-    const low = o.low
-    const S = director.toS(T)
-    // FX ages keep running after the fight track ends — nothing freezes.
-    const Sfx = S + Math.max(0, T - B.battleEndT)
-    computeCamera(T, S)
-    const g = ctx
-    g.setTransform(DPR, 0, 0, DPR, 0, 0)
-    g.globalAlpha = 1
-    g.globalCompositeOperation = 'source-over'
-
-    // The world crossfades out in the outro, uncovering the live game.
-    const worldA = 1 - ramp(T, B.outroT - 0.05, B.outroT + 0.4)
-    g.clearRect(0, 0, W, H)
-    if (worldA > 0 && bgBuffer) {
-      g.globalAlpha = worldA
-      g.drawImage(bgBuffer, 0, 0, W, H)
-      g.globalAlpha = 1
-    }
-    const px = 1 / worldScale()
-
-    // ── World ──
-    // While the world is fading (the outro), draw it into a layer and blit the
-    // layer with worldA — the world's own draws set absolute alphas.
-    let wg: C2D = g
-    if (worldA > 0 && worldA < 1) {
-      if (!worldLayer || worldLayer.width !== Math.max(1, Math.ceil(W * DPR)) || worldLayer.height !== Math.max(1, Math.ceil(H * DPR))) {
-        worldLayer = mkCanvas(W * DPR, H * DPR)
-      }
-      wg = ctx2d(worldLayer)
-      wg.setTransform(DPR, 0, 0, DPR, 0, 0)
-      wg.clearRect(0, 0, W, H)
-    }
-    if (worldA > 0) {
-      const g = wg
-      g.save()
-      g.translate(W / 2 + cam.sx, H / 2 + cam.sy)
-      g.scale(worldScale(), worldScale())
-      g.translate(-cam.x, -cam.y)
-      const half = INTRO_ARENA_R + ARENA_PAD
-      g.drawImage(arena, -half, -half, half * 2, half * 2)
-      g.globalAlpha = 0.18 + 0.08 * Math.sin(T * 3.2)
-      g.drawImage(glowRed, -INTRO_ARENA_R * 0.8, -INTRO_ARENA_R * 0.8, INTRO_ARENA_R * 1.6, INTRO_ARENA_R * 1.6)
-      g.globalAlpha = 1
-      drawGroundFx(g, T, Sfx)
-      drawBumper(g, T, 1 - ramp(T, B.battleEndT, B.fallStartT))
-      // Players under the boss, so a charge reads as the boss running OVER them.
-      drawBody(g, P1, S, T, low, px)
-      drawBody(g, P2, S, T, low, px)
-      drawBody(g, BOSS, S, T, low, px)
-      drawBossCrackle(g, T, S, low, px)
-      drawEventFx(g, T, Sfx, low, px)
-      g.restore()
-    }
-    if (wg !== g && worldLayer) {
-      g.globalAlpha = worldA
-      g.setTransform(1, 0, 0, 1, 0, 0)
-      g.drawImage(worldLayer, 0, 0)
-      g.setTransform(DPR, 0, 0, DPR, 0, 0)
-      g.globalAlpha = 1
-    }
-
-    // ── Screen-space grade & FX ──
-    let lines = 0
-    let fx = W / 2
-    let fy = H / 2
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const t0 = eventT[i]!
-      if (t0 > T) break
-      if (e.kind === 'charge' || e.kind === 'slam') {
-        const end = e.kind === 'slam' ? t0 + 0.45 : (e.b === P1 ? B.koT[0] : B.koT[1]) + 0.25
-        const a = envelope(T, t0, 0.06, end, 0.2) * (e.kind === 'slam' ? 0.55 : 0.42)
-        if (a > lines) {
-          lines = a
-          fx = wsx(sampleTrack(track, S, BOSS, F_X))
-          fy = wsy(sampleTrack(track, S, BOSS, F_Y))
-        }
-      }
-    }
-    speedLines(g, fx, fy, lines * worldA, T, low)
-
-    const wind = windupAt(S)
-    if (wind > 0) {
-      g.globalAlpha = wind * 0.34 * worldA
-      g.fillStyle = '#0a0418'
-      g.fillRect(0, 0, W, H)
-      g.globalAlpha = 1
-    }
-
-    // The world drains of colour after the final KO.
-    const grade = ramp(T, B.koT[1] + 0.2, B.koT[1] + 1.5) * worldA
-    if (grade > 0) {
-      if (!low) {
-        g.globalCompositeOperation = 'saturation'
-        g.globalAlpha = grade * 0.9
-        g.fillStyle = '#808080'
-        g.fillRect(0, 0, W, H)
-        g.globalCompositeOperation = 'source-over'
-      }
-      // Deeper still once the reclaim needs the stage.
-      g.globalAlpha = grade * (0.5 + 0.3 * ramp(T, B.holdEndT, B.reclaimT + 0.4))
-      g.fillStyle = '#05020a'
-      g.fillRect(0, 0, W, H)
-      g.globalAlpha = 1
-    }
-
-    drawDamageNumbers(g, T)
-
-    // ── Lv. 30 pills: under each blue → hanging where it died → merge ──
-    if (T < B.fallStartT + 0.1 && pillSprite) {
-      const pw = badgeWidth(pillSprite)
-      const ph = PILL_H
-      const k = Math.max(0.85, Math.min(1.6, MIN / 720))
-      const merge = ramp(T, B.fallStartT - 0.12, B.fallStartT + 0.06)
-      for (let t = 0; t < TARGETS.length; t++) {
-        const id = TARGETS[t]!
-        if (T < 0.35) continue
-        const koT = id === P1 ? B.koT[0] : B.koT[1]
-        const koE = T >= koT ? koEventOf(id) : null
-        const ko = koE !== null
-        const bx = koE ? koE.x : sampleTrack(track, S, id, F_X)
-        const by = koE ? koE.y : sampleTrack(track, S, id, F_Y)
-        let sx = wsx(bx)
-        let sy = wsy(by) + BODY_R[id]! * worldScale() + 14 * k
-        let a = ramp(T, 0.35, 0.55)
-        let scale = k
-        if (ko) {
-          const kAge = T - koT
-          sy += Math.sin(kAge * 40) * 3 * Math.exp(-kAge * 6)
-          a *= 0.65 + 0.35 * Math.sin(kAge * 18) * Math.exp(-kAge * 3)
-        }
-        const gu = easeInOutCubic(ramp(T, B.battleEndT, B.fallStartT - 0.1))
-        if (gu > 0) {
-          sx += (L.heroLevelX - sx) * gu
-          sy += (L.heroLevelY - sy) * gu
-          scale *= 1 + gu * 1.5
-          a = Math.max(a, gu)
-        }
-        a *= 1 - merge
-        if (a <= 0.01) continue
-        g.globalAlpha = a
-        g.drawImage(pillSprite, sx - (pw * scale) / 2, sy - (ph * scale) / 2, (pillSprite.width / DPR) * scale,
-          (pillSprite.height / DPR) * scale)
-        g.globalAlpha = 1
-      }
-    }
-
-    stageBadgePose(T, pose)
-    const st = countAt(STAGE_FROM, fallU(T, B.fallStartT))
-    drawCards(g, T, low, false)
-
-    // Vignette, with a red heartbeat in the hold at "1".
-    const hb = Math.max(
-      beatPulse(T, B.landT + 0.18), 0.7 * beatPulse(T, B.landT + 0.42),
-      beatPulse(T, B.landT + 0.9), 0.7 * beatPulse(T, B.landT + 1.14)
-    )
-    const landP = T >= B.landT && T < B.landT + 0.4 ? 1 - (T - B.landT) / 0.4 : 0
-    const redV = Math.max(grade * 0.55, hb, landP) * (1 - ramp(T, B.reclaimT, B.reclaimT + 0.6))
-    g.globalAlpha = worldA * 0.9
-    g.drawImage(vignette, -W * 0.15, -H * 0.15, W * 1.3, H * 1.3)
-    if (redV > 0) {
-      g.globalAlpha = redV
-      g.drawImage(vignetteRed, -W * 0.1, -H * 0.1, W * 1.2, H * 1.2)
-    }
-    g.globalAlpha = 1
-
-    // Letterbox bars — frame 0 on, deeper for the fall, gone for the reclaim.
-    const barIn = 1 - ramp(T, B.reclaimT, B.reclaimT + 0.5)
-    const bar = (L.barFight + (L.barFall - L.barFight) * easeInOutCubic(ramp(T, B.battleEndT, B.fallStartT))) * barIn
-    if (bar > 0.5) {
-      g.fillStyle = '#000000'
-      g.fillRect(0, 0, W, bar)
-      g.fillRect(0, H - bar, W, bar)
-    }
-
-    // Boss subtitle band (portrait / narrow) or side panel (wide landscape).
-    const band = envelope(T, 0.6, 0.1, 1.55, 0.25)
-    if (band > 0) {
-      const bh = L.nameH * 1.55
-      const skew = bh * 0.35
-      const x0 = L.nameMode === 'side' ? W - (W - L.arenaPx) / 2 + 6 : 0
-      const bw = W - x0
-      const bx = x0 + (1 - easeOutCubic(ramp(T, 0.6, 0.72))) * bw
-      g.globalAlpha = band * 0.92
-      g.fillStyle = '#5c0a10'
-      g.beginPath()
-      g.moveTo(bx, L.nameY + bh / 2)
-      g.lineTo(bx + bw + skew * 2, L.nameY + bh / 2)
-      g.lineTo(bx + bw + skew * 2, L.nameY - bh / 2)
-      g.lineTo(bx + skew, L.nameY - bh / 2)
-      g.closePath()
-      g.fill()
-      g.fillStyle = '#ff5a4a'
-      g.fillRect(bx + skew, L.nameY - bh / 2 - 3 * unitPx, bw + skew, 3 * unitPx)
-      g.fillRect(bx, L.nameY + bh / 2, bw + skew * 2, 3 * unitPx)
-      g.globalAlpha = 1
-    }
-
-    // ── Level medallion, flanked by the fallen blues ──
-    const lv = countAt(LEVEL_FROM, fallU(T, B.fallStartT))
-    const heroSize = heroH * 1.45
-    drawLostPortraits(g, T, heroSize)
-    if (T >= B.fallStartT - 0.12 && T < B.badgeGoneT) {
-      const pop = easeOutBack(ramp(T, B.fallStartT - 0.12, B.fallStartT + 0.16), 2.4)
-      const landSq = T >= B.landT ? Math.sin(ramp(T, B.landT, B.landT + 0.3) * Math.PI) * Math.exp(-(T - B.landT) * 3.5) : 0
-      const lastK = LEVEL_FROM - lv
-      const tk = lastK > 0 ? stepTime(lastK, LEVEL_FROM, B.fallStartT) : -9
-      const jolt = T - tk < 0.12 ? 1 - (T - tk) / 0.12 : 0
-      // Each heartbeat shakes it.
-      const shiver = hb * Math.sin(T * 90) * 3 * unitPx
-      const exitA = 1 - ramp(T, B.holdEndT, B.holdEndT + 0.04)
-      const my = L.heroLevelY + jolt * heroH * 0.07
-      drawLevelHero(g, T, lv, L.heroLevelX + shiver, my, heroSize * (0.5 + 0.5 * pop), exitA, landSq * 1.6)
-      drawMedallionCracks(g, T, L.heroLevelX + shiver, my, heroSize * 0.9)
-    }
-    drawLevelShatter(g, T, L.heroLevelX, L.heroLevelY, heroSize)
-
-    // ── Stage badge (name card → HUD → hero → foot of the ladder → HUD) ──
-    if (pose.a > 0) {
-      const landSq = T >= B.landT ? Math.sin(ramp(T, B.landT, B.landT + 0.3) * Math.PI) * Math.exp(-(T - B.landT) * 3.5) : 0
-      const lastK = STAGE_FROM - st
-      const tk = lastK > 0 ? stepTime(lastK, STAGE_FROM, B.fallStartT) : -9
-      const jolt = T - tk < 0.1 ? 1 - (T - tk) / 0.1 : 0
-      drawStageBadge(g, pose.x, pose.y + jolt * heroH * 0.04, pose.h, st, pose.a, landSq * 1.6)
-    }
-    drawCards(g, T, low, true)
-
-    // Landing: a heavy thump — dust rings under both badges.
-    if (T >= B.landT && T < B.landT + 0.55) {
-      const u = (T - B.landT) / 0.55
-      g.globalAlpha = (1 - u) * 0.85
-      g.strokeStyle = '#ffffff'
-      g.lineWidth = 7 * unitPx * (1 - u) + 1
-      g.beginPath()
-      g.ellipse(L.heroStageX, L.heroStageY + heroH * 0.55, heroH * 1.8 * (0.5 + u), heroH * 0.3 * (0.4 + u), 0, 0, TAU)
-      g.stroke()
-      g.beginPath()
-      g.ellipse(L.heroLevelX, L.heroLevelY + heroSize * 0.5, heroSize * (0.55 + u), heroSize * 0.2 * (0.4 + u), 0, 0, TAU)
-      g.stroke()
-      g.globalAlpha = 1
-    }
-
-    // ── Impact frames ──
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      if (e.kind !== 'ko') continue
-      const age = T - eventT[i]!
-      if (age < 0 || age > 0.12) continue
-      if (e.a === P2 && age < 0.1 && !low) {
-        // KO 2: the manga two-tone frame — black world, white cut-outs.
-        g.fillStyle = '#000000'
-        g.fillRect(0, 0, W, H)
-        g.save()
-        g.translate(W / 2 + cam.sx, H / 2 + cam.sy)
-        g.scale(worldScale(), worldScale())
-        g.translate(-cam.x, -cam.y)
-        const br = BODY_R[BOSS]!
-        const pr = BODY_R[P2]!
-        const bx = sampleTrack(track, e.s, BOSS, F_X)
-        const by = sampleTrack(track, e.s, BOSS, F_Y)
-        g.drawImage(whiteSkins[BOSS]!, bx - br, by - br, br * 2, br * 2)
-        g.drawImage(whiteSkins[P2]!, e.x - pr, e.y - pr, pr * 2, pr * 2)
-        g.restore()
-        speedLines(g, wsx(e.x), wsy(e.y), 0.9, T, low)
-      } else if (age < 0.07) {
-        // KO 1 (and KO 2 on the low tier): a clean white frame.
-        g.globalAlpha = 0.9 * (1 - age / 0.07)
-        g.fillStyle = '#ffffff'
-        g.fillRect(0, 0, W, H)
-        g.globalAlpha = 1
-      }
-    }
-    // Other flashes: thunder strike, the slam, the landing.
-    let flash = 0
-    let flashCol = '#ffffff'
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!
-      const t0 = eventT[i]!
-      if (t0 > T) break
-      const age = T - t0
-      if (e.kind === 'thunder' && e.b === BOSS && age < 0.14) {
-        flash = Math.max(flash, 0.3 * (1 - age / 0.14))
-        flashCol = '#c9d8ff'
-      } else if (e.kind === 'slam' && age < 0.14) {
-        flash = Math.max(flash, 0.42 * (1 - age / 0.14))
-      }
-    }
-    if (T >= B.landT && T < B.landT + 0.1) flash = Math.max(flash, 0.28 * (1 - (T - B.landT) / 0.1))
-    if (flash > 0) {
-      g.globalAlpha = flash
-      g.fillStyle = flashCol
-      g.fillRect(0, 0, W, H)
-      g.globalAlpha = 1
-    }
-
-    // ── Reclaim: the boss as the goal, the ladder, one line of copy ──
-    if (T >= B.reclaimT) {
-      const rA = 1 - ramp(T, B.outroT - 0.12, B.outroT + 0.12)
-      if (rA > 0) {
-        const up = easeOutBack(ramp(T, B.reclaimT, B.reclaimT + 0.5), 1.5)
-        const gs = L.goalSize * (0.6 + 0.4 * up)
-        const gy = L.heroLevelY + (L.goalY - L.heroLevelY) * easeOutCubic(ramp(T, B.reclaimT, B.reclaimT + 0.5))
-        const ga = rA * ramp(T, B.reclaimT, B.reclaimT + 0.25)
-        const pulse = 0.7 + 0.3 * Math.sin((T - B.reclaimT) * 6)
-        g.globalAlpha = ga * pulse
-        g.drawImage(glowRed, L.goalX - gs * 1.1, gy - gs * 1.1, gs * 2.2, gs * 2.2)
-        g.globalAlpha = ga
-        const sw = gs * (goal.width / 256)
-        g.save()
-        g.translate(L.goalX, gy)
-        g.rotate((T - B.reclaimT) * 1.1)
-        g.drawImage(goal, -sw / 2, -sw / 2, sw, sw)
-        g.restore()
-        // Skull · 50 — where the climb ends.
-        const cs = chipPx * 0.9
-        const cy = gy + gs * 0.52
-        g.drawImage(skull, L.goalX - cs * 1.08, cy, cs, cs)
-        drawAtlasCard(g, STAGE_FROM, L.goalX + cs * 0.08, cy, cs)
-        g.globalAlpha = 1
-        drawLadder(g, T, rA)
-        if (taglineSprite) {
-          const tu = easeOutBack(ramp(T, B.reclaimT + 1.0, B.reclaimT + 1.3), 2)
-          const ta = rA * ramp(T, B.reclaimT + 1.0, B.reclaimT + 1.12)
-          if (ta > 0) {
-            const tw = taglineSprite.width / DPR
-            const th = taglineSprite.height / DPR
-            const s = 0.55 + 0.45 * tu
-            g.globalAlpha = ta
-            g.drawImage(taglineSprite, L.tagX - (tw * s) / 2, L.tagY - (th * s) / 2, tw * s, th * s)
-            g.globalAlpha = 1
-          }
-        }
-      }
-    }
-
-    // Fade in from black at the very start, and the skip fade.
-    const fadeIn = 1 - ramp(T, 0, 0.3)
-    if (fadeIn > 0) {
-      g.globalAlpha = fadeIn
-      g.fillStyle = '#000000'
-      g.fillRect(0, 0, W, H)
-      g.globalAlpha = 1
-    }
-    if (o.fade > 0) {
-      g.globalCompositeOperation = 'destination-out'
-      g.globalAlpha = o.fade
-      g.fillStyle = '#000000'
-      g.fillRect(0, 0, W, H)
-      g.globalCompositeOperation = 'source-over'
-      g.globalAlpha = 1
+  /** Rockets without the skill module (skills-off build): flat darts. */
+  const drawFallbackRockets = (T: number): void => {
+    for (const r of rockets) {
+      if (!r.active || !r.target) continue
+      const u = (T * 1000 - r.startAt) / (r.arriveAt - r.startAt)
+      const x = r.x0 + (r.target.x - r.x0) * u
+      const y = r.y0 + (r.target.y - r.y0) * u - Math.sin(u * Math.PI) * 24
+      ctx.fillStyle = SUN
+      ctx.strokeStyle = INK
+      ctx.lineWidth = 1.6
+      ctx.beginPath()
+      ctx.arc(x, y, 4.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
     }
   }
 
-  const resize = (w: number, h: number, dpr: number, s: SafeInsets): void => {
+  // ── Screen-space layers (css px) ──
+  /** Beat 1: the leafy canopy corners parting outward. */
+  const drawCanopy = (): void => {
+    const p = ov.canopy
+    if (p >= 1) return
+    ctx.save()
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const diag = Math.hypot(W, H)
+    const img = introArtImage('canopy', 'corner')
+    const size = Math.max(W, H) * 0.62
+    ctx.globalAlpha = 1 - p * p * p
+    for (let c = 0; c < 4; c++) {
+      const fx = c % 2 === 0 ? -1 : 1
+      const fy = c < 2 ? -1 : 1
+      const off = p * diag * 0.45
+      const cx = (fx < 0 ? 0 : W) + fx * off * 0.7
+      const cy = (fy < 0 ? 0 : H) + fy * off * 0.7
+      ctx.save()
+      ctx.translate(Math.round(cx), Math.round(cy))
+      ctx.scale(-fx, -fy)
+      if (img) {
+        // never upscaled: at most the file's own pixels
+        const k = Math.min(size / img.naturalWidth, img.naturalWidth / dpr / img.naturalWidth)
+        ctx.drawImage(img, 0, 0, img.naturalWidth * k, img.naturalHeight * k)
+      } else {
+        vectorCanopy(size, c)
+      }
+      ctx.restore()
+    }
+    ctx.restore()
+  }
+
+  /** Vector canopy corner: overlapping flat leaves, navy outline, three greens. */
+  const LEAF_TONES = ['#2f7d43', '#3f9a4c', '#5fc36a'] as const
+  const vectorCanopy = (size: number, corner: number): void => {
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = INK
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.fillStyle = LEAF_TONES[layer]!
+      const n = 7 - layer
+      for (let i = 0; i < n; i++) {
+        const h1 = hash01(corner * 31 + layer, i)
+        const h2 = hash01(corner * 17 + layer + 5, i)
+        const a = (i / n) * (Math.PI / 2) + (h1 - 0.5) * 0.3
+        const dist = size * (0.08 + 0.42 * (1 - layer * 0.28) * (0.5 + h2 * 0.5))
+        const x = Math.cos(a) * dist
+        const y = Math.sin(a) * dist
+        const len = size * (0.2 - layer * 0.035) * (0.8 + h1 * 0.4)
+        const rot = a + (h2 - 0.5) * 0.8
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(rot)
+        ctx.beginPath()
+        ctx.moveTo(-len * 0.5, 0)
+        ctx.quadraticCurveTo(0, -len * 0.42, len * 0.5, 0)
+        ctx.quadraticCurveTo(0, len * 0.42, -len * 0.5, 0)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+        // midrib
+        ctx.beginPath()
+        ctx.moveTo(-len * 0.42, 0)
+        ctx.lineTo(len * 0.4, 0)
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+        ctx.lineWidth = 2.5
+        ctx.restore()
+      }
+    }
+  }
+
+  /** The cartoon iris closing on the felled tree. */
+  const drawIris = (): void => {
+    if (ov.iris < 0) return
+    const p = toScreen(TREES.red.x, TREES.red.y)
+    const far = Math.hypot(Math.max(p.x, W - p.x), Math.max(p.y, H - p.y))
+    const r = Math.max(0, ov.iris * far)
+    ctx.save()
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.beginPath()
+    ctx.rect(0, 0, W, H)
+    if (r > 0.5) ctx.arc(p.x, p.y, r, 0, Math.PI * 2, true)
+    ctx.fillStyle = INK
+    ctx.fill('evenodd')
+    if (r > 0.5) {
+      ctx.lineWidth = 6
+      ctx.strokeStyle = SUN
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, r + 3, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
+  // ── Frame ──
+  let curU = 1
+  let curOx = 0
+  let curOy = 0
+
+  const toScreen = (x: number, y: number) => ({ x: (curOx + x * curU) / dpr, y: (curOy + y * curU) / dpr })
+
+  const draw = (T: number, sound: boolean): void => {
+    const nowMs = T * 1000
+    overlayAt(T, ov)
+    // From the title card on, the canvas is clear (the DOM card and then the
+    // live arena show).
+    if (T >= BEAT.title) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, Math.round(W * dpr), Math.round(H * dpr))
+      return
+    }
+    ensureBakes()
+    cameraAt(T, cam, opts.still)
+    clampCam(cam)
+    // State of the scene at T (positions are pure functions of T).
+    treeAt('red', T, trees.red, opts.still)
+    treeAt('blue', T, trees.blue, opts.still)
+    for (let i = 0; i < CAST.length; i++) smasherAt(i, T, sm[i]!, opts.still)
+    // Callout anchors are CAMERA-relative: the pills are drawn around the
+    // camera centre, so their on-screen clamp (renderSkillCallouts) holds.
+    for (let i = 0; i < CAST.length; i++) {
+      const a = anchors[i]!
+      a.x = sm[i]!.x - cam.x
+      a.y = sm[i]!.y - sm[i]!.h - cam.y
+    }
+    slamAnchor.x = SLAM_CALLOUT_SPOT.x - cam.x
+    slamAnchor.y = SLAM_CALLOUT_SPOT.y - cam.y
+    stepFx(T, sound)
+    // These may have been moved by the event replay — re-sample.
+    smasherAt(VIXIE, T, sm[VIXIE]!, opts.still)
+
+    const z = zoomOf(cam)
+    const u = devPerUnit(z)
+    const ox = Math.round((W * dpr) / 2 - (cam.x + cam.sx) * u)
+    const oy = Math.round((H * dpr) / 2 - (cam.y + cam.sy) * u)
+    curU = u
+    curOx = ox
+    curOy = oy
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.fillStyle = THEME_LOOK[THEME].backdrop
+    ctx.fillRect(0, 0, Math.round(W * dpr), Math.round(H * dpr))
+    const useClose = close !== null && z >= 1 + (closeZoom - 1) * 0.5 - 1e-6
+    if (wide && (!useClose || !covers(close!, cam, u))) blit(wide, u, ox, oy)
+    if (useClose) blit(close!, u, ox, oy)
+
+    ctx.setTransform(u, 0, 0, u, ox, oy)
+    // trees (behind everything that moves), then rings on the ground
+    drawTree('red', nowMs)
+    drawTree('blue', nowMs)
+    drawRings(T)
+    drawAim(T)
+    // smashers, back to front
+    const order = [THUMPER, VIXIE, GRIZZLE, BRAMBLE, CHOMPER].sort((a, b) => (sm[a]!.y - sm[b]!.y))
+    for (const i of order) {
+      drawSmasher(i, u)
+      if (skill && i === GRIZZLE) {
+        const s = sm[GRIZZLE]!
+        const b = blades[GRIZZLE]!
+        b.x = s.x
+        b.y = s.y - s.h
+        b.skills!.has = s.shield > 0 ? 2 : 0
+        b.skills!.shield = s.shield
+        ctx.globalAlpha = 1
+        skill.drawShield(ctx, b, nowMs)
+      }
+    }
+    // tree-hit particles + ambient leaves
+    drawTowerFx(ctx, towerFx)
+    drawTowerFx(ctx, ambient)
+    // rockets (Thorn Volley)
+    const br = sm[BRAMBLE]!
+    for (let k = 0; k < ROCKETS.length; k++) {
+      const r = ROCKETS[k]!
+      const rv = rockets[k]!
+      rv.active = T >= r.at && T < r.arrive
+      rv.x0 = br.x
+      rv.y0 = br.y - SMASHER_R * 0.6
+      const tgt = rocketTargets[k]!
+      if (r.target >= 0) {
+        tgt.x = sm[r.target]!.x
+        tgt.y = sm[r.target]!.y
+      } else {
+        tgt.x = TREE_ROCKET_POINT.x
+        tgt.y = TREE_ROCKET_POINT.y
+      }
+    }
+    for (let i = 0; i < CAST.length; i++) {
+      const b = blades[i]!
+      b.x = sm[i]!.x
+      b.y = sm[i]!.y - sm[i]!.h
+      b.hp = sm[i]!.alpha > 0 ? 1 : 0
+    }
+    if (skill) skill.drawLayer(ctx, rockets, blades, nowMs)
+    else drawFallbackRockets(T)
+    drawStars(T)
+    if (skill) {
+      const px = dpr / u
+      ctx.setTransform(u, 0, 0, u, ox + cam.x * u, oy + cam.y * u)
+      skill.drawCallouts(ctx, nowMs, px, (W / 2) * px, (H / 2) * px)
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.globalAlpha = 1
+    drawCanopy()
+    drawIris()
+  }
+
+  const resize = (w: number, h: number, d: number, s: SafeInsets): void => {
     W = Math.max(1, w)
     H = Math.max(1, h)
-    DPR = dpr
-    safe = s
-    MIN = Math.min(W, H)
-    portrait = H > W
-    bakeViewport()
-    layout()
-    // The outro's world layer, allocated here rather than on the frame that
-    // first needs it (a full-screen canvas allocation is a long frame).
-    worldLayer = mkCanvas(W * DPR, H * DPR)
+    dpr = d
+    void s
+    fitCss = Math.min(W / (CONTENT.x1 - CONTENT.x0), H / (CONTENT.y1 - CONTENT.y0))
+    const floor = PAINTED_FLOORS[FLOOR_KEY]
+    if (floor) fitCss = Math.min(fitCss, (floor.size * FLOOR_WIDE_UPSCALE) / (2 * ARENA_R) / dpr)
+    closeZoom = pickCloseZoom()
+    bakeKey = ''
   }
 
   return {
     resize,
-    setHudTarget: (r) => {
-      hud = r
+    draw,
+    setSkillFx: (fx) => {
+      skill = fx
+      resetFx()
     },
-    setLabels: (l, family) => {
-      labels = l
-      fontFamily = family
-      font100 = `100px ${fontFamily}`
-      if (W > 1) {
-        bakeViewport()
-        layout()
+    toScreen,
+    get closeZoom() {
+      return closeZoom
+    },
+    dispose: () => {
+      for (const b of [wide, close]) {
+        if (b) {
+          b.canvas.width = 1
+          b.canvas.height = 1
+        }
       }
-    },
-    draw
+      wide = null
+      close = null
+    }
   }
 }

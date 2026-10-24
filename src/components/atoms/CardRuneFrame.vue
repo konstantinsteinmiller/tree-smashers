@@ -7,7 +7,7 @@ import { RARITY_EDGE, type SmasherRarity } from '@/data/smasherRarity'
  * REPLACES the card's own border: the card keeps a 2px border for its layout,
  * and this frame paints over exactly that ring — a solid ink edge, an inner
  * EDGE band in the card's rarity colour (thicker along the base, like a
- * trading card), flat diagonal stripes in the top-right corner, and an ink
+ * trading card), a solid dog-ear notch in the top-right corner, and an ink
  * keyline. Everything stays inside the card's footprint, so it never touches
  * a neighbouring card.
  *
@@ -57,16 +57,18 @@ const color = computed(() => {
   box-shadow: inset 0 0 0 3px var(--frame), inset 0 -6px 0 var(--frame), inset 0 0 0 4.5px rgba(22, 26, 64, 0.4)
   pointer-events: none
 
-  // Corner stripes: a triangle of flat diagonal bars in the edge colour.
+  // Corner notch (#UX1c): a solid dog-ear in the edge colour with a light
+  // bevel along its top (was a stripe triangle).
   &::after
     content: ''
     position: absolute
     top: 0
     right: 0
-    width: 1.9rem
-    height: 1.9rem
-    background-image: repeating-linear-gradient(315deg, var(--frame) 0 3px, transparent 3px 7px)
-    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    width: 1.3rem
+    height: 1.3rem
+    background-color: var(--frame)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45)
+    clip-path: polygon(0 0, 100% 0, 100% 100%)
     border-top-right-radius: calc(var(--radius-ui) - 3px)
 
   &.is-selected

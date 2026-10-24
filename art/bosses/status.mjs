@@ -21,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { loadConfig } from '../../tools/art-desk/config.mjs'
 import { scanJobs } from '../../tools/art-desk/jobs.mjs'
 import { DRAWABLES, PROCEDURAL_RECEIPT, STATUS_DOC } from './manifest.mjs'
+import { RELEASED_SMASHER_IDS, SMASHER_IDS } from '../../tools/smasher-sheets/released.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -105,8 +106,31 @@ export const renderStatus = (rows) => {
     lines.push(`| ${r.mark} | ${r.title} (\`${r.stem}\`) | ${r.doc ? `\`${r.doc}\`` : '—'} | ${ref} | ${r.needsPainting && r.mark === '✓' ? 'sliced, but the target is still the procedural drawing' : r.state} | ${ships} |`)
   }
   lines.push('', 'Marks: ✓ sliced and current · ! repaint (reference changed / old painting parked) · ? painted, no receipt · · not painted yet.', '')
+  lines.push(...smasherSheetStatus(ROOT))
   lines.push(...arenaArtStatus(ROOT))
   return lines.join('\n')
+}
+
+/** Smasher sheets (tools/smasher-sheets): the paint queue follows the release
+ *  gate (src/data/smasherCatalog.ts RELEASED_SMASHER_COUNT). */
+const smasherSheetStatus = (root) => {
+  let bare = []
+  try {
+    bare = readdirSync(join(root, 'art-sheets', 'smashers-bare'))
+  } catch {
+  }
+  const done = (id) => bare.includes(`${id}.full32`)
+  const later = SMASHER_IDS.filter(id => !RELEASED_SMASHER_IDS.includes(id))
+  const todo = RELEASED_SMASHER_IDS.filter(id => !done(id))
+  return [
+    `## Smasher sheets — this release: smashers 1–${RELEASED_SMASHER_IDS.length}`,
+    '',
+    `Release gate: the paint queue runs only the ${RELEASED_SMASHER_IDS.length} released smashers by default (\`node tools/smasher-sheets/paint-queue.mjs\`; explicit ids \`… paint-queue.mjs <ids>\`, or \`--all\` for the later release too).`,
+    '',
+    `- Released, full 32-frame painting sliced: ${RELEASED_SMASHER_IDS.length - todo.length}/${RELEASED_SMASHER_IDS.length}${todo.length ? ` — still to paint: ${todo.join(', ')}` : ''}`,
+    `- Later release (${later.length}, not queued by default): ${later.filter(done).length}/${later.length} sliced`,
+    ''
+  ]
 }
 
 /** Arena floors / backdrop / props (text-only paint pass) — read from disk. */
@@ -116,18 +140,78 @@ const arenaArtStatus = (root) => {
     files = readdirSync(join(root, 'art-sheets', 'painted'))
   } catch {
   }
-  const floors = files.map(f => /^arena-floor-(\d+)\.png$/.exec(f)?.[1]).filter(Boolean).map(Number).sort((a, b) => a - b)
-  const props = files.map(f => /^props-(.+)\.png$/.exec(f)?.[1]).filter(Boolean)
+  // Per arena THEME (src/use/arenaThemes.ts): floor variants planned in
+  // FLOOR_PLAN, one backdrop tile, its prop sheets (tools/arena-props/pack.mjs SHEETS).
+  const THEMES = {
+    meadow: { floors: 4, bg: 'backdrop-highland.png', sheets: ['forest-a', 'forest-b'] },
+    woodland: { floors: 3, bg: 'backdrop-woodland.png', sheets: ['woodland-a'] },
+    rocky: { floors: 3, bg: 'backdrop-rocky.png', sheets: ['rocky-a'] },
+    snowy: { floors: 3, bg: 'backdrop-snowy.png', sheets: ['snowy-a'] },
+    volcanic: { floors: 3, bg: 'backdrop-volcanic.png', sheets: ['volcanic-a'] },
+    ruins: { floors: 3, bg: 'backdrop-ruins.png', sheets: ['ruins-a'] },
+    bedroom: { floors: 3, bg: 'backdrop-bedroom.png', sheets: ['bedroom-a', 'bedroom-b'] }
+  }
+  const rows = Object.entries(THEMES).map(([t, d]) => {
+    const floors = Array.from({ length: d.floors }, (_, n) => n).filter(n => files.includes(`arena-floor-${t}-${n}.png`))
+    const sheets = d.sheets.filter(sh => files.includes(`props-${sh}.png`))
+    const missing = d.sheets.filter(sh => !sheets.includes(sh))
+    return `| ${t} | ${floors.length}/${d.floors}${floors.length ? ` (${floors.join(', ')})` : ''} | ${files.includes(d.bg) ? 'painted' : '**not painted**'} | ${sheets.length}/${d.sheets.length}${missing.length ? ` (missing ${missing.join(', ')})` : ''} |`
+  })
   return [
-    '## Arena art (floors, backdrop, props)',
+    '## Arena art per theme (floors, backdrop, props)',
     '',
     '> **Gemini account limitation (since the Oct 2026 account switch):** this account REFUSES reference-based edits',
     '> ("Sorry, I can\'t edit images for you yet. Can I generate an image instead") — paint with TEXT-ONLY prompts',
     '> (`paint.mjs` without `--ref`) and describe the subject precisely; a job that needs a reference falls back to text.',
     '',
-    `- Arena floors painted: ${floors.length ? floors.map(i => `layout ${i}`).join(', ') : 'none'} of 50 — \`arena-floors/floor-<id>.prompt.txt\` → \`painted/arena-floor-<id>.png\` → \`node tools/arena-floors/make-floors.mjs\``,
-    `- Backdrop: ${files.includes('backdrop-highland.png') ? 'highland plain painted' : 'not painted'} — \`bg/highland.prompt.txt\` → \`node tools/bg-tile/make-tile.mjs <png> public/images/bg/highland-tile_768x768.webp --size 768 --hard\``,
-    `- Prop sheets painted: ${props.length ? props.join(', ') : 'none'} — \`props/<sheet>.prompt.txt\` → \`painted/props-<sheet>.png\` → \`node tools/arena-props/pack.mjs\``,
+    '| Theme | Floor variants painted | Backdrop tile | Prop sheets |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+    '- Prompts: `node tools/arena-themes/prompts.mjs` → `art-sheets/{arena-floors,bg,props}/*.prompt.txt`; unattended painting: `node tools/arena-themes/paint-queue.mjs` (stops on QUOTA / SIGNED_OUT, a re-run continues)',
+    '- Then: `node tools/arena-floors/make-floors.mjs` · `node tools/arena-themes/make-backdrops.mjs` · `node tools/arena-props/pack.mjs`',
+    "- An unpainted floor variant falls back to the procedural floor tinted to the theme; an unpainted backdrop to the theme's flat ground colour",
+    '',
+    ...arenaBorderStatus(root, files),
+    '## UI icons (Options tabs + HUD settings button)',
+    '',
+    `Painted: ${['settings', 'difficulty', 'sound'].map(n => `${n} ${files.includes(`ui-icon-${n}.png`) ? 'painted' : '**not painted**'}`).join(', ')} — an unpainted icon ships as the drawn SVG (src/components/icons/UiIcon.vue)`,
+    '',
+    '- Queue (TEXT-ONLY, one Gemini job at a time through paint.mjs and its lock, stops on QUOTA / SIGNED_OUT, a re-run continues, packs at the end): `node tools/ui-icons/paint-queue.mjs` (`--dry` lists the jobs)',
+    '- Prompts: `node tools/ui-icons/prompts.mjs` → `art-sheets/ui-icons/*.prompt.txt`; pack only: `node tools/ui-icons/pack.mjs` → `public/images/ui-icons/<name>_{128,256}.webp` + `src/use/paintedUiIcons.ts`',
+    ''
+  ]
+}
+
+/** Painted arena BORDERS (tools/arena-borders): the special walls first
+ *  (lava hurts, heal heals — owner priority), then one per theme. */
+const arenaBorderStatus = (root, files) => {
+  let reg = ''
+  try {
+    reg = readFileSync(join(root, 'src', 'use', 'paintedBorders.ts'), 'utf-8')
+  } catch {
+  }
+  const KEYS = [
+    ['lava', 'lava arena wall — HURTS on contact'], ['heal', 'forest arena wall — HEALS on contact'],
+    ['meadow', 'meadow'], ['ruins', 'ruins (boss)'], ['woodland', 'woodland'], ['bedroom', 'bedroom'],
+    ['volcanic', 'volcanic'], ['snowy', 'snowy'], ['rocky', 'rocky']
+  ]
+  const rows = KEYS.map(([k, label]) => {
+    const painted = files.includes(`border-${k}.png`)
+    const line = reg.split('\n').find(l => l.trimStart().startsWith(`"${k}": {`))
+    const tiles = line ? (line.match(/"y":/g) ?? []).length : 0
+    return `| ${painted && line ? '✓' : '·'} | ${label} (\`${k}\`) | ${painted ? 'painted' : '**not painted**'} | ${line ? `shipped, ${tiles} tileable variants` : k === 'lava' || k === 'heal' ? 'its theme border (volcanic / woodland)' : 'procedural log rim'} |`
+  })
+  return [
+    '## Arena borders (painted wall along every clearing outline) — PRIORITY',
+    '',
+    '| | Border | Painting | In game |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+    '- Queue (TEXT-ONLY, one Gemini job at a time through paint.mjs and its lock, stops on QUOTA / SIGNED_OUT, a re-run continues, packs at the end): `node tools/arena-borders/paint-queue.mjs` (`--dry` lists the jobs, `--redo <key>` parks a painting for a repaint, max 2)',
+    '- Prompts: `node tools/arena-borders/prompts.mjs` → `art-sheets/arena-borders/<key>.prompt.txt`; pack only: `node tools/arena-borders/pack.mjs` → `public/images/arena-borders/<key>_WxH.webp` + `src/use/paintedBorders.ts`; review the seams in `art-sheets/arena-borders/<key>.preview.png`',
+    '- An unpainted (or refused) border falls back to the procedural wooden log rim; the lava / heal wall falls back to its theme border (volcanic / woodland)',
     ''
   ]
 }

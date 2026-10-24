@@ -2,14 +2,16 @@
 //
 // Writes save keys BEFORE any app code runs, so a rep can start in a heavy
 // mid-campaign fight instead of the 2v2 stage-1 tutorial. Stage 1 is the
-// LIGHTEST thing the renderer ever draws (no bouncers, no special-skin auras,
+// LIGHTEST thing the renderer ever draws (no special-skin auras,
 // two blades a side) — measuring only there hides most of the frame cost.
 //
 // Reference stages:
-//   1   tutorial            — 2v2, default arena, no bouncers   (lightest)
-//   46  tornado + shock     — tornado aura, 2 bouncers
-//   48  ice + 3 bouncers    — 3 NPC blades, 3 bouncers
-//   91  3 bouncers, 3 NPCs  — late-campaign roster              (heaviest)
+//   1   tutorial            — 2v2, default arena                (lightest)
+//   46  tornado + shock     — tornado aura
+//   48  ice                 — 3 NPC blades
+//   91  3 NPCs              — late-campaign roster              (heaviest)
+// (Stages 46 / 48 / 91 also carried 2–3 pinball bumpers until 2026-10-20;
+// the bumpers are gone — older PERF-LEDGER rows were measured with them.)
 //
 // Any seeded stage also marks the intro cutscene, the league unlock popup and
 // the skills intros as seen, so no dialog covers the arena while measuring.

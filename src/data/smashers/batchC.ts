@@ -154,7 +154,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   blubbo: {
     id: 'blubbo', archetype: { top: 'cushioned', bottom: 'tanky' },
     profile: p(1.45, 0.97, 1.15, 0.75, 1.3), unlockStage: 235,
-    disc: 1.35, armor: { front: 0.8, back: 1.05 },
+    disc: 1.35, armor: { front: 0.75, back: 0.75, look: 'bulwark' },
     skills: [
       sk('blubber_wall', 'anchor', { resist: 1.2 }),
       sk('ice_floe', 'hazard_ward', { lava: 1.5, thunder: 1.5, chip: 1.5, shockKeep: 1.2 }),

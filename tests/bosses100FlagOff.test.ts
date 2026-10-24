@@ -174,7 +174,7 @@ describe('engine, flag off', () => {
         bossTrait: 'frost',
         shardTrait: 'chill'
       }
-    ], false, 'boss', 0, false, undefined, null, 'circle', { seed: 5 })
+    ], false, 'boss', false, undefined, null, 'circle', { seed: 5 })
     expect(hasBossTraits).not.toHaveBeenCalled()
     expect(e.traitsActive()).toBe(false)
     expect(e.bossTraitHud.value).toEqual([])
@@ -227,9 +227,11 @@ describe('SpinnerArena at stage 110, flag off', () => {
       expect(seen.has('frost-vault')).toBe(true)
       expect(seen.has('cinder')).toBe(false)
       expect(seen.has('yeti')).toBe(false)
-      // Ordinary shop skins of the same tops are still listed.
-      expect(seen.has('turtle')).toBe(true)
-      expect(seen.has('prisma')).toBe(true)
+      // 2026-10-23: the old colourway list is gone from the picker — each smasher lists its
+      // free default and its ONE own skin (`<smasher>-skin`) instead.
+      expect(seen.has('turtle')).toBe(false)
+      expect(seen.has('prisma')).toBe(false)
+      expect([...seen].some(alt => alt.endsWith('-skin'))).toBe(true)
       for (const sel of BOSS_DOM) expect(document.querySelector(sel), sel).toBeNull()
     } finally {
       arena.unmount()

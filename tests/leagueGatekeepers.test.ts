@@ -149,9 +149,10 @@ describe('bosses100 ON build', () => {
       'stages.boss_cinder_tyrant', 'stages.boss_glacier_warden', 'stages.boss_elemental_court'
     ])
     expect(cards.slice(0, 3).map(c => c.badgeSrc)).toEqual([null, null, null])
-    expect(cards[3]!.badgeSrc).toMatch(/boss-badges\/cinder-tyrant_256x256\.webp$/)
-    expect(cards[4]!.badgeSrc).toMatch(/boss-badges\/glacier-warden_256x256\.webp$/)
-    expect(cards[5]!.badgeSrc).toMatch(/boss-badges\/cinder-tyrant_256x256\.webp$/) // the court's lead wears cinder
+    // the crest bake, or the toy-box repaint (painted-boss-*) once tools/badge-icons shipped it
+    expect(cards[3]!.badgeSrc).toMatch(/boss-badges\/(painted-boss-)?cinder-tyrant_256x256\.webp(\?v=\w+)?$/)
+    expect(cards[4]!.badgeSrc).toMatch(/boss-badges\/(painted-boss-)?glacier-warden_256x256\.webp(\?v=\w+)?$/)
+    expect(cards[5]!.badgeSrc).toMatch(/boss-badges\/(painted-boss-)?cinder-tyrant_256x256\.webp(\?v=\w+)?$/) // the court's lead wears cinder
     expect(cards.map(c => c.modelId)).toEqual(['piranha', 'mountain', 'thunderstorm', 'cinder', 'frost-vault', 'cinder'])
   })
 })

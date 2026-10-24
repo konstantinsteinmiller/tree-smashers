@@ -7,6 +7,7 @@
 
 import type { TopPartId } from '@/types/spinner'
 import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
+import { SMASHER_SKIN_COIN_COST, SMASHER_SKIN_IDS, isSmasherSkin } from '@/data/smasherSkinCatalog'
 
 /** Set of all spinner model IDs across every top part. The exhaustive
  *  list lets us key into per-skin metadata without picking a top. */
@@ -33,7 +34,9 @@ export const SPINNER_MODEL_IDS = [
   // Bosses 100+ trophy skins (bosses-100-feature.md §3.5) — EARN-ONLY, see
   // TROPHY_SKINS below. Worn by the Cinder Tyrant, the Glacier Warden and the
   // Frostbite Yeti; granted by the first win over an encounter that wears it.
-  'cinder', 'frost-vault', 'yeti'
+  'cinder', 'frost-vault', 'yeti',
+  // 2026-10-23: ONE locked skin per smasher (src/data/smasherSkinCatalog.ts).
+  ...SMASHER_SKIN_IDS
 ] as const
 
 export type SpinnerModelId = (typeof SPINNER_MODEL_IDS)[number]
@@ -51,7 +54,8 @@ export const SKINS_PER_TOP: Record<TopPartId, SpinnerModelId[]> = {
   piercer: ['scorpion', 'wulf', 'demon', 'hawk', 'rhino', 'ape', 'teleporter', 'narwhal', 'stag-beetle', 'drill', 'lancer']
 }
 
-/** Special skins with unique VFX — cost 1500 coins and are excluded
+/** Special skins with unique VFX — cost 1500 coins (one rewarded ad on an ad
+ *  build, see `isAdUnlockSkin`) and are excluded
  *  from daily rewards / battle pass / honor track skin draws. The
  *  battle-pass bug CG QA reported on 2026-05-05 was caused by the BP
  *  modal forgetting to filter these out: it offered "rainbow" at stage
@@ -90,15 +94,14 @@ export const offerableSkinsForTop = (topPartId: TopPartId): SpinnerModelId[] =>
 export const SKIN_COST = 300
 export const SPECIAL_SKIN_COST = 1500
 
-/** The 2026-09 expansion — the newest 4 skins of every top part. On a build
- *  that serves rewarded ads (`HAS_REWARDED_ADS`) they are NOT sold for coins:
- *  the skin shop unlocks each with ONE rewarded ad. On a build without
- *  rewarded ads the ad button is hidden and they sell for
- *  `AD_SKIN_COIN_COST` coins instead. Either way they stay regular skins, so
- *  the Skin Chest, the roulette wheel, the Battle Pass and Daily Rewards keep
- *  handing them out (`getOfferableSkinPool` does not exclude them). A player
- *  who bought one with coins before this rule keeps it — ownership lives in
- *  `smashers_owned_skins` and nothing here revokes it. */
+/** The 2026-09 expansion — the newest 4 skins of every top part. They were
+ *  the first ad-unlock skins; since the owner rule of 2026-10-21 EVERY
+ *  purchasable skin unlocks with one rewarded ad on an ad build (see
+ *  `isAdUnlockSkin`), so this set now only decides their tier (`skinRarity`
+ *  "super"), their no-ad coin price (`AD_SKIN_COIN_COST`) and which legacy
+ *  ad progress settles (`settleSkinAdProgress`). They stay regular skins: the
+ *  Skin Chest, the roulette wheel, the Battle Pass and Daily Rewards keep
+ *  handing them out (`getOfferableSkinPool` does not exclude them). */
 export const AD_UNLOCK_SKINS: ReadonlySet<SpinnerModelId> = new Set<SpinnerModelId>([
   'cheetah', 'jester', 'ninja', 'pirate',
   'porcupine', 'lionfish', 'morningstar', 'cactus',
@@ -108,8 +111,8 @@ export const AD_UNLOCK_SKINS: ReadonlySet<SpinnerModelId> = new Set<SpinnerModel
   'narwhal', 'stag-beetle', 'drill', 'lancer'
 ])
 
-/** Completed rewarded ads needed to unlock one `AD_UNLOCK_SKINS` skin in the
- *  shop. Was 3; progress saved under the old rule (1–2 watches, see
+/** Completed rewarded ads needed to unlock one skin in the shop. Was 3 for
+ *  the expansion; progress saved under the old rule (1–2 watches, see
  *  `SKIN_AD_PROGRESS_KEY`) already meets it and is settled into ownership. */
 export const SKIN_AD_UNLOCK_ADS = 1
 
@@ -117,20 +120,33 @@ export const SKIN_AD_UNLOCK_ADS = 1
  *  3x the special-skin price. */
 export const AD_SKIN_COIN_COST = SPECIAL_SKIN_COST * 3
 
-/** True when the shop offers the rewarded-ad unlock for this skin — only an
- *  `AD_UNLOCK_SKINS` skin, and only on a build that serves rewarded ads.
- *  `adsBuild` exists for tests; production always uses the build constant. */
-export const isAdUnlockSkin = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
-  adsBuild && AD_UNLOCK_SKINS.has(modelId) && !isEarnOnlySkin(modelId)
+/** The free default of its top part (first entry; always owned). */
+export const isDefaultSkin = (modelId: string): boolean =>
+  Object.values(SKINS_PER_TOP).some(list => list[0] === modelId)
 
-/** False for skins the shop never sells for coins: `AD_UNLOCK_SKINS` on an
- *  ad build. Without rewarded ads every skin is coin-purchasable. */
+/**
+ * Owner rule (2026-10-21): on every build that serves rewarded ads, EVERY
+ * purchasable skin — regular, special and the 2026-09 expansion — is unlocked
+ * by watching ONE rewarded ad instead of coins. Never an earn-only boss trophy
+ * (they were never sold: earned by gameplay only, B4) and never a free default.
+ *
+ * `adsBuild` is the SESSION answer: the skin shop passes
+ * `rewardedUnlocksAvailable` (useAds — the build constant AND no ad blocker /
+ * no "rewarded unsupported" from the portal), so a session that loses ad
+ * support falls back to the coin price. The default is the build constant.
+ */
+export const isAdUnlockSkin = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
+  adsBuild && !isEarnOnlySkin(modelId) && !isDefaultSkin(modelId)
+
+/** True when the shop sells this skin for coins: every non-trophy skin on a
+ *  session without rewarded ads, none on a session with them. */
 export const isCoinPurchasable = (modelId: SpinnerModelId, adsBuild: boolean = HAS_REWARDED_ADS): boolean =>
   !isEarnOnlySkin(modelId) && !isAdUnlockSkin(modelId, adsBuild)
 
-/** Coin cost for a given skin. For `AD_UNLOCK_SKINS` it is only offered on a
- *  build without rewarded ads — check `isCoinPurchasable` first. */
+/** Coin cost of a skin on a session without rewarded ads (unchanged prices:
+ *  300 regular, 1 500 special, 4 500 for the 2026-09 expansion). */
 export const skinCost = (modelId: SpinnerModelId): number =>
+  isSmasherSkin(modelId) ? SMASHER_SKIN_COIN_COST :
   AD_UNLOCK_SKINS.has(modelId)
     ? AD_SKIN_COIN_COST
     : SPECIAL_SKINS.has(modelId) ? SPECIAL_SKIN_COST : SKIN_COST

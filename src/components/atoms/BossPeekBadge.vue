@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { modelImgPath } from '@/use/useModels'
+import VsPortrait from '@/components/atoms/VsPortrait.vue'
+import { smasherForSkin } from '@/smashers/smasherSkins'
 import { isLowQuality } from '@/use/useQuality'
 import type { BossPeek } from '@/use/bossPeek'
 // Bosses 100+ (bosses gate): the trait glyph is a lazy handle, null on a
@@ -9,6 +10,7 @@ import type { BossPeek } from '@/use/bossPeek'
 // behind the literal.
 import { BOSSES100_BUILD, BossTraitGlyphUi } from '@/bosses/bosses100Gate'
 import { bossBadgeImgPathForSkin } from '@/data/bossArt'
+import { bossFrameArt } from '@/use/bossFrameArt'
 
 /**
  * ─── "Next boss · Stage 5" ──────────────────────────────────────────────────
@@ -42,6 +44,10 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
+// The painted portal frame (tools/boss-frame-art), null until it has loaded
+// (and always under ?art=procedural): the CSS ring is the fallback.
+const frameArt = computed(() => bossFrameArt())
+
 
 /** Same construction as StageBadge: translated stage name + cycle numeral. */
 const bossName = computed(() => {
@@ -57,6 +63,31 @@ const distance = computed(() =>
     : t('bossPeek.stagesAway', { n: props.peek.stagesAway })
 )
 
+// The skin is DRAWN (VsPortrait): the painted portrait / sheet frame when the
+// look is painted (a smasher's signature skin; ?art=procedural turns it off),
+// the rig otherwise — at css × dpr, redrawn when a painting decodes late. It
+// is fitted into the round opening by its MEASURED alpha (portraitFit.ts),
+// not by the FRAME_BOX, which left every smasher low with its base on the
+// bottom rim. The canvas size is the opening's measured css size.
+const smasherId = computed(() => (props.peek.modelId ? smasherForSkin(props.peek.modelId) : null))
+const skinEl = ref<HTMLElement | null>(null)
+const skinPx = ref(0)
+let ro: ResizeObserver | null = null
+onMounted(() => {
+  const el = skinEl.value
+  if (!el) return
+  const read = () => { skinPx.value = Math.round(el.clientWidth) }
+  read()
+  if (typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(read)
+    ro.observe(el)
+  }
+})
+onBeforeUnmount(() => ro?.disconnect())
+/** Rim of the portrait disc (the old DOM portrait's gold). */
+const PORTRAIT_RIM = '#e0b04a'
+const FIT = { fill: 0.93, lift: 0.06 }
+
 const portraitAlt = computed(() => t('bossPeek.portraitAlt', { name: bossName.value }))
 
 // Stage-101+ encounters (bosses-100-feature.md §7.2): the boss's crest on the
@@ -67,23 +98,37 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 </script>
 
 <template lang="pug">
-  div.boss-peek.relative.flex.items-center(:class="{ 'is-static': isLowQuality }")
+  div.boss-peek.relative.flex.items-center(
+    :class="{ 'is-static': isLowQuality, 'is-painted': !!frameArt }"
+    :style="frameArt ? frameArt.vars : undefined"
+  )
     //- Framed portrait. Layers, back to front: berry pulse, the boss skin in
     //- the opening, a round wood frame (CSS), a few rising sparks.
     //- ART-DESK SEAM: a painted cozy wood/berry frame can replace
     //- .boss-peek__frame (keep the box; --hole-* describe its opening).
     div.boss-peek__portrait.relative.shrink-0
       div.boss-peek__glow(aria-hidden="true")
-      div.boss-peek__skin
-        img.boss-peek__skin-img.pointer-events-none(
-          v-if="peek.modelId"
-          :src="modelImgPath(peek.modelId)"
-          :alt="portraitAlt"
-          draggable="false"
-          decoding="async"
+      div.boss-peek__skin(ref="skinEl" :role="smasherId ? 'img' : undefined" :aria-label="smasherId ? portraitAlt : undefined")
+        VsPortrait.boss-peek__skin-img(
+          v-if="smasherId && peek.modelId && skinPx > 0"
+          :smasher-id="smasherId"
+          :model-id="peek.modelId"
+          :frame="1"
+          :width="skinPx"
+          :height="skinPx"
+          :rim="PORTRAIT_RIM"
+          :fit-circle="FIT"
         )
-        span.boss-peek__skull(v-else role="img" :aria-label="portraitAlt") 💀
-      div.boss-peek__frame.pointer-events-none(aria-hidden="true")
+        span.boss-peek__skull(v-else-if="!smasherId" role="img" :aria-label="portraitAlt") 💀
+      img.boss-peek__frame-art.pointer-events-none(
+        v-if="frameArt"
+        :src="frameArt.src"
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+        data-boss-frame="painted"
+      )
+      div.boss-peek__frame.pointer-events-none(v-else aria-hidden="true" data-boss-frame="css")
       span.boss-peek__ember(aria-hidden="true")
       span.boss-peek__ember(aria-hidden="true")
       span.boss-peek__ember(aria-hidden="true")
@@ -111,7 +156,8 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 
 <style scoped lang="sass">
 // ── Geometry ────────────────────────────────────────────────────────────────
-// --frame-w is the frame box width. The CSS ring is round: its opening is
+// --frame-w is the CSS ring's box width (a painted frame's box is
+// --frame-scale times that; see bossFrameArt.ts). The CSS ring is round: its opening is
 // centred and --hole-d of the box wide (1 - 2 x the ring thickness).
 .boss-peek
   --frame-w: clamp(6.5rem, 19vh, 8.5rem)
@@ -141,7 +187,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
     margin-block: -0.3rem
 
 .boss-peek__portrait
-  width: var(--frame-w)
+  width: calc(var(--frame-w) * var(--frame-scale, 1))
   aspect-ratio: var(--frame-aspect)
   z-index: 1
   animation: boss-peek-slam 0.7s ease-out 0.3s both
@@ -178,9 +224,8 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   justify-content: center
 
 .boss-peek__skin-img
-  width: 90%
-  height: 90%
-  object-fit: contain
+  position: absolute
+  inset: 0
 
 .boss-peek__skull
   font-size: calc(var(--frame-w) * 0.2)
@@ -196,9 +241,31 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   // Wood ring with ink edges and a berry inner trim; 0-blur shadows only.
   border: calc(var(--frame-w) * 0.13) solid var(--color-wood-600)
   box-shadow: 0 0 0 3px var(--color-ink), 0 5px 0 3px var(--color-ink), inset 0 0 0 3px var(--color-ink), inset 0 0 0 6px var(--color-berry-500)
-  outline: 2px dashed rgba(255, 255, 255, 0.5)
+  // A solid light keyline on the ring (#UX1c: no stitch dashes on hard UI).
+  outline: 2px solid rgba(255, 255, 255, 0.35)
   outline-offset: calc(var(--frame-w) * -0.065 - 1px)
 
+// The painted portal: the image IS the box (its aspect drives the box); the
+// skin sits in its measured opening. Idle: the frame breathes a 2 % scale on
+// its own layer (transform only, no filter) once the slam has landed.
+.boss-peek__frame-art
+  position: absolute
+  inset: 0
+  width: 100%
+  height: 100%
+  object-fit: fill
+  transform-origin: 50% 60%
+  animation: boss-frame-idle 3.2s ease-in-out 1.1s infinite
+
+.boss-peek.is-painted
+  .boss-peek__skin
+    width: calc(var(--hole-d) * 106%)
+    background-color: var(--color-berry-300)
+  .boss-peek__glow
+    display: none
+  .boss-peek__plate
+    margin-left: calc(var(--frame-w) * -0.2)
+    padding-left: calc(var(--frame-w) * 0.22)
 
 // New-encounter crest on the upper-left shoulder (clear of the skull).
 .boss-peek__crest
@@ -245,7 +312,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   margin-left: calc(var(--frame-w) * -0.16)
   padding: 0.4rem 1.3rem 0.45rem calc(var(--frame-w) * 0.19)
   // A berry WARNING TAG: the plate is the ::before, skewed so its right end
-  // is cut on the diagonal, with flat diagonal stripes; the text stays
+  // is cut on the diagonal, with a two-tone facet; the text stays
   // upright on top. Its left end hides under the frame's wing.
   &::before
     content: ''
@@ -254,7 +321,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
     z-index: -1
     border-radius: 0 var(--radius-ui-sm) var(--radius-ui-sm) 0
     background-color: var(--color-berry-600)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     border: 3px solid var(--color-ink)
     border-left: none
     box-shadow: inset 0 3px 0 var(--color-berry-400), inset 0 -4px 0 var(--color-berry-700), 0 4px 0 var(--color-ink)
@@ -326,6 +393,12 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
   100%
     transform: none
 
+@keyframes boss-frame-idle
+  0%, 100%
+    transform: scale(1)
+  50%
+    transform: scale(1.02) translateY(-1%)
+
 @keyframes boss-peek-glow
   0%, 100%
     opacity: 0.45
@@ -356,6 +429,9 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 .boss-peek.is-static .boss-peek__ember
   display: none
 
+.boss-peek.is-static .boss-peek__frame-art
+  animation: none
+
 @media (prefers-reduced-motion: reduce)
   .boss-peek,
   .boss-peek__portrait
@@ -367,4 +443,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
 
   .boss-peek__ember
     display: none
+
+  .boss-peek__frame-art
+    animation: none
 </style>

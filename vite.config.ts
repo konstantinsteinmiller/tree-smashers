@@ -310,7 +310,11 @@ export default defineConfig(({ mode, command }) => {
   // src/bosses/bosses100Gate.ts) follows the same rule, and so do the league
   // flags (src/league/leagueGate.ts): VITE_APP_FEATURE_LEAGUE, and
   // VITE_APP_KIDS (child-directed build -> offline league, league plan O5).
-  for (const flag of ['VITE_APP_FEATURE_SKILLS', 'VITE_APP_FEATURE_BOSSES100', 'VITE_APP_FEATURE_LEAGUE', 'VITE_APP_KIDS']) {
+  // The #UX100 interstitial switches (src/use/ads/interstitialConfig.ts) too:
+  // VITE_APP_PLAYTIME_INTERSTITIALS and VITE_APP_COIN_CHORD_INTERSTITIAL.
+  // And the #UX3 balloon HP switch (src/use/balloonHpFlag.ts; the owner's
+  // spelling): VITE_APP_BALOON_HP_BAR ("false" = today's HP gauge).
+  for (const flag of ['VITE_APP_FEATURE_SKILLS', 'VITE_APP_FEATURE_BOSSES100', 'VITE_APP_FEATURE_LEAGUE', 'VITE_APP_KIDS', 'VITE_APP_PLAYTIME_INTERSTITIALS', 'VITE_APP_COIN_CHORD_INTERSTITIAL', 'VITE_APP_BALOON_HP_BAR']) {
     const v = env[flag]
     if (v !== undefined && v !== '' && v !== 'true' && v !== 'false') {
       throw new Error(
@@ -326,6 +330,18 @@ export default defineConfig(({ mode, command }) => {
       throw new Error(
         `[build] VITE_APP_LEAGUE_UNLOCK_STAGE must be a positive integer in mode "${mode}" (got ${JSON.stringify(v)}). `
         + 'Set it in .env (default "13") or .env.<mode>[.local].'
+      )
+    }
+  }
+  // The smasher release gate (src/data/smasherCatalog.ts RELEASED_SMASHER_COUNT):
+  // unset = the shipped default (smashers 1-24); "all" or an integer 1-48 opens
+  // more of the catalog for dev / testing the later release.
+  {
+    const v = env.VITE_APP_SMASHERS_RELEASED
+    if (v !== undefined && v !== '' && v !== 'all' && !(/^[1-9]\d*$/.test(v) && Number(v) <= 48)) {
+      throw new Error(
+        `[build] VITE_APP_SMASHERS_RELEASED must be "all" or an integer 1-48 in mode "${mode}" (got ${JSON.stringify(v)}). `
+        + 'Leave it unset for the release default (24).'
       )
     }
   }

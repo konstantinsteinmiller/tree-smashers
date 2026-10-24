@@ -12,13 +12,13 @@
 //   sfx       which synthesised skill sound plays and at which playback rate
 //             (the smasher's "voice": big animals lower, small ones higher).
 //
-// ART DESK (paint pass) — to replace a drawing with a painting:
-//   • icon:    drop `public/images/skills/<skillId>.webp` (square, ≥ 96 px,
-//              transparent, art only — the medallion rim stays procedural)
-//              and set `painted: true` on that skill below. The DOM and the
-//              canvas pick the bitmap up; the vector stays as the fallback.
-//   • flavour: drop `public/images/skills/fx/<shape>.webp` and set
-//              `painted: true` on that shape in FLAVOUR_SHAPES.
+// ART DESK (paint pass) — tools/skill-art (prompts → paint-queue → pack):
+//   • icon:    `public/images/skills/<skillId>.webp` (128 px, transparent, art
+//              only — the medallion rim + effect disc stay procedural), listed
+//              in the GENERATED registry `paintedSkillArt.ts` (id → hash).
+//              The DOM and the canvas pick the bitmap up; the vector stays the
+//              fallback (unpainted id, image not loaded yet, `?art=procedural`).
+//   • flavour: `public/images/skills/fx/<shape>.webp` (64 px), same registry.
 //   Reference sheet for the painter: `pnpm dev` → /dev/skill-icons.html
 //   (every icon + flavour shape, drawn by this module; ?key=1 = magenta
 //   chroma background without labels).
@@ -30,6 +30,7 @@ import type { SkillId } from '@/types/skills'
 import { SKILLS } from '@/data/skillCatalog'
 import { SMASHER_LIST, type SmasherId } from '@/data/smasherCatalog'
 import { prependBaseUrl } from '@/utils/function'
+import { PAINTED_SKILL_FX, PAINTED_SKILL_ICONS } from '@/use/skills/paintedSkillArt'
 import { BATCH_A_SKILL_ART } from '@/use/skills/smasherSkillArtBatchA'
 import { BATCH_B_SKILL_ART } from '@/use/skills/smasherSkillArtBatchB'
 import { BATCH_C_SKILL_ART } from '@/use/skills/smasherSkillArtBatchC'
@@ -175,8 +176,6 @@ export interface FlavourShape {
   d: string
   /** Optional second, unoutlined detail fill (e.g. the acorn cap). */
   d2?: string
-  /** Painted bitmap at public/images/skills/fx/<shape>.webp (art desk). */
-  painted?: boolean
 }
 
 export interface SkillFlavour {
@@ -206,8 +205,6 @@ export interface SmasherSkillArt {
   icon: readonly SkillIconLayer[]
   flavour: SkillFlavour
   sfx: { name: SkillSfxBase; rate: number }
-  /** Painted icon at public/images/skills/<id>.webp (art desk). */
-  painted?: boolean
 }
 
 // ─── Flavour particle shapes (unit box) ────────────────────────────────────
@@ -655,9 +652,20 @@ export const smasherSkillKey = (smasherId: SmasherId | string | undefined, effec
 export const smasherSkillArt = (key: string | undefined): SmasherSkillArt | null =>
   key ? SMASHER_SKILL_ART[key] ?? null : null
 
-/** Painted icon URL (art desk), or null while the drawing is in use. */
-export const paintedSkillIconUrl = (key: string): string | null =>
-  SMASHER_SKILL_ART[key]?.painted ? prependBaseUrl(`images/skills/${key}.webp`) : null
+/** `?art=procedural` (A/B): every skill icon / flavour sprite stays drawn. */
+const ART_PROCEDURAL = typeof location !== 'undefined' && /[?&]art=procedural(?:&|$)/.test(location.search)
+
+/** Painted icon URL (art desk, with its cache key), or null while the drawing is in use. */
+export const paintedSkillIconUrl = (key: string): string | null => {
+  const v = SMASHER_SKILL_ART[key] && !ART_PROCEDURAL ? PAINTED_SKILL_ICONS[key] : undefined
+  return v ? prependBaseUrl(`images/skills/${key}.webp?v=${v}`) : null
+}
+
+/** Painted flavour sprite URL, or null while the drawing is in use. */
+export const paintedFlavourUrl = (shape: FlavourShapeId): string | null => {
+  const v = ART_PROCEDURAL ? undefined : PAINTED_SKILL_FX[shape]
+  return v ? prependBaseUrl(`images/skills/fx/${shape}.webp?v=${v}`) : null
+}
 
 // ─── Canvas drawing ────────────────────────────────────────────────────────
 
@@ -673,11 +681,12 @@ const path2d = (d: string): Path2D | null => {
 
 const paintedCache = new Map<string, HTMLImageElement | null>()
 const paintedImage = (key: string): HTMLImageElement | null => {
-  if (!SMASHER_SKILL_ART[key]?.painted || typeof Image === 'undefined') return null
+  const url = paintedSkillIconUrl(key)
+  if (url === null || typeof Image === 'undefined') return null
   let img = paintedCache.get(key)
   if (img === undefined) {
     img = new Image()
-    img.src = paintedSkillIconUrl(key)!
+    img.src = url
     paintedCache.set(key, img)
   }
   return img !== null && img.complete && img.naturalWidth > 0 ? img : null
@@ -767,11 +776,12 @@ export function drawSmasherSkillIcon(
 const paintedFxCache = new Map<string, HTMLImageElement>()
 /** Painted flavour sprite (art desk), or null while the drawing is in use. */
 export const paintedFlavourImage = (shape: FlavourShapeId): HTMLImageElement | null => {
-  if (!FLAVOUR_SHAPES[shape].painted || typeof Image === 'undefined') return null
+  const url = paintedFlavourUrl(shape)
+  if (url === null || typeof Image === 'undefined') return null
   let img = paintedFxCache.get(shape)
   if (img === undefined) {
     img = new Image()
-    img.src = prependBaseUrl(`images/skills/fx/${shape}.webp`)
+    img.src = url
     paintedFxCache.set(shape, img)
   }
   return img.complete && img.naturalWidth > 0 ? img : null

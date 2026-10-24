@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
+import UiIcon from '@/components/icons/UiIcon.vue'
 import useLeaderboard, { type LeaderboardEntry } from '@/use/useLeaderboard'
 import useSpinnerCampaign from '@/use/useSpinnerCampaign'
 import { isMobileLandscape } from '@/use/useUser.ts'
@@ -108,13 +109,14 @@ const indexToRank = (entry: LeaderboardEntry): number =>
 <template lang="pug">
   //- ─── Trigger Button ────────────────────────────────────────────────────
   //- Royal 3D HUD button (sinks into its lip on press).
-  button.ui-btn.ui-btn--royal.ui-btn--icon(
+  button.ui-btn.ui-btn--royal.ui-btn--icon.ui-hit-44(
     type="button"
     @click="openModal"
     :aria-label="t('leaderboard')"
     class="cursor-pointer scale-80 sm:scale-100 pointer-events-auto p-2"
   )
-    img.w-7.h-7(src="/images/icons/trophy_128x128.webp" alt="")
+    span.block.w-7.h-7(aria-hidden="true")
+      UiIcon(name="leaderboard")
 
   //- ─── Modal ──────────────────────────────────────────────────────────────
   //- The whole panel scrolls in FModal's body (the single scroll authority),
@@ -192,7 +194,8 @@ const indexToRank = (entry: LeaderboardEntry): number =>
             :aria-label="isFightLocked(entry) ? t('alreadyFoughtToday') : t('fightAsGhost')"
             :title="isFightLocked(entry) ? t('alreadyFoughtToday') : t('fightAsGhost')"
             class="px-2.5 py-2 sm:px-3 sm:py-2.5 text-lg"
-          ) ⚔️
+          )
+            UiIcon.lb-fight__icon(name="fight")
 
           //- "YOU" tag for the player row
           span.lb-you.font-black.shrink-0(
@@ -231,7 +234,7 @@ const indexToRank = (entry: LeaderboardEntry): number =>
   :deep(.model-container)
     transform: scale(90%)
 
-// Rows: ice wells that pop in staggered; #1 sun with stripes; the player's
+// Rows: ice wells that pop in staggered; #1 sun with a facet; the player's
 // own row sky with an ink edge + lip (catalog: "own row must pop").
 .lb-row
   border: 2px solid var(--color-ice-400)
@@ -243,12 +246,12 @@ const indexToRank = (entry: LeaderboardEntry): number =>
   &.is-top1
     border-color: var(--color-ink)
     background-color: var(--color-sun-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: 0 2px 0 var(--color-ink)
   &.is-player
     border: 3px solid var(--color-ink)
     background-color: var(--color-sky-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 0 0 2px var(--color-sky-500), inset 0 -4px 0 var(--color-sky-500), 0 3px 0 var(--color-ink)
 
 // Rank plate: a square chip; the podium three get colour + a drop.
@@ -256,6 +259,10 @@ const indexToRank = (entry: LeaderboardEntry): number =>
   border-radius: 0.3rem
 .rank-plate.is-podium
   box-shadow: 0 2px 0 var(--color-ink)
+
+.lb-fight__icon
+  width: 1.25rem
+  height: 1.25rem
 
 .lb-fight
   min-height: 2.75rem

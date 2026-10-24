@@ -61,6 +61,14 @@ export interface AdProvider {
    */
   readonly isAdsBlocked: Ref<boolean>
   /**
+   * Reactive, optional: false once the portal has said it can NEVER serve a
+   * rewarded ad in this session (Playgama Bridge's
+   * `advertisement.isRewardedSupported`). Unlike `isRewardedReady` (nothing
+   * loaded right now — try again soon) this is final, so the ad-unlock
+   * placements switch to their coin price. Absent = supported.
+   */
+  readonly isRewardedSupported?: Ref<boolean>
+  /**
    * True when the provider handles the ad-audio guarantee itself, on the
    * real-ad edge, rather than the caller muting up front.
    *

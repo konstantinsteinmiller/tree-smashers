@@ -93,8 +93,9 @@ onUnmounted(() => timer.cancel())
   animation-play-state: paused
 
 // The "BOSS!" sign: a deep-navy plate SKEWED like a warning tag (the plate
-// is the ::before; crest + name stay upright), a berry trim with hard
-// diagonal berry stripes, and two berry slash bars flying in at the ends.
+// is the ::before; crest + name stay upright), a berry trim, a flat
+// two-tone split (a berry-tinted upper facet over the navy, one hard edge —
+// #UX1c, was berry stripes), and two berry slash bars flying in at the ends.
 .boss-intro__row
   position: relative
   isolation: isolate
@@ -108,7 +109,7 @@ onUnmounted(() => timer.cancel())
     inset: 0
     z-index: -1
     background-color: var(--color-royal-900)
-    background-image: repeating-linear-gradient(300deg, color-mix(in srgb, var(--color-berry-500) 24%, transparent) 0 8px, transparent 8px 18px)
+    background-image: linear-gradient(165deg, color-mix(in srgb, var(--color-berry-500) 30%, transparent) 0 44%, transparent 44%)
     border: 3px solid var(--color-ink)
     border-radius: var(--radius-ui-sm)
     box-shadow: inset 0 0 0 3px var(--color-berry-500), inset 0 -6px 0 var(--color-berry-700), 0 5px 0 var(--color-ink)

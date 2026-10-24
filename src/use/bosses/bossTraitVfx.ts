@@ -10,13 +10,13 @@
 //     gameplay state (hp, velocity, turn locks, chill stacks), never draws
 //     from matchRng — VFX randomness is Math.random or none.
 //   • Zero per-frame allocation: pools are created in createBossTraitVfx(),
-//     sprites (aura ×3, one ice shell per victim radius) are baked in
+//     sprites (one ice shell per victim radius) are baked in
 //     prepareBossTraitVfx() (initGame, only when the roster carries a trait);
 //     render/tick calls use indexed loops, module-constant colours, no
 //     closures / arrays / strings.
-//   • No shadowBlur, no ctx.filter, no per-frame gradients (the aura and ice
-//     sprites are baked ONCE as flat concentric rings, then blitted); fades are
-//     globalAlpha.
+//   • No shadowBlur, no ctx.filter, no per-frame gradients (the ice sprites
+//     are baked ONCE, then blitted; the carrier aura is a flat dashed ring —
+//     no soft glow, Tree Smashers' cartoon rule); fades are globalAlpha.
 //   • FX.low (`low`) follows the §7.3 fallback column: no carrier auras, ice
 //     shell = one stroked hexagon, nova = one stroke, no shards / embers /
 //     chill-fade rings. Charge arc + reach ring and the frost rim are the
@@ -33,8 +33,8 @@
 // createBossTraitVfx / resetBossTraitVfx):
 //   1. prepareBossTraitVfx — initGame, after spawns, when the roster has a
 //      trait (bake sprites, request the SFX set).
-//   2. renderBossAura      — render(), aura pass UNDER the blades (circle
-//      arena only), once per living carrier.
+//   2. renderBossAura      — render(), marker pass UNDER the blades, once
+//      per living carrier.
 //   3. renderEmberCharge / renderIceShell / renderChillOverlay — after the
 //      blade loop + border FX, per living carrier / frozen / chilled blade.
 //   4. renderBossTraitLayer — right after 3: pooled transients.
@@ -44,7 +44,6 @@
 
 import type { BossTrait } from '@/types/spinner'
 import { BOSS_TRAIT_TUNING } from '@/use/bosses/bossTraits'
-import { fillConcentric } from '@/utils/concentricFill'
 import { playBossSfx, requestBossTraitSfx } from '@/use/bosses/bossTraitSfx'
 
 // ─── Events (the engine's fixed ring feeds this layer) ─────────────────────
@@ -241,26 +240,16 @@ const makeSurface = (w: number, h: number): { c: Sprite; g: Ctx2D } | null => {
   }
 }
 
-const AURA_R = 128
 const TRAIT_INDEX: Record<BossTrait, number> = { ember: 0, frost: 1, chill: 2 }
-/** Aura stops per trait (ember / frost / chill) — baked once, never per frame. */
-const AURA_STOPS: readonly (readonly [number, string][])[] = [
-  [[0, 'rgba(255,170,60,0)'], [0.36, 'rgba(255,150,40,0.42)'], [0.7, 'rgba(255,90,20,0.16)'], [1, 'rgba(255,60,10,0)']],
-  [[0, 'rgba(127,212,255,0)'], [0.45, 'rgba(127,212,255,0.4)'], [0.75, 'rgba(42,127,201,0.15)'], [1, 'rgba(42,127,201,0)']],
-  [[0, 'rgba(230,244,255,0)'], [0.45, 'rgba(225,242,255,0.42)'], [0.75, 'rgba(159,231,224,0.14)'], [1, 'rgba(159,231,224,0)']]
-]
-/** Aura radius as a multiple of the carrier radius: the ember aura spans the
- *  nova's reach, so its soft edge IS the danger zone. */
+/** Carrier ring colour per trait (ember / frost / chill) — flat, no glow.
+ *  (Was a soft radial aura sprite; the Chaos Arena glow look is retired.) */
+const AURA_COLOR: readonly string[] = ['#ff8a2a', '#7fd4ff', '#d6f1ff']
+/** Dash pattern per trait (module constants — never built per frame). */
+const AURA_DASH: readonly number[][] = [[9, 6], [4, 5], [2, 5]]
+const NO_DASH: number[] = []
+/** Ring radius as a multiple of the carrier radius: the ember ring sits on
+ *  the nova's reach, so its line IS the danger zone. */
 const AURA_MUL: readonly number[] = [0, 1.9, 1.9]
-/** undefined = not baked yet; null = no canvas in this environment. */
-const auraSprites: (Sprite | null | undefined)[] = [undefined, undefined, undefined]
-
-const bakeAura = (i: number): Sprite | null => {
-  const s = makeSurface(AURA_R * 2, AURA_R * 2)
-  if (s === null) return null
-  fillConcentric(s.g, AURA_R, AURA_R, AURA_R, AURA_STOPS[i]!, 14)
-  return s.c
-}
 
 /** Ice shells are baked at this many device px per arena unit. */
 const SHELL_BAKE = 3
@@ -386,7 +375,6 @@ const bakeShellFor = (radius: number): void => {
 export function prepareBossTraitVfx(fx: BossTraitVfx, blades: readonly BossTraitVfxBlade[], _low: boolean): void {
   fx.prepared = true
   requestBossTraitSfx()
-  for (let i = 0; i < 3; i++) if (auraSprites[i] === undefined) auraSprites[i] = bakeAura(i)
   // Victims = blades of the other side than any carrier (NPC bosses → player).
   let carrierOwner: 'player' | 'npc' | null = null
   for (let i = 0; i < blades.length; i++) {
@@ -575,20 +563,31 @@ const easeOut = (u: number): number => 1 - (1 - u) * (1 - u)
 
 // ─── Call site 2 — carrier aura ────────────────────────────────────────────
 
-/** Call site 2 — carrier aura under the blade (cached sprite; none on low). */
+/** Call site 2 — carrier marker under the blade: one flat, slowly turning
+ *  dashed ring in the trait colour (none on low). One stroke. */
 export function renderBossAura(
   ctx: CanvasRenderingContext2D, fx: BossTraitVfx, carrier: Readonly<BossTraitVfxBlade>, now: number, low: boolean
 ): void {
   const trait = carrier.config.bossTrait
   if (low || !fx.prepared || trait === undefined || carrier.hp <= 0) return
   const i = TRAIT_INDEX[trait]
-  const sprite = auraSprites[i]
-  if (sprite === undefined || sprite === null) return
   const R = i === 0 ? BOSS_TRAIT_TUNING.EMBER_RADIUS_MUL * carrier.radius + 10 : AURA_MUL[i]! * carrier.radius
-  const prev = ctx.globalAlpha
-  ctx.globalAlpha = prev * (0.7 + 0.2 * Math.sin(now * 0.004 + i * 2.1))
-  ctx.drawImage(sprite as CanvasImageSource, carrier.x - R, carrier.y - R, R * 2, R * 2)
-  ctx.globalAlpha = prev
+  const prevAlpha = ctx.globalAlpha
+  const prevWidth = ctx.lineWidth
+  const prevStroke = ctx.strokeStyle
+  ctx.beginPath()
+  ctx.arc(carrier.x, carrier.y, R, 0, TAU)
+  ctx.globalAlpha = prevAlpha * 0.85
+  ctx.lineWidth = 2.5
+  ctx.strokeStyle = AURA_COLOR[i]!
+  ctx.setLineDash(AURA_DASH[i]!)
+  ctx.lineDashOffset = -now * 0.01
+  ctx.stroke()
+  ctx.setLineDash(NO_DASH)
+  ctx.lineDashOffset = 0
+  ctx.globalAlpha = prevAlpha
+  ctx.lineWidth = prevWidth
+  ctx.strokeStyle = prevStroke
 }
 
 // ─── Call site 3 — per carrier / frozen / chilled blade ────────────────────
@@ -876,9 +875,8 @@ const C_GLYPH_INK = '#000000'
 /** Tests / QA: the cached snowflake Path2D (builds it on first call). */
 export const __snowflakePath = snowflakePath
 
-/** Tests: drop the module sprite caches (auras, ice shells, glyph path). */
+/** Tests: drop the module sprite caches (ice shells, glyph path). */
 export function __resetBossTraitSprites(): void {
-  auraSprites[0] = auraSprites[1] = auraSprites[2] = undefined
   shellSprites.length = 0
   shellCount = 0
   snowflake = undefined

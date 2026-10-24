@@ -3,14 +3,13 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FIconButton from '@/components/atoms/FIconButton.vue'
+import FButton from '@/components/atoms/FButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
-import IconDiamond from '@/components/icons/IconDiamond.vue'
-import IconBattlePass from '@/components/icons/IconBattlePass.vue'
-import { displayDiamondReward } from '@/use/useCurrency'
+import UiIcon from '@/components/icons/UiIcon.vue'
 import useBattlePass, {
   BP_TOTAL_STAGES,
   BP_XP_PER_STAGE,
-  BP_DIAMOND_AMOUNT,
+  BP_JACKPOT_COINS,
   startSeasonClock
 } from '@/use/useBattlePass'
 import {
@@ -26,6 +25,17 @@ import usePvpStats, { HONOR_PER_STAGE, HONOR_TOTAL_STAGES } from '@/use/usePvpSt
 import usePVP from '@/use/usePVP'
 import { stopGameplay } from '@/use/useCrazyGames'
 import { revealRewards } from '@/use/useRewardReveal'
+import { claimAll, claimAllVisible } from '@/use/claimAll'
+import { showHudToast } from '@/use/useHudToast'
+import { useLongPressPeek } from '@/use/useLongPressPeek'
+import FSkinPeek from '@/components/molecules/FSkinPeek.vue'
+import { skinRarity } from '@/data/smasherRarity'
+import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
+import BattlePassResetAdButton from '@/components/organisms/BattlePassResetAdButton.vue'
+
+// "[movie] Reset Battle Pass": picked at module scope so a no-ad build
+// neither renders nor bundles the placement (rewarded build gate).
+const ResetAdButton = HAS_REWARDED_ADS ? BattlePassResetAdButton : null
 
 const {
   currentXp,
@@ -36,13 +46,14 @@ const {
   isStageUnlocked,
   bpCoinReward,
   bpIsSkinStage,
-  bpIsDiamondStage,
+  bpIsJackpotStage,
   claimStage,
   claimedSkins,
   isMaxed,
   daysUntilReset,
   persistedOffers,
-  saveOfferedSkins
+  saveOfferedSkins,
+  canAdReset
 } = useBattlePass()
 
 const {
@@ -72,14 +83,8 @@ onBeforeUnmount(() => {
   stopSeasonClock = null
 })
 
-// What the battle-pass diamond tier pays and shows. On a single-currency
-// build (Poki) that is coins at the diamond rate; `addDiamonds` already
-// converts the grant, so this only keeps the card honest.
-const diamondTier = computed(() => displayDiamondReward(BP_DIAMOND_AMOUNT))
-
 const emit = defineEmits<{
   (e: 'coins-awarded', sourceEl: HTMLElement): void
-  (e: 'diamonds-awarded', sourceEl: HTMLElement, amount: number): void
 }>()
 
 const { t } = useSfcI18n('BattlePass')
@@ -113,9 +118,10 @@ const stageCards = computed(() =>
     const stage = i + 1
     return {
       stage,
-      coins: bpCoinReward(stage),
+      // Jackpot tiers (15/35/55) pay a fixed coin prize — they paid a
+      // diamond until 2026-10-21 (useBattlePass BP_JACKPOT_STAGES).
+      coins: bpIsJackpotStage(stage) ? BP_JACKPOT_COINS : bpCoinReward(stage),
       isSkin: bpIsSkinStage(stage),
-      isDiamond: bpIsDiamondStage(stage),
       unlocked: isStageUnlocked(stage),
       claimed: isStageClaimed(stage),
       inProgress: stage === inProgressStage.value
@@ -307,11 +313,9 @@ const onClaim = (stage: number) => {
     // Granted by claimStage; the gift screen shows it, then the VFX fly.
     void revealRewards([
       { kind: 'coins', amount: res.coins },
-      { kind: 'diamonds', amount: res.diamonds },
       ...(res.skin ? [{ kind: 'skin' as const, modelId: res.skin }] : [])
     ]).then(() => {
       if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
-      if (res.diamonds > 0 && bpBtnRef.value) emit('diamonds-awarded', bpBtnRef.value, res.diamonds)
     })
   }
 }
@@ -331,6 +335,70 @@ const onClaimHonor = (stage: number) => {
   refreshHonorOfferedSkins()
   void revealRewards([{ kind: 'skin', modelId: skin }])
 }
+
+// ─── Claim all (#UX1b) ──────────────────────────────────────────────────────
+// Every claimable pass tier + honour tier in one tap, ONE reveal: coins
+// summed into one count-up, every skin side by side. The per-tier
+// claims run underneath (src/use/claimAll.ts), so every rule and save of a
+// single claim still applies.
+
+const pendingPassStages = (): number[] =>
+  stageCards.value.filter(c => c.unlocked && !c.claimed).map(c => c.stage)
+const pendingHonorStages = (): number[] =>
+  canShowPvP.value ? honorStageCards.value.filter(c => c.unlocked && !c.claimed).map(c => c.stage) : []
+
+/** Tiers a claim-all would take right now. */
+const claimAllCount = computed(() => pendingPassStages().length + pendingHonorStages().length)
+/** The button shows from two waiting tiers up — and (#UX1c) for the honour
+ *  track ALONE whenever the pass has nothing waiting, so honour tiers never
+ *  need hunting for in the scroll strip. */
+const showClaimAll = computed(() => claimAllVisible(pendingPassStages().length, pendingHonorStages().length))
+
+const onClaimAll = () => {
+  const res = claimAll({
+    pendingPass: pendingPassStages,
+    passOffer: (stage) => offeredSkins.value[stage],
+    claimPass: (stage, offer) => claimStage(stage, offer),
+    pendingHonor: pendingHonorStages,
+    honorOffer: (stage) => honorOfferedSkins.value[stage],
+    offerablePool: () => getOfferableSkinPool(),
+    claimHonor: (stage, skin) => claimHonorStage(stage, skin),
+    unlockSkin: (skin) => {
+      for (const topPartId of Object.keys(SKINS_PER_TOP) as TopPartId[]) {
+        if (SKINS_PER_TOP[topPartId].includes(skin)) buySkin(topPartId, skin)
+      }
+    }
+  })
+  if (res.passStages.length + res.honorStages.length === 0) return
+  const { playSound } = useSounds()
+  playSound('happy')
+  refreshOfferedSkins()
+  refreshHonorOfferedSkins()
+  void revealRewards([
+    { kind: 'coins', amount: res.coins },
+    ...res.skins.map(modelId => ({ kind: 'skin' as const, modelId }))
+  ]).then(() => {
+    if (res.coins > 0 && bpBtnRef.value) emit('coins-awarded', bpBtnRef.value)
+    // #UX1c: a one-line HUD confirmation once the reveal has closed.
+    showHudToast(t('claimedRewards', { n: res.passStages.length + res.honorStages.length }), 'leaf')
+  })
+}
+
+// ─── Rewarded reset of a full pass ─────────────────────────────────────────
+const onPassReset = () => {
+  const { playSound } = useSounds()
+  playSound('happy')
+  refreshOfferedSkins()
+  nextTick(() => scrollToCurrentStage())
+  showHudToast(t('resetPassDone'), 'leaf')
+}
+
+// ─── Skin peek (#UX1c): hold a skin tier to see the skin big, with rarity ────
+const skinPeek = useLongPressPeek<SpinnerModelId>({ cardWidth: 176, minRoomAbove: 200 })
+const skinPeekState = skinPeek.peek
+/** Peek handlers for a tier that shows a skin (none for coin tiers). */
+const peekOn = (skin: SpinnerModelId | null | undefined) => (skin ? skinPeek.bind(skin) : {})
+watch(isModalOpen, (open) => { if (!open) skinPeek.close() })
 
 // ─── Drag-to-scroll for the BP strip ────────────────────────────────────────
 
@@ -378,7 +446,7 @@ const onStripPointerUp = (e: PointerEvent) => {
   //- The bounce lives on the wrapper so it never fights the button's own
   //- press transform (the .ui-btn recipe sinks it into its lip).
   div.battle-pass(:class="{ 'hint-bounce': hasUnclaimedReward || (canShowPvP && pendingHonorClaims > 0) }")
-    button.bp-hud-btn.ui-btn.ui-btn--royal.ui-btn--icon.cursor-pointer.z-10(
+    button.bp-hud-btn.ui-btn.ui-btn--royal.ui-btn--icon.ui-hit-44.cursor-pointer.z-10(
       ref="bpBtnRef"
       type="button"
       :aria-label="t('battlePass')"
@@ -393,7 +461,8 @@ const onStripPointerUp = (e: PointerEvent) => {
         )
           //- Glyph instead of the English-only "BP" caption; the button's
           //- aria-label / title carry the translated name.
-          IconBattlePass.text-sun-300(class="w-[18px] h-[18px] sm:w-5 sm:h-5 -my-0.5 drop-shadow-[1px_1px_0_var(--color-ink)]")
+          span.block(class="w-6 h-6 -my-1" aria-hidden="true")
+            UiIcon(name="battlepass")
           span.flex.items-center(class="gap-0.5")
             span.font-black.ui-outline-sm.leading-none(
               class="text-[11px] sm:text-sm !text-sun-300"
@@ -436,6 +505,24 @@ const onStripPointerUp = (e: PointerEvent) => {
               :style="{ width: `${progressFraction * 100}%` }"
             )
 
+      //- Claim all: the screen's one hero CTA whenever two or more tiers
+      //- (pass + honour) wait, or any honour tier while the pass has none
+      //- (#UX1c). One reveal, coins summed, skins in a row, then a toast.
+      div.bp-claim-all(v-if="showClaimAll")
+        FButton(
+          tone="premium"
+          variant="brawl"
+          size="sm"
+          data-testid="bp-claim-all"
+          @click="onClaimAll"
+        )
+          span.bp-claim-all-label
+            span {{ t('claimAll') }}
+            span.bp-claim-all-count.ui-chip.ui-chip--berry {{ claimAllCount }}
+
+      //- Full AND fully claimed: watch a rewarded ad to start the pass over.
+      component(:is="ResetAdButton" v-if="ResetAdButton" @reset="onPassReset")
+
       //- Horizontal scroll strip of all 50 stages
       div.relative
         div.flex.gap-1.overflow-x-auto.overflow-y-hidden.py-2.px-1.bp-strip(
@@ -451,25 +538,17 @@ const onStripPointerUp = (e: PointerEvent) => {
             v-for="card in stageCards"
             :key="card.stage"
             :data-bp-stage="card.stage"
+            v-on="peekOn(card.isSkin ? bpSkinForStage(card.stage) : null)"
             class="bp-tier shrink-0 flex flex-col items-center p-1 sm:p-2 w-16 sm:w-20"
             :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'ui-shine': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
+            //- A claimable tier twinkles (#UX1c).
+            span.ui-sparkle.ui-sparkle--sun.bp-sp(v-if="card.unlocked && !card.claimed" aria-hidden="true" :style="{ '--sp-delay': ((card.stage % 4) * 0.35) + 's' }")
             //- Stage number
             div.bp-tier-label.font-black(class="text-[0.65rem] sm:text-[0.8rem]") S{{ card.stage }}
 
-            //- Reward icon. On a single-currency build the diamond tier
-            //- pays coins, so it has to LOOK like coins — see useCurrency.
-            template(v-if="card.isDiamond && diamondTier.currency === 'diamonds'")
-              IconDiamond(
-                class="w-5 h-5 sm:w-6 sm:h-6 my-0.5"
-                :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
-              )
-            template(v-else-if="card.isDiamond")
-              IconCoin(
-                class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5"
-                :class="{ 'opacity-60': !card.unlocked && !card.claimed }"
-              )
-            template(v-else-if="card.isSkin && bpSkinForStage(card.stage)")
+            //- Reward icon
+            template(v-if="card.isSkin && bpSkinForStage(card.stage)")
               div.skin-thumb-wrap.relative.flex.items-center.justify-center(
                 class="w-6 h-6 sm:w-8 sm:h-8 my-0.5"
               )
@@ -492,15 +571,9 @@ const onStripPointerUp = (e: PointerEvent) => {
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
             ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
 
-            //- Diamond amount (diamond stages). `diamondTier` carries both
-            //- the currency and the already-converted amount.
-            div.font-black.leading-tight(
-              v-if="card.isDiamond"
-              :class="[diamondTier.currency === 'diamonds' ? 'text-plum-700' : 'text-sun-600', 'text-[0.7rem] sm:text-xs']"
-            ) +{{ diamondTier.amount }}
-            //- Coin amount (coin stages + skin stages with an empty pool)
+            //- Coin amount (coin + jackpot stages, skin stages with an empty pool)
             div.text-sun-600.font-black.leading-tight(
-              v-else-if="!card.isSkin || !bpSkinForStage(card.stage)"
+              v-if="!card.isSkin || !bpSkinForStage(card.stage)"
               class="text-[0.7rem] sm:text-xs"
             ) +{{ card.coins }}
 
@@ -561,6 +634,7 @@ const onStripPointerUp = (e: PointerEvent) => {
           div(
             v-for="card in honorStageCards"
             :key="card.stage"
+            v-on="peekOn(honorSkinForStage(card.stage))"
             class="bp-tier is-honor flex flex-col items-center p-2 w-20 sm:w-24"
             :class="{ 'is-claimed': card.claimed, 'is-ready': card.unlocked && !card.claimed, 'ui-shine': card.unlocked && !card.claimed, 'is-progress': card.inProgress && !card.unlocked, 'is-locked': !card.unlocked && !card.claimed && !card.inProgress }"
           )
@@ -603,6 +677,15 @@ const onStripPointerUp = (e: PointerEvent) => {
                 span.text-plum-700 {{ Math.floor(honorProgressFraction * 100) }}%
               span.text-ink-soft(v-else) —
 
+      //- Long-press skin peek (#UX1c).
+      FSkinPeek(
+        v-if="skinPeekState"
+        id="bp-skin-peek"
+        :anchor="skinPeekState"
+        :src="modelImgPath(skinPeekState.key)"
+        :name="t('skins.' + skinPeekState.key)"
+        :rarity="skinRarity(skinPeekState.key)"
+      )
       //- Season reset countdown
       div.text-center(
         v-if="daysUntilReset != null"
@@ -610,7 +693,9 @@ const onStripPointerUp = (e: PointerEvent) => {
       ) {{ t('seasonReset', { n: daysUntilReset }) }}
       //- Footer tip
       div.text-center.ui-body(class="text-[0.75rem] sm:text-xs")
-        template(v-if="isMaxed")
+        template(v-if="canAdReset && ResetAdButton")
+          | {{ t('resetPassHint') }}
+        template(v-else-if="isMaxed")
           | {{ t('battlePassComplete') }}
         template(v-else-if="hasUnclaimedReward")
           | {{ t('rewardsReady', { n: pendingClaimCount }) }}
@@ -636,11 +721,30 @@ const onStripPointerUp = (e: PointerEvent) => {
   &::-webkit-scrollbar
     display: none
 
+// Claim all: hero sun button with the count on a berry chip.
+.bp-claim-all
+  display: flex
+  justify-content: center
+  padding-top: 0.25rem
+
+.bp-claim-all-label
+  display: inline-flex
+  align-items: center
+  gap: 0.45rem
+
+.bp-claim-all-count
+  font-size: 0.8em
+  text-transform: none
+
 // HUD button: royal .ui-btn (sinks into its lip), a berry count sticker.
 .bp-hud-btn
-  padding: 0.3rem 0.65rem 0.4rem
+  // Same box as its neighbour (daily ↔ battle pass) so the bottom-left row
+  // lines up: fixed height, same padding, content centred.
+  flex-direction: column
+  justify-content: center
+  padding: 0.3rem 0.6rem 0.4rem
   min-width: 2.75rem
-  min-height: 2.75rem
+  height: 3.6rem
 
 .bp-notify
   position: absolute
@@ -661,12 +765,16 @@ const onStripPointerUp = (e: PointerEvent) => {
 // ── Tiers: collectible mini cards ─────────────────────────────────────────
 //   locked    steel hatch, dimmed icon
 //   progress  sun edge + "nn %"
-//   ready     sun face + stripes, lifted + tilted, sun ring, shine sweep
+//   ready     sun face + facet, lifted + tilted, sun ring, shine sweep, twinkle
 //   claimed   lime face with a slanted "✓" stamp
 //   honour    the same states on plum (the premium track)
 .bp-tier
   --edge: var(--color-ice-400)
   position: relative
+  // Long press on a skin tier = skin peek (#UX1c): no callout / selection.
+  -webkit-touch-callout: none
+  user-select: none
+  -webkit-user-select: none
   border: 2px solid var(--color-ink)
   border-radius: var(--radius-ui)
   background-color: var(--color-ice-50)
@@ -680,8 +788,10 @@ const onStripPointerUp = (e: PointerEvent) => {
     right: 0
     width: 1.3rem
     height: 1.3rem
-    background-image: repeating-linear-gradient(315deg, var(--edge) 0 3px, transparent 3px 6px)
-    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    // Corner notch (#UX1c): a solid dog-ear in the edge colour, no stripes.
+    background-color: var(--edge)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45)
+    clip-path: polygon(0 0, 100% 0, 100% 100%)
     border-top-right-radius: calc(var(--radius-ui) - 2px)
     pointer-events: none
   &.is-honor
@@ -696,13 +806,13 @@ const onStripPointerUp = (e: PointerEvent) => {
     --edge: var(--color-sun-500)
     z-index: 1
     background-color: var(--color-sun-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet-ink)
     box-shadow: inset 0 0 0 2px var(--edge), inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
     transform: translateY(-3px) rotate(-2deg)
   &.is-locked
     --edge: var(--color-steel-500)
     background-color: var(--color-steel-300)
-    background-image: var(--ui-stripes-ink)
+    background-image: var(--ui-hatch)
 
 .bp-tier-label
   color: var(--ui-text-muted)
@@ -743,10 +853,15 @@ const onStripPointerUp = (e: PointerEvent) => {
   45%
     translate: 0 -1px
 
+.bp-sp
+  left: 0.25rem
+  top: 0.3rem
+  --sp-size: 0.75rem
+
 // ── Honour track: the premium plum panel ──────────────────────────────────
 .honor-panel
   background-color: var(--color-plum-500)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   color: var(--color-ice-50)
   border: 3px solid var(--color-ink)
   border-radius: var(--radius-ui-lg)

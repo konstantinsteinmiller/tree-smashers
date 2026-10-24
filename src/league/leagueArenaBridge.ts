@@ -90,7 +90,6 @@ export interface LeagueBattleInit {
   enemyTeam: SpinnerConfig[]
   enemySkillLoadout: SkillLoadout
   arenaType: ArenaType
-  bouncers: number
   /** DT1 — overrides the engine's last-result first-turn bias. */
   firstTurn: 'player' | 'opponent'
 }
@@ -229,7 +228,6 @@ export const createLeagueBattle = async (input: LeagueBattleInput): Promise<Leag
   let enemyTeam: SpinnerConfig[]
   let enemySkills: SkillLoadout = []
   let arenaType: ArenaType = 'default'
-  let bouncers = 0
   let gateTier: GateTier | null = null
   let opponentName = ''
   let opponentNameKey: string | null = null
@@ -241,7 +239,6 @@ export const createLeagueBattle = async (input: LeagueBattleInput): Promise<Leag
     const stage = gatekeeperStageFor(next)
     enemyTeam = gatekeeperEnemyConfigs(stage)
     arenaType = stage.arenaType ?? 'default'
-    bouncers = stage.bouncers ?? 0
     opponentNameKey = gatekeeperNameKey(next)
   } else {
     const card = input.card
@@ -295,7 +292,6 @@ export const createLeagueBattle = async (input: LeagueBattleInput): Promise<Leag
       enemyTeam,
       enemySkillLoadout: enemySkills,
       arenaType,
-      bouncers,
       firstTurn: session.firstTurn
     },
     vs: {

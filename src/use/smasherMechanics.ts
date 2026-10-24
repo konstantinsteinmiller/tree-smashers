@@ -45,15 +45,21 @@ export function discOf(config: Pick<SpinnerConfig, 'smasherId'>): number {
   return typeof d === 'number' && Number.isFinite(d) ? clamp(d, DISC_MIN, DISC_MAX) : 1
 }
 
+/** Profile damage from which a smasher's reinforced zone is drawn as the sharp
+ *  steel blade plate (a damage-scaling smasher); below it, the tank bulwark. */
+export const BLADE_LOOK_DAMAGE = 1.1
+
 /** Directional armour of a config's smasher; null when neutral / absent. */
-export function armorOf(config: Pick<SpinnerConfig, 'smasherId'>): SmasherArmor | null {
+export function armorOf(config: Pick<SpinnerConfig, 'smasherId'>): Required<SmasherArmor> | null {
   if (!isSmasherId(config.smasherId)) return null
   const a = SMASHERS[config.smasherId].armor
   if (!a) return null
   const front = Number.isFinite(a.front) ? clamp(a.front, ARMOR_MIN, ARMOR_MAX) : 1
   const back = Number.isFinite(a.back) ? clamp(a.back, ARMOR_MIN, ARMOR_MAX) : 1
   if (front === 1 && back === 1) return null
-  return { front, back }
+  const def = SMASHERS[config.smasherId]
+  const look = a.look ?? (def.profile.damage >= BLADE_LOOK_DAMAGE ? 'blade' : 'bulwark')
+  return { front, back, look }
 }
 
 /** Default heading of a fresh blade: towards the other side (player up, npc down). */

@@ -304,7 +304,8 @@ export function beginLaunchSkills(blade: SkillBlade): void {
   }
 }
 
-/** Wall / bouncer rebound of `blade`: +1 Momentum stack during its own launch. */
+/** Wall / island / mushroom / log rebound of `blade`: +1 Momentum stack during
+ *  its own launch. */
 export function onOwnBounce(blade: SkillBlade, launchedBladeId: number | null): void {
   const s = blade.skills as SkillRuntime | undefined
   if (s === undefined || (s.has & B_MOMENTUM) === 0 || launchedBladeId !== blade.id) return
@@ -313,7 +314,7 @@ export function onOwnBounce(blade: SkillBlade, launchedBladeId: number | null): 
 
 // ─── Smasher-only effects (no RNG) ─────────────────────────────────────────
 
-/** Bank Shot: a rebound (wall, island, bumper, tower) of `blade` during its
+/** Bank Shot: a rebound (wall, island, tower) of `blade` during its
  *  own launch arms this launch's one bonus hit. */
 export function onBankRebound(blade: SkillBlade, launchedBladeId: number | null): void {
   const s = blade.skills as SkillRuntime | undefined

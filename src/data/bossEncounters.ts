@@ -68,7 +68,6 @@ export interface BossEncounter {
   /** Translation key under `stages.` (`Stage.name`). */
   nameKey: `boss_${BossEncounterId}`
   arenaType: ArenaType
-  bouncers?: number
   /** Cycle-1 levels; `bossTrait` set on the carriers. */
   enemyTeam: readonly StageBladeConfig[]
   /** Skins the first win over this encounter grants (earn-only trophies). */
@@ -284,7 +283,6 @@ export const buildBossEncounterStage = (
     rewardLose: opts.rewardLose ?? 0,
     bossEncounterId: enc.id
   }
-  if (enc.bouncers) stage.bouncers = enc.bouncers
   return stage
 }
 

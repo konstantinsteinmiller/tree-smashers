@@ -12,7 +12,16 @@ import { COINS_KEY, DIAMONDS_KEY } from '@/keys'
 import { isSingleCurrency, diamondsToCoins } from '@/use/useCurrency'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { TOP_UPGRADE_BONUS, BOTTOM_UPGRADE_BONUS } from '@/use/useSpinnerCampaign'
-import { SMASHERS, isSmasherId, smasherConfig, smasherForParts, type SmasherId } from '@/data/smasherCatalog'
+import {
+  SMASHERS,
+  SMASHER_TAPER_LEVEL,
+  isSmasherId,
+  smasherConfig,
+  smasherForParts,
+  smasherUpgradeLevel,
+  type SmasherId
+} from '@/data/smasherCatalog'
+import { MAX_TEAM_SIZE } from '@/data/teamSize'
 
 // ─── Part Definitions ────────────────────────────────────────────────────────
 
@@ -188,13 +197,18 @@ export const computeStats = (
   const b = prof ? SMASHER_BOTTOM_PARTS[config.bottomPartId] : bottom
   const tb = prof ? SMASHER_TOP_UPGRADE[config.topPartId] : TOP_UPGRADE_BONUS[config.topPartId]
   const bb = prof ? SMASHER_BOTTOM_UPGRADE[config.bottomPartId] : BOTTOM_UPGRADE_BONUS[config.bottomPartId]
+  // Smashers past level 30: stat gains taper (smasherUpgradeLevel) and force
+  // decay stops growing, so a very deep level is strong but never invulnerable.
+  const tl = prof ? smasherUpgradeLevel(topLevel) : topLevel
+  const bl = prof ? smasherUpgradeLevel(bottomLevel) : bottomLevel
+  const dl = prof ? Math.min(bottomLevel, SMASHER_TAPER_LEVEL - 1) : bottomLevel
   return {
-    maxHp: (BASE_HP + t.healthBonus + b.healthBonus + tb.hp * topLevel + bb.hp * bottomLevel) * (prof?.hp ?? 1),
+    maxHp: (BASE_HP + t.healthBonus + b.healthBonus + tb.hp * tl + bb.hp * bl) * (prof?.hp ?? 1),
     totalWeight: b.weight * (prof ? prof.weight ** SMASHER_TUNING.profileWeightExp : 1),
-    damageMultiplier: (t.damageMultiplier + tb.damage * topLevel) * (prof?.damage ?? 1),
-    defenseMultiplier: (t.defenseMultiplier + tb.defense * topLevel) * (prof?.defense ?? 1),
-    speedMultiplier: (b.speedMultiplier + bb.speed * bottomLevel) * (prof?.speed ?? 1),
-    forceDecay: b.forceDecay + bb.decay * bottomLevel,
+    damageMultiplier: (t.damageMultiplier + tb.damage * tl) * (prof?.damage ?? 1),
+    defenseMultiplier: (t.defenseMultiplier + tb.defense * tl) * (prof?.defense ?? 1),
+    speedMultiplier: (b.speedMultiplier + bb.speed * bl) * (prof?.speed ?? 1),
+    forceDecay: b.forceDecay + bb.decay * dl,
     top,
     bottom
   }
@@ -206,7 +220,8 @@ const TEAM_KEY = 'smashers_player_team'
 // COINS_KEY imported from `@/keys` at the top of this file (single source of truth shared with SaveMergePolicy).
 const FIRST_WIN_KEY = 'smashers_first_win'
 
-// The team is stored as smasher configs. Only `smasherId` is load-bearing:
+// The team is stored as smasher configs: the picks for team slots 1 … 3 (how
+// many of them fight is the team size, `useTeamSize`). Only `smasherId` is load-bearing:
 // level and parts are refilled from the roster at battle time
 // (`useSmashers.teamConfigs`), so a stale level in this key can never matter.
 export const DEFAULT_TEAM_SMASHERS: readonly SmasherId[] = ['bramble', 'thumper']
@@ -229,7 +244,7 @@ const loadStoredTeam = (): SpinnerConfig[] => {
     const raw = localStorage.getItem(TEAM_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length >= 2) {
+      if (Array.isArray(parsed) && parsed.length >= 1) {
         const seen = new Set<string>()
         const team: SpinnerConfig[] = []
         for (const entry of parsed) {
@@ -238,7 +253,9 @@ const loadStoredTeam = (): SpinnerConfig[] => {
           seen.add(cfg.smasherId!)
           team.push(cfg)
         }
-        if (team.length >= 2) return team
+        // One pick is enough; slots without a pick are padded at battle time
+        // (`useSmashers.fieldTeam`).
+        if (team.length >= 1) return team.slice(0, MAX_TEAM_SIZE)
       }
     }
   } catch { /* fall through */

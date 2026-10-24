@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { getCachedImage } from '@/use/useAssets'
 import { prependBaseUrl } from '@/utils/function'
+import { PAINTED_ROULETTE, type PaintedRoulettePart } from '@/use/paintedRoulette'
 
 // ─── Painted parts of the boss-reward roulette wheel ────────────────────────
 //
@@ -26,14 +27,39 @@ export type RouletteArtKey = 'rim' | 'pointer' | 'hub' | 'bulbOff' | 'bulbOn'
 /** Shipped paintings, by part. Leave a part out until its file exists.
  *  Sizes are ~2x the largest display size (the wheel caps at 300 CSS px). */
 //
-// COZY RESTYLE (Tree Smashers): the shipped paintings in public/images/roulette/
-// (rim_560x560, pointer_78x120, hub_128x128, bulb-off/on_40x40) are the old
-// Chaos Arena gold-filigree / ruby / sapphire / marquee-bulb set. They are
-// delisted, so the component draws its flat wooden rim, cream bolts, wooden
-// pointer and hub instead and no request is made for them. Re-list a part
-// here once art/roulette/ has re-painted it in the cozy wood/cream style (and
-// re-measure GEO in RouletteWheel.vue against the new rim's opening).
-const PAINTED: Partial<Record<RouletteArtKey, string>> = {}
+// TOY-BOX RESTYLE: the old Chaos Arena gold-filigree set (rim_560x560,
+// pointer_78x120, hub_128x128, bulb-off/on_40x40) stays delisted. The listed
+// parts are the toy-box repaint (tools/roulette-art → PAINTED_ROULETTE, a
+// generated registry: a part that is not painted is simply absent). The rim's
+// measured opening re-registers GEO in RouletteWheel.vue (rouletteGeo below).
+// `?art=procedural` lists nothing, so the CSS / SVG drawing shows (A/B).
+const artAllowed = (): boolean =>
+  typeof location === 'undefined' || !/[?&]art=procedural(?:&|$)/.test(location.search)
+
+const PAINTED: Partial<Record<RouletteArtKey, string>> = artAllowed()
+  ? Object.fromEntries(
+    (Object.entries(PAINTED_ROULETTE) as [RouletteArtKey, PaintedRoulettePart][])
+      .map(([k, p]) => [k, `images/roulette/${p.file}?v=${p.v}`])
+  )
+  : {}
+
+/** Wheel geometry (fractions of the wheel size). The CSS rim's opening is
+ *  r 0.36; a listed painted rim brings its own measured opening `open`: the
+ *  face tucks 0.012 under its lip and the bolts sit mid-band. */
+export const rouletteGeo = (rimOpen: number | null): { disk: number, bulbRing: number } =>
+  rimOpen === null
+    ? { disk: 0.372, bulbRing: 0.436 }
+    : { disk: +(rimOpen + 0.012).toFixed(4), bulbRing: +((rimOpen + 0.5) / 2).toFixed(4) }
+
+/** The listed painted rim's opening, or null (CSS rim). */
+export const paintedRimOpen = (): number | null =>
+  PAINTED.rim && PAINTED_ROULETTE.rim ? PAINTED_ROULETTE.rim.open : null
+
+/** The listed painted pointer's aspect (h / w) and cap pivot, or null (SVG pointer). */
+export const paintedPointer = (): { aspect: number, pivotY: number } | null => {
+  const p = PAINTED_ROULETTE.pointer
+  return PAINTED.pointer && p ? { aspect: p.h / p.w, pivotY: p.pivotY } : null
+}
 
 export const rouletteArtSrc: Partial<Record<RouletteArtKey, string>> = Object.fromEntries(
   Object.entries(PAINTED).map(([k, path]) => [k, prependBaseUrl(path as string)])

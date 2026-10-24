@@ -128,26 +128,28 @@ const ariaText = computed(() =>
 .llb--compact .llb__track
   height: 0.8rem
 
-// Tier-coloured fill, flat diagonal stripes, a hard dark base band. While it
-// slides (result screen) the stripes march — the bar visibly "charges".
+// Tier-coloured fill with a two-tone facet (#UX1c, was marching stripes), a
+// hard dark base band. While it slides (result screen) the white gloss strip
+// pulses twice — the bar visibly "charges".
 .llb__fill
   position: absolute
   inset: 0 auto 0 0
   border-radius: 999px
   background-color: var(--llb-accent)
-  background-image: var(--ui-stripes)
-  background-size: 22px 100%
+  background-image: var(--ui-facet)
   box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--llb-accent) 62%, var(--color-ink)), 1px 0 0 var(--color-ink)
   min-width: 0.6rem
   overflow: hidden
 
 .llb__fill--anim
   transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1)
-  animation: llb-march 0.5s linear 2
 
-@keyframes llb-march
-  to
-    background-position: 22px 0
+.llb__fill--anim + .llb__shine, .llb__fill--anim .llb__shine
+  animation: llb-charge 0.5s ease-in-out 2
+
+@keyframes llb-charge
+  50%
+    opacity: 0.25
 
 // Hard white gloss strip along the top (flat, no ramp).
 .llb__shine
@@ -197,12 +199,13 @@ const ariaText = computed(() =>
   white-space: nowrap
 
 .llb--static .llb__fill,
+.llb--static .llb__shine,
 .llb--static .llb__gate
   animation: none
   transition: none
 
 @media (prefers-reduced-motion: reduce)
-  .llb__fill, .llb__gate
+  .llb__fill, .llb__shine, .llb__gate
     animation: none !important
     transition: none !important
 </style>

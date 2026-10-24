@@ -4,6 +4,7 @@ import { POSTED_BUILD_KEY, POSTED_NAME_KEY, SUBMITTED_STAGE_KEY } from '@/keys'
 import { resolveIdentity, type PlayerIdentity } from '@/use/usePlayerIdentity'
 import { boardSnapshot, rankFromDist } from '@/use/leaderboardSnapshot'
 import { sanitizeDisplayName } from '@/utils/nameDenylist'
+import { mirrorScore } from '@/use/platformBoard'
 import {
   BUILD_REFRESH_MS,
   buildDigest,
@@ -652,6 +653,15 @@ const readPostedBuild = (): { d: string; at: number } | null => {
 export const reportRun = async (
   bestScore: number, bestPower: number, o: { force?: boolean } = {}
 ): Promise<void> => {
+  // A guest's run reaches no board at all — ours or the portal's (see below).
+  if (!leaderboardAuthorized.value) return
+  // THE PORTAL'S OWN BOARD gets every reported run too (Wavedash), at this
+  // exact moment and before any of our own gates: it is a different backend
+  // with its own dedupe (only a new personal best is uploaded, `keepBest` on
+  // the portal's side), so neither our D1 write throttle nor a build without
+  // a live Worker may hold it back. A no-op on every build that installed no
+  // mirror — see `src/use/platformBoard.ts`.
+  mirrorScore(bestScore, bestPower)
   // A baked build has nothing to report TO. The rank it shows comes from the
   // snapshot, which no run can change, so this is the one entry point that stays
   // switched off where `leaderboardEnabled` is true.

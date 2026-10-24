@@ -10,6 +10,8 @@
 import type {
   DecorKind, TerrainArrow, TerrainBooster, TerrainDisc, TerrainHole, TerrainIsland, TerrainLayout, TerrainLog
 } from '@/use/arenaTerrain'
+import { OBSTACLE_LOOK, type ArenaTheme, type DiscLook, type LogLook } from '@/use/arenaThemes'
+import { OBSTACLE_DRAW, drawThemedLog } from '@/use/arenaObstacleDraw'
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
@@ -291,19 +293,31 @@ const drawLog = (ctx: Ctx, l: TerrainLog) => {
   ctx.closePath()
   ctx.fill()
   ctx.stroke()
-  // bark stripes
+  // wood grain: two long solid lines along the body (never dashes) + a knot
   ctx.strokeStyle = '#5e3a1e'
   ctx.lineWidth = 1.4
   ctx.lineCap = 'round'
-  for (let x = r * 0.6; x < len - r * 0.2; x += r * 1.1) {
+  const g0 = r * 0.35
+  const g1 = len - r * 0.2
+  if (g1 > g0) {
     ctx.beginPath()
-    ctx.moveTo(x, -r * 0.55)
-    ctx.lineTo(x + r * 0.5, -r * 0.55)
-    ctx.moveTo(x + r * 0.3, r * 0.45)
-    ctx.lineTo(x + r * 0.8, r * 0.45)
+    ctx.moveTo(g0, -r * 0.5)
+    ctx.quadraticCurveTo((g0 + g1) / 2, -r * 0.62, g1, -r * 0.48)
+    ctx.moveTo(g0 + r * 0.3, r * 0.42)
+    ctx.quadraticCurveTo((g0 + g1) / 2, r * 0.3, g1, r * 0.46)
     ctx.stroke()
   }
   ctx.lineCap = 'butt'
+  if (len > r * 1.6) {
+    ctx.fillStyle = '#5e3a1e'
+    ctx.beginPath()
+    ctx.ellipse(len * 0.62, r * 0.05, r * 0.24, r * 0.15, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#80522e'
+    ctx.beginPath()
+    ctx.ellipse(len * 0.62, r * 0.05, r * 0.1, r * 0.06, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
   // light top edge
   ctx.fillStyle = 'rgba(255, 230, 190, 0.22)'
   ctx.fillRect(0, -r * 0.85, len, r * 0.28)
@@ -344,21 +358,34 @@ export const TERRAIN_FEATURE_DRAW = {
   log: drawLog
 }
 
-/** Draws every feature of a layout, flat ground first, solids on top. */
-export const renderTerrainFeatures = (ctx: Ctx, t: TerrainLayout): void => {
+/** Draws every feature of a layout, flat ground first, solids on top. Solids
+ *  wear the arena theme's look (arenaThemes OBSTACLE_LOOK — visual only). */
+export const renderTerrainFeatures = (ctx: Ctx, t: TerrainLayout, theme: ArenaTheme = 'meadow'): void => {
   const D = TERRAIN_FEATURE_DRAW
+  const look = OBSTACLE_LOOK[theme]
   for (const h of t.holes) (h.deep ? D.deepHole : D.mud)(ctx, h)
   for (const h of t.honey) D.honey(ctx, h)
   for (const b of t.boosters) D.booster(ctx, b)
   for (const a of t.arrows) D.leafArrow(ctx, a)
-  for (const isl of t.islands) D[isl.kind](ctx, isl)
-  for (const l of t.logs) D.log(ctx, l)
-  for (const m of t.mushrooms) D.mushroom(ctx, m)
+  for (const isl of t.islands) {
+    const k = look[isl.kind]
+    if (k === 'plain') D[isl.kind](ctx, isl)
+    else OBSTACLE_DRAW[k as DiscLook](ctx, isl)
+  }
+  for (const l of t.logs) {
+    if (look.log === 'plain') D.log(ctx, l)
+    else drawThemedLog(ctx, l, look.log as LogLook)
+  }
+  for (const m of t.mushrooms) {
+    if (look.mushroom === 'plain') D.mushroom(ctx, m)
+    else OBSTACLE_DRAW[look.mushroom as DiscLook](ctx, m)
+  }
 }
 
 // ── Floor decor (tiny, scattered by the arena renderer) ─────────────────────
 
-export interface DecorPalette { tuft: string; flower: string }
+/** `base`: the floor's base colour (the painted decor picks its pebble look by it). */
+export interface DecorPalette { tuft: string; flower: string; base?: string }
 
 const tuft = (ctx: Ctx, x: number, y: number, c: string) => {
   ctx.strokeStyle = c

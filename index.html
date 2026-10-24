@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="color-scheme" content="dark only">
   <meta name="darkreader-lock">
-  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <!--
     YouTube Playables SDK. Stripped from every non-YouTube build by
     vite.config.ts. Load-bearing on that one: the Playgama Bridge's `youtube`
@@ -45,112 +46,833 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tree Smashers">
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/images/icons/icon_192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/icons/apple-touch-icon_180x180.png">
   <title>Tree Smashers</title>
   <style>
-      /* Static splash — renders instantly before any JS loads */
+      /*
+       * ─── Loader CSS — ONE source for two DOMs ─────────────────────────────
+       * #static-splash (below, before any JS) and FLogoProgress.vue (after the
+       * app mounts) render the SAME classes and both read THIS sheet, so the
+       * hand-over shows the same frame; FLogoProgress copies the splash's
+       * animation start times so every entrance / idle / pan keeps its phase.
+       * Toy-box UI rules (src/assets/css/DESIGN.md): navy #161a40 outlines,
+       * flat fills, hard 0-blur shadows, hard-stop gradients only, no blur /
+       * glow / radial gradients. Transform + opacity animations only.
+       * Entrances fill `backwards` only: their last frame IS the resting
+       * style, so the loader can still fade / fly those elements afterwards.
+       */
       body {
           margin: 0;
           background: #1a351d;
       }
 
-      /* Mirrors FLogoProgress.vue rule for rule (flat, transform-only pan). */
       #static-splash {
           position: fixed;
           inset: 0;
           z-index: 9999;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: #2f5f35;
           transition: opacity 0.4s ease-out;
       }
 
-      #static-splash.hidden {
+      /* not `.hidden`: Tailwind's .hidden is display:none and kills the fade */
+      #static-splash.ts-handed-over {
           opacity: 0;
           pointer-events: none;
       }
 
-      #static-splash .s-pan {
+      /* ── Backdrop: the key-art scene (tools/loader-art) ──────────────────
+         Back → front: banded sky; flat sun rays turning round the logo; two
+         cloud decks drifting at two speeds; the flat sun (the calm plate
+         behind the logo); a smasher flicked across the sky on its disc; far
+         and mid hills swaying in a slow camera dolly (parallax); small
+         drifting bits; two giant cartoon trees taking hits IN TIME WITH THE
+         LOGO'S HOP (right tree on one landing, left on the next); the forest
+         band; the ground; a smasher zooming along it; the foreground
+         bushes; big drifting leaves; the impact star behind the logo on
+         every third hop. Art = the generated block below (SVG data URIs, or
+         the painted webp at its exact pixel size). Transforms + opacity
+         only, all compositor-run; reduced motion = the same scene, still.
+
+         PIXEL GRID (render-sharpness rule): a box, tile or offset on a
+         fractional device pixel is RESAMPLED, and a resampled edge is a
+         soft edge. So every layer sits on whole css px (= whole device px
+         at DPR 1 / 2 / 3; round() in the @supports blocks), tiles are
+         whole px wide and high, paintings are shown at exactly their file
+         pixels ÷ DPR (files are multiples of 12 px), the slow slides move in
+         steps of ONE device pixel (steps(), generated per DPR), the detailed
+         layers (trees, forest, ground, bushes) hold still except for the hit
+         tilt, the camera dolly moves only the flat hill bands, and the
+         impact stars flash by opacity alone (no scaling). */
+      :root { --ts-dpr: 1; }
+      @media (min-resolution: 1.01dppx) { :root { --ts-dpr: 1.25; } }
+      @media (min-resolution: 1.26dppx) { :root { --ts-dpr: 1.5; } }
+      @media (min-resolution: 1.51dppx) { :root { --ts-dpr: 2; } }
+      @media (min-resolution: 2.01dppx) { :root { --ts-dpr: 2.5; } }
+      @media (min-resolution: 2.51dppx) { :root { --ts-dpr: 3; } }
+      @media (min-resolution: 3.01dppx) { :root { --ts-dpr: 4; } }
+
+      .ts-backdrop {
+          position: fixed;
+          inset: 0;
+          overflow: hidden;
+          contain: strict;
+          background: linear-gradient(#1f8ae6 0 18%, #34a6f4 18% 36%, #55bff9 36% 52%, #7fd3fc 52%);
+      }
+
+      :where(.ts-backdrop) div,
+      :where(.ts-backdrop) div::before,
+      :where(.ts-backdrop) div::after {
           position: absolute;
-          inset: -256px 0 0 -256px;
-          background-image: url('/images/bg/forest-tile_512x512.webp'), url('/images/bg/forest-tile.svg');
-          background-size: 256px 256px;
-          animation: forest-pan 90s linear infinite;
-          will-change: transform;
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          pointer-events: none;
       }
 
-      @keyframes forest-pan {
-          to { transform: translate3d(256px, 256px, 0); }
+      /* flat low-contrast wedges: they may turn smoothly */
+      .ts-rays {
+          --d: 170vmax;
+          left: 50%;
+          top: 42%;
+          width: var(--d);
+          height: var(--d);
+          translate: -50% -50%;
+          animation: ts-turn 100s linear infinite;
       }
 
-      #static-splash .s-card {
-          position: relative;
+      /* just big enough to cover the farthest corner while it turns */
+      @supports (width: hypot(3px, 4px)) {
+          .ts-rays { --d: calc(2 * hypot(50vw, 58vh) + 8px); }
+      }
+
+      .ts-sun {
+          --s: min(62vmin, 480px);
+          left: calc(50% - var(--s) / 2);
+          top: calc(42% - var(--s) / 2);
+          width: var(--s);
+          height: var(--s);
+          border-radius: 50%;
+          background: #fff8d2;
+          box-shadow: 0 0 0 2.4vmin #ffec94, 0 0 0 4.8vmin rgba(255, 255, 255, 0.24);
+      }
+
+      /* sideways tiles, --w × --h (generated: whole px, and the slide steps
+         one device px at a time) */
+      .ts-clouds {
+          left: 0;
+          width: calc(100% + var(--w));
+          height: var(--h);
+          background-size: var(--w) var(--h);
+          background-repeat: repeat-x;
+          animation: ts-slide var(--t) linear infinite;
+      }
+
+      .ts-clouds--far { top: 3vh; --t: 160s; }
+      .ts-clouds--near { top: 9vh; --t: 85s; }
+
+      /* the camera dolly: only the flat hill bands, amplitude --par by depth */
+      .ts-hills {
+          left: calc(var(--par) * -1);
+          right: calc(var(--par) * -1);
+          animation: ts-dolly 26s ease-in-out infinite alternate;
+      }
+
+      .ts-hills--far { --h: 50vh; --par: 8px; }
+      .ts-hills--mid { --h: 39vh; --par: 16px; }
+
+      .ts-forest,
+      .ts-ground {
+          left: 0;
+          right: 0;
+      }
+
+      .ts-forest { --h: 29vh; }
+      .ts-ground { --h: 12vh; }
+
+      .ts-hills,
+      .ts-forest,
+      .ts-ground {
+          bottom: 0;
+          height: var(--h);
+          background-size: var(--w, calc(var(--h) * var(--ar))) var(--h);
+          background-repeat: repeat-x;
+          background-position: 0 0;
+      }
+
+      /* the giant cartoon trees: still, but for a hit every 5.6 s (= 2 logo
+         hops), on the landing of SMASHERS' hop — right tree at 3.9 s, left
+         at 6.7 s, … Size --tw × --th (a painting: its file px ÷ DPR). */
+      .ts-trees { inset: 0; }
+
+      .ts-tree {
+          --hit: 1.1s;
+          --th: min(max(54vmin, 30vh), 640px);
+          --tw: calc(var(--th) * var(--ar));
+          --tb: 16vh;
+          bottom: var(--tb);
+          left: calc(var(--tx) - var(--tw) / 2);
+          width: var(--tw);
+          height: var(--th);
+          transform-origin: 50% 100%;
+          animation: ts-tree-hit 5.6s var(--hit) steps(1, end) infinite;
+      }
+
+      .ts-tree--l { --hit: 3.9s; --tx: 7%; scale: -1 1; }
+      .ts-tree--r { --tx: 93%; }
+
+      @media (min-aspect-ratio: 1/1) {
+          .ts-tree--l { --tx: 14%; }
+          .ts-tree--r { --tx: 86%; }
+      }
+
+      /* tall phones: the bar and tip sit low, so the forest drops and the
+         trees shrink to peek over it at the edges, clear of the bar */
+      @media (max-aspect-ratio: 3/4) {
+          .ts-forest { --h: 22vh; }
+          .ts-tree { --tb: 14vh; --th: 42vmin; }
+          .ts-tree--l { --tx: 5%; }
+          .ts-tree--r { --tx: 95%; }
+      }
+
+      .ts-tree::before,
+      .ts-tree::after {
+          content: '';
+          opacity: 0;
+      }
+
+      .ts-tree::before {
+          left: 2%;
+          top: 34%;
+          width: 38%;
+          aspect-ratio: 1;
+          animation: ts-tree-star 5.6s var(--hit) linear infinite;
+      }
+
+      .ts-tree::after {
+          left: 30%;
+          top: 4%;
+          width: 66%;
+          aspect-ratio: 200 / 160;
+          animation: ts-tree-chips 5.6s var(--hit) steps(1, end) infinite;
+      }
+
+      /* smashers on spinning discs: one flicked across the sky, one zooming
+         along the ground (path = x on the outer box, hop = y on the inner) */
+      .ts-zoom {
+          left: 0;
+          height: var(--zh);
+          aspect-ratio: 240 / 180;
+          transform: translate3d(-60vw, 0, 0);
+      }
+
+      .ts-zoom--sky { top: 8vh; --zh: 10vmin; --hop: ts-fly-y 11s 2.4s infinite; animation: ts-fly-x 11s 2.4s linear infinite; }
+      .ts-zoom--ground { bottom: 2.5vh; --zh: 16vmin; --hop: ts-run-y 13s 6.6s infinite; animation: ts-run-x 13s 6.6s linear infinite; }
+      .ts-zoom--ground .ts-zoom__body { transform: scaleX(-1); }
+
+      .ts-zoom__hop,
+      .ts-zoom__body {
+          inset: 0;
+      }
+
+      .ts-zoom__hop { animation: var(--hop); }
+
+      .ts-zoom__body::after {
+          content: '';
+          inset: 0;
+      }
+
+      /* the disc: a flat top-view disc squashed into perspective, spinning */
+      .ts-zoom__disc {
+          z-index: 1;
+          left: 38%;
+          bottom: -12%;
+          width: 62%;
+          aspect-ratio: 1;
+          transform: scaleY(0.34);
+          transform-origin: 50% 100%;
+      }
+
+      .ts-zoom__disc::before {
+          content: '';
+          inset: 0;
+          animation: ts-turn 0.45s linear infinite;
+      }
+
+      /* the foreground bushes, tucked past both bottom corners (still) */
+      .ts-front {
+          inset: 0;
+          --fh: min(44vmin, 26vw);
+          --fw: calc(var(--fh) * var(--ar));
+      }
+
+      .ts-front::before,
+      .ts-front::after {
+          content: '';
+          bottom: calc(var(--fh) * -0.16);
+          left: calc(var(--fw) * -0.14);
+          width: var(--fw);
+          height: var(--fh);
+      }
+
+      .ts-front::after {
+          left: auto;
+          right: calc(var(--fw) * -0.14);
+          scale: -1 1;
+      }
+
+      /* drifting leaves, chips and confetti: a repeating --tile² tile falling
+         down-left by exactly one tile per loop, one device px per step */
+      .ts-drift {
+          left: 0;
+          top: calc(var(--tile) * -1);
+          width: calc(100% + var(--tile));
+          height: calc(100% + var(--tile));
+          background-size: var(--tile) var(--tile);
+          background-repeat: repeat;
+          animation: ts-fall var(--t) linear infinite;
+      }
+
+      .ts-drift--far { --t: 34s; }
+      .ts-drift--near { --t: 19s; }
+
+      /* the impact star behind the logo, on every third landing of its hop */
+      .ts-burst {
+          --b: min(92vmin, 700px);
+          left: calc(50% - var(--b) / 2);
+          top: calc(42% - var(--b) / 2);
+          width: var(--b);
+          height: var(--b);
+          opacity: 0;
+          animation: ts-burst 8.4s 3.9s linear infinite;
+      }
+
+      /* the pixel grid: whole css px for every box and offset */
+      @supports (width: round(1.5px, 1px)) {
+          .ts-sun {
+              --s: round(min(62vmin, 480px), 2px);
+              left: round(calc(50% - var(--s) / 2), 1px);
+              top: round(calc(42% - var(--s) / 2), 1px);
+              box-shadow: 0 0 0 round(2.4vmin, 1px) #ffec94, 0 0 0 round(4.8vmin, 1px) rgba(255, 255, 255, 0.24);
+          }
+
+          .ts-clouds--far { top: round(3vh, 1px); }
+          .ts-clouds--near { top: round(9vh, 1px); }
+          .ts-hills--far { --h: round(50vh, 1px); }
+          .ts-hills--mid { --h: round(39vh, 1px); }
+          .ts-forest { --h: round(29vh, 1px); }
+          .ts-ground { --h: round(12vh, 1px); }
+
+          .ts-hills,
+          .ts-forest,
+          .ts-ground {
+              background-size: round(var(--w, calc(var(--h) * var(--ar))), 1px) var(--h);
+          }
+
+          .ts-tree {
+              bottom: round(var(--tb), 1px);
+              left: round(calc(var(--tx) - var(--tw) / 2), 1px);
+              width: round(var(--tw), 1px);
+              height: round(var(--th), 1px);
+          }
+
+          .ts-tree::before {
+              left: round(calc(var(--tw) * 0.02), 1px);
+              top: round(calc(var(--th) * 0.34), 1px);
+              width: round(calc(var(--tw) * 0.38), 2px);
+              height: round(calc(var(--tw) * 0.38), 2px);
+          }
+
+          .ts-tree::after {
+              left: round(calc(var(--tw) * 0.3), 1px);
+              top: round(calc(var(--th) * 0.04), 1px);
+              width: round(calc(var(--tw) * 0.65), 5px);
+              height: round(calc(var(--tw) * 0.52), 4px);
+          }
+
+          .ts-zoom--sky { top: round(8vh, 1px); }
+          .ts-zoom--ground { bottom: round(2.5vh, 1px); }
+
+          .ts-front {
+              --fh: round(min(44vmin, 26vw), 1px);
+              --fw: round(calc(var(--fh) * var(--ar)), 1px);
+          }
+
+          .ts-front::before,
+          .ts-front::after {
+              bottom: round(calc(var(--fh) * -0.16), 1px);
+              left: round(calc(var(--fw) * -0.14), 1px);
+          }
+
+          .ts-front::after {
+              left: auto;
+              right: round(calc(var(--fw) * -0.14), 1px);
+          }
+
+          .ts-burst {
+              --b: round(min(92vmin, 700px), 2px);
+              left: round(calc(50% - var(--b) / 2), 1px);
+              top: round(calc(42% - var(--b) / 2), 1px);
+          }
+      }
+
+      @media (max-aspect-ratio: 3/4) {
+          @supports (width: round(1.5px, 1px)) {
+              .ts-forest { --h: round(22vh, 1px); }
+          }
+      }
+
+      /* loader-scene:start — generated by tools/loader-art/build.mjs (do not edit by hand) */
+      .ts-rays { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='-100 -100 200 200'%3E%3Cpath fill='%23fff' fill-opacity='.15' d='M8 0L141 -15L141 15L8 0ZM8 3L138 34L127 63L7 3ZM6 5L118 79L98 102L6 5ZM4 7L84 115L57 130L4 7ZM2 8L40 136L9 142L1 8ZM-1 8L-9 142L-40 136L-2 8ZM-4 7L-57 130L-84 115L-4 7ZM-6 5L-98 102L-118 79L-6 5ZM-7 3L-127 63L-138 34L-8 3ZM-8 0L-141 15L-141 -15L-8 0ZM-8 -3L-138 -34L-127 -63L-7 -3ZM-6 -5L-118 -79L-98 -102L-6 -5ZM-4 -7L-84 -115L-57 -130L-4 -7ZM-2 -8L-40 -136L-9 -142L-1 -8ZM1 -8L9 -142L40 -136L2 -8ZM4 -7L57 -130L84 -115L4 -7ZM6 -5L98 -102L118 -79L6 -5ZM7 -3L127 -63L138 -34L8 -3Z'/%3E%3Cpath fill='%23fff' fill-opacity='.28' d='M30 5L140 23L140 26L30 5ZM26 15L124 69L122 72L26 15ZM19 23L93 108L90 110L19 23ZM10 28L50 133L47 134L10 28ZM0 30L2 142L-2 142L0 30ZM-10 28L-47 134L-50 133L-10 28ZM-19 23L-90 110L-93 108L-19 23ZM-26 15L-122 72L-124 69L-26 15ZM-30 5L-140 26L-140 23L-30 5ZM-30 -5L-140 -23L-140 -26L-30 -5ZM-26 -15L-124 -69L-122 -72L-26 -15ZM-19 -23L-93 -108L-90 -110L-19 -23ZM-10 -28L-50 -133L-47 -134L-10 -28ZM0 -30L-2 -142L2 -142L0 -30ZM10 -28L47 -134L50 -133L10 -28ZM19 -23L90 -110L93 -108L19 -23ZM26 -15L122 -72L124 -69L26 -15ZM30 -5L140 -26L140 -23L30 -5Z'/%3E%3C/svg%3E"); }
+      .ts-clouds--far { background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='1400' height='300' viewBox='0 0 1400 300'%3E%3Cdefs%3E%3Cg id='u'%3E%3Ccircle cx='230' cy='133' r='27'/%3E%3Ccircle cx='264' cy='117' r='41'/%3E%3Ccircle cx='306' cy='104' r='51'/%3E%3Ccircle cx='347' cy='123' r='37'/%3E%3Ccircle cx='376' cy='136' r='25'/%3E%3Ccircle cx='302' cy='137' r='34'/%3E%3Ccircle cx='515' cy='198' r='28'/%3E%3Ccircle cx='550' cy='182' r='42'/%3E%3Ccircle cx='592' cy='169' r='51'/%3E%3Ccircle cx='634' cy='189' r='37'/%3E%3Ccircle cx='663' cy='201' r='25'/%3E%3Ccircle cx='588' cy='203' r='35'/%3E%3Ccircle cx='1104' cy='143' r='25'/%3E%3Ccircle cx='1135' cy='128' r='37'/%3E%3Ccircle cx='1173' cy='117' r='46'/%3E%3Ccircle cx='1210' cy='135' r='33'/%3E%3Ccircle cx='1236' cy='146' r='22'/%3E%3Ccircle cx='1169' cy='147' r='31'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23u' y='13' fill='%23b9e8ff'/%3E%3Cuse href='%23u' fill='%23fff'/%3E%3C/svg%3E"); }
+      .ts-clouds--near { background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='1600' height='360' viewBox='0 0 1600 360'%3E%3Cdefs%3E%3Cg id='u'%3E%3Ccircle cx='170' cy='249' r='36'/%3E%3Ccircle cx='215' cy='227' r='54'/%3E%3Ccircle cx='270' cy='211' r='67'/%3E%3Ccircle cx='324' cy='236' r='49'/%3E%3Ccircle cx='362' cy='252' r='33'/%3E%3Ccircle cx='264' cy='254' r='45'/%3E%3Ccircle cx='1240' cy='239' r='48'/%3E%3Ccircle cx='1300' cy='210' r='72'/%3E%3Ccircle cx='1374' cy='188' r='89'/%3E%3Ccircle cx='1446' cy='222' r='65'/%3E%3Ccircle cx='1496' cy='244' r='43'/%3E%3Ccircle cx='1366' cy='246' r='60'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23u' y='20' fill='%23b9e8ff'/%3E%3Cuse href='%23u' fill='%23fff'/%3E%3C/svg%3E"); }
+      .ts-drift--far { background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='380' height='380' viewBox='0 0 380 380'%3E%3Cg transform='translate(60 70) rotate(60) scale(0.6)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%23b8f07a'/%3E%3C/g%3E%3Cg transform='translate(250 160) rotate(-20) scale(0.55)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%239be34f'/%3E%3C/g%3E%3Cg transform='translate(150 320) rotate(110) scale(0.6)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%23c8f76a'/%3E%3C/g%3E%3Crect x='310' y='40' width='12' height='7' rx='2' fill='%23ffd21a' transform='rotate(30 316 43)'/%3E%3Crect x='40' y='230' width='12' height='7' rx='2' fill='%23fff' transform='rotate(-40 46 233)'/%3E%3Crect x='330' y='300' width='11' height='6' rx='2' fill='%23ffae00' transform='rotate(70 335 303)'/%3E%3C/svg%3E"); }
+      .ts-drift--near { background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg transform='translate(90 120) rotate(30) scale(1.25)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%236fd04a' stroke='%23161a40' stroke-width='3.5'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.2'/%3E%3C/g%3E%3Cg transform='translate(360 300) rotate(-50) scale(1.05)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%239be34f' stroke='%23161a40' stroke-width='3.5'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.2'/%3E%3C/g%3E%3Cg transform='translate(200 470) rotate(80) scale(1.4)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%236fd04a' stroke='%23161a40' stroke-width='3.5'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.2'/%3E%3C/g%3E%3Cpath transform='translate(470 70) rotate(25)' d='M-12 -5L9 -9L14 3L-5 9Z' fill='%23f2a23a' stroke='%23161a40' stroke-width='3.5' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+      .ts-clouds--far { --w: 784px; --h: 168px; animation-timing-function: steps(784); } .ts-drift--far { --tile: 380px; animation-timing-function: steps(380); } .ts-clouds--near { --w: 880px; --h: 198px; animation-timing-function: steps(880); } .ts-drift--near { --tile: 560px; animation-timing-function: steps(560); }
+      @media (min-resolution: 1.51dppx) { .ts-clouds--far { animation-timing-function: steps(1568); } .ts-drift--far { animation-timing-function: steps(760); } .ts-clouds--near { animation-timing-function: steps(1760); } .ts-drift--near { animation-timing-function: steps(1120); } }
+      @media (min-resolution: 2.51dppx) { .ts-clouds--far { animation-timing-function: steps(2352); } .ts-drift--far { animation-timing-function: steps(1140); } .ts-clouds--near { animation-timing-function: steps(2640); } .ts-drift--near { animation-timing-function: steps(1680); } }
+      @media (min-resolution: 3.01dppx) { .ts-clouds--far { animation-timing-function: steps(3136); } .ts-drift--far { animation-timing-function: steps(1520); } .ts-clouds--near { animation-timing-function: steps(3520); } .ts-drift--near { animation-timing-function: steps(2240); } }
+      @media (max-height: 500px) { .ts-clouds--far { --w: 420px; --h: 90px; animation-timing-function: steps(420); } .ts-drift--far { --tile: 260px; animation-timing-function: steps(260); } .ts-clouds--near { --w: 480px; --h: 108px; animation-timing-function: steps(480); } .ts-drift--near { --tile: 380px; animation-timing-function: steps(380); } }
+      @media (max-height: 500px) and (min-resolution: 1.51dppx) { .ts-clouds--far { animation-timing-function: steps(840); } .ts-drift--far { animation-timing-function: steps(520); } .ts-clouds--near { animation-timing-function: steps(960); } .ts-drift--near { animation-timing-function: steps(760); } }
+      @media (max-height: 500px) and (min-resolution: 2.51dppx) { .ts-clouds--far { animation-timing-function: steps(1260); } .ts-drift--far { animation-timing-function: steps(780); } .ts-clouds--near { animation-timing-function: steps(1440); } .ts-drift--near { animation-timing-function: steps(1140); } }
+      @media (max-height: 500px) and (min-resolution: 3.01dppx) { .ts-clouds--far { animation-timing-function: steps(1680); } .ts-drift--far { animation-timing-function: steps(1040); } .ts-clouds--near { animation-timing-function: steps(1920); } .ts-drift--near { animation-timing-function: steps(1520); } }
+      .ts-hills--far { --ar: 4.0000; background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='1600' height='400' viewBox='0 0 1600 400'%3E%3Cdefs%3E%3Cpath id='k' d='M-100 800L-100 95C-67 96 -33 93 0 91C33 90 67 87 100 86C133 85 167 86 200 87C233 87 267 88 300 87C333 87 367 85 400 83C433 81 467 77 500 76C533 75 567 75 600 76C633 76 667 80 700 80C733 81 767 82 800 78C833 75 867 67 900 59C933 52 967 39 1000 32C1033 25 1067 18 1100 17C1133 16 1167 21 1200 28C1233 35 1267 49 1300 58C1333 68 1367 79 1400 86C1433 92 1467 94 1500 95C1533 96 1567 93 1600 91C1633 90 1667 87 1700 86L1700 800Z'/%3E%3C/defs%3E%3Cuse href='%23k' fill='%23b6ecd9'/%3E%3Cuse href='%23k' y='20' fill='%238fdcc6'/%3E%3Cuse href='%23k' y='128' fill='%237fd0bd'/%3E%3C/svg%3E"); }
+      .ts-hills--mid { --ar: 3.5000; background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='1400' height='400' viewBox='0 0 1400 400'%3E%3Cdefs%3E%3Cg id='c'%3E%3Ccircle r='1' fill='%233fae68' stroke='%23161a40' stroke-width='0.13333333333333333'/%3E%3Ccircle cx='-.05' cy='-.12' r='.86' fill='%233fae68'/%3E%3Ccircle cx='-.26' cy='-.36' r='.42' fill='%236fd08a'/%3E%3C/g%3E%3C/defs%3E%3Cuse href='%23c' transform='translate(127 128)scale(39)'/%3E%3Cuse href='%23c' transform='translate(162 137)scale(28)'/%3E%3Cuse href='%23c' transform='translate(261 124)scale(36)'/%3E%3Cuse href='%23c' transform='translate(294 134)scale(26)'/%3E%3Cuse href='%23c' transform='translate(442 113)scale(36)'/%3E%3Cuse href='%23c' transform='translate(474 112)scale(25)'/%3E%3Cuse href='%23c' transform='translate(731 73)scale(33)'/%3E%3Cuse href='%23c' transform='translate(761 86)scale(23)'/%3E%3Cuse href='%23c' transform='translate(957 97)scale(29)'/%3E%3Cuse href='%23c' transform='translate(983 109)scale(20)'/%3E%3Cuse href='%23c' transform='translate(1139 125)scale(39)'/%3E%3Cuse href='%23c' transform='translate(1174 130)scale(27)'/%3E%3Cuse href='%23c' transform='translate(1322 99)scale(24)'/%3E%3Cuse href='%23c' transform='translate(1344 106)scale(17)'/%3E%3Cdefs%3E%3Cpath id='k' d='M-100 800L-100 90C-67 89 -33 97 0 100C33 104 67 111 100 113C133 115 167 112 200 112C233 111 267 113 300 112C333 112 367 114 400 109C433 104 467 91 500 81C533 72 567 58 600 54C633 50 667 54 700 57C733 60 767 67 800 71C833 74 867 75 900 79C933 83 967 90 1000 95C1033 101 1067 110 1100 112C1133 113 1167 106 1200 103C1233 99 1267 90 1300 90C1333 89 1367 97 1400 100C1433 104 1467 111 1500 113L1500 800Z'/%3E%3C/defs%3E%3Cuse href='%23k' fill='%2393e39a' stroke='%23161a40' stroke-width='4'/%3E%3Cuse href='%23k' y='20' fill='%235cc681'/%3E%3Cuse href='%23k' y='128' fill='%234fb873'/%3E%3C/svg%3E"); }
+      .ts-ground { --ar: 6.0000; background-image: url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg' width='1200' height='200' viewBox='0 0 1200 200'%3E%3Cpath fill='%233ea814' stroke='%23161a40' stroke-width='5' stroke-linejoin='round' d='M85 53l7-22 6 22 6-30 6 30 6-18 5 18zM288 60l7-22 6 22 6-30 6 30 6-18 5 18zM497 48l7-22 6 22 6-30 6 30 6-18 5 18zM695 44l7-22 6 22 6-30 6 30 6-18 5 18zM926 36l7-22 6 22 6-30 6 30 6-18 5 18zM1089 47l7-22 6 22 6-30 6 30 6-18 5 18z'/%3E%3Cdefs%3E%3Cpath id='k' d='M-100 600L-100 43C-67 46 -33 52 0 53C33 54 67 51 100 49C133 48 167 43 200 44C233 45 267 55 300 56C333 58 367 54 400 52C433 50 467 48 500 45C533 42 567 36 600 35C633 34 667 37 700 39C733 40 767 45 800 44C833 43 867 33 900 32C933 30 967 34 1000 36C1033 38 1067 40 1100 43C1133 46 1167 52 1200 53C1233 54 1267 51 1300 49L1300 600Z'/%3E%3C/defs%3E%3Cuse href='%23k' fill='%238be33a' stroke='%23161a40' stroke-width='7'/%3E%3Cuse href='%23k' y='14' fill='%2359c62a'/%3E%3Cuse href='%23k' y='70' fill='%2342ad22'/%3E%3C/svg%3E"); }
+      .ts-forest { --w: calc(912px / var(--ts-dpr)); --h: calc(336px / var(--ts-dpr)); background-image: url("/images/loader/loader-forest-l_912x336.webp?v=6aac67b6"); }
+      @media (max-aspect-ratio: 3/4) { .ts-forest { --w: calc(1476px / var(--ts-dpr)); --h: calc(540px / var(--ts-dpr)); background-image: url("/images/loader/loader-forest-p_1476x540.webp?v=6aac67b6"); } }
+      .ts-tree { --tw: calc(636px / var(--ts-dpr)); --th: calc(600px / var(--ts-dpr)); background-image: url("/images/loader/loader-tree-l_636x600.webp?v=6aac67b6"); }
+      @media (max-aspect-ratio: 3/4) { .ts-tree { --tw: calc(504px / var(--ts-dpr)); --th: calc(480px / var(--ts-dpr)); background-image: url("/images/loader/loader-tree-p_504x480.webp?v=6aac67b6"); } }
+      .ts-tree::before, .ts-burst { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='-50 -50 100 100'%3E%3Cpath d='M0 -47L6 -22L23 -41L16 -16L41 -23L22 -6L47 0L22 6L41 23L16 16L23 41L6 22L0 47L-6 22L-24 41L-16 16L-41 24L-22 6L-47 0L-22 -6L-41 -24L-16 -16L-24 -41L-6 -22Z' fill='%23fff' stroke='%23161a40' stroke-width='3.5' stroke-linejoin='round'/%3E%3Cpath d='M0 -30L4 -14L15 -26L10 -10L26 -15L14 -4L30 0L14 4L26 15L10 10L15 26L4 14L0 30L-4 14L-15 26L-10 10L-26 15L-14 4L-30 0L-14 -4L-26 -15L-10 -10L-15 -26L-4 -14Z' fill='%23ffe45c'/%3E%3C/svg%3E"); }
+      .ts-tree::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='160' viewBox='0 0 200 160'%3E%3Cpath transform='translate(40 120) rotate(20) scale(1.2)' d='M-14 -6L10 -10L16 4L-6 10Z' fill='%23f2a23a' stroke='%23161a40' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath transform='translate(110 40) rotate(-30) scale(1)' d='M-14 -6L10 -10L16 4L-6 10Z' fill='%23f2a23a' stroke='%23161a40' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath transform='translate(170 100) rotate(60) scale(0.9)' d='M-14 -6L10 -10L16 4L-6 10Z' fill='%23f2a23a' stroke='%23161a40' stroke-width='4' stroke-linejoin='round'/%3E%3Cg transform='translate(70 60) rotate(40) scale(1.1)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%236fd04a' stroke='%23161a40' stroke-width='4'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(150 20) rotate(-60) scale(0.9)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%236fd04a' stroke='%23161a40' stroke-width='4'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(186 140) rotate(100) scale(0.8)'%3E%3Cpath d='M0 -16C11 -9 11 9 0 16C-11 9 -11 -9 0 -16Z' fill='%236fd04a' stroke='%23161a40' stroke-width='4'/%3E%3Cpath d='M0 -12L0 12' stroke='%23161a40' stroke-width='2.5'/%3E%3C/g%3E%3C/svg%3E"); }
+      .ts-zoom__body::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='180' viewBox='0 0 240 180'%3E%3Cg fill='%23fff' opacity='.85'%3E%3Crect x='8' y='70' width='86' height='11' rx='5.5'/%3E%3Crect x='30' y='112' width='66' height='11' rx='5.5'/%3E%3Crect x='0' y='152' width='94' height='11' rx='5.5'/%3E%3C/g%3E%3Cg fill='%23161a40'%3E%3Ccircle cx='150' cy='52' r='17'/%3E%3Ccircle cx='196' cy='50' r='15'/%3E%3Ccircle cx='172' cy='84' r='42'/%3E%3Cellipse cx='164' cy='140' rx='46' ry='36'/%3E%3Ccircle cx='212' cy='112' r='15'/%3E%3Cpath d='M200 120L222 96L232 106L210 130Z'/%3E%3Ccircle cx='122' cy='132' r='13'/%3E%3C/g%3E%3Cpath d='M176 74L198 68L196 84Z M150 72L168 76L162 88Z' fill='%23fff'/%3E%3C/svg%3E"); }
+      .ts-zoom__disc::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='-50 -50 100 100'%3E%3Ccircle cx='0' cy='0' r='49' fill='%23161a40'/%3E%3Ccircle cx='0' cy='0' r='42' fill='%23f2a23a'/%3E%3Ccircle cx='0' cy='0' r='30' fill='none' stroke='%23ffc86a' stroke-width='5'/%3E%3Ccircle cx='0' cy='0' r='15' fill='none' stroke='%23d9772a' stroke-width='5'/%3E%3Cpath d='M0 -42L6 -18L-6 -18Z M36 21L14 12L20 2Z M-36 21L-20 2L-14 12Z' fill='%23161a40'/%3E%3C/svg%3E"); }
+      .ts-front { --fw: calc(564px / var(--ts-dpr)); --fh: calc(504px / var(--ts-dpr)); }
+      @media (max-aspect-ratio: 3/4) { .ts-front { --fw: calc(336px / var(--ts-dpr)); --fh: calc(300px / var(--ts-dpr)); } }
+      .ts-front::before, .ts-front::after { background-image: url("/images/loader/loader-front-l_564x504.webp?v=6aac67b6"); }
+      @media (max-aspect-ratio: 3/4) { .ts-front::before, .ts-front::after { background-image: url("/images/loader/loader-front-p_336x300.webp?v=6aac67b6"); } }
+      /* loader-scene:end */
+
+      @keyframes ts-turn {
+          to { transform: rotate(360deg); }
+      }
+
+      @keyframes ts-slide {
+          to { transform: translate3d(calc(var(--w) * -1), 0, 0); }
+      }
+
+      @keyframes ts-dolly {
+          from { transform: translate3d(var(--par), 0, 0); }
+          to { transform: translate3d(calc(var(--par) * -1), 0, 0); }
+      }
+
+      @keyframes ts-fall {
+          to { transform: translate3d(calc(var(--tile) * -1), var(--tile), 0); }
+      }
+
+      /* the hit: a cartoon jolt on whole-px poses, each held by steps(1)
+         (a rotated or sub-pixel tree would be a resampled, soft one) */
+      @keyframes ts-tree-hit {
+          0%, 49.99% { transform: none; }
+          50% { transform: translate(12px, -3px); }
+          53% { transform: translate(-7px, 0); }
+          56% { transform: translate(4px, -1px); }
+          59% { transform: translate(-2px, 0); }
+          62%, 100% { transform: none; }
+      }
+
+      /* the stars flash by opacity alone: a scaled star is a resampled one */
+      @keyframes ts-tree-star {
+          0%, 49.9% { opacity: 0; }
+          50%, 55% { opacity: 1; }
+          61%, 100% { opacity: 0; }
+      }
+
+      @keyframes ts-tree-chips {
+          0%, 49.99% { opacity: 0; transform: none; }
+          50% { opacity: 1; transform: none; }
+          54% { opacity: 1; transform: translate(14px, -16px); }
+          58% { opacity: 1; transform: translate(26px, -30px); }
+          62%, 100% { opacity: 0; transform: translate(26px, -30px); }
+      }
+
+      @keyframes ts-fly-x {
+          0% { transform: translate3d(-30vw, 0, 0); }
+          24%, 100% { transform: translate3d(130vw, 0, 0); }
+      }
+
+      @keyframes ts-fly-y {
+          0% { transform: translateY(90%) rotate(-16deg); animation-timing-function: cubic-bezier(0.3, 0.6, 0.5, 1); }
+          12% { transform: translateY(-20%) rotate(0deg); animation-timing-function: cubic-bezier(0.5, 0, 0.7, 0.4); }
+          24%, 100% { transform: translateY(100%) rotate(16deg); }
+      }
+
+      @keyframes ts-run-x {
+          0% { transform: translate3d(110vw, 0, 0); }
+          28%, 100% { transform: translate3d(-40vw, 0, 0); }
+      }
+
+      @keyframes ts-run-y {
+          0%, 7%, 14%, 21%, 28%, 100% { transform: none; animation-timing-function: ease-out; }
+          3.5%, 10.5%, 17.5%, 24.5% { transform: translateY(-24%) rotate(5deg); animation-timing-function: ease-in; }
+      }
+
+      @keyframes ts-burst {
+          0%, 4% { opacity: 1; }
+          9%, 100% { opacity: 0; }
+      }
+
+      .ts-stage {
+          position: fixed;
+          inset: 0;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+      }
+
+      .ts-card {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: clamp(14px, 4vmin, 28px);
-          width: min(86vw, 120vh, 560px);
-          user-select: none;
-          -webkit-user-select: none;
+          gap: clamp(12px, 3.4vmin, 26px);
+          /* the SMASHERS slam shakes the card once */
+          animation: ts-shake 0.34s 0.62s linear;
       }
 
-      #static-splash .s-logo {
+      /* ── Logo lockup: emblem, TREE, SMASHERS (tools/logo/build.mjs) ── */
+      .ts-logo {
+          position: relative;
           margin: 0;
           width: 100%;
-          text-align: center;
-          display: block;
-          font-family: 'Nunito', system-ui, sans-serif;
-          font-weight: 900;
-          font-size: clamp(2.6rem, min(13vw, 17vh), 5.6rem);
-          line-height: 0.95;
-          letter-spacing: 0.02em;
-          color: #ffeb3b;
-          -webkit-text-stroke: 0.14em #161a40;
-          paint-order: stroke fill;
-          text-shadow: 0 0.09em 0 #161a40;
-          transform: rotate(-3deg);
       }
 
-      #static-splash .s-bar {
+      /* logo-layout:start — generated by tools/logo/build.mjs */
+      .ts-card { width: min(84vw, 620px, 44vh * 1.3791); }
+      .ts-logo { aspect-ratio: 1084 / 786; }
+      .ts-logo__emblem { left: 27.000%; top: 0.000%; width: 46.000%; height: 65.574%; }
+      .ts-logo__tree { left: 32.372%; top: 52.459%; width: 35.256%; height: 22.593%; }
+      .ts-logo__smashers { left: 0.000%; top: 70.533%; width: 100.000%; height: 29.467%; }
+      .ts-logo__shine { -webkit-mask-image: url('/images/logo/word-smashers.svg?v=7cebd1f2'); mask-image: url('/images/logo/word-smashers.svg?v=7cebd1f2'); display: none; }
+      /* logo-layout:end */
+
+      .ts-logo__part {
+          position: absolute;
+      }
+
+      .ts-logo__fly,
+      .ts-logo__anim {
           position: relative;
-          width: 72%;
-          height: clamp(14px, 3vmin, 20px);
-          border: 3px solid #161a40;
+          width: 100%;
+          height: 100%;
+      }
+
+      .ts-logo__img {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          -webkit-user-drag: none;
+      }
+
+      /* emblem: spins down out of the sky, lands with a squash; idle: rests,
+         then flicks round once like a launched disc */
+      .ts-logo__anim--emblem {
+          animation: ts-emblem-in 0.86s cubic-bezier(0.2, 0.75, 0.3, 1) backwards, ts-emblem-idle 3.6s 1.5s ease-in-out infinite;
+      }
+
+      /* the words slam in from big, then hop like the hero CTA's beat */
+      .ts-logo__anim--tree {
+          animation: ts-slam 0.42s 0.34s cubic-bezier(0.3, 0.7, 0.4, 1) backwards, ts-beat 2.8s 1.4s ease-in-out infinite;
+      }
+
+      .ts-logo__anim--smashers {
+          animation: ts-slam 0.46s 0.5s cubic-bezier(0.3, 0.7, 0.4, 1) backwards, ts-beat 2.8s 1.52s ease-in-out infinite;
+      }
+
+      /* a double shine strip sweeps across SMASHERS (masked by its letters) */
+      .ts-logo__shine {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+          -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+          -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+      }
+
+      .ts-logo__shine::before {
+          content: '';
+          position: absolute;
+          top: -10%;
+          bottom: -10%;
+          left: 0;
+          width: 24%;
+          background: linear-gradient(90deg, transparent 0 14%, rgba(255, 255, 255, 0.7) 14% 48%, transparent 48% 62%, rgba(255, 255, 255, 0.7) 62% 76%, transparent 76%);
+          transform: translateX(-130%) skewX(-18deg);
+          animation: ts-shine 3.4s 1.1s ease-in-out infinite;
+      }
+
+      @keyframes ts-emblem-in {
+          0% { opacity: 0; transform: translateY(-70%) scale(0.25) rotate(-540deg); }
+          55% { opacity: 1; transform: translateY(6%) scale(1.14) rotate(12deg); }
+          76% { transform: translateY(-2%) scale(0.95) rotate(-5deg); }
+          100% { opacity: 1; transform: none; }
+      }
+
+      @keyframes ts-emblem-idle {
+          0%, 62% { transform: none; }
+          70% { transform: rotate(-14deg) scale(0.96); }
+          86% { transform: rotate(372deg); }
+          93% { transform: rotate(357deg) scale(0.99); }
+          100% { transform: rotate(360deg); }
+      }
+
+      @keyframes ts-slam {
+          0% { opacity: 0; transform: scale(2.6) rotate(-6deg); }
+          62% { opacity: 1; transform: scale(0.9) rotate(1deg); }
+          82% { transform: scale(1.05); }
+          100% { opacity: 1; transform: none; }
+      }
+
+      /* a hop with a squash: never scaled ABOVE 1 — an upscale would stretch
+         the 1× raster of the letters (render-sharpness rule) */
+      @keyframes ts-beat {
+          0%, 70%, 100% { transform: none; }
+          77% { transform: translateY(-6%); }
+          85% { transform: translateY(2%) scale(1, 0.95); }
+          92% { transform: translateY(-1.5%); }
+      }
+
+      @keyframes ts-shake {
+          0%, 100% { transform: none; }
+          20% { transform: translate(-3px, 4px) rotate(-0.6deg); }
+          40% { transform: translate(3px, -3px) rotate(0.5deg); }
+          60% { transform: translate(-2px, 2px); }
+          80% { transform: translate(1px, -1px); }
+      }
+
+      @keyframes ts-shine {
+          0% { transform: translateX(-130%) skewX(-18deg); }
+          38%, 100% { transform: translateX(470%) skewX(-18deg); }
+      }
+
+      /* ── Progress bar: outlined navy track, striped sun fill, 10 notches,
+         a spinning mini disc riding the head of the fill ── */
+      /* bar + percentage slot (the slot is empty until the app fills it) */
+      .ts-meter {
+          display: flex;
+          align-items: center;
+          /* > half the runner disc (0.84 × bar height), so at 100 % it never covers the numerals */
+          gap: clamp(26px, 5.6vmin, 36px);
+          width: 94%;
+          flex: none;
+          animation: ts-bar-in 0.4s 0.66s cubic-bezier(0.3, 0.8, 0.4, 1.2) backwards;
+      }
+
+      .ts-bar {
+          position: relative;
+          flex: 1 1 auto;
+          height: clamp(24px, 5.2vmin, 34px);
+      }
+
+      .ts-bar__track {
+          position: absolute;
+          inset: 0;
+          box-sizing: border-box;
+          border: 4px solid #161a40;
           border-radius: 999px;
           background: #10164f;
-          box-shadow: 0 4px 0 #161a40;
+          box-shadow: inset 0 4px 0 #0b1040, 0 5px 0 #161a40;
           overflow: hidden;
       }
 
-      #static-splash .s-fill {
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(#fff2b8 0 28%, #ffc93e 28% 100%);
-          transform-origin: left center;
-          transform: scaleX(0);
-          animation: s-creep 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+      .ts-bar__fill {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: linear-gradient(#fff7a3 0 24%, #ffd21a 24% 70%, #ffae00 70% 100%);
+          transform: translateX(-100%);
+          animation: ts-creep-fill 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+          will-change: transform;
       }
 
-      @keyframes s-creep {
-          to { transform: scaleX(0.14); }
+      .ts-bar__fill::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: -46px;
+          background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.3) 0 8px, transparent 8px 16px);
+          animation: ts-stripes 0.8s linear infinite;
+      }
+
+      .ts-bar__notches {
+          position: absolute;
+          inset: 0;
+          background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 3px), rgba(16, 22, 79, 0.6) calc(10% - 3px) 10%);
+      }
+
+      .ts-bar__run {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 4px;
+          right: 4px;
+          pointer-events: none;
+          transform: translateX(0);
+          animation: ts-creep-run 3.2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+          will-change: transform;
+      }
+
+      .ts-bar__disc {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          height: 168%;
+          aspect-ratio: 1;
+          transform: translate(-50%, -50%);
+      }
+
+      .ts-bar__disc::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: #161a40;
+          transform: translateY(3px);
+      }
+
+      .ts-bar__disc img {
+          position: relative;
+          display: block;
+          width: 100%;
+          height: 100%;
+          animation: ts-spin 0.9s linear infinite;
+      }
+
+      .ts-pct {
+          flex: none;
+          width: 3.4em;
+          font: 900 clamp(17px, 4.2vmin, 26px) / 1 'Nunito', system-ui, sans-serif;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.02em;
+          white-space: nowrap;
+          color: #ffffff;
+          -webkit-text-stroke: 0.24em #161a40;
+          paint-order: stroke fill;
+          text-shadow: 0 0.12em 0 #161a40;
+      }
+
+      .ts-tip {
+          box-sizing: border-box;
+          max-width: 100%;
+          min-height: 2.7em;
+          padding: 0 4%;
+          font: 900 clamp(13px, 3.4vmin, 19px) / 1.35 'Nunito', system-ui, sans-serif;
+          color: #ffffff;
+          text-align: center;
+          -webkit-text-stroke: 0.22em #161a40;
+          paint-order: stroke fill;
+          text-shadow: 0 0.12em 0 #161a40;
+      }
+
+      @keyframes ts-bar-in {
+          0% { opacity: 0; transform: translateY(40%) scaleX(0.6); }
+          70% { opacity: 1; transform: translateY(-6%) scaleX(1.04); }
+          100% { opacity: 1; transform: none; }
+      }
+
+      @keyframes ts-creep-fill {
+          to { transform: translateX(-86%); }
+      }
+
+      @keyframes ts-creep-run {
+          to { transform: translateX(14%); }
+      }
+
+      @keyframes ts-stripes {
+          to { transform: translateX(-22.627px); }
+      }
+
+      @keyframes ts-spin {
+          to { transform: rotate(360deg); }
       }
 
       @media (prefers-reduced-motion: reduce) {
-          #static-splash .s-pan { animation: none; }
+          /* the same scene, still: no dolly, drift, turn, hits or riders */
+          .ts-backdrop div,
+          .ts-backdrop div::before,
+          .ts-backdrop div::after,
+          .ts-card,
+          .ts-logo__anim,
+          .ts-logo__shine::before,
+          .ts-meter,
+          .ts-bar__fill::before,
+          .ts-bar__disc img {
+              animation: none;
+          }
+
+          .ts-logo__shine,
+          .ts-zoom,
+          .ts-burst,
+          .ts-tree::before,
+          .ts-tree::after {
+              display: none;
+          }
       }
   </style>
 </head>
 <body>
-<!-- Static splash screen — visible before JS loads -->
-<link rel="preload" href="/images/bg/forest-tile_512x512.webp" as="image" type="image/webp">
+<!-- Static splash screen — visible before JS loads; FLogoProgress.vue continues it -->
+<!-- loader-preload:start -->
+<link rel="preload" href="/images/loader/loader-tree-l_636x600.webp?v=6aac67b6" as="image" type="image/webp" media="not all and (max-aspect-ratio: 3/4)">
+<link rel="preload" href="/images/loader/loader-tree-p_504x480.webp?v=6aac67b6" as="image" type="image/webp" media="(max-aspect-ratio: 3/4)">
+<link rel="preload" href="/images/loader/loader-forest-l_912x336.webp?v=6aac67b6" as="image" type="image/webp" media="not all and (max-aspect-ratio: 3/4)">
+<link rel="preload" href="/images/loader/loader-forest-p_1476x540.webp?v=6aac67b6" as="image" type="image/webp" media="(max-aspect-ratio: 3/4)">
+<link rel="preload" href="/images/loader/loader-front-l_564x504.webp?v=6aac67b6" as="image" type="image/webp" media="not all and (max-aspect-ratio: 3/4)">
+<link rel="preload" href="/images/loader/loader-front-p_336x300.webp?v=6aac67b6" as="image" type="image/webp" media="(max-aspect-ratio: 3/4)">
+<!-- loader-preload:end -->
 <div id="static-splash" aria-hidden="true">
-  <div class="s-pan"></div>
-  <div class="s-card">
-    <!-- Brand wordmark; swap for the painted logo <img> together with LOGO_SRC in FLogoProgress.vue -->
-    <div class="s-logo">Tree Smashers</div>
-    <div class="s-bar"><div class="s-fill"></div></div>
+  <!-- loader-scene: the key-art backdrop (tools/loader-art); FLogoProgress.vue renders the same tree -->
+  <div class="ts-backdrop">
+    <div class="ts-rays"></div>
+    <div class="ts-clouds ts-clouds--far"></div>
+    <div class="ts-sun"></div>
+    <div class="ts-clouds ts-clouds--near"></div>
+    <div class="ts-zoom ts-zoom--sky"><div class="ts-zoom__hop"><div class="ts-zoom__body"><div class="ts-zoom__disc"></div></div></div></div>
+    <div class="ts-hills ts-hills--far"></div>
+    <div class="ts-hills ts-hills--mid"></div>
+    <div class="ts-drift ts-drift--far"></div>
+    <div class="ts-trees"><div class="ts-tree ts-tree--l"></div><div class="ts-tree ts-tree--r"></div></div>
+    <div class="ts-forest"></div>
+    <div class="ts-ground"></div>
+    <div class="ts-zoom ts-zoom--ground"><div class="ts-zoom__hop"><div class="ts-zoom__body"><div class="ts-zoom__disc"></div></div></div></div>
+    <div class="ts-front"></div>
+    <div class="ts-drift ts-drift--near"></div>
+    <div class="ts-burst"></div>
+  </div>
+  <div class="ts-stage">
+    <div class="ts-card">
+      <!-- logo:start — generated by tools/logo/build.mjs; FLogoProgress.vue renders the same tree -->
+      <div class="ts-logo">
+        <div class="ts-logo__part ts-logo__emblem"><div class="ts-logo__fly"><div class="ts-logo__anim ts-logo__anim--emblem"><img class="ts-logo__img" src="/images/logo/emblem.svg?v=7cebd1f2" srcset="/images/logo/painted-emblem_590x468.webp?v=8305f934 590w, /images/logo/emblem.svg?v=7cebd1f2 4096w" sizes="calc(min(84vw, 620px, 44vh * 1.3791) * 0.4600)" alt="" draggable="false"></div></div></div>
+        <div class="ts-logo__part ts-logo__tree"><div class="ts-logo__anim ts-logo__anim--tree"><img class="ts-logo__img" src="/images/logo/word-tree.svg?v=7cebd1f2" srcset="/images/logo/painted-tree_518x218.webp?v=8305f934 518w, /images/logo/word-tree.svg?v=7cebd1f2 4096w" sizes="calc(min(84vw, 620px, 44vh * 1.3791) * 0.3526)" alt="" draggable="false"></div></div>
+        <div class="ts-logo__part ts-logo__smashers"><div class="ts-logo__anim ts-logo__anim--smashers"><img class="ts-logo__img" src="/images/logo/word-smashers.svg?v=7cebd1f2" srcset="/images/logo/painted-smashers_908x214.webp?v=8305f934 908w, /images/logo/word-smashers.svg?v=7cebd1f2 4096w" sizes="calc(min(84vw, 620px, 44vh * 1.3791) * 1.0000)" alt="" draggable="false"><div class="ts-logo__shine"></div></div></div>
+      </div>
+      <div class="ts-meter">
+        <div class="ts-bar">
+          <div class="ts-bar__track"><div class="ts-bar__fill"></div><div class="ts-bar__notches"></div></div>
+          <div class="ts-bar__run"><div class="ts-bar__disc"><img src="/favicon.svg?v=7cebd1f2" alt="" draggable="false"></div></div>
+        </div>
+        <div class="ts-pct"></div>
+      </div>
+      <div class="ts-tip"></div>
+      <!-- logo:end -->
+    </div>
   </div>
 </div>
 <!-- Load the SDK before your game code -->

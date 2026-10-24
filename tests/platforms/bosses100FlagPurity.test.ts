@@ -88,7 +88,7 @@ describe('bosses100 ON — unobfuscated twin (the markers are live)', () => {
     for (const m of ['cinder_tyrant', 'elemental_court', 'boss-ember-pulse', 'BossIntroCard', 'freeze_crack', 'nextNovaAt']) {
       expect(markers, m).toContain(m)
     }
-    expect(on.featurePublic.length).toBe(4 + 3)
+    expect(on.featurePublic.length).toBe(4 + 3 + 3) // + the 3 toy-box boss badges (painted-boss-*, tools/badge-icons)
   })
 
   it('keeps the trait rules, VFX and SFX out of the hot path', () => {

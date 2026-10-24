@@ -7,27 +7,35 @@ import type {
   SpinnerStats,
   GamePhase,
   GameResult,
-  MeteorParticle,
   SpritesheetAnimation,
   Powerup,
   PowerupStat,
   BossTrait
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
-import { bossHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
+import { bossHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcCountHpMul, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
 import {
-  applyGround, buildTerrainLayout, collideSolids, createTower, decideResult, inDeepCore, newGroundState, newSolidEffect,
-  terrainCircles, terrainSolidCircles, towerHitDamage,
-  type GroundEffect, type GroundState, type IslandKind, type TeamTower, type TerrainLayout
+  allTreesDown, applyGround, buildTerrainLayout, collideSolids, createTowers, decideResult, pickTargetTree, inDeepCore, newGroundState, newSolidEffect,
+  terrainCircles, terrainSolidCircles, towerHitDamage, towerSpecFor, towerSpikeRecoil, towerFrontAngle, TOWER_FRONT_HALF_ARC,
+  type GroundEffect, type GroundState, type TeamTower, type TerrainLayout
 } from '@/use/arenaTerrain'
 import { DECOR_DRAW, renderTerrainFeatures } from '@/use/arenaTerrainDraw'
+import { armorTilesImage, bulwarkTilesImage, drawArmorTiles } from '@/use/armorArt'
+import { PAINTED_BULWARK } from '@/use/paintedBulwark'
+import { PAINTED_ARMOR } from '@/use/paintedArmor'
 import { terrainArtRevision } from '@/use/arenaTerrainArt'
-import { drawPaintedFloor, floorArtRevision } from '@/use/arenaFloorArt'
-import { drawArenaBackdrop } from '@/use/arenaBackdrop'
+import { drawPaintedFloor, floorArtRevision, preloadFloorArt } from '@/use/arenaFloorArt'
+import { borderArtRevision, borderKeyFor, drawPaintedBorder, preloadBorderArt } from '@/use/arenaBorderArt'
+import { backdropArtRevision, paintArenaBackdrop, preloadBackdropArt } from '@/use/arenaBackdrop'
+import { warmNextStageArt } from '@/use/nextStageArt'
+import { drawPullArrow } from '@/use/pullArrowArt'
+import { arenaFitPoints, FIT_HUD_OUTLINE_MARGIN, fillRatio, fitArenaView, fitPointsBounds, legacyArenaView, type ArenaView, type FitInsets, type FitRect } from '@/use/arenaFit'
+import { floorKeyFor, THEME_LOOK, themeFor, type ArenaTheme } from '@/use/arenaThemes'
 import {
   resolveWall as shapeResolveWall,
   clampInside as shapeClampInside,
   isInside as shapeIsInside,
+  sdf as shapeSdf,
   traceArenaPath,
   type ArenaShape,
   TERRAIN_SHAPES
@@ -47,12 +55,39 @@ import useSounds from '@/use/useSound'
 import { prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
+import { discGaugeFrame, drawHpGauge, newHpGaugeState, type HpGaugeState } from '@/use/hpGauge'
+import { BALLOON_HP_BUILD } from '@/use/balloonHpFlag'
+import { BALLOON_HP, balloonCount, drawBalloonHp, drawBalloonHpNumber, newBalloonState, updateBalloonHp, type BalloonState } from '@/use/balloonHp'
+import { preloadBalloonArt } from '@/use/balloonArt'
+import { BALLOON_FX_CAP, createBalloonPopFx, drawBalloonPopFx, resetBalloonPopFx, tickBalloonPopFx, type BalloonPopFx } from '@/use/balloonPopFx'
+import { newSlotOn, BALLOON_POP_SFX } from '@/audio/audioVersions'
+import { drawPaintedTower, towerArtMaxScale, preloadTowerArt, towerArtRevision, towerDamageStage } from '@/use/towerArt'
 import { matchRng, seedMatchRng, seedMatchRngRandom, currentMatchSeed, createRng, GAMEPLAY_RNG_SALT } from '@/use/useDeterministicRng'
 import { currentPvpRole } from '@/use/usePVP'
 import { saveDataVersion } from '@/use/useSaveStatus'
 import { pushCombatEntry, clearCombatLog } from '@/use/useCombatLog'
 import { FX } from '@/use/useQuality'
-import { POWERUP_PLATE, powerupBoxPath, preloadPowerupArt, statIconPath, uiArtImage, uiArtReady } from '@/data/uiArt'
+import {
+  createMeteorShower, spawnMeteorShowerFx, tickMeteorShower, meteorClock, meteorShake,
+  drawMeteorGround, drawMeteorSky, drawMeteorScreen, preloadMeteorArt, prefersStill,
+  installMeteorDevHook, METEOR_INTRO_MS, type MeteorShowerKind
+} from '@/use/meteorShower'
+import {
+  createRingShower, spawnRingShowerFx, tickRingShower, ringClock, ringShake,
+  drawRingGround, drawRingSky, drawRingScreen, preloadRingMeteorArt, installRingDevHook,
+  METEOR_VARIANT
+} from '@/use/ringShower'
+
+/**
+ * Owner 2026-10-23: the meteor shower is out of the game. The modules, painted
+ * art and tests stay for other projects; the `meteor_intro` phase itself (the
+ * 3-2-1, the boss intro card, the 1,600 ms timing) is unchanged. Flip to bring
+ * the shower back.
+ */
+const METEOR_SHOWER_ENABLED = false
+import { createTowerFx, resetTowerFx, spawnSplinters, spawnLeaves, spawnThornShards, noteTowerStage, tickTowerFx, drawTowerFx } from '@/use/towerHitFx'
+import { drawTowerThorns, preloadThornArt, thornArtRevision } from '@/use/towerThorns'
+import { POWERUP_PLATE, powerupBoxPath, preloadPowerupArt, statIconImage, uiArtImage, uiArtReady } from '@/data/uiArt'
 import { fmtNum } from '@/utils/localeNumber'
 import {
   createBorderFx, resetBorderFx, tickBorderFx, triggerBurn, triggerHeal,
@@ -80,6 +115,7 @@ import {
   armorMul, armorOf, armorZone, defaultHeadingY, discOf, followHeading,
   ZONE_BACK, ZONE_FRONT, type ArmorZone
 } from '@/use/smasherMechanics'
+import { clampTeamSize, sideSizeMul, sideStatMul } from '@/data/teamSize'
 import type {
   SkillEvent, SkillEventKind, SkillRocketView, SkillVfx, SkillVfxBlade
 } from '@/use/skills/skillVfx'
@@ -95,6 +131,7 @@ import type {
   BossTraitEvent, BossTraitEventKind, BossTraitGlyph, BossTraitVfx
 } from '@/use/bosses/bossTraitVfx'
 import { BOSSES100_BUILD, type BossTraitEnginePort } from '@/bosses/bosses100Gate'
+import type { NpcPlayStyle } from '@/use/pvpBots'
 
 const { triggerShake } = useScreenshake()
 const { playSound } = useSounds()
@@ -157,18 +194,8 @@ const WALL_BOOST_FACTOR = 1.08
 // Bounce decay: reduce wall boost by 12% per bounce after the first, min 30% effectiveness
 const WALL_BOUNCE_DECAY_PER_HIT = 0.12
 const WALL_BOUNCE_MIN_EFFECTIVENESS = 0.30
-// Extra padding around the arena so drags near the edge have room
-// Camera margin around the 2R arena circle: room for the Team Towers, which
-// are set into the wall and bulge up to ~35 units past R (towerPosition).
-const ARENA_PADDING = 76
-// Pinball-style bouncer obstacles placed on the arena floor on certain stages.
-// They behave like the arena wall — blades ricochet off them with the same
-// speed-based boost — but each hit is independent of the wall-bounce decay.
-const BOUNCER_RADIUS = 6
-// Band of the arena the bouncer centers can spawn in. Kept away from the
-// very center (where NPCs spawn) and the spawn-row at the bottom.
-const BOUNCER_MIN_R = ARENA_RADIUS * 0.25
-const BOUNCER_MAX_R = ARENA_RADIUS * 0.70
+// Camera fit: @/use/arenaFit (the layout's real outline + towers, clear of
+// the HUD) — it replaced the fixed 2R + 76 padding fit.
 // Blade needs time to reach full speed after launch
 const ACCEL_FRAMES = 28
 // Pull distance — tuned for mobile screens where screen real estate is
@@ -278,7 +305,7 @@ const clampInArena = (x: number, y: number, radius: number, extra = 0) =>
 
 // Module-level so the speed setting persists across composable instances and
 // can be controlled from anywhere in the UI. At 2x we substep ALL physics
-// (accel ramp, position, velocity decay, wall/bouncer/blade collision) — so
+// (accel ramp, position, velocity decay, wall/island/blade collision) — so
 // blades launch, travel, AND brake twice as fast in real time. What stays
 // 1x: VFX timers (hit flash, sparks, damage-number floats), powerup spawn
 // cadence, and the `contactArmed` real-time damage gate — both substeps see
@@ -366,292 +393,6 @@ const saveLastGameResult = (result: GameResult) => {
   else localStorage.removeItem(LAST_RESULT_KEY)
 }
 
-// ─── Skin auras ──────────────────────────────────────────────────────────
-//
-// Each renderer draws a specific skin's aura at the origin as a pure
-// function of `(R, now)`. Extracted from the inline `renderAura` switch
-// for readability; dispatch happens in `renderAura` further down.
-//
-// An earlier iteration baked these into an offscreen spritesheet and
-// replayed with `drawImage`. That cut primitive count but was a net
-// slowdown on Brave/Chromium: replacing 20 adjacent stroke/fill ops
-// with a single `drawImage` broke the batch kind and the backing
-// texture kept pathing through CPU memory. Kept the extracted
-// functions — they're the same work, just nicer to read.
-
-type AuraCtx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
-
-// ─── Cached aura sprites ─────────────────────────────────────────
-//
-// Every aura in the game is a radial gradient whose colour stops all scale by
-// one `pulse` factor and whose outermost stop is fully transparent. That makes
-// `drawImage(spriteBakedAtPulse1)` with `globalAlpha = pulse` algebraically
-// the same composite as rebuilding the gradient with pulse-scaled stops
-// — identical source alpha per pixel, identical source-over result — while
-// collapsing a per-blade, per-frame `createRadialGradient` plus a large
-// translucent gradient fill into a single blit.
-//
-// Gradient FILLS, not gradient construction, are what cost: ablating every
-// `createRadialGradient`/`createLinearGradient` to a flat colour took the
-// stage-1 arena from 28.5 fps to a pinned 60 at 4x CPU throttle.
-//
-// Baked once at a canonical radius and scaled on draw — the gradients are
-// smooth, so the bilinear resample is indistinguishable from the analytic
-// gradient at every size the game uses. Module-scoped (not per composable
-// instance) so a remounted arena reuses the bake.
-const AURA_SPRITE_R = 128
-const auraSprites = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
-
-const auraSprite = (
-  key: string,
-  innerStopRatio: number,
-  stops: [number, string][]
-): HTMLCanvasElement | OffscreenCanvas => {
-  const cached = auraSprites.get(key)
-  if (cached) return cached
-  const size = AURA_SPRITE_R * 2
-  let sprite: HTMLCanvasElement | OffscreenCanvas
-  if (typeof OffscreenCanvas !== 'undefined') {
-    sprite = new OffscreenCanvas(size, size)
-  } else {
-    const el = document.createElement('canvas')
-    el.width = size
-    el.height = size
-    sprite = el
-  }
-  const c = sprite.getContext('2d') as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D
-    | null
-  if (c) {
-    // Banded flat annuli (no radial gradient — perf rule): the stops are
-    // sampled at each band's mid radius; inside the inner stop is stop 0.
-    const parsed = stops.map(([o, col]) => {
-      const m = /rgba?\(([^)]+)\)/.exec(col)
-      const v = m ? m[1]!.split(',').map(Number) : [255, 255, 255, 0]
-      return { o, r: v[0]!, g: v[1]!, b: v[2]!, a: v[3] ?? 1 }
-    })
-    const sample = (t: number) => {
-      let i = 0
-      while (i < parsed.length - 2 && t > parsed[i + 1]!.o) i++
-      const p0 = parsed[i]!
-      const p1 = parsed[Math.min(i + 1, parsed.length - 1)]!
-      const k = p1.o > p0.o ? Math.max(0, Math.min(1, (t - p0.o) / (p1.o - p0.o))) : 0
-      const mix = (x: number, y: number) => x + (y - x) * k
-      return `rgba(${Math.round(mix(p0.r, p1.r))}, ${Math.round(mix(p0.g, p1.g))}, ${Math.round(mix(p0.b, p1.b))}, ${mix(p0.a, p1.a).toFixed(3)})`
-    }
-    const BANDS = 14
-    const inner = AURA_SPRITE_R * innerStopRatio
-    const C = AURA_SPRITE_R
-    c.fillStyle = sample(0)
-    c.beginPath()
-    c.arc(C, C, inner, 0, Math.PI * 2)
-    c.fill()
-    for (let i = 0; i < BANDS; i++) {
-      const r0 = inner + (AURA_SPRITE_R - inner) * (i / BANDS)
-      const r1 = inner + (AURA_SPRITE_R - inner) * ((i + 1) / BANDS)
-      c.fillStyle = sample((i + 0.5) / BANDS)
-      c.beginPath()
-      c.arc(C, C, r1, 0, Math.PI * 2)
-      c.arc(C, C, r0, 0, Math.PI * 2, true)
-      c.fill()
-    }
-  }
-  auraSprites.set(key, sprite)
-  return sprite
-}
-
-const drawAuraSprite = (
-  ctx: AuraCtx,
-  sprite: HTMLCanvasElement | OffscreenCanvas,
-  x: number,
-  y: number,
-  radius: number,
-  alpha: number
-) => {
-  if (alpha <= 0.004) return
-  const prev = ctx.globalAlpha
-  ctx.globalAlpha = prev * alpha
-  ctx.drawImage(sprite as CanvasImageSource, x - radius, y - radius, radius * 2, radius * 2)
-  ctx.globalAlpha = prev
-}
-
-const LEECH_AURA_STOPS: [number, string][] = [
-  [0, 'rgba(100, 255, 100, 0.4)'],
-  [0.5, 'rgba(0, 180, 0, 0.2)'],
-  [1, 'rgba(0, 100, 0, 0)']
-]
-const BOSS_AURA_STOPS: [number, string][] = [
-  [0, 'rgba(255, 80, 20, 0.8)'],
-  [0.3, 'rgba(255, 40, 10, 0.5)'],
-  [0.6, 'rgba(180, 20, 5, 0.3)'],
-  [1, 'rgba(120, 10, 0, 0)']
-]
-const TORNADO_GLOW_STOPS: [number, string][] = [
-  [0, 'rgba(180,220,255,0.5)'],
-  [0.5, 'rgba(120,180,240,0.2)'],
-  [1, 'rgba(80,140,220,0)']
-]
-const SANDSTORM_HAZE_STOPS: [number, string][] = [
-  [0, 'rgba(220,180,100,0.45)'],
-  [0.5, 'rgba(190,150,80,0.18)'],
-  [1, 'rgba(160,120,60,0)']
-]
-const THUNDER_GLOW_STOPS: [number, string][] = [
-  [0, 'rgba(150,200,255,0.4)'],
-  [1, 'rgba(100,150,255,0)']
-]
-
-const renderTornadoAura = (ctx: AuraCtx, R: number, now: number): void => {
-  // 1. Outer radial glow — swirling color gradient
-  const glowAngle = now * 0.002
-  drawAuraSprite(
-    ctx, auraSprite('tornadoGlow', 0.2 / 2.2, TORNADO_GLOW_STOPS),
-    0, 0, R * 2.2, 0.12 + 0.04 * Math.sin(now * 0.003)
-  )
-
-  // Layers 2-4 are the expensive half of this aura: ~90 stroked spiral
-  // segments, 6 stroked ellipses and 10 filled arcs, per tornado blade, per
-  // frame. On the low tier the glow above carries the skin's identity and the
-  // rest is dropped.
-  if (FX.low) return
-
-  // 2. Spiral wind trails — 3 interleaved arms rotating at different speeds
-  for (let arm = 0; arm < 3; arm++) {
-    const armPhase = glowAngle * (1.8 + arm * 0.3) + arm * (Math.PI * 2 / 3)
-    ctx.save()
-    ctx.globalAlpha = 0.18 - arm * 0.03
-    ctx.strokeStyle = arm === 0 ? '#cceeff' : arm === 1 ? '#99ccee' : '#77aadd'
-    ctx.lineWidth = 2 - arm * 0.3
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    const steps = 28
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps
-      const angle = armPhase + t * Math.PI * 2.5
-      const dist = R * (0.4 + t * 1.4)
-      const px = Math.cos(angle) * dist
-      const py = Math.sin(angle) * dist * 0.45  // flatten to elliptical
-      if (s === 0) ctx.moveTo(px, py)
-      else ctx.lineTo(px, py)
-    }
-    ctx.stroke()
-    ctx.restore()
-  }
-
-  // 3. Concentric vortex rings — tilted ellipses narrowing toward center
-  const rings = 6
-  for (let r = 0; r < rings; r++) {
-    const phase = now * 0.005 + r * Math.PI * 0.33
-    const layerT = r / (rings - 1)
-    const ringR = R * (0.6 + layerT * 1.3)
-    const flatten = 0.2 + layerT * 0.15
-    const wobX = Math.sin(phase * 1.3) * 2
-    const wobY = Math.cos(phase * 0.7) * 1.5
-    ctx.save()
-    ctx.globalAlpha = 0.13 - layerT * 0.04
-    ctx.strokeStyle = `hsl(${200 + layerT * 20}, 70%, ${75 + layerT * 10}%)`
-    ctx.lineWidth = 1.8 - layerT * 0.5
-    ctx.beginPath()
-    ctx.ellipse(wobX, wobY, ringR, ringR * flatten, phase * 0.4, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.restore()
-  }
-
-  // 4. Debris particles — small dots orbiting at various speeds/radii
-  const debrisCount = 10
-  for (let d = 0; d < debrisCount; d++) {
-    const seed = d * 137.508 // golden angle
-    const orbitSpeed = 0.003 + (d % 3) * 0.0015
-    const orbitR = R * (0.7 + (d % 5) * 0.3)
-    const angle = now * orbitSpeed + seed
-    const px = Math.cos(angle) * orbitR
-    const py = Math.sin(angle) * orbitR * (0.3 + (d % 4) * 0.1)
-    const size = 1 + (d % 3) * 0.7
-    ctx.save()
-    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(now * 0.01 + d)
-    ctx.fillStyle = d % 2 === 0 ? '#ddeeff' : '#aaccee'
-    ctx.beginPath()
-    ctx.arc(px, py, size, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-  }
-}
-
-const renderSandstormAura = (ctx: AuraCtx, R: number, now: number): void => {
-  // 1. Warm radial haze — dusty golden glow
-  const hazeAngle = now * 0.0015
-  drawAuraSprite(
-    ctx, auraSprite('sandHaze', 0.3 / 2.0, SANDSTORM_HAZE_STOPS),
-    0, 0, R * 2.0, 0.10 + 0.04 * Math.sin(now * 0.004)
-  )
-
-  // As with the tornado aura, the haze alone reads as "sandstorm"; the ~100
-  // stroked stream segments, 16 orbiting grains and 5 dust puffs below are
-  // the part a weak rasteriser cannot afford.
-  if (FX.low) return
-
-  // 2. Spiral sand streams — 4 arms rotating with slight wobble
-  for (let arm = 0; arm < 4; arm++) {
-    const armPhase = hazeAngle * (1.5 + arm * 0.25) + arm * (Math.PI / 2)
-    ctx.save()
-    ctx.globalAlpha = 0.14 - arm * 0.02
-    ctx.strokeStyle = arm % 2 === 0 ? '#d4a855' : '#c49040'
-    ctx.lineWidth = 1.8 - arm * 0.2
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    const steps = 24
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps
-      const angle = armPhase + t * Math.PI * 2.2
-      const dist = R * (0.35 + t * 1.3)
-      const wobble = Math.sin(now * 0.005 + arm + t * 4) * 2
-      const px = Math.cos(angle) * dist + wobble
-      const py = Math.sin(angle) * dist * 0.5 + wobble * 0.5
-      if (s === 0) ctx.moveTo(px, py)
-      else ctx.lineTo(px, py)
-    }
-    ctx.stroke()
-    ctx.restore()
-  }
-
-  // 3. Orbiting sand grains — 16 small particles at varying speeds/radii
-  const grainCount = 16
-  for (let g = 0; g < grainCount; g++) {
-    const seed = g * 137.508
-    const orbitSpeed = 0.0025 + (g % 4) * 0.0012
-    const orbitR = R * (0.5 + (g % 6) * 0.25)
-    const angle = now * orbitSpeed + seed
-    const flatten = 0.35 + (g % 3) * 0.12
-    const px = Math.cos(angle) * orbitR
-    const py = Math.sin(angle) * orbitR * flatten
-    const size = 0.8 + (g % 3) * 0.6
-    ctx.save()
-    ctx.globalAlpha = 0.35 + 0.2 * Math.sin(now * 0.008 + g * 0.7)
-    ctx.fillStyle = g % 3 === 0 ? '#e8c870' : g % 3 === 1 ? '#d4a855' : '#bf8f3a'
-    ctx.beginPath()
-    ctx.arc(px, py, size, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-  }
-
-  // 4. Dust puffs — 5 larger translucent circles drifting outward
-  for (let p = 0; p < 5; p++) {
-    const phase = now * 0.002 + p * 1.2566 // golden ratio spacing
-    const drift = R * (0.8 + 0.6 * Math.sin(phase * 0.7 + p))
-    const px = Math.cos(phase) * drift
-    const py = Math.sin(phase) * drift * 0.4
-    const puffSize = R * (0.15 + 0.08 * Math.sin(now * 0.003 + p))
-    ctx.save()
-    ctx.globalAlpha = 0.06 + 0.03 * Math.sin(now * 0.005 + p * 2)
-    ctx.fillStyle = '#d4a855'
-    ctx.beginPath()
-    ctx.arc(px, py, puffSize, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-  }
-}
-
 // ─── Skills: public contracts (skills-feature.md §8.1, §9.1, §10.3) ─────────
 
 /**
@@ -684,8 +425,16 @@ export interface InitGameOptions {
    *  boosters, pot holes; null = the plain arena) and `towers` = each team
    *  defends a Team Tower (destroying the enemy's wins). Omitted: the plain
    *  legacy arena with no towers. Both PvP peers must pass the same value
-   *  (derived from the shared seed). */
-  terrain?: { layout: number | null; towers: boolean } | null
+   *  (derived from the shared seed). `trees` = trees per side (1–3, default
+   *  1; campaign: arenaTerrain treeCountForStage) — a side wins by trees only
+   *  when ALL the other side's trees have fallen. */
+  terrain?: { layout: number | null; towers: boolean; trees?: number } | null
+  /** Random-search bot (src/use/pvpBots.ts): how the NPC AI plays this
+   *  match — reaction delay per turn, aim spread, the odd bad shot, force
+   *  range, "Opponent's turn" banners. Single-player only (ignored in PvP).
+   *  Its extra draws come from the style's own `rand`; the gameplay stream
+   *  draws exactly what it draws without it. Omitted: the campaign NPC. */
+  npcPlay?: NpcPlayStyle | null
 }
 
 /** Live state of one HUD skill chip — structurally the `SkillHudState` prop
@@ -894,7 +643,7 @@ export const useSpinnerGame = () => {
   const SEEDED_CLOCK_START_TICKS = 3600
 
   // ── Gameplay RNG outside the match stream (league, LG-DET) ────────────
-  // NPC spawn jitter, bouncer placement, the NPC AI's blade/target/angle/
+  // NPC spawn jitter, the NPC AI's blade/target/angle/
   // force picks and split-child jitter. With `opts.seed` they draw from an
   // AUX stream derived from the seed — never from `matchRng()`, so the match
   // stream's draw order (star crit, power-ups, first turn, emitters) is
@@ -972,6 +721,8 @@ export const useSpinnerGame = () => {
       entries.push(`tw:${hostTower?.hp.toFixed(3) ?? '-'},${guestTower?.hp.toFixed(3) ?? '-'}`)
     }
     if (BOSSES100_BUILD && traitsActive) entries.push(`clk:${bossPort!['bossClockHashPart'](bossClock!)}`)
+    // Team sizes (host first): they set every blade's radius and the solo boost.
+    entries.push(teamSizeHash)
     const str = entries.join('|')
     let h = 5381
     for (let i = 0; i < str.length; i++) {
@@ -1031,6 +782,113 @@ export const useSpinnerGame = () => {
     if (cur.w !== w || cur.h !== h) canvasMetrics.value = { w, h }
   }
 
+  // ── Arena fit (presentation only — @/use/arenaFit) ──────────────────────
+  // One transform (css px per arena unit + screen centre) shared by the
+  // render, the static bake, the joystick overlay and pixelToGame, so input
+  // maps exactly onto what is drawn. Fitted to the current layout's outline
+  // + towers, clear of the HUD rects the view reports (setArenaFitHud).
+  // Never feeds the simulation: PvP peers stay bit-identical.
+  let fitHud: FitRect[] = []
+  let fitInsets: FitInsets = { top: 0, right: 0, bottom: 0, left: 0 }
+  let fitHudRev = 0
+  let fitCacheKey = ''
+  let fitTarget: ArenaView = { scale: 1, cx: 0, cy: 0 }
+  // Short ease when the target changes at a constant viewport size (a HUD
+  // element appearing, the next stage's layout) instead of a snap.
+  let fitShown: ArenaView | null = null
+  let fitFrom: ArenaView | null = null
+  let fitTweenStart = 0
+  let fitTweenSize = ''
+  const FIT_TWEEN_MS = 260
+  // `?fit=legacy` — the old 2R + 76 circle fit, for before/after A/B.
+  const LEGACY_FIT = typeof location !== 'undefined' && /[?&]fit=legacy(?:&|$)/.test(location.search)
+  /** The view reports the opaque HUD rects over the canvas (css px) and the
+   *  device safe-area insets. */
+  const setArenaFitHud = (rects: readonly FitRect[], insets: FitInsets): void => {
+    const next = JSON.stringify([rects.map(r => [Math.round(r.x0), Math.round(r.y0), Math.round(r.x1), Math.round(r.y1)]), insets])
+    if (next === JSON.stringify([fitHud.map(r => [Math.round(r.x0), Math.round(r.y0), Math.round(r.x1), Math.round(r.y1)]), fitInsets])) return
+    fitHud = rects.map(r => ({ ...r }))
+    fitInsets = { ...insets }
+    fitHudRev++
+  }
+  const arenaFitTarget = (w: number, h: number): ArenaView => {
+    const key = `${w}x${h}:${typeof window !== 'undefined' ? window.devicePixelRatio : 1}:${arenaShape.value}:${towers.map(t => `${t.x.toFixed(1)},${t.y.toFixed(1)},${t.radius}`).join(';')}:${fitHudRev}`
+    if (key !== fitCacheKey) {
+      fitCacheKey = key
+      // Never past the painted trees' own resolution on this display.
+      const dpr = typeof window !== 'undefined' ? Math.min(3, Math.max(1, window.devicePixelRatio || 1)) : 1
+      const cap = towers.reduce((m, t) => Math.min(m, towerArtMaxScale(t.radius, dpr)), Infinity)
+      const pts = arenaFitPoints(arenaShape.value, ARENA_RADIUS, towers)
+      const hudPts = arenaFitPoints(arenaShape.value, ARENA_RADIUS, towers, 'tucked', FIT_HUD_OUTLINE_MARGIN)
+      fitTarget = LEGACY_FIT ? legacyArenaView(w, h) : fitArenaView(w, h, pts, fitInsets, fitHud, cap, hudPts)
+      if (import.meta.env.DEV) {
+        // Fit decision for the harness / console: which rule held the zoom.
+        const free = fitArenaView(w, h, pts, fitInsets, [])
+        const fill = fillRatio(fitTarget, pts, w, h, fitInsets)
+        ;(window as unknown as { __arenaFitDebug?: unknown }).__arenaFitDebug = {
+          w, h, dpr, shape: arenaShape.value, scale: +fitTarget.scale.toFixed(4), artCap: +cap.toFixed(4),
+          edgeOnly: +free.scale.toFixed(4), fillX: +fill.x.toFixed(3), fillY: +fill.y.toFixed(3),
+          bound: fitTarget.scale >= cap * 0.999 ? 'art' : fitTarget.scale >= free.scale * 0.999 ? 'edge' : 'hud'
+        }
+      }
+    }
+    return fitTarget
+  }
+  const arenaViewFor = (w: number, h: number): ArenaView => {
+    const target = arenaFitTarget(w, h)
+    const size = `${w}x${h}`
+    const now = typeof performance !== 'undefined' ? performance.now() : 0
+    if (fitShown === null || size !== fitTweenSize) {
+      // First frame or a resize: snap (the whole screen changes anyway).
+      fitShown = target
+      fitFrom = null
+      fitTweenSize = size
+      return target
+    }
+    if (fitFrom === null && fitShown !== target &&
+      (fitShown.scale !== target.scale || fitShown.cx !== target.cx || fitShown.cy !== target.cy)) {
+      fitFrom = fitShown
+      fitTweenStart = now
+    }
+    if (fitFrom !== null) {
+      const u = Math.min(1, (now - fitTweenStart) / FIT_TWEEN_MS)
+      if (u >= 1) {
+        fitFrom = null
+        fitShown = target
+        return target
+      }
+      const e = u * u * (3 - 2 * u)
+      // Re-aim mid-tween if the target moved again.
+      const v: ArenaView = {
+        scale: fitFrom.scale + (target.scale - fitFrom.scale) * e,
+        cx: fitFrom.cx + (target.cx - fitFrom.cx) * e,
+        cy: fitFrom.cy + (target.cy - fitFrom.cy) * e
+      }
+      fitShown = v
+      if (u >= 1) fitFrom = null
+      return v
+    }
+    fitShown = target
+    return target
+  }
+  /** Screen layout of the fitted board (css px, the settled target view):
+   *  the board's important extent and the player's tree (sprite + gauge) —
+   *  the view keeps DOM hints (the drag hint) off them. */
+  const arenaScreenLayout = (w: number, h: number): { board: FitRect; playerTree: FitRect | null } => {
+    const v = arenaFitTarget(w, h)
+    const b = fitPointsBounds(arenaFitPoints(arenaShape.value, ARENA_RADIUS, towers))
+    const px = (r: FitRect): FitRect => ({ x0: v.cx + r.x0 * v.scale, y0: v.cy + r.y0 * v.scale, x1: v.cx + r.x1 * v.scale, y1: v.cy + r.y1 * v.scale })
+    // Union of the player's standing trees (1–3).
+    let tree: FitRect | null = null
+    for (const t of towers) {
+      if (t.side !== 'player' || t.hp <= 0) continue
+      const r = px({ x0: t.x - t.radius * 1.45, y0: t.y - t.radius * 1.5, x1: t.x + t.radius * 1.45, y1: t.y + t.radius * 1.3 })
+      tree = tree === null ? r : { x0: Math.min(tree.x0, r.x0), y0: Math.min(tree.y0, r.y0), x1: Math.max(tree.x1, r.x1), y1: Math.max(tree.y1, r.y1) }
+    }
+    return { board: px(b), playerTree: tree }
+  }
+  const viewKeyOf = (v: ArenaView): string => `${v.scale.toFixed(5)},${v.cx.toFixed(2)},${v.cy.toFixed(2)}`
+
   // ── Virtual Joystick ─────────────────────────────────────────────────────
   // Shown as a helper when the selected blade is near any arena edge so the
   // player can aim + launch without fighting the screen boundary.
@@ -1073,9 +931,19 @@ export const useSpinnerGame = () => {
 
   // ── NPC Timer ────────────────────────────────────────────────────────────
   let npcThinkingElapsed = 0
+  /** Random-search bot style for this match (null: the campaign NPC). */
+  let npcPlay: NpcPlayStyle | null = null
+  /** This NPC turn's think time (a bot draws a human-like one per turn). */
+  let npcThinkTarget = NPC_THINK_MS
 
-  // ── Meteor Shower Particles ──────────────────────────────────────────────
-  const meteorParticles: Ref<MeteorParticle[]> = ref([])
+  // ── Meteor shower (pre-battle intro beat — src/use/meteorShower.ts) ─────
+  // One pooled, allocation-free shower per arena instance; presentation only.
+  const meteorFx = createMeteorShower()
+  if (import.meta.env.DEV) installMeteorDevHook(meteorFx)
+  // Default: the ring burst (src/use/ringShower.ts, chaos-arena style);
+  // `?meteor=strike` = the kept strike variant above (ui-catalog §7.2).
+  const ringFx = createRingShower()
+  if (import.meta.env.DEV) installRingDevHook(ringFx)
   let meteorIntroTimer = 0
 
   // ── Arena Powerups ───────────────────────────────────────────────────────
@@ -1105,13 +973,10 @@ export const useSpinnerGame = () => {
   // tear down VFX and transition into the reward phase exactly once.
   let gameOverAt: number | null = null
 
-  // ── Background tile pattern ─────────────────────────────────────────────
-  const bgTileImage = preloadImage(prependBaseUrl('images/bg/bg-tile_400x400.webp'))
-  let bgTilePattern: CanvasPattern | null = null
-
   // ── Background SKIN rendering ───────────────────────────────────────────
   // The arena background is the currently-equipped bg skin (see useBgSkins).
-  // The default skin reuses the tile pattern above. Premium skins tile a real
+  // The default skin is the arena theme's backdrop (arenaBackdrop.ts, baked
+  // into the static layer below). Premium skins tile a real
   // image when one is present + loaded, otherwise fall back to a cached
   // gradient placeholder. Read fresh each frame so a selection change applies
   // immediately.
@@ -1149,26 +1014,11 @@ export const useSpinnerGame = () => {
     return skin.colors[1]
   }
 
-  // ─── Cached background layer ───────────────────────────────────
-  //
-  // The background is a full-viewport fill and it does not change within a
-  // match, but the default skin fills it from a REPEATING PATTERN, which the
-  // rasteriser has to sample with modulo addressing for every one of the
-  // ~380k pixels, every frame. Pre-tiling it once into a buffer turns that
-  // into a straight opaque blit of the same pixels.
-  //
-  // Rebuilt only when the skin, the canvas size, or the load state of the
-  // tile image changes — the load state is in the key because the first
-  // frames are painted before the tile has decoded, and the buffer baked from
-  // the '#0d1117' fallback must not stick around once the artwork arrives.
-  let bgBuffer: HTMLCanvasElement | OffscreenCanvas | null = null
-  let bgBufferKey: string | null = null
-
+  /** Load state of a premium skin's tile (in the static layer's key: the
+   *  first frames bake before it decodes, and that fallback must not stick). */
   const bgImageReady = (): boolean => {
     const skin = selectedBgSkin.value
-    if (skin.id === DEFAULT_BG_SKIN_ID) {
-      return bgTileImage.complete && bgTileImage.naturalWidth > 0
-    }
+    if (skin.id === DEFAULT_BG_SKIN_ID) return true
     if (skin.img) {
       const img = bgSkinImages.get(skin.id)
       return !!img && img.complete && img.naturalWidth > 0
@@ -1176,44 +1026,97 @@ export const useSpinnerGame = () => {
     return true
   }
 
-  const drawBackground = (
+  // ─── ONE static layer ──────────────────────────────────────────────
+  //
+  // Everything that does not move within a match is baked ONCE into a single
+  // device-resolution buffer (the canvas's own backing size — render-sharpness
+  // rule: never below css × dpr): the background (the arena theme's painted
+  // backdrop + props on the default skin, the skin's fill otherwise), the
+  // clearing floor, the wooden rim, the terrain features and the standing
+  // tower bodies. A frame is ONE 1:1 drawImage of it plus the dynamic layers.
+  // Re-baked only when the canvas size / dpr, the skin, the arena type /
+  // shape / layout / theme, a tower's alive state or the load state of any
+  // baked art changes. One buffer, reused across re-bakes (re-allocated only on
+  // a size change, the old one dropped first) — no second full-screen canvas.
+  // Purely visual: reads match state, never writes it.
+  let staticLayer: HTMLCanvasElement | OffscreenCanvas | null = null
+  let staticLayerKey = ''
+
+  /** The theme dressing the current arena (arenaThemes.ts — decorative only). */
+  const arenaTheme = (): ArenaTheme => themeFor(arenaType.value, terrain?.id ?? null)
+
+  const drawStaticLayer = (
     ctx: CanvasRenderingContext2D,
     w: number,
-    h: number
+    h: number,
+    shakeX = 0,
+    shakeY = 0
   ) => {
-    // Default skin: painted highland ground + the layout's decorative props
-    // around the clearing (arenaBackdrop — its own device-resolution cached
-    // layer). Until that art has loaded: the flat FOREST_BACKDROP below.
-    if (selectedBgSkin.value.id === DEFAULT_BG_SKIN_ID &&
-      drawArenaBackdrop(ctx, w, h, terrain?.id ?? null, arenaShape.value, ARENA_RADIUS + ARENA_PADDING / 2)) return
-    const key = `${selectedBgSkin.value.id}:${w}x${h}:${bgImageReady() ? 'r' : 'p'}`
-    if (bgBufferKey !== key || !bgBuffer) {
-      let buf: HTMLCanvasElement | OffscreenCanvas
-      if (typeof OffscreenCanvas !== 'undefined') {
-        buf = new OffscreenCanvas(Math.max(1, w), Math.max(1, h))
-      } else {
-        const el = document.createElement('canvas')
-        el.width = Math.max(1, w)
-        el.height = Math.max(1, h)
-        buf = el
+    const cw = ctx.canvas?.width ?? Math.round(w)
+    const ch = ctx.canvas?.height ?? Math.round(h)
+    const bw = Math.max(1, cw)
+    const bh = Math.max(1, ch)
+    const dpr = bw / Math.max(1, w)
+    const skin = selectedBgSkin.value
+    const theme = arenaTheme()
+    const backdrop = skin.id === DEFAULT_BG_SKIN_ID
+    const key = `${bw}x${bh}:${w}x${h}:${skin.id}:${bgImageReady() ? 'r' : 'p'}:${theme}:` +
+      `${backdrop ? `${backdropArtRevision()}:${terrain?.id ?? '-'}:${arenaShape.value}` : '-'}:` +
+      `${arenaStaticKey()}:${towerBakeKey()}:${viewKeyOf(arenaViewFor(w, h))}`
+    if (key !== staticLayerKey || !staticLayer) {
+      if (!staticLayer || staticLayer.width !== bw || staticLayer.height !== bh) {
+        staticLayer = null
+        if (typeof OffscreenCanvas !== 'undefined') {
+          staticLayer = new OffscreenCanvas(bw, bh)
+        } else {
+          const el = document.createElement('canvas')
+          el.width = bw
+          el.height = bh
+          staticLayer = el
+        }
       }
-      const bctx = buf.getContext('2d') as
+      const b = staticLayer.getContext('2d') as
         | CanvasRenderingContext2D
         | OffscreenCanvasRenderingContext2D
         | null
-      if (!bctx) {
+      if (!b) {
         // No buffer context (memory pressure, exotic browser) — fall back to
         // the direct fill rather than leaving the frame unpainted.
         ctx.fillStyle = resolveBgFill(ctx, w, h)
         ctx.fillRect(0, 0, w, h)
         return
       }
-      bctx.fillStyle = resolveBgFill(bctx as CanvasRenderingContext2D, w, h)
-      bctx.fillRect(0, 0, w, h)
-      bgBuffer = buf
-      bgBufferKey = key
+      const view = arenaViewFor(w, h)
+      const cx = view.cx * dpr
+      const cy = view.cy * dpr
+      const unit = dpr * view.scale
+      b.setTransform(1, 0, 0, 1, 0, 0)
+      if (backdrop) {
+        paintArenaBackdrop(b, bw, bh, cx, cy, unit, theme, terrain?.id ?? null, arenaShape.value)
+      } else {
+        b.setTransform(dpr, 0, 0, dpr, 0, 0)
+        b.fillStyle = resolveBgFill(b as CanvasRenderingContext2D, w, h)
+        b.fillRect(0, 0, w, h)
+      }
+      b.setTransform(unit, 0, 0, unit, cx, cy)
+      renderArenaStatic(b)
+      bakeTowerBodies(b)
+      b.setTransform(1, 0, 0, 1, 0, 0)
+      staticLayerKey = key
     }
-    ctx.drawImage(bgBuffer as CanvasImageSource, 0, 0)
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.drawImage(staticLayer as CanvasImageSource, shakeX, shakeY)
+    // Camera shake (whole device px): the strip the shifted blit uncovers is
+    // filled from the unshifted layer, pixel for pixel (no resampling).
+    if (shakeX !== 0 || shakeY !== 0) {
+      const src = staticLayer as CanvasImageSource
+      if (shakeX > 0) ctx.drawImage(src, 0, 0, shakeX, bh, 0, 0, shakeX, bh)
+      else if (shakeX < 0) ctx.drawImage(src, bw + shakeX, 0, -shakeX, bh, bw + shakeX, 0, -shakeX, bh)
+      if (shakeY > 0) ctx.drawImage(src, 0, 0, bw, shakeY, 0, 0, bw, shakeY)
+      else if (shakeY < 0) ctx.drawImage(src, 0, bh + shakeY, bw, -shakeY, 0, bh + shakeY, bw, -shakeY)
+    }
+    ctx.restore()
   }
 
   // ── Spark VFX ───────────────────────────────────────────────────────────
@@ -1324,28 +1227,15 @@ export const useSpinnerGame = () => {
     })
   }
 
-  // Pinball-style bouncers placed on the arena floor for certain stages.
-  // Populated by initGame from the stage's `bouncers` count and consumed
-  // by the physics loop (ricochet) + renderArena (visual disc).
-  interface Bouncer {
-    x: number
-    y: number
-    radius: number
-    /** Flash intensity 0..1 — pops to 1 on contact, decays each frame. */
-    flash: number
-    /** Terrain island (static obstacle drawn in the arena art, not as a
-     *  pinball bumper). Physics are the bouncer's. */
-    island?: IslandKind
-  }
-
-  const arenaBouncers: Bouncer[] = []
-
   // ── Tree Smashers terrain + team towers (see @/use/arenaTerrain) ─────────
-  /** This match's layout (null = plain arena). Islands are also pushed into
-   *  `arenaBouncers` so they share the ricochet physics. */
+  /** This match's layout (null = plain arena). Its islands are the static
+   *  ricochet discs (`bounceOffIslands`); the old pinball bumpers are gone —
+   *  the terrain solids are the arena's only floor obstacles. */
   let terrain: TerrainLayout | null = null
   /** Team towers ([] = towers off). Host-frame-independent: index by side. */
   const towers: TeamTower[] = []
+  // DEV-only handle for screenshot / VFX harnesses (stage a damaged tower).
+  if (import.meta.env.DEV) (window as unknown as { __smashersTowers?: TeamTower[] }).__smashersTowers = towers
   /** Per-blade ground state (booster cooldown, deep-hole exemption), by id. */
   const groundStates = new Map<number, GroundState>()
   const groundOut: GroundEffect = { boosted: false, stopped: false, inMud: false }
@@ -1355,6 +1245,28 @@ export const useSpinnerGame = () => {
   /** Destruction debris of a fallen tower (VFX only). */
   interface TowerDebris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; size: number; color: string; life: number }
   const towerDebris: TowerDebris[] = []
+  /** Splinter bursts + leaf cascades (pooled, VFX only — @/use/towerHitFx).
+   *  Capped off the shared VFX budget; off entirely on the low tier. */
+  const towerFx = createTowerFx(MAX_ACTIVE_VFX * 12)
+  /** #UX3 balloon bursts (pooled, VFX only — @/use/balloonPopFx). Only on a
+   *  balloon build (VITE_APP_BALOON_HP_BAR); Firefox gets a smaller pool, the
+   *  low tier draws the bang star only. */
+  const balloonFx: BalloonPopFx | null = BALLOON_HP_BUILD ? createBalloonPopFx(isFirefox ? 40 : BALLOON_FX_CAP) : null
+  // Painted balloons + pop debris (@/use/balloonArt): start the atlas early;
+  // until it lands (or with ?art=procedural) the procedural shapes draw.
+  if (BALLOON_HP_BUILD) preloadBalloonArt()
+  if (import.meta.env.DEV) {
+    (window as unknown as { __smashersTowerFx?: unknown }).__smashersTowerFx = {
+      fx: towerFx,
+      hit: (i: number, dmg = 20) => {
+        const t = towers[i]
+        if (!t) return
+        const ny = t.y > 0 ? -1 : 1
+        spawnSplinters(towerFx, t.x, t.y + ny * t.radius, 0, ny, t.radius, dmg)
+        t.flash = 1
+      }
+    }
+  }
   const groundStateOf = (blade: SpinnerState): GroundState => {
     let gs = groundStates.get(blade.id)
     if (!gs) {
@@ -1380,7 +1292,7 @@ export const useSpinnerGame = () => {
   // If a pair stays overlapping for longer than HUG_BREAK_MS the collision
   // resolver applies a one-off strong counter-impulse to forcibly separate
   // them — stops two blades from grinding against each other (or a blade
-  // from grinding against a wall/bouncer) and piling up clash SFX, spark
+  // from grinding against a wall/island) and piling up clash SFX, spark
   // VFX and damage rolls at a rate that tanks the frame time.
   const HUG_BREAK_MS = 1000
   const HUG_SEPARATION_IMPULSE = 3.5
@@ -1424,6 +1336,9 @@ export const useSpinnerGame = () => {
     faceHeading: boolean
   }
   const bladeYawState = new Map<number, BladeLook>()
+  // DEV-only handle for the store-screenshot harness: drop cached looks after
+  // re-dressing a blade's config.smasherId so the next frame redraws it.
+  if (import.meta.env.DEV) (window as unknown as { __smashersLooks?: { clear: () => void } }).__smashersLooks = { clear: () => bladeYawState.clear() }
 
   const getBladeLook = (blade: SpinnerState): BladeLook => {
     let look = bladeYawState.get(blade.id)
@@ -1562,7 +1477,7 @@ export const useSpinnerGame = () => {
   const sandGrains: SandGrain[] = []
 
   // Stat-switch phase indicator particles (floating icon over boss)
-  // Rendered in renderAura so it layers correctly.
+  // Rendered in renderBladeMarkers so it layers correctly.
 
   const updateSpecialSkinVFX = (blades: SpinnerState[], now: number) => {
     // Dark cloud emission
@@ -1813,7 +1728,7 @@ export const useSpinnerGame = () => {
       const startX = pf.x - (iconSize + gap + textWidth) / 2
 
       // Icon — the painted stat icon, else the drawn glyph with a gold rim.
-      const icon = uiArtImage(statIconPath(pf.stat))
+      const icon = statIconImage(pf.stat)
       if (uiArtReady(icon)) {
         ctx.drawImage(icon, startX, y - iconSize / 2, iconSize, iconSize)
       } else {
@@ -2005,7 +1920,9 @@ export const useSpinnerGame = () => {
   // Ghost-boss: lateral offset of the twin at spawn, relative to blade radius.
   const GHOST_SPLIT_OFFSET = 2.1
   // Healer-boss: oversize vs normal blade (1.2x as requested).
-  const HEALER_RADIUS_MULT = 1.2
+  // Boss sizes: −25 % from the old 1.6× / 1.2× (owner, 2026-10-21).
+  const BOSS_RADIUS_MULT = 1.2
+  const HEALER_RADIUS_MULT = 0.9
   // Healer-boss: HP restored per ally-contact, capped so it's chip-heal only.
   const HEALER_CONTACT_HEAL = 2
   const HEALER_HEAL_COOLDOWN_MS = 250
@@ -2032,12 +1949,16 @@ export const useSpinnerGame = () => {
    * Spawn settle for non-default disc sizes: push blades out of team towers
    * and islands, apart from each other, and back inside the arena, a few
    * deterministic passes in syncKey order. Runs only when a blade's disc is
-   * not 1×, so every 1×-disc spawn stays exactly where it always was.
+   * not 1× — `disc` carries the team-size multiplier too (×0.9 base), so in
+   * practice every match; a spawn already clear of everything never moves.
    */
   const settleSpawnOverlaps = (): void => {
     const blades = [...allBlades.value].sort((p, q) => p.syncKey - q.syncKey)
-    if (!blades.some(b => (b.disc ?? 1) !== 1)) return
     const GAP = 3
+    // Also with 1× discs when a spawn lands on a tree (2–3 trees per side
+    // reach the deep NPC formation rows). Deterministic, no RNG.
+    const onTree = blades.some(b => towers.some(t => Math.hypot(b.x - t.x, b.y - t.y) < b.radius + t.radius + GAP))
+    if (!onTree && !blades.some(b => (b.disc ?? 1) !== 1)) return
     for (let pass = 0; pass < 8; pass++) {
       let moved = false
       for (const b of blades) {
@@ -2054,8 +1975,7 @@ export const useSpinnerGame = () => {
             moved = true
           }
         }
-        for (const isl of arenaBouncers) {
-          if (isl.island === undefined) continue
+        for (const isl of terrain?.islands ?? []) {
           const dx = b.x - isl.x
           const dy = b.y - isl.y
           const d = Math.sqrt(dx * dx + dy * dy)
@@ -2108,6 +2028,21 @@ export const useSpinnerGame = () => {
 
   let firstGameBoost = false
 
+  // ── Team size (src/data/teamSize.ts) ──────────────────────────────────────
+  // Set by initGame from each side's team length, BEFORE any blade is built:
+  // the radius multiplier every blade of a side gets (base size × team size)
+  // and its damage / max-HP multiplier (×1.2 for a side of one). Derived from
+  // the team arrays alone, so both PvP peers compute the same numbers.
+  const teamSizeMul = { player: 1, npc: 1 }
+  const teamStatMul = { player: 1, npc: 1 }
+  /** Both team sizes in the host's frame order — hashed (computeStateHash)
+   *  so two peers that disagree on the match's team sizes desync at once. */
+  let teamSizeHash = 'ts:1,1'
+  /** The NPC team's length at initGame (campaign count compensation). */
+  let npcTeamCount = 1
+  /** #UX3: each side's team size (balloon count per smasher). Visual only. */
+  const balloonTeamSize = { player: 1, npc: 1 }
+
   // Per-frame stats cache — cleared once per physics tick so statsFor()
   // never recomputes the same blade twice in one frame.
   const _statsCache = new Map<number, SpinnerStats>()
@@ -2126,6 +2061,10 @@ export const useSpinnerGame = () => {
     let spd = stats.speedMultiplier
     if (firstGameBoost && blade.owner === 'player') dmg *= 2
     if (isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.dmgMul
+    // A side of one fights boosted (team size 1: ×1.2 damage) — a lone
+    // part-only campaign NPC has it offset (CAMPAIGN_NPC_TUNING.soloDmgMul).
+    dmg *= teamStatMul[blade.owner]
+    if (teamStatMul[blade.owner] !== 1 && isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.soloDmgMul
     // Split-boss children hit for a fraction of the parent's damage so a
     // swarm can't simply out-DPS a focused target. Defense and weight are
     // also nerfed so each child reads as a fragile minion, not a clone of
@@ -2910,7 +2849,8 @@ export const useSpinnerGame = () => {
     bossStats = false
   ): SpinnerState {
     const stats = computeStats(config, config.topLevel ?? 0, config.bottomLevel ?? 0)
-    const bossHpMultiplier = (isBoss || bossStats) ? 2 : 1
+    // Bosses: CAMPAIGN_NPC_TUNING.bossHpMul; a lone "boss stats" enemy keeps 2×.
+    const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul : bossStats ? 2 : 1
     const boostHpMultiplier = (firstGameBoost && owner === 'player') ? 2 : 1
     // Campaign-only NPC HP scaling by difficulty: EASY -10%, HARD +30%.
     // PvP and ghost fights are excluded so both modes stay authoritative.
@@ -2930,19 +2870,24 @@ export const useSpinnerGame = () => {
     // actually baked into this spawn so a later difficulty change scales
     // from the correct starting point.
     if (owner === 'npc') appliedDifficultyHpMult = difficultyHpMultiplier
-    // Healer partners are only 20% oversize — per design they're "barely
-    // bigger than normal blades". Every other boss keeps the 1.6x hulk
-    // radius so the classic solo-boss silhouette still reads as huge.
+    // Healer partners are a touch smaller than other bosses; every other
+    // boss uses BOSS_RADIUS_MULT so the solo-boss silhouette still reads big.
     let radiusMult = 1
     if (isBoss) {
-      radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : 1.6
+      radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : BOSS_RADIUS_MULT
     }
-    // Smasher disc size (catalog `disc`, 0.75 … 1.35); boss sizes stack on top.
-    const disc = discOf(config)
+    // Smasher disc size (catalog `disc`, 0.75 … 1.35) × the side's team-size
+    // multiplier (base 0.9 × 1 / 0.87 / 0.75); boss sizes stack on top.
+    const disc = discOf(config) * teamSizeMul[owner]
     const bossRadius = BLADE_RADIUS * radiusMult * disc
     const armor = armorOf(config)
     const legacyNpcHpMul = isLegacyNpc(owner, config) ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2) : 1
-    const finalHp = stats.maxHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier
+    // A side of one fights boosted (team size 1: ×1.2 max HP) — a lone
+    // part-only campaign NPC has it offset (CAMPAIGN_NPC_TUNING.soloHpMul), and
+    // part-only campaign NPCs get the team-size refit of their count (countHpMul).
+    const teamHpMultiplier = teamStatMul[owner] * (teamStatMul[owner] !== 1 && isLegacyNpc(owner, config) ? CAMPAIGN_NPC_TUNING.soloHpMul : 1)
+      * (isLegacyNpc(owner, config) ? campaignNpcCountHpMul(npcTeamCount) : 1)
+    const finalHp = stats.maxHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier
     return {
       id: nextBladeId++,
       // Placeholder — every spawn site assigns the real peer-independent key.
@@ -3038,7 +2983,8 @@ export const useSpinnerGame = () => {
       const dx = Math.cos(angle)
       const dy = Math.sin(angle)
       // Place outside parent's body so they don't trivially collide on frame 1.
-      const childRadius = BLADE_RADIUS * SPLIT_CHILD_RADIUS_PCT
+      // Shards are sized off their side's smasher size (team size), not the raw unit.
+      const childRadius = BLADE_RADIUS * teamSizeMul[parent.owner] * SPLIT_CHILD_RADIUS_PCT
       const spawnDist = parent.radius + childRadius * 1.1
       const child = createBladeState(
         parent.owner,
@@ -3194,7 +3140,6 @@ export const useSpinnerGame = () => {
     nTeam: SpinnerConfig[],
     boost = false,
     arena: ArenaType = 'default',
-    bouncerCount = 0,
     enablePowerups = false,
     powerupIntervalMs: [number, number] = [POWERUP_DEFAULT_INTERVAL_MIN_MS, POWERUP_DEFAULT_INTERVAL_MAX_MS],
     /** `role` = this client's lobby role; defaults to usePVP's live role. */
@@ -3207,7 +3152,7 @@ export const useSpinnerGame = () => {
   ) => {
     pvpMode.value = !!pvp?.enabled
     pvpLocalIsGuest = pvpMode.value && (pvp?.role ?? currentPvpRole()) === 'guest'
-    // Set the arena shape BEFORE spawns so spawn/bouncer/power-up placement can
+    // Set the arena shape BEFORE spawns so spawn/terrain/power-up placement can
     // clamp to the active boundary geometry.
     // Tree Smashers: no round arenas. A terrain match gets its layout's
     // clearing shape, any other "circle" request the clover clearing.
@@ -3229,6 +3174,7 @@ export const useSpinnerGame = () => {
     else if (!pvpMode.value) seedMatchRngRandom()
     matchSeed = currentMatchSeed()
     forcedFirstTurn = !pvpMode.value && (opts.firstTurn === 'player' || opts.firstTurn === 'opponent') ? opts.firstTurn : null
+    npcPlay = !pvpMode.value ? (opts.npcPlay ?? null) : null
     // Seeded battle: aux gameplay stream + sim-clock timers (see gameplayRand).
     gameplayStream = opts.seed !== undefined ? createRng((opts.seed ^ GAMEPLAY_RNG_SALT) >>> 0) : null
     seededSim = opts.seed !== undefined && !pvpMode.value
@@ -3239,6 +3185,17 @@ export const useSpinnerGame = () => {
     childSpawnSeq.clear()
     // Forget blade looks so skin / smasher changes take effect
     bladeYawState.clear()
+
+    // Team size (src/data/teamSize.ts): each side's blade size and solo boost
+    // come from its own team length — before the first createBladeState.
+    teamSizeMul.player = sideSizeMul(pTeam.length)
+    teamSizeMul.npc = sideSizeMul(nTeam.length)
+    teamStatMul.player = sideStatMul(pTeam.length)
+    teamStatMul.npc = sideStatMul(nTeam.length)
+    npcTeamCount = nTeam.length
+    balloonTeamSize.player = clampTeamSize(pTeam.length)
+    balloonTeamSize.npc = clampTeamSize(nTeam.length)
+    teamSizeHash = `ts:${clampTeamSize(pvpLocalIsGuest ? nTeam.length : pTeam.length)},${clampTeamSize(pvpLocalIsGuest ? pTeam.length : nTeam.length)}`
 
     // Player blades: bottom half, spread evenly
     const pCount = pTeam.length
@@ -3463,7 +3420,14 @@ export const useSpinnerGame = () => {
     pvpTurnCounter = 0
     gameResult.value = null
     turnAnnouncement.value = ''
-    meteorParticles.value = []
+    meteorFx.active = false
+    meteorFx.count = 0
+    ringFx.active = false
+    ringFx.count = 0
+    if (METEOR_SHOWER_ENABLED) {
+      if (METEOR_VARIANT === 'strike') preloadMeteorArt()
+      else preloadRingMeteorArt()
+    }
     meteorIntroTimer = 0
     trails.clear()
     cloudParticles.length = 0
@@ -3495,35 +3459,44 @@ export const useSpinnerGame = () => {
     powerupIntervalMaxMs = powerupIntervalMs[1]
     resetPowerups()
 
-    // ── Bouncers: pinball-style obstacles on the arena floor ───────────────
-    // Regenerate positions every match. We place them inside an annulus
-    // (BOUNCER_MIN_R..BOUNCER_MAX_R), enforce a minimum separation from
-    // each other AND from every player + NPC spawn, and never overlap the
-    // arena border. A capped retry count keeps this bounded even if the
-    // annulus is very crowded.
-    arenaBouncers.length = 0
-
     // ── Terrain layout + team towers (Tree Smashers) ──────────────────────
     // Fixed tables (no RNG): a PvP guest mirrors y so the host-frame geometry
-    // is identical on both peers. Islands join `arenaBouncers` (same ricochet
-    // physics); boosters / holes act in the physics loop (applyGround).
+    // is identical on both peers. Islands ricochet (bounceOffIslands);
+    // boosters / holes act in the physics loop (applyGround). The terrain
+    // solids are the arena's only floor obstacles (MAX_SOLID_OBSTACLES).
     groundStates.clear()
     towerContactTimes.clear()
+    spikeCalloutShown = false
     towerDebris.length = 0
+    resetTowerFx(towerFx)
+    if (balloonFx !== null) {
+      resetBalloonPopFx(balloonFx)
+      balloonStates.clear()
+    }
     towers.length = 0
     const terrainOpt = opts.terrain ?? null
     terrain = terrainOpt !== null && terrainOpt.layout !== null && requestedCircle
       ? buildTerrainLayout(terrainOpt.layout, pvpLocalIsGuest)
       : null
-    if (terrain !== null) {
-      for (const isl of terrain.islands) {
-        arenaBouncers.push({ x: isl.x, y: isl.y, radius: isl.radius, flash: 0, island: isl.kind })
-      }
-    }
+    // Decorative only: start fetching this arena theme's art (backdrop tile,
+    // prop atlas, floor variant) so the static layer bakes dressed early.
+    preloadBackdropArt(arenaTheme())
+    preloadFloorArt(floorKeyFor(arenaTheme(), terrain?.id ?? null))
+    preloadBorderArt(borderKeyFor(arenaType.value, arenaTheme()))
+    // Campaign only: quietly warm the NEXT stage's arena art once the network is idle.
+    if (!pvpMode.value && !ghostMode.value) warmNextStageArt()
     if (terrainOpt?.towers && requestedCircle) {
       const teamHp = (bs: SpinnerState[]) => bs.reduce((s, b) => s + b.maxHp, 0)
-      towers.push(createTower('player', ARENA_RADIUS, BLADE_RADIUS, teamHp(playerBlades.value), arenaShape.value))
-      towers.push(createTower('npc', ARENA_RADIUS, BLADE_RADIUS, teamHp(npcBlades.value), arenaShape.value))
+      // Tree spec (arenaTerrain TOWER_TUNING): the boss's tree on a boss stage
+      // gets extra HP and the spiked front cover. Bosses only ever sit on the
+      // NPC side (campaign / cheat), so both PvP peers derive bare trees.
+      const bossStage = isBossStage.value && !pvpMode.value
+      // 1–3 trees per side (both sides the same count; PvP / league pass 1).
+      const trees = terrainOpt.trees ?? 1
+      towers.push(...createTowers('player', ARENA_RADIUS, BLADE_RADIUS, teamHp(playerBlades.value), arenaShape.value, towerSpecFor(bossStage ? 'bossFoe' : 'plain'), trees))
+      towers.push(...createTowers('npc', ARENA_RADIUS, BLADE_RADIUS, teamHp(npcBlades.value), arenaShape.value, towerSpecFor(bossStage ? 'boss' : 'plain'), trees))
+      preloadTowerArt()
+      if (towers.some(t => t.spiked)) preloadThornArt()
     }
     towerFallResult = null
     towerFallFrames = 0
@@ -3531,72 +3504,6 @@ export const useSpinnerGame = () => {
     // Big / small smasher discs: no spawn inside a tower, an island or a
     // neighbour (no-op when every disc is 1×).
     settleSpawnOverlaps()
-    const terrainBlocks = (x: number, y: number, r: number): boolean => {
-      for (const t of towers) if (Math.hypot(t.x - x, t.y - y) < t.radius + r + 8) return true
-      if (terrain !== null) {
-        for (const c of terrainCircles(terrain)) {
-          if (Math.hypot(c.x - x, c.y - y) < c.radius + r + 4) return true
-        }
-      }
-      return false
-    }
-
-    const clampedBouncerCount = Math.max(0, Math.min(3, bouncerCount | 0))
-    if (clampedBouncerCount > 0) {
-      const minSepBouncer = BOUNCER_RADIUS * 2 + 12
-      const minSepBlade = BLADE_RADIUS + BOUNCER_RADIUS + 8
-      // `extra`: a bigger smasher disc keeps the bumper further away.
-      const spawns: { x: number; y: number; extra: number }[] = [
-        ...playerBlades.value.map(b => ({ x: b.x, y: b.y, extra: BLADE_RADIUS * ((b.disc ?? 1) - 1) })),
-        ...npcBlades.value.map(b => ({ x: b.x, y: b.y, extra: BLADE_RADIUS * ((b.disc ?? 1) - 1) }))
-      ]
-      for (let i = 0; i < clampedBouncerCount; i++) {
-        let placed: Bouncer | null = null
-        for (let attempt = 0; attempt < 40 && !placed; attempt++) {
-          const angle = gameplayRand() * Math.PI * 2
-          const r = BOUNCER_MIN_R + gameplayRand() * (BOUNCER_MAX_R - BOUNCER_MIN_R)
-          // Clamp into the active shape so a bouncer never overlaps a
-          // non-circular wall (no-op on the circle arena).
-          const { x, y } = clampInArena(Math.cos(angle) * r, Math.sin(angle) * r, BOUNCER_RADIUS, 6)
-          let ok = true
-          for (const b of arenaBouncers) {
-            // b.radius = BOUNCER_RADIUS for a bumper (→ minSepBouncer exactly);
-            // larger for a terrain island.
-            if (Math.hypot(b.x - x, b.y - y) < minSepBouncer + (b.radius - BOUNCER_RADIUS)) {
-              ok = false
-              break
-            }
-          }
-          if (ok && terrainBlocks(x, y, BOUNCER_RADIUS)) ok = false
-          if (ok) {
-            for (const sp of spawns) {
-              if (Math.hypot(sp.x - x, sp.y - y) < minSepBlade + sp.extra) {
-                ok = false
-                break
-              }
-            }
-          }
-          if (ok) placed = { x, y, radius: BOUNCER_RADIUS, flash: 0 }
-        }
-        // Fall back to a deterministic ring slot if 40 random tries all
-        // collided — better to have a slightly clumped bouncer than to
-        // silently skip the obstacle the stage author asked for.
-        if (!placed) {
-          const slotAngle = (i / clampedBouncerCount) * Math.PI * 2
-          const r = (BOUNCER_MIN_R + BOUNCER_MAX_R) / 2
-          let { x, y } = clampInArena(Math.cos(slotAngle) * r, Math.sin(slotAngle) * r, BOUNCER_RADIUS, 6)
-          // Terrain arenas: rotate the slot off islands / towers / pads.
-          const islandHit = (px: number, py: number) => terrainBlocks(px, py, BOUNCER_RADIUS)
-            || arenaBouncers.some(b => b.island !== undefined && Math.hypot(b.x - px, b.y - py) < b.radius + BOUNCER_RADIUS + 8)
-          for (let k = 1; k < 12 && islandHit(x, y); k++) {
-            const a = slotAngle + k * Math.PI / 6
-            ;({ x, y } = clampInArena(Math.cos(a) * r, Math.sin(a) * r, BOUNCER_RADIUS, 6))
-          }
-          placed = { x, y, radius: BOUNCER_RADIUS, flash: 0 }
-        }
-        arenaBouncers.push(placed)
-      }
-    }
 
     clearCountdown()
 
@@ -3607,7 +3514,8 @@ export const useSpinnerGame = () => {
       turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.opponentTurn')
       turnBannerUntil = performance.now() + 1200
       startPhysics()
-      spawnMeteorShower(80, 50, 65)
+      // Lands inside the 1200 ms turn banner (PvP has no meteor_intro phase).
+      spawnMeteorShower('intro', 1200)
       // PvP has no meteor intro: Opening Salvo fires here, host team then
       // guest team (G1) — before any tick, so both peers start equal.
       if (SKILLS_BUILD) fireOpeningSalvo()
@@ -3633,8 +3541,8 @@ export const useSpinnerGame = () => {
     // never mixes in hits from a previous match.
     clearCombatLog()
 
-    // Trigger meteor shower intro
-    spawnMeteorShower(80, 50, 65)
+    // Trigger meteor shower intro (lands within the 1600 ms meteor_intro)
+    spawnMeteorShower('intro', METEOR_INTRO_MS)
 
     try {
       const randomInt = Math.min(Math.floor(Math.random() * 2) + 1, 2) // vfx-rng
@@ -3659,57 +3567,25 @@ export const useSpinnerGame = () => {
 
   // ─── Meteor Shower (reusable) ────────────────────────────────────────────
 
-  const spawnMeteorShower = (
-    count: number,
-    spawnRadius: number,
-    maxLife: number
-  ) => {
-    // Spawn in staggered waves — delay spread across ~60% of maxLife
-    // so particles keep appearing throughout most of the animation
-    const maxDelay = Math.floor(maxLife * 0.6)
-    const particles: MeteorParticle[] = []
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3 // vfx-rng
-      const spawnDist = spawnRadius + (Math.random() - 0.5) * 6 // vfx-rng
-      const spd = 1.5 + Math.random() * 2.5 // vfx-rng
-      const lifeVar = maxLife + Math.floor(Math.random() * 20) // vfx-rng
-      // Stagger: life starts above maxLife; particle waits until life <= maxLife
-      const delay = Math.floor(Math.random() * maxDelay) // vfx-rng
-      particles.push({
-        x: Math.cos(angle) * spawnDist,
-        y: Math.sin(angle) * spawnDist,
-        vx: Math.cos(angle) * spd,
-        vy: Math.sin(angle) * spd,
-        life: lifeVar + delay,
-        maxLife: lifeVar,
-        hue: Math.random() < 0.25 ? 20 + Math.floor(Math.random() * 25) : 190 + Math.floor(Math.random() * 40) // vfx-rng
-      })
+  /**
+   * Start the meteor shower (presentation only — no gameplay state, no match
+   * RNG). 'intro' = the pre-battle strike that lands within `span` ms (the
+   * 1600 ms meteor_intro; PvP's 1200 ms banner); 'celebrate' = a lighter
+   * shower for the win / boss reward moments (no hero, flash or shake).
+   */
+  const spawnMeteorShower = (kind: MeteorShowerKind = 'intro', span = METEOR_INTRO_MS) => {
+    if (!METEOR_SHOWER_ENABLED) return
+    if (METEOR_VARIANT === 'strike') {
+      spawnMeteorShowerFx(meteorFx, kind, span, ARENA_RADIUS, FX.low, prefersStill(), performance.now())
+    } else {
+      spawnRingShowerFx(ringFx, kind, span, ARENA_RADIUS, arenaTheme(), FX.low, prefersStill(), performance.now())
     }
-    meteorParticles.value = particles
   }
 
+  /** One physics tick of the shower clock (16 ms, like meteorIntroTimer). */
   const updateMeteorParticles = () => {
-    const particles = meteorParticles.value
-    let w = 0
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i]!
-      p.life--
-      if (p.life <= 0) continue
-      // Only move once the delay has elapsed (life <= maxLife)
-      if (p.life <= p.maxLife) {
-        p.x += p.vx
-        p.y += p.vy
-        const dist = Math.sqrt(p.x * p.x + p.y * p.y)
-        if (dist > 0.1) {
-          p.vx += (p.x / dist) * 0.02
-          p.vy += (p.y / dist) * 0.02
-        }
-      }
-      particles[w++] = p
-    }
-    // Reassign .value to trigger Vue reactivity (in-place .length mutation
-    // on a ref'd array may not notify watchers)
-    meteorParticles.value = particles.slice(0, w)
+    tickMeteorShower(meteorFx, performance.now())
+    tickRingShower(ringFx, performance.now())
   }
 
   // ─── Player Interaction ──────────────────────────────────────────────────
@@ -3982,8 +3858,9 @@ export const useSpinnerGame = () => {
 
     // Tree Smashers terrain AI (cheap): go for the player's tower when it is
     // low or on a 20% whim, and don't fire straight into an island when
-    // another target has a clear line. No extra draws without towers.
-    const enemyTower = towers.find(t => t.side === 'player' && t.hp > 0)
+    // another target has a clear line. No extra draws without towers. With
+    // several trees: the weakest STANDING one (ties → nearest), never a stump.
+    const enemyTower = pickTargetTree(towers, 'player', blade.x, blade.y)
     if (enemyTower && (enemyTower.hp / enemyTower.maxHp < 0.35 || gameplayRand() < 0.2)) target = enemyTower
     const islands: { x: number; y: number; radius: number }[] = terrain !== null ? terrainSolidCircles(terrain) : []
     if (islands.length > 0) {
@@ -4045,6 +3922,9 @@ export const useSpinnerGame = () => {
       return false
     }
 
+    // A random-search bot aims looser and now and then fluffs a shot
+    // (pvpBots `botPlayStyle`); the campaign NPC keeps its ±15°.
+    const spread = npcPlay ? npcPlay.aimSpread : Math.PI / 6
     // If the direct path is blocked, try offset angles to find a clear shot
     if (isPathBlocked(angle)) {
       let found = false
@@ -4061,15 +3941,20 @@ export const useSpinnerGame = () => {
         }
       }
       // If no clear path, just add the normal spread and hope for the best
-      if (!found) angle += (gameplayRand() - 0.5) * (Math.PI / 6)
+      if (!found) angle += (gameplayRand() - 0.5) * spread
     } else {
       // Normal ±15° spread when path is clear
-      angle += (gameplayRand() - 0.5) * (Math.PI / 6)
+      angle += (gameplayRand() - 0.5) * spread
+    }
+    if (npcPlay && npcPlay.rand() < npcPlay.whiffChance) {
+      angle += (npcPlay.rand() < 0.5 ? -1 : 1) * npcPlay.whiffRad * (0.6 + 0.4 * npcPlay.rand())
     }
 
-    // Random force 65-100% of max
+    // Random force 65-100% of max (a bot: its own range, same single draw)
     const stats = statsFor(blade)
-    const forcePct = 0.65 + gameplayRand() * 0.35
+    const forcePct = npcPlay
+      ? npcPlay.forceMin + gameplayRand() * (npcPlay.forceMax - npcPlay.forceMin)
+      : 0.65 + gameplayRand() * 0.35
     const maxForce = BASE_MAX_FORCE * stats.speedMultiplier
     const targetForce = forcePct * maxForce
 
@@ -4122,7 +4007,9 @@ export const useSpinnerGame = () => {
         // the draw is still taken so the match stream stays aligned.
         const turnRoll = matchRng()
         const startsWithPlayer = forcedFirstTurn !== null ? forcedFirstTurn === 'player' : turnRoll < playerStartChance
-        turnAnnouncement.value = startsWithPlayer ? translate('spinner.yourTurn') : translate('spinner.npcTurn')
+        turnAnnouncement.value = startsWithPlayer
+          ? translate('spinner.yourTurn')
+          : translate(npcPlay?.opponentLabel ? 'spinner.opponentTurn' : 'spinner.npcTurn')
         turnBannerUntil = performance.now() + 500
         setTimeout(() => {
           phase.value = startsWithPlayer ? 'player_turn' : 'npc_turn'
@@ -4136,8 +4023,8 @@ export const useSpinnerGame = () => {
       return
     }
 
-    // Update meteor particles even during gameplay (they fade out)
-    if (meteorParticles.value.length > 0) {
+    // The shower keeps ticking into the first turn (craters cool and shrink).
+    if (meteorFx.active || ringFx.active) {
       updateMeteorParticles()
     }
 
@@ -4154,7 +4041,8 @@ export const useSpinnerGame = () => {
     // (handled outside this loop).
     // PvP always runs 1x — the 2x switch must never change lockstep physics
     // (the peer may be at 1x) — and not at all between launches.
-    const subSteps = !simActive ? 0 : pvpMode.value ? 1 : simSpeed.value
+    // PvP — and a random-search bot match, which plays like one — runs at 1×.
+    const subSteps = !simActive ? 0 : pvpMode.value || npcPlay ? 1 : simSpeed.value
     // Collision pairs in syncKey order, lower key always `a`: the pair order
     // and resolveCollision's a/b asymmetries (anti-draw tie-break, crit draw
     // order) are then the same on both PvP clients.
@@ -4230,10 +4118,12 @@ export const useSpinnerGame = () => {
 
         // Wall collision with BOOST
         bounceOffWalls(blade)
-        // Pinball-bouncer ricochet (no-op on stages without bouncers)
-        bounceOffBouncers(blade)
-        // Terrain: speed boosters, mud, deep holes; then team towers.
-        if (terrain !== null) applyTerrainGround(blade)
+        // Terrain: island ricochet, solids, speed boosters, mud, deep holes;
+        // then team towers.
+        if (terrain !== null) {
+          bounceOffIslands(blade)
+          applyTerrainGround(blade)
+        }
         if (towers.length > 0) bounceOffTowers(blade)
       }
 
@@ -4255,14 +4145,6 @@ export const useSpinnerGame = () => {
     for (const blade of all) {
       if (blade.hp <= 0) continue
       if (blade.hitFlash > 0) blade.hitFlash--
-    }
-
-    // Decay bouncer flash intensity back toward 0 so the hit glow fades
-    // out over ~10 frames.
-    if (arenaBouncers.length > 0) {
-      for (const b of arenaBouncers) {
-        if (b.flash > 0) b.flash = Math.max(0, b.flash - 0.1)
-      }
     }
 
     // Record trail points
@@ -4366,8 +4248,9 @@ export const useSpinnerGame = () => {
         : phase.value.startsWith('player_') ? 'player'
           : (pvpLocalIsGuest ? 'npc' : 'player')
     if (towers.length > 0 && towerFallResult === null && !gameResult.value) {
-      const pDown = towers.some(t => t.side === 'player' && t.hp <= 0)
-      const nDown = towers.some(t => t.side === 'npc' && t.hp <= 0)
+      // A side loses by trees only when ALL its trees are down.
+      const pDown = allTreesDown(towers, 'player')
+      const nDown = allTreesDown(towers, 'npc')
       if (pDown || nDown) {
         towerFallResult = decideResult(playerAlive, npcAlive, pDown, nDown, tieWinner)
         towerFallFrames = 0
@@ -4476,8 +4359,10 @@ export const useSpinnerGame = () => {
     // NPC thinking — in PvP mode the remote player controls the NPC blades,
     // so we skip the AI entirely and wait for launchRemoteBlade() calls.
     if (phase.value === 'npc_turn' && !pvpMode.value) {
+      // A bot draws a fresh, human-like think time at the start of each turn.
+      if (npcThinkingElapsed === 0) npcThinkTarget = npcPlay ? npcPlay.thinkMs() : NPC_THINK_MS
       npcThinkingElapsed += 16
-      if (npcThinkingElapsed >= NPC_THINK_MS) {
+      if (npcThinkingElapsed >= npcThinkTarget) {
         launchNpc()
       }
     }
@@ -4601,21 +4486,21 @@ export const useSpinnerGame = () => {
   }
 
   /**
-   * Pinball-style obstacles. Each bouncer is a static disc: if a blade
+   * Terrain islands (stump / rock / pond). Each is a static disc: if a blade
    * overlaps it, push the blade out along the contact normal and reflect
    * its velocity the same way the arena wall does (with the same
    * speed-based boost) so ramming one feels like ricocheting off the rim.
-   * Unlike the wall, bouncer hits do NOT count toward `wallBounceCount`,
+   * Unlike the wall, island hits do NOT count toward `wallBounceCount`,
    * so they don't erode the wall-boost decay budget.
    */
-  const bounceOffBouncers = (blade: SpinnerState) => {
-    if (arenaBouncers.length === 0) return
-    if (blade.isTeleporter) return // teleporters pass through bouncers
-    for (const bouncer of arenaBouncers) {
-      const dx = blade.x - bouncer.x
-      const dy = blade.y - bouncer.y
+  const bounceOffIslands = (blade: SpinnerState) => {
+    if (terrain === null || terrain.islands.length === 0) return
+    if (blade.isTeleporter) return // teleporters pass through islands
+    for (const isl of terrain.islands) {
+      const dx = blade.x - isl.x
+      const dy = blade.y - isl.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      const minDist = blade.radius + bouncer.radius
+      const minDist = blade.radius + isl.radius
       if (dist >= minDist || dist < 0.01) continue
 
       // Push the blade out along the contact normal so it no longer overlaps.
@@ -4626,7 +4511,7 @@ export const useSpinnerGame = () => {
       blade.y += ny * overlap
 
       const dot = blade.vx * nx + blade.vy * ny
-      // Only reflect if the blade is moving INTO the bouncer (dot < 0).
+      // Only reflect if the blade is moving INTO the island (dot < 0).
       // Blades already moving away (e.g. just nudged out by the separation
       // step) shouldn't get an extra kick.
       if (dot >= 0) continue
@@ -4645,7 +4530,6 @@ export const useSpinnerGame = () => {
         hudTouch(blade)
       }
 
-      bouncer.flash = 1
       triggerShake('small')
 
     }
@@ -4656,7 +4540,7 @@ export const useSpinnerGame = () => {
     if (terrain === null) return
     const gs = groundStateOf(blade)
     const maxSpd = BASE_MAX_FORCE * statsFor(blade).speedMultiplier
-    // Mushroom caps + logs (solids; teleporters pass through like bouncers).
+    // Mushroom caps + logs (solids; teleporters pass through like islands).
     if (!blade.isTeleporter && (terrain.mushrooms.length > 0 || terrain.logs.length > 0)) {
       collideSolids(terrain, blade, gs, maxSpd, skillClock(), solidOut)
       if (solidOut.bounced) {
@@ -4686,11 +4570,15 @@ export const useSpinnerGame = () => {
   }
 
   /**
-   * Team tower: a static disc blades ricochet off like a bouncer. An ENEMY
+   * Team tower: a static disc blades ricochet off like an island. An ENEMY
    * blade's contact damages it (closing speed × damage multiplier × the
    * DAMAGE_SCALE family, defense 1, one roll per contact period); own-team
    * blades just bounce. Invulnerable split children deal nothing. Towers are
    * immune to every skill / boss trait / hazard — only body contact hurts.
+   * A SPIKED tree (boss trees — arenaTerrain TOWER_TUNING.spikes) pricks the
+   * attacker back for TOWER_TUNING.spikeRecoil × the plain impact
+   * (towerSpikeRecoil; Tower Breaker's bonus is not spiked): a 'reflect' HP
+   * loss, deterministic, inside the PvP state hash (blade hp).
    */
   const bounceOffTowers = (blade: SpinnerState) => {
     for (const tower of towers) {
@@ -4722,6 +4610,7 @@ export const useSpinnerGame = () => {
       blade.lastHitTime = now
       let dmg = towerHitDamage(closing, statsFor(blade).damageMultiplier, DAMAGE_SCALE)
       if (dmg <= 0) continue
+      const recoil = towerSpikeRecoil(tower, nx, ny, dmg)
       // Tower Breaker (smasher skill): bonus damage against team towers.
       if (SKILLS_BUILD && blade.skills !== undefined) {
         const tm = towerDamageMul(blade)
@@ -4732,6 +4621,11 @@ export const useSpinnerGame = () => {
       }
       tower.hp = Math.max(0, tower.hp - dmg)
       tower.flash = 1
+      if (!FX.low) {
+        spawnSplinters(towerFx, tower.x + nx * tower.radius, tower.y + ny * tower.radius, nx, ny, tower.radius, dmg)
+        // Hard hit: now and then a few leaves shake loose too.
+        if (dmg >= tower.maxHp * 0.06 && Math.random() < 0.35) spawnLeaves(towerFx, tower.x, tower.y, tower.radius, 3, 0.15) // vfx-rng
+      }
       triggerShake('small')
       const shown = Math.round(dmg)
       if (shown > 0) {
@@ -4742,8 +4636,35 @@ export const useSpinnerGame = () => {
           color: '#ffd166', life: DAMAGE_NUMBER_LIFE, maxLife: DAMAGE_NUMBER_LIFE, isCrit: false
         })
       }
+      if (recoil > 0) pricklyRecoil(blade, tower, nx, ny, recoil)
       if (tower.hp <= 0) onTowerDestroyed(tower)
       publishTowerHud()
+    }
+  }
+
+  /** The spiked tree's thorns prick `blade` for `recoil` HP (gameplay), with
+   *  the attacker's hit flash + a 'thorns' damage number (applyBladeDamage),
+   *  a few thorn shards off the garland and — once per match, the first time
+   *  the player's smasher gets pricked — a "Spiked tree!" callout (VFX). */
+  let spikeCalloutShown = false
+  const pricklyRecoil = (blade: SpinnerState, tower: TeamTower, nx: number, ny: number, recoil: number) => {
+    if (blade.hp <= 0) return
+    const killed = applyBladeDamage(blade, recoil, blade.x, blade.y, tower.side, false, 'reflect', false, 'thorns')
+    if (!FX.low) spawnThornShards(towerFx, tower.x + nx * tower.radius, tower.y + ny * tower.radius, nx, ny, tower.radius, recoil)
+    if (killed) {
+      handleSplitDeath(blade)
+      triggerShake('big')
+    }
+    if (!spikeCalloutShown && blade.owner === 'player') {
+      spikeCalloutShown = true
+      // On the far side of the attacker (into the clearing), clear of its
+      // own thorn-damage number.
+      const d = tower.radius + blade.radius * 3.2
+      damageNumbers.push({
+        x: tower.x + nx * d, y: tower.y + ny * d, value: 0,
+        vx: 0, vy: -0.05, color: '#f2e6c8', life: DAMAGE_NUMBER_LIFE * 1.4, maxLife: DAMAGE_NUMBER_LIFE * 1.4,
+        isCrit: false, comboText: translate('terrain.spikedTree'), centered: true
+      })
     }
   }
 
@@ -4756,6 +4677,9 @@ export const useSpinnerGame = () => {
     triggerShake('big')
     try { playSound('celebration-1') } catch { /* audio optional */ }
     const c = TOWER_TEAM_COLORS[tower.side]
+    // Several trees per side: how many of this side's are still standing.
+    let left = 0
+    for (const t of towers) if (t.side === tower.side && t.hp > 0) left++
     const palette = [c.leaf, c.leafDark, '#8a5a35', '#5e3b22', '#f4e3b0']
     const n = FX.low ? 14 : 28
     for (let i = 0; i < n; i++) {
@@ -4770,12 +4694,21 @@ export const useSpinnerGame = () => {
     damageNumbers.push({
       x: 0, y: tower.y - tower.radius, value: 0,
       vx: 0, vy: -0.05, color: '#fff1c1', life: DAMAGE_NUMBER_LIFE * 1.6, maxLife: DAMAGE_NUMBER_LIFE * 1.6,
-      isCrit: true, comboText: translate('terrain.towerDestroyed'), centered: true
+      isCrit: true, comboText: left > 0 ? translate('terrain.treesLeft', { n: left }) : translate('terrain.towerDestroyed'), centered: true
     })
   }
 
   const tickTowerVfx = () => {
     for (const t of towers) if (t.flash > 0) t.flash = Math.max(0, t.flash - 0.06)
+    // Leaf cascade once per damage-state drop (healthy → damaged → nearly
+    // down → felled); the first look only records the baseline.
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i]!
+      const st = towerDamageStage(t.hp, t.maxHp)
+      const n = noteTowerStage(towerFx, i, st)
+      if (n > 0 && !FX.low) spawnLeaves(towerFx, t.x, t.y, t.radius, n, st === 1 ? 0.1 : st === 2 ? 0.35 : 0.5)
+    }
+    tickTowerFx(towerFx, 16)
     for (let i = towerDebris.length - 1; i >= 0; i--) {
       const d = towerDebris[i]!
       d.x += d.vx
@@ -5256,7 +5189,8 @@ export const useSpinnerGame = () => {
         if (emittedCount >= 3) continue // max 3 active emitted children
         // Gameplay roll (spawn position + drift) — on the match RNG.
         const angle = matchRng() * Math.PI * 2
-        const spawnDist = emitter.radius + BLADE_RADIUS * 0.5 + 2
+        const sideUnit = BLADE_RADIUS * teamSizeMul[emitter.owner]
+        const spawnDist = emitter.radius + sideUnit * 0.5 + 2
         const child = createBladeState(
           emitter.owner,
           emitter.x + Math.cos(angle) * spawnDist,
@@ -5264,7 +5198,7 @@ export const useSpinnerGame = () => {
           { ...emitter.config, bossAbility: undefined, isBoss: false, bossTrait: undefined, shardTrait: undefined },
           false
         )
-        child.radius = BLADE_RADIUS * 0.45
+        child.radius = sideUnit * 0.45
         // Every 2nd child adds +1 HP: 1→1, 2→2, 3→2, 4→3, 5→3, 6→4 …
         emitter.emittedChildCount = (emitter.emittedChildCount ?? 0) + 1
         const bonusHp = Math.floor((emitter.emittedChildCount) / 2)
@@ -5468,9 +5402,14 @@ export const useSpinnerGame = () => {
     const charge = bp['novaCharge'](bossClock)
     const period = bp['BOSS_TRAIT_TUNING']['EMBER_PERIOD_MS']
     const mul = bp['BOSS_TRAIT_TUNING']['EMBER_RADIUS_MUL']
+    // Once the fight is decided (win OR lose) the frost status is moot: the ice shell / chill veil
+    // are "for the next turn", so they must not stay on the winner as a white bubble through the
+    // result screen (owner report 2026-10-24).
+    const over = gameResult.value !== null
     for (const b of allBlades.value) {
       if (b.hp <= 0) continue
       if (b.config.bossTrait === 'ember') bp['renderEmberCharge'](ctx, fx, b, charge, period, mul * b.radius, now, low)
+      if (over) continue
       if (b.lockKind === 'frost' && bp['isFrostLockedFor'](b, turnIndexOf(b.owner) + 1)) bp['renderIceShell'](ctx, fx, b, now, low)
       const n = b.chillN ?? 0
       if (n > 0) bp['renderChillOverlay'](ctx, fx, b, n, now, low)
@@ -5486,47 +5425,69 @@ export const useSpinnerGame = () => {
     currentStageId = 1
   ) => {
     noteCanvasMetrics(canvasWidth, canvasHeight)
-    const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2
-    const fitSize = Math.min(canvasWidth, canvasHeight)
-    const scale = fitSize / (ARENA_RADIUS * 2 + ARENA_PADDING)
+    const view = arenaViewFor(canvasWidth, canvasHeight)
+    const scale = view.scale
+    // Meteor shower: its render clock and the camera shake, in WHOLE device
+    // pixels so the static blit stays pixel-aligned (render-sharpness rule).
+    const meteorOn = meteorFx.count > 0 && meteorFx.clock < meteorFx.end
+    const meteorT = meteorOn ? meteorClock(meteorFx, performance.now()) : 0
+    const devPx = (ctx.canvas?.width ?? canvasWidth) / Math.max(1, canvasWidth)
+    const ringOn = ringFx.count > 0 && ringFx.clock < ringFx.end
+    const ringT = ringOn ? ringClock(ringFx, performance.now()) : 0
+    const shake = meteorOn ? meteorShake(meteorFx, meteorT) : ringOn ? ringShake(ringFx, ringT) : null
+    const shakeX = shake !== null ? shake.x : 0
+    const shakeY = shake !== null ? shake.y : 0
+    const centerX = view.cx + shakeX / devPx
+    const centerY = view.cy + shakeY / devPx
 
-    // Background = currently-equipped bg skin (tile pattern, artwork, or
-    // gradient placeholder), blitted from a buffer that is keyed on the skin
-    // id, so equipping a new skin in the modal still applies immediately.
-    drawBackground(ctx, canvasWidth, canvasHeight)
+    // ONE blit of everything static: background (theme backdrop + props or
+    // the equipped skin — keyed on the skin id, so equipping a new skin in the
+    // modal still applies immediately), floor, rim, terrain, tower bodies.
+    drawStaticLayer(ctx, canvasWidth, canvasHeight, shakeX, shakeY)
 
     ctx.save()
     ctx.translate(centerX, centerY)
     ctx.scale(scale, scale)
 
-    drawArenaStaticCached(ctx)
     renderArenaDynamic(ctx)
-    renderBouncers(ctx)
     if (towers.length > 0 || towerDebris.length > 0) renderTowers(ctx)
+    if (towerFx.active > 0) drawTowerFx(ctx, towerFx)
     renderPowerups(ctx)
-    renderMeteorShower(ctx)
+    // Meteor craters, dust, shock rings, target rings: on the floor.
+    if (meteorOn) drawMeteorGround(ctx, meteorFx, meteorT)
+    if (ringOn) drawRingGround(ctx, ringFx, ringT)
     renderGroundDecals(ctx, performance.now())
     renderTrails(ctx)
     renderCloudParticles(ctx)
     renderSandGrains(ctx)
 
-    // Auras (rendered under blades) — ONLY in the circular / standard arena.
-    // A blade aura is a soft radial fade; on the non-circular shapes
-    // (oval / hexagon / diamond / rounded-rect)
-    // the straight walls slice that fade into a hard-edged glow no matter
-    // whether we let it bleed past the wall or clip it to the floor. Per
-    // design feedback we simply skip all fade-out glows there and keep them
-    // only for the round arena, where the aura stays fully inside the ring.
-    if (arenaShape.value === 'circle') {
-      for (const blade of allBlades.value) {
-        if (blade.hp <= 0) continue
-        renderAura(ctx, blade)
-        if (BOSSES100_BUILD && traitsActive && blade.config.bossTrait !== undefined) {
-          bossPort!['renderBossAura'](ctx, bossTraitFx!, blade, skillClock(), FX.low)
-        }
+    // Mechanic markers under the blades (flat rings — no glow, so every
+    // arena shape gets them; the old soft team / skin auras are removed, see
+    // renderBladeMarkers). Boss-trait carriers keep their flat trait ring.
+    // Selection highlight — a control affordance ("this blade is armed"),
+    // not gameplay, so it goes in a clean feed. Drawn UNDER the blade so the
+    // plush and its HP gauge stay on top of it.
+    if (!CLEAN_FEED && phase.value === 'player_turn' && selectedBlade.value && !isDragging.value) {
+      renderSelectionGlow(ctx, selectedBlade.value)
+    }
+    for (const blade of allBlades.value) {
+      if (blade.hp <= 0) continue
+      renderBladeMarkers(ctx, blade)
+      if (BOSSES100_BUILD && traitsActive && blade.config.bossTrait !== undefined) {
+        bossPort!['renderBossAura'](ctx, bossTraitFx!, blade, skillClock(), FX.low)
       }
     }
+
+    // Aim preview (pull band, power arrow, guide dots) UNDER the models, so
+    // the arrow comes out from behind the plush instead of covering it.
+    // Kept in a clean feed: it is the shot being aimed, not interface.
+    if (phase.value === 'player_turn' && selectedBlade.value) {
+      if (isDragging.value) renderAimPreview(ctx, selectedBlade.value)
+      else if (isJoystickDragging.value) renderJoystickAimPreview(ctx, selectedBlade.value)
+    }
+    // Idle "demo pull" hint: the same kit as the real aim preview, also
+    // under the models. A teaching aid (interface), so not in a clean feed.
+    if (!CLEAN_FEED) renderHintAnimation(ctx, showHintAnim, centerX, centerY, scale, devPx)
 
     // Render all models
     const shakeLeft = tapShakeId >= 0 ? tapShakeUntil - performance.now() : 0
@@ -5543,6 +5504,8 @@ export const useSpinnerGame = () => {
       }
     }
     if (tapShakeId >= 0 && shakeLeft <= 0) tapShakeId = -1
+    // #UX3 balloon bursts over the models (a no-op on gauge builds).
+    if (BALLOON_HP_BUILD) renderBalloonLayer(ctx)
 
     // Arena-border contact VFX, over the spinner they follow: the flame ring
     // licks over the rim (the art keeps the HP digit clear), the heal pulse
@@ -5569,6 +5532,10 @@ export const useSpinnerGame = () => {
     for (const explosion of activeExplosions) {
       renderSpritesheetAnim(ctx, explosion)
     }
+
+    // Meteors in flight, landing starbursts, spark shards: over the models.
+    if (meteorOn) drawMeteorSky(ctx, meteorFx, meteorT, scale * devPx)
+    if (ringOn) drawRingSky(ctx, ringFx, ringT, scale * devPx)
 
     // Static Charge lightning bolts
     for (const bolt of activeShockBolts) {
@@ -5610,17 +5577,12 @@ export const useSpinnerGame = () => {
       // Skill proc callouts (icon + skill name + what it did), css-px sized.
       if (SKILLS_BUILD && skillCallouts !== null) {
         skillPort?.['renderSkillCallouts'](ctx, skillCallouts, performance.now(), 1 / scale,
-          canvasWidth / 2 / scale, canvasHeight / 2 / scale, FX.low)
+          centerX / scale, centerY / scale, FX.low)
       }
     }
 
-    // Selection highlight — a control affordance ("this blade is armed"),
-    // not gameplay, so it goes in a clean feed.
-    if (!CLEAN_FEED && phase.value === 'player_turn' && selectedBlade.value && !isDragging.value) {
-      renderSelectionGlow(ctx, selectedBlade.value)
-    }
-
-    // Drag indicator — the slingshot pull-back and its aim line.
+    // Drag indicator, top layer: the cancel-zone ring / ✕ badge (the arrow,
+    // band and dots are drawn under the models — renderAimPreview).
     //
     // DELIBERATELY KEPT in a clean feed. This is not interface reporting on
     // the game, it is the player's shot being aimed: it shows intent, it is
@@ -5630,52 +5592,10 @@ export const useSpinnerGame = () => {
       renderDragIndicator(ctx, selectedBlade.value)
     }
 
-    // Joystick drag: show launch arrow on the blade so the player sees
-    // where it will go, same as the normal slingshot indicator.
-    if (isJoystickDragging.value && selectedBlade.value && phase.value === 'player_turn') {
-      const blade = selectedBlade.value
-      const { dx, dy } = joystickVector.value
-      const mag = Math.sqrt(dx * dx + dy * dy)
-      if (mag >= JOYSTICK_CANCEL_RADIUS) {
-        const ratio = joystickForceRatio.value
-        const nx = -dx / mag
-        const ny = -dy / mag
-        const arrowLen = 30 + 50 * ratio
-        const endX = blade.x + nx * arrowLen
-        const endY = blade.y + ny * arrowLen
-
-        const r = Math.floor(255 * ratio)
-        const g = Math.floor(255 * (1 - ratio * 0.6))
-
-        ctx.save()
-        ctx.strokeStyle = `rgb(${r}, ${g}, 0)`
-        ctx.fillStyle = `rgb(${r}, ${g}, 0)`
-        ctx.lineWidth = 3
-        ctx.beginPath()
-        ctx.moveTo(blade.x, blade.y)
-        ctx.lineTo(endX, endY)
-        ctx.stroke()
-
-        const headSize = 8
-        const angle = Math.atan2(ny, nx)
-        const tipX = endX + nx * headSize
-        const tipY = endY + ny * headSize
-        ctx.beginPath()
-        ctx.moveTo(tipX, tipY)
-        ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
-        ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
-        ctx.closePath()
-        ctx.fill()
-        ctx.restore()
-      }
-    }
-
-    // Hint animation and the early-game tutorial arrows. Both are teaching
-    // aids aimed at the player holding the device — pure interface, and the
-    // arrows in particular read as a watermark on a silent clip.
+    // The early-game tutorial arrows (the idle hint is drawn under the
+    // models, above). A teaching aid aimed at the player holding the device —
+    // pure interface, and the arrows read as a watermark on a silent clip.
     if (!CLEAN_FEED) {
-      renderHintAnimation(ctx, showHintAnim)
-
       // Early-game tutorial arrows orbiting the player's spinners — gated
       // on `currentStageId <= 11` and a 1s grace from the start of player_turn.
       renderTutorialArrows(ctx, currentStageId)
@@ -5686,18 +5606,26 @@ export const useSpinnerGame = () => {
     // overlay canvas (see renderJoystickOverlay) so it can render ABOVE the
     // HTML stat-card HUD instead of being covered by it.
     if (isJoystickVisible.value && phase.value === 'player_turn') {
-      updateJoystickCenter(canvasWidth, canvasHeight, scale)
+      updateJoystickCenter(canvasWidth, canvasHeight, view)
     }
 
     ctx.restore()
+
+    // Meteor shower screen layer (css px): flat vignette bands + hero flash.
+    if (meteorOn) drawMeteorScreen(ctx, meteorFx, meteorT, canvasWidth, canvasHeight)
+    if (ringOn) drawRingScreen(ctx, ringFx, ringT, canvasWidth, canvasHeight)
   }
 
   // Bottom-left corner of the visible canvas, clamped outside the arena.
   // Pulled out so both the main render (for hit testing) and the overlay
   // canvas (for drawing) reach the same coordinates.
-  const updateJoystickCenter = (canvasWidth: number, canvasHeight: number, scale: number) => {
-    const halfVisibleX = canvasWidth / (2 * scale)
-    const halfVisibleY = canvasHeight / (2 * scale)
+  const updateJoystickCenter = (canvasWidth: number, canvasHeight: number, view: ArenaView) => {
+    const scale = view.scale
+    // Visible span from the arena origin to the LEFT and to the BOTTOM edge
+    // (the fit may slide the board off the screen centre — arenaFit).
+    const halfVisibleX = view.cx / scale
+    const halfVisibleY = (canvasHeight - view.cy) / scale
+    void canvasWidth
     const margin = 4
     let jcX: number
     let jcY: number
@@ -5756,11 +5684,11 @@ export const useSpinnerGame = () => {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
     joystickOverlayPainted = wantsJoystick
     if (!wantsJoystick) return
-    const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2
-    const fitSize = Math.min(canvasWidth, canvasHeight)
-    const scale = fitSize / (ARENA_RADIUS * 2 + ARENA_PADDING)
-    updateJoystickCenter(canvasWidth, canvasHeight, scale)
+    const view = arenaViewFor(canvasWidth, canvasHeight)
+    const centerX = view.cx
+    const centerY = view.cy
+    const scale = view.scale
+    updateJoystickCenter(canvasWidth, canvasHeight, view)
     ctx.save()
     ctx.translate(centerX, centerY)
     ctx.scale(scale, scale)
@@ -5936,9 +5864,8 @@ export const useSpinnerGame = () => {
   }
 
   // Static-layer renderer: everything in the arena that doesn't change
-  // within a match (floor gradient, outer halo, neon border + shadowBlur,
-  // inner rings, theme frost bands). Called into a cached buffer
-  // (see arenaStaticBuffer below), not directly from the per-frame path.
+  // within a match (floor, rim, terrain features). Baked into the ONE static
+  // layer (drawStaticLayer), never called from the per-frame path.
   // Caller must have already translated to the arena origin.
   const renderArenaStatic = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
     const theme = ARENA_THEMES[arenaType.value]
@@ -5947,22 +5874,25 @@ export const useSpinnerGame = () => {
     // ARENA_RADIUS-based — clipped to whatever path we fill.
     const traceArena = (scale = 1) => traceArenaPath(ctx, arenaShape.value, ARENA_RADIUS, scale)
 
-    // Arena floor — a cozy forest clearing: flat cartoon fills tinted per
-    // arena type (lava = scorched earth, ice = snow, boss = dusk moss …),
-    // a darker rim band, mown rings and a few grass tufts / flowers. No
-    // radial gradients or blur (perf rule): flat fills + alpha shapes only.
-    const pal = FLOOR_PALETTES[arenaType.value]
-    // A layout theme may retint the plain clearing (snow, autumn, marsh …);
-    // the lava / ice / boss … arena types keep their own identity.
-    const themeFloor = arenaType.value === 'default' ? terrain?.theme.floor : undefined
+    // Arena floor — the arena THEME's ground (arenaThemes.ts: meadow,
+    // woodland, rocky steppe, snowfield, cooled volcanic plain, dusk ruins,
+    // bedroom play rug): its painted floor variant when there is one, else
+    // flat cartoon fills tinted to the theme, a darker rim band, lighter
+    // patches and the theme's floor decor. No radial gradients or blur (perf
+    // rule): flat fills + alpha shapes only.
+    const artTheme = arenaTheme()
+    const look = THEME_LOOK[artTheme]
+    const pal = look.floor
+    // A layout may retint the plain meadow clearing (snow, autumn, marsh …);
+    // every other theme keeps its own identity.
+    const themeFloor = artTheme === 'meadow' ? terrain?.theme.floor : undefined
     ctx.fillStyle = themeFloor?.[0] ?? pal.base
     traceArena()
     ctx.fill()
-    // Painted floor of this layout (arenaFloorArt — clipped to the outline;
-    // false = not painted / not loaded yet / would upscale): it replaces the
+    // Painted floor variant (arenaFloorArt — clipped to the outline; false =
+    // not painted / not loaded yet / would upscale): it replaces the
     // procedural patches + decor below.
-    const paintedFloor = arenaType.value === 'default' && terrain !== null &&
-      drawPaintedFloor(ctx, terrain.id, arenaShape.value, ARENA_RADIUS)
+    const paintedFloor = drawPaintedFloor(ctx, floorKeyFor(artTheme, terrain?.id ?? null), arenaShape.value, ARENA_RADIUS, `${pal.rim}29`)
     // Irregular lighter grass patches (deterministic blobs, clipped to the
     // clearing) instead of concentric rings — nothing on the floor should
     // read as round / target-like.
@@ -5989,7 +5919,8 @@ export const useSpinnerGame = () => {
       ctx.fill()
     }
     ctx.restore()
-    if (!paintedFloor) {
+    const decor = look.decor === 'layout' ? (terrain?.theme.decor ?? 'tufts') : look.decor
+    if (!paintedFloor && decor !== null) {
       // Deterministic decor (golden-angle scatter): tufts + tiny flowers,
       // only where they sit fully inside the clearing.
       for (let i = 0; i < 40; i++) {
@@ -5999,39 +5930,34 @@ export const useSpinnerGame = () => {
         const y = Math.sin(a) * r
         if (!shapeIsInside(arenaShape.value, x, y, ARENA_RADIUS, 12)) continue
         if (terrainBlocksDecor(x, y)) continue
-        DECOR_DRAW[terrain?.theme.decor ?? 'tufts'](ctx, x, y, i, pal)
+        DECOR_DRAW[decor](ctx, x, y, i, pal)
       }
     }
 
-    // Border: a solid wooden log rim — dark outline, bark band, a thin
-    // lighter top line in the arena type's accent. No halo, no glow, no
-    // gradient around the arena (perf + art direction).
-    ctx.lineJoin = 'round'
-    ctx.strokeStyle = '#2c1d12'
-    ctx.lineWidth = theme.borderWidth + 7
-    traceArena()
-    ctx.stroke()
-    ctx.strokeStyle = '#7a5130'
-    ctx.lineWidth = theme.borderWidth + 3
-    traceArena()
-    ctx.stroke()
-    ctx.strokeStyle = theme.neonColor
-    ctx.lineWidth = 1.5
-    traceArena((ARENA_RADIUS - theme.borderWidth * 0.5 - 2) / ARENA_RADIUS)
-    ctx.stroke()
+    // Border: the PAINTED edge (arenaBorderArt — tileable strips laid along
+    // the outline, baseline on the wall, a gap at each tree): the lava wall
+    // (hurts) / heal wall (heals) on those arena types, else the theme's; else a
+    // solid wooden log rim — dark outline, bark band, a thin lighter top line
+    // in the arena type's accent. No halo, no glow, no gradient around the
+    // arena (perf + art direction).
+    if (!drawPaintedBorder(ctx, borderKeyFor(arenaType.value, artTheme), arenaShape.value, ARENA_RADIUS, towers, `${artTheme}:${terrain?.id ?? '-'}`)) {
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = '#2c1d12'
+      ctx.lineWidth = theme.borderWidth + 7
+      traceArena()
+      ctx.stroke()
+      ctx.strokeStyle = '#7a5130'
+      ctx.lineWidth = theme.borderWidth + 3
+      traceArena()
+      ctx.stroke()
+      ctx.strokeStyle = theme.neonColor
+      ctx.lineWidth = 1.5
+      traceArena((ARENA_RADIUS - theme.borderWidth * 0.5 - 2) / ARENA_RADIUS)
+      ctx.stroke()
+    }
 
     // Terrain layout features (static): holes, boosters, islands.
     if (terrain !== null) renderTerrainStatic(ctx, terrain)
-  }
-
-  /** Clearing palettes per arena type (identity kept: lava scorched, ice
-   *  snow, boss dusk-red, forest deep moss). */
-  const FLOOR_PALETTES: Record<ArenaType, { rim: string; base: string; light: string; ring: string; tuft: string; flower: string }> = {
-    default: { rim: '#4f8f3e', base: '#7cc05c', light: '#8fcd6b', ring: '#6aad4f', tuft: '#4f9a3c', flower: '#fff27a' },
-    forest: { rim: '#2f6b33', base: '#4e9a4e', light: '#5aa957', ring: '#428a44', tuft: '#2f7334', flower: '#ffd36b' },
-    boss: { rim: '#4a2523', base: '#7a443c', light: '#875047', ring: '#6a3832', tuft: '#5a2c28', flower: '#ff8a6b' },
-    lava: { rim: '#4d2a17', base: '#8a5634', light: '#97613c', ring: '#7a4a2b', tuft: '#5e3820', flower: '#ffb347' },
-    ice: { rim: '#8fb8d6', base: '#d6ebf7', light: '#e4f2fb', ring: '#bcd8ec', tuft: '#a9cbe3', flower: '#ffffff' }
   }
 
   /** Decor scatter keeps clear of terrain features and towers. */
@@ -6049,77 +5975,114 @@ export const useSpinnerGame = () => {
   /** Terrain features: one draw function per kind in arenaTerrainDraw
    *  (TERRAIN_FEATURE_DRAW) — the sprite seam for painted art. */
   const renderTerrainStatic = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TerrainLayout) => {
-    renderTerrainFeatures(ctx, t)
+    renderTerrainFeatures(ctx, t, arenaTheme())
   }
 
   /** Team towers: a sturdy little tree in the team colour, HP ring around
    *  it (like a blade's), flash on hit; a stump + debris after it falls. */
-  const renderTowers = (ctx: CanvasRenderingContext2D) => {
-    for (const t of towers) {
-      const c = TOWER_TEAM_COLORS[t.side]
-      const r = t.radius
-      ctx.strokeStyle = TERRAIN_OUTLINE
-      if (t.hp <= 0) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
-        ctx.beginPath()
-        ctx.arc(t.x + 3, t.y + 4, r * 0.5, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = '#8a5a35'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(t.x, t.y, r * 0.5, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
-        ctx.fillStyle = '#e8c48a'
-        ctx.beginPath()
-        ctx.arc(t.x, t.y, r * 0.36, 0, Math.PI * 2)
-        ctx.fill()
-        continue
-      }
-      const wob = t.flash > 0 ? Math.sin(performance.now() * 0.08) * t.flash * 2 : 0
-      ctx.save()
-      ctx.translate(t.x + wob, t.y)
+  /** Tower bodies baked into the static layer: per tower its damage state
+   *  (healthy / damaged / nearly down / felled — the painted tree changes
+   *  with it) + whether the painted tower atlas has landed. */
+  const towerBakeKey = (): string =>
+    towers.map(t => `${towerDamageStage(t.hp, t.maxHp)}${t.spiked ? 's' : ''}`).join('') + towerArtRevision() + (towers.some(t => t.spiked) ? `t${thornArtRevision()}` : '')
+
+  /** THE tower-body seam — drawn into the static layer (bakeTowerBodies) and,
+   *  only during a hit flash, redrawn per frame on top (renderTowers): a sturdy
+   *  little tree in the team colour, or the stump of a felled one. A painted
+   *  tower sprite drops in here. Caller has translated to the tower centre. */
+  const drawTowerBody = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TeamTower, flash = 0): boolean => {
+    const painted = drawTowerTree(ctx, t, flash)
+    // Spiked front cover (boss trees): the thorny garland on the arc that
+    // faces the clearing — @/use/towerThorns (painted segments or vector).
+    if (t.spiked && t.hp > 0) drawTowerThorns(ctx, t.radius, towerFrontAngle(t), TOWER_FRONT_HALF_ARC)
+    return painted
+  }
+  const drawTowerTree = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TeamTower, flash = 0): boolean => {
+    // Painted team tree (blue / red bow + pennant, damage state by HP —
+    // @/use/towerArt); the vector tree below is its fallback.
+    if (drawPaintedTower(ctx, t.side, 0, 0, t.radius, t.hp, t.maxHp, flash)) return true
+    const c = TOWER_TEAM_COLORS[t.side]
+    const r = t.radius
+    ctx.strokeStyle = TERRAIN_OUTLINE
+    if (t.hp <= 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
       ctx.beginPath()
-      ctx.arc(3, 5, r, 0, Math.PI * 2)
+      ctx.arc(3, 4, r * 0.5, 0, Math.PI * 2)
       ctx.fill()
-      ctx.lineWidth = 2.5
-      ctx.fillStyle = '#7a4f2c'
+      ctx.fillStyle = '#8a5a35'
+      ctx.lineWidth = 2
       ctx.beginPath()
-      ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2)
+      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2)
       ctx.fill()
       ctx.stroke()
-      // leafy crown: 6 puffs + centre
-      ctx.fillStyle = c.leafDark
-      for (let i = 0; i < 6; i++) {
-        const a = i * Math.PI / 3 + 0.3
-        ctx.beginPath()
-        ctx.arc(Math.cos(a) * r * 0.48, Math.sin(a) * r * 0.48, r * 0.42, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
-      }
-      ctx.fillStyle = c.leaf
+      ctx.fillStyle = '#e8c48a'
       ctx.beginPath()
-      ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2)
+      ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2)
       ctx.fill()
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)'
+      return false
+    }
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+    ctx.beginPath()
+    ctx.arc(3, 5, r, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.lineWidth = 2.5
+    ctx.fillStyle = '#7a4f2c'
+    ctx.beginPath()
+    ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+    // leafy crown: 6 puffs + centre
+    ctx.fillStyle = c.leafDark
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3 + 0.3
       ctx.beginPath()
-      ctx.arc(-r * 0.22, -r * 0.24, r * 0.2, 0, Math.PI * 2)
+      ctx.arc(Math.cos(a) * r * 0.48, Math.sin(a) * r * 0.48, r * 0.42, 0, Math.PI * 2)
       ctx.fill()
-      if (t.flash > 0.05) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${(t.flash * 0.45).toFixed(3)})`
-        ctx.beginPath()
-        ctx.arc(0, 0, r * 0.95, 0, Math.PI * 2)
-        ctx.fill()
-      }
+      ctx.stroke()
+    }
+    ctx.fillStyle = c.leaf
+    ctx.beginPath()
+    ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)'
+    ctx.beginPath()
+    ctx.arc(-r * 0.22, -r * 0.24, r * 0.2, 0, Math.PI * 2)
+    ctx.fill()
+    return false
+  }
+
+  /** Static layer: every tower body at rest (caller in arena units). */
+  const bakeTowerBodies = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
+    for (const t of towers) {
+      ctx.save()
+      ctx.translate(t.x, t.y)
+      drawTowerBody(ctx, t)
       ctx.restore()
-      // HP badge — the SAME ring + number a smasher shows, at smasher size,
-      // on the half of the tree that bulges into the arena (the rest is set
-      // into the wall), so a tower's HP reads exactly like a smasher's.
-      if (!CLEAN_FEED || CLEAN_HP_RINGS) {
-        const inward = t.y > 0 ? -1 : 1
-        renderHealthRing(ctx, t.x, t.y + inward * r * 0.5, t.hp, t.maxHp, BLADE_RADIUS, t.side === 'player')
+    }
+  }
+
+  /** Per frame: only what moves — a flashing tower's wobbling body + flash,
+   *  the HP badges and the debris (bodies at rest are in the static layer). */
+  const renderTowers = (ctx: CanvasRenderingContext2D) => {
+    for (const t of towers) {
+      const r = t.radius
+      if (t.hp <= 0) continue
+      if (t.flash > 0.05) {
+        const wob = t.flash > 0 ? Math.sin(performance.now() * 0.08) * t.flash * 2 : 0
+        ctx.save()
+        ctx.translate(t.x + wob, t.y)
+        const painted = drawTowerBody(ctx, t, t.flash)
+        if (t.flash > 0.05 && !painted) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${(t.flash * 0.45).toFixed(3)})`
+          ctx.beginPath()
+          ctx.arc(0, 0, r * 0.95, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.restore()
       }
+      // HP — the SAME gauge a smasher shows, on the side of the tree that
+      // bulges into the arena (the rest is set into the wall).
+      if (!CLEAN_FEED || CLEAN_HP_RINGS) renderTowerGauge(ctx, t)
     }
     for (const d of towerDebris) {
       ctx.save()
@@ -6153,139 +6116,11 @@ export const useSpinnerGame = () => {
     ctx.fill()
   }
 
-  // ── Arena static-layer cache ──────────────────────────────────────────
-  // The static arena art (floor, halo, neon border with shadowBlur, inner
-  // rings, ice frost bands) doesn't change within a match, yet its
-  // per-frame cost on Firefox — dominated by shadowBlur on the neon border
-  // — is one of the biggest items in the render budget. We pre-composite
-  // it into a buffer sized in arena-local coordinates so the cache is
-  // independent of viewport and canvas scale. Invalidated when arenaType
-  // changes; lazily rebuilt on the next render.
-  //
-  // Buffer radius of 280 covers ARENA_RADIUS (200) + outer halo (40) + a
-  // safety margin for shadowBlur bleed that's larger than any theme's
-  // shadowBlur setting. 560×560 RGBA = ~1.2 MB — fine.
-  const ARENA_STATIC_BUFFER_RADIUS = 280
-  const ARENA_STATIC_BUFFER_SIZE = ARENA_STATIC_BUFFER_RADIUS * 2
-  let arenaStaticBuffer: OffscreenCanvas | HTMLCanvasElement | null = null
-  // Cache key combines arena THEME and SHAPE — either change invalidates the
-  // pre-composited static buffer.
-  let arenaStaticCacheKey: string | null = null
+  // Key of everything renderArenaStatic draws (part of the static layer's
+  // key — drawStaticLayer): arena type, shape, layout, theme, PvP flip,
+  // towers on/off and the load state of the terrain / floor art.
   const arenaStaticKey = (): string =>
-    `${arenaType.value}:${arenaShape.value}:${terrain?.id ?? '-'}:${pvpLocalIsGuest ? 'g' : 'h'}:${towers.length}:${terrainArtRevision()}:${floorArtRevision()}`
-
-  const createArenaStaticBuffer = (): OffscreenCanvas | HTMLCanvasElement => {
-    if (typeof OffscreenCanvas !== 'undefined') {
-      return new OffscreenCanvas(ARENA_STATIC_BUFFER_SIZE, ARENA_STATIC_BUFFER_SIZE)
-    }
-    const c = document.createElement('canvas')
-    c.width = ARENA_STATIC_BUFFER_SIZE
-    c.height = ARENA_STATIC_BUFFER_SIZE
-    return c
-  }
-
-  // Device pixels per arena unit the buffer was baked at. The buffer is
-  // baked at the canvas's own resolution (render-sharpness rule: never draw
-  // below css × dpr) — a 560-unit bake blitted ×2–3 on a phone was soft.
-  let arenaStaticPxScale = 1
-  const rebuildArenaStaticBuffer = (pxScale: number) => {
-    const px = Math.max(1, Math.ceil(ARENA_STATIC_BUFFER_SIZE * pxScale))
-    if (!arenaStaticBuffer || arenaStaticBuffer.width !== px) {
-      arenaStaticBuffer = createArenaStaticBuffer()
-      arenaStaticBuffer.width = px
-      arenaStaticBuffer.height = px
-    }
-    const bctx = arenaStaticBuffer.getContext('2d') as
-      | CanvasRenderingContext2D
-      | OffscreenCanvasRenderingContext2D
-      | null
-    if (!bctx) return
-    bctx.setTransform(1, 0, 0, 1, 0, 0)
-    bctx.clearRect(0, 0, px, px)
-    bctx.save()
-    bctx.scale(px / ARENA_STATIC_BUFFER_SIZE, px / ARENA_STATIC_BUFFER_SIZE)
-    bctx.translate(ARENA_STATIC_BUFFER_RADIUS, ARENA_STATIC_BUFFER_RADIUS)
-    renderArenaStatic(bctx)
-    bctx.restore()
-    arenaStaticPxScale = pxScale
-    arenaStaticCacheKey = arenaStaticKey()
-  }
-
-  // Blit the cached static arena at the arena origin. Caller has already
-  // translated+scaled into arena-local space, so we draw the buffer
-  // centred at (0,0).
-  const drawArenaStaticCached = (ctx: CanvasRenderingContext2D) => {
-    // Current device pixels per arena unit (quantised so a resize re-bakes
-    // only on a real change).
-    let pxScale = 1
-    try {
-      const m = ctx.getTransform()
-      pxScale = Math.round(Math.hypot(m.a, m.b) * 20) / 20 || 1
-    } catch { /* old engines: 1 */ }
-    pxScale = Math.min(pxScale, 6)
-    if (arenaStaticCacheKey !== arenaStaticKey() || pxScale !== arenaStaticPxScale) rebuildArenaStaticBuffer(pxScale)
-    if (!arenaStaticBuffer) return
-    ctx.drawImage(
-      arenaStaticBuffer as CanvasImageSource,
-      -ARENA_STATIC_BUFFER_RADIUS,
-      -ARENA_STATIC_BUFFER_RADIUS,
-      ARENA_STATIC_BUFFER_SIZE,
-      ARENA_STATIC_BUFFER_SIZE
-    )
-  }
-
-  /**
-   * Draw pinball-style bouncers. Each bouncer is a stacked disc: a soft
-   * drop-shadow base, a bright cyan rim that pulses on contact, and a
-   * radial highlight to sell the "polished bumper" look.
-   */
-  const renderBouncers = (ctx: CanvasRenderingContext2D) => {
-    if (arenaBouncers.length === 0) return
-    const now = performance.now()
-    const idlePulse = 0.6 + 0.4 * Math.sin(now * 0.005)
-    for (const b of arenaBouncers) {
-      if (b.island !== undefined) continue // drawn in the static terrain art
-      const hit = b.flash
-      const rimAlpha = Math.min(1, 0.55 + hit * 0.45)
-      const glowR = b.radius * (1.8 + hit * 0.8)
-
-      // Outer glow
-      ctx.fillStyle = `rgba(120, 220, 255, ${((0.35 + hit * 0.4) * 0.4).toFixed(3)})`
-      ctx.beginPath()
-      ctx.arc(b.x, b.y, glowR, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Drop-shadow base
-      ctx.fillStyle = '#0f1a30'
-      ctx.beginPath()
-      ctx.arc(b.x, b.y + 1.2, b.radius, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Main bumper body — gradient from bright center to darker edge
-      // Flat two-tone body (no radial gradient — perf rule).
-      ctx.fillStyle = '#1a4d7a'
-      ctx.beginPath()
-      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillStyle = hit > 0.01 ? '#ffffff' : ('#5bb8e8')
-      ctx.beginPath()
-      ctx.arc(b.x - b.radius * 0.12, b.y - b.radius * 0.12, b.radius * 0.72, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Rim
-      ctx.strokeStyle = `rgba(180, 240, 255, ${rimAlpha * idlePulse})`
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2)
-      ctx.stroke()
-
-      // Tiny white highlight for polish
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-      ctx.beginPath()
-      ctx.arc(b.x - b.radius * 0.35, b.y - b.radius * 0.35, b.radius * 0.22, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
+    `${arenaType.value}:${arenaShape.value}:${terrain?.id ?? '-'}:${arenaTheme()}:${pvpLocalIsGuest ? 'g' : 'h'}:${towers.length}:${terrainArtRevision()}:${floorArtRevision()}:${borderArtRevision()}`
 
   // ─── Powerup lifecycle ───────────────────────────────────────────────────
 
@@ -6397,10 +6232,7 @@ export const useSpinnerGame = () => {
         }
       }
       if (ok) {
-        // Terrain: never on an island or a team tower.
-        for (const b of arenaBouncers) {
-          if (b.island !== undefined && Math.hypot(b.x - x, b.y - y) < b.radius + fullRadius + 6) ok = false
-        }
+        // Terrain: never on a feature (islands included) or a team tower.
         if (terrain !== null) {
           for (const c of terrainCircles(terrain)) {
             if (Math.hypot(c.x - x, c.y - y) < c.radius + fullRadius + 6) ok = false
@@ -6646,7 +6478,7 @@ export const useSpinnerGame = () => {
     const pr = size * POWERUP_PLATE.r
     const px = (POWERUP_PLATE.cx - 0.5) * size
     const py = (POWERUP_PLATE.cy - 0.5) * size
-    const icon = uiArtImage(statIconPath(p.stat))
+    const icon = statIconImage(p.stat)
     if (uiArtReady(icon)) {
       ctx.drawImage(icon, px - pr * 1.05, py - pr * 1.05, pr * 2.1, pr * 2.1)
     } else {
@@ -6778,184 +6610,41 @@ export const useSpinnerGame = () => {
     }
   }
 
-  const renderMeteorShower = (ctx: CanvasRenderingContext2D) => {
-    // Batched draw: every particle's streak and head go into ONE path per
-    // hue bucket, and we replace the per-particle fade with the bucket's
-    // mean alpha applied via `globalAlpha`. Net cost collapses from
-    // 2·N draw calls (stroke+fill per particle) to ≤4 — two strokes and
-    // two fills — regardless of particle count. The mean-alpha simplification
-    // is invisible in practice because every particle shares the same
-    // life/maxLife curve within a shower; they only differ in start delay,
-    // and that delay is already handled by the `p.life > p.maxLife` skip.
-    const particles = meteorParticles.value
-    if (particles.length === 0) return
-
-    // Single pass to accumulate each bucket's members + mean alpha. Hue
-    // split matches `spawnMeteorShower`: warm (~20–45°) vs cool (~190–230°).
-    let warmCount = 0
-    let warmAlphaSum = 0
-    let coolCount = 0
-    let coolAlphaSum = 0
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i]!
-      if (p.life > p.maxLife) continue
-      const alpha = (p.life / p.maxLife) * 0.8
-      if (p.hue < 100) {
-        warmCount++
-        warmAlphaSum += alpha
-      } else {
-        coolCount++
-        coolAlphaSum += alpha
-      }
-    }
-
-    if (warmCount === 0 && coolCount === 0) return
-
-    ctx.lineWidth = 2
-    ctx.lineCap = 'round'
-
-    const drawBucket = (
-      isWarm: boolean,
-      count: number,
-      alpha: number
-    ): void => {
-      if (count === 0) return
-      ctx.globalAlpha = alpha
-      // Streaks — one stroke pass for all particles in the bucket.
-      ctx.strokeStyle = isWarm ? 'hsl(32, 90%, 70%)' : 'hsl(210, 90%, 70%)'
-      ctx.beginPath()
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]!
-        if (p.life > p.maxLife) continue
-        if ((p.hue < 100) !== isWarm) continue
-        const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy)
-        const tailLen = spd * 4
-        const nx = spd > 0.01 ? p.vx / spd : 0
-        const ny = spd > 0.01 ? p.vy / spd : 0
-        ctx.moveTo(p.x - nx * tailLen, p.y - ny * tailLen)
-        ctx.lineTo(p.x, p.y)
-      }
-      ctx.stroke()
-
-      // Heads — one fill pass. Using `moveTo` before each arc breaks the
-      // subpath so the filled shapes don't connect.
-      ctx.fillStyle = isWarm ? 'hsl(32, 90%, 90%)' : 'hsl(210, 90%, 90%)'
-      ctx.beginPath()
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]!
-        if (p.life > p.maxLife) continue
-        if ((p.hue < 100) !== isWarm) continue
-        ctx.moveTo(p.x + 1.5, p.y)
-        ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2)
-      }
-      ctx.fill()
-    }
-
-    drawBucket(true, warmCount, warmCount > 0 ? warmAlphaSum / warmCount : 0)
-    drawBucket(false, coolCount, coolCount > 0 ? coolAlphaSum / coolCount : 0)
-
-    ctx.globalAlpha = 1
-    ctx.lineCap = 'butt'
+  // Under-blade markers. The Chaos Arena team aura (a soft blue / red glow
+  // under every smasher) and the tornado / sandstorm / thunderstorm skin
+  // auras (radial haze + translucent swirls) are gone: ownership reads from
+  // the team-coloured disc rim and HP gauge. What signals a MECHANIC stays,
+  // as a flat, non-glowing ring around the disc (drawn under the blade):
+  //  · boss — a chunky ember-orange dashed ring (it was a fiery radial glow);
+  //  · life-leech boss — a green dotted ring outside it (was a green glow);
+  //  · stat-switch boss — the ATK / DEF phase label above it (unchanged).
+  const MARKER_BOSS_DASH = [7, 4]
+  const MARKER_LEECH_DASH = [2.5, 3.5]
+  const markerRing = (
+    ctx: CanvasRenderingContext2D, blade: SpinnerState, pad: number, color: string, dash: number[], speed: number
+  ) => {
+    const side = blade.radius * 0.2
+    const rx = blade.radius + pad
+    const ry = blade.radius * DISC_SQUASH_RENDER + pad
+    const cy = blade.y + side * 0.5
+    ctx.lineWidth = 4.6
+    ctx.strokeStyle = '#1b1530'
+    ctx.beginPath()
+    ctx.ellipse(blade.x, cy, rx, ry, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash(dash)
+    ctx.lineDashOffset = -performance.now() * speed
+    ctx.lineWidth = 2.6
+    ctx.strokeStyle = color
+    ctx.beginPath()
+    ctx.ellipse(blade.x, cy, rx, ry, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash(NO_DASH)
+    ctx.lineDashOffset = 0
   }
+  const NO_DASH: number[] = []
 
-  const renderAura = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
-    const isPlayer = blade.owner === 'player'
-    const mid = blade.config.modelId
-
-    // Direct render — an offscreen spritesheet cache was tried and
-    // rolled back; see the note on the extracted `renderTornadoAura` /
-    // `renderSandstormAura` at the top of the file.
-    if (mid === 'tornado') {
-      ctx.save()
-      ctx.translate(blade.x, blade.y)
-      renderTornadoAura(ctx, blade.radius, performance.now())
-      ctx.restore()
-    } else if (mid === 'sandstorm') {
-      ctx.save()
-      ctx.translate(blade.x, blade.y)
-      renderSandstormAura(ctx, blade.radius, performance.now())
-      ctx.restore()
-    }
-
-    // ── Thunderstorm skin aura ─────────────────────────────────────────
-    // Direct path: bolt jitter uses `boltSeed = Math.floor(now/100)`
-    // and randomised branch geometry per frame.
-    if (mid === 'thunderstorm') {
-      const now = performance.now()
-      // Refresh bolt geometry every 100ms for crackling effect
-      const boltSeed = Math.floor(now / 100)
-      const boltCount = (isFirefox || FX.low) ? 1 : 5
-      // Ambient electric glow
-      drawAuraSprite(
-        ctx, auraSprite('thunderGlow', 0.15, THUNDER_GLOW_STOPS),
-        blade.x, blade.y, blade.radius * 2, 0.15 + 0.1 * Math.sin(now * 0.008)
-      )
-      // 5 big branching lightning bolts, ~72° apart with slight jitter
-      for (let i = 0; i < boltCount; i++) {
-        const baseAngle = (i / boltCount) * Math.PI * 2
-        const jitterAngle = ((boltSeed * 7 + i * 41) % 30 - 15) * Math.PI / 180
-        const angle = baseAngle + jitterAngle
-        const len = blade.radius * (1.4 + ((boltSeed * 3 + i * 41) % 100) * 0.012)
-        const ex = blade.x + Math.cos(angle) * len
-        const ey = blade.y + Math.sin(angle) * len
-        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, (isFirefox || FX.low) ? {
-          jitter: 6,
-          segments: 4,
-          branchChance: 0.2,
-          branchLength: 0.3,
-          maxDepth: 1,
-          color: '#ffee66',
-          glowColor: '#88bbff',
-          lineWidth: 1.5,
-          glowWidth: 4,
-          alpha: 0.85
-        } : {
-          jitter: 8,
-          segments: 7,
-          branchChance: 0.55,
-          branchLength: 0.55,
-          maxDepth: 3,
-          color: '#ffee66',
-          glowColor: '#88bbff',
-          lineWidth: 1.5,
-          glowWidth: 4,
-          alpha: 0.85
-        })
-      }
-      // Smaller arcs filling the gaps between big bolts
-      const smallBoltCount = (isFirefox || FX.low) ? 1 : 5
-      const smallSeed = Math.floor(now / 130)
-      for (let i = 0; i < smallBoltCount; i++) {
-        const angle = ((smallSeed * 11 + i * 73 + 34) % 360) * Math.PI / 180
-        const len = blade.radius * (0.85 + ((smallSeed * 5 + i * 29) % 100) * 0.005)
-        const ex = blade.x + Math.cos(angle) * len
-        const ey = blade.y + Math.sin(angle) * len
-        drawLightningBolt(ctx, blade.x, blade.y, ex, ey, (isFirefox || FX.low) ? {
-          jitter: 4,
-          segments: 3,
-          branchChance: 0,
-          branchLength: 0,
-          maxDepth: 0,
-          color: '#ffee66',
-          glowColor: '#88bbff',
-          lineWidth: 0.8,
-          glowWidth: 2.5,
-          alpha: 0.55
-        } : {
-          jitter: 5,
-          segments: 5,
-          branchChance: 0.35,
-          branchLength: 0.4,
-          maxDepth: 2,
-          color: '#ffee66',
-          glowColor: '#88bbff',
-          lineWidth: 0.8,
-          glowWidth: 2.5,
-          alpha: 0.55
-        })
-      }
-    }
-
+  const renderBladeMarkers = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
     // ── Stat-switch boss phase indicator ───────────────────────────────
     // The recorder's fillText gate already erases this label, but gating it
     // here too keeps `?clean=1` self-sufficient: the flag means "no
@@ -6970,63 +6659,24 @@ export const useSpinnerGame = () => {
       ctx.globalAlpha = pulse
       ctx.fillStyle = isAtk ? '#ff4444' : '#4488ff'
       ctx.font = 'bold 8px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText(isAtk ? '⚔ ATK' : '🛡 DEF', 0, 0)
+      // The stat family's icon in front of the tag (emoji only until it loads).
+      const icon = statIconImage(isAtk ? 'attack' : 'defense')
+      if (uiArtReady(icon)) {
+        const tag = isAtk ? 'ATK' : 'DEF'
+        const iw = 10
+        const w = iw + 1.5 + ctx.measureText(tag).width
+        ctx.drawImage(icon, -w / 2, -iw + 1.5, iw, iw)
+        ctx.textAlign = 'left'
+        ctx.fillText(tag, -w / 2 + iw + 1.5, 0)
+      } else {
+        ctx.textAlign = 'center'
+        ctx.fillText(isAtk ? '⚔ ATK' : '🛡 DEF', 0, 0)
+      }
       ctx.globalAlpha = 1
       ctx.restore()
     }
-
-    // ── Life-leech boss indicator ──────────────────────────────────────
-    if (blade.isLifeLeech) {
-      const now = performance.now()
-      const pulse = 0.4 + 0.3 * Math.sin(now * 0.004)
-      const auraR = blade.radius * 1.6
-      drawAuraSprite(ctx, auraSprite('leech', 0.1875, LEECH_AURA_STOPS),
-        blade.x, blade.y, auraR, pulse)
-    }
-
-    if (blade.isBoss) {
-      // Boss: large fiery pulsating aura
-      const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.003)
-      const auraRadius = blade.radius * 2.2
-      drawAuraSprite(ctx, auraSprite('boss', 0.4 / 2.2, BOSS_AURA_STOPS),
-        blade.x, blade.y, auraRadius, pulse)
-      return
-    }
-
-    // Player aura pulsates, NPC aura is steady
-    const pulse = isPlayer
-      ? 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(performance.now() * 0.004))
-      : 0.5
-    const auraRadius = blade.radius * 1.8 + 4
-    // Aura brightness is nudged per arena so ownership stays readable on
-    // floors whose hue overlaps the aura colour.
-    const at = arenaType.value
-    const bright = isPlayer
-      ? ((at === 'ice' || at === 'default') ? 1 : 0)
-      : ((at === 'boss' || at === 'lava') ? 1 : 0)
-
-    // `blade.radius * 0.3 / auraRadius` is *almost* constant (0.149-0.157
-    // across every blade size in the game) but not exactly, so it gets
-    // quantised into 0.005-wide buckets folded into the cache key. At a 60px
-    // aura the worst-case inner-stop shift is 0.15px.
-    const innerRatio = Math.round((blade.radius * 0.3 / auraRadius) * 200) / 200
-    const key = `${isPlayer ? 'p' : 'n'}${bright}_${innerRatio}`
-    const stops: [number, string][] = isPlayer
-      ? [
-        // Blue aura — brighter on blue-tinted floors (ice, default)
-        [0, `rgba(${80 + bright * 40}, ${170 + bright * 40}, 255, 0.55)`],
-        [0.5, `rgba(${50 + bright * 30}, ${120 + bright * 30}, 240, 0.3)`],
-        [1, `rgba(${40 + bright * 20}, ${100 + bright * 20}, 220, 0)`]
-      ]
-      : [
-        // Red aura — brighter on red/warm-tinted floors (boss, lava)
-        [0, `rgba(255, ${80 + bright * 50}, ${80 + bright * 50}, 0.75)`],
-        [0.5, `rgba(240, ${55 + bright * 40}, ${55 + bright * 40}, 0.45)`],
-        [1, `rgba(220, ${40 + bright * 30}, ${40 + bright * 30}, 0)`]
-      ]
-    drawAuraSprite(ctx, auraSprite(key, innerRatio, stops),
-      blade.x, blade.y, auraRadius, pulse)
+    if (blade.isBoss) markerRing(ctx, blade, 3.5, '#ff8a2a', MARKER_BOSS_DASH, 0.012)
+    if (blade.isLifeLeech) markerRing(ctx, blade, blade.isBoss ? 8.5 : 3.5, '#6fd65a', MARKER_LEECH_DASH, -0.01)
   }
 
   /**
@@ -7043,13 +6693,105 @@ export const useSpinnerGame = () => {
     ctx.translate(x, y)
     ctx.scale(1, DISC_SQUASH_RENDER)
     ctx.lineCap = 'round'
+    // ONE continuous rim around the whole disc (owner 2026-10-23): the reinforced / weak
+    // zones are thicker stretches of this same band, not three separate stuck-on pieces.
+    // The neutral band shows between them (the sides) and runs under every zone, so a
+    // zone's ends melt into it. Flat fills, one ink outline, no seam anywhere.
+    {
+      const rw = r * 0.1
+      ctx.strokeStyle = '#161a40'
+      ctx.lineWidth = rw + r * 0.06
+      ctx.beginPath()
+      ctx.ellipse(0, 0, r * 0.98, r * 0.98, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.strokeStyle = '#d9cdb4'
+      ctx.lineWidth = rw
+      ctx.beginPath()
+      ctx.ellipse(0, 0, r * 0.98, r * 0.98, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.strokeStyle = '#f4ecd8'
+      ctx.lineWidth = Math.max(1, rw * 0.28)
+      ctx.beginPath()
+      ctx.ellipse(0, 0, r * 0.98 + rw * 0.26, r * 0.98 + rw * 0.26, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    // Painted tiles (tools/armor-art, armorArt.ts) when they ship + load;
+    // the vector arcs below stay the fallback per arc.
+    const tiles = PAINTED_ARMOR ? armorTilesImage() : null
+    // The tank bulwark (armor.look === 'bulwark'): its own painted tile, else
+    // the vector shield wall below.
+    const bulwark = PAINTED_BULWARK ? bulwarkTilesImage() : null
+    const bulwarkLook = armor.look === 'bulwark'
     for (let k = 0; k < 2; k++) {
       const mul = k === 0 ? armor.front : armor.back
       if (mul === 1) continue
       const mid = k === 0 ? th : th + Math.PI
       const a0 = mid - ARMOR_HALF
       const a1 = mid + ARMOR_HALF
-      if (mul < 1) {
+      if (mul < 1 && bulwarkLook && bulwark && PAINTED_BULWARK) {
+        const bw = r * (0.2 + (1 - mul) * 0.3 + 0.08)
+        const meta = { file: PAINTED_BULWARK.file, v: PAINTED_BULWARK.v, plate: PAINTED_BULWARK.tile, patch: PAINTED_BULWARK.tile }
+        if (drawArmorTiles(ctx, bulwark, meta, 'plate', r * 0.98, bw * 1.15, a0, a1)) continue
+      }
+      if (tiles && PAINTED_ARMOR && !(mul < 1 && bulwarkLook)) {
+        const band = mul < 1 ? r * (0.16 + (1 - mul) * 0.25 + 0.07) : r * (0.14 + Math.min(0.6, mul - 1) * 0.2 + 0.06)
+        if (drawArmorTiles(ctx, tiles, PAINTED_ARMOR, mul < 1 ? 'plate' : 'patch', r * (mul < 1 ? 0.98 : 0.97), band * 1.15, a0, a1)) continue
+      }
+      if (mul < 1 && bulwarkLook) {
+        // Bulwark: a thick rounded shield wall — deep navy outline, warm
+        // oak-and-stone band, pale top edge, big domed studs, round end caps.
+        const w = r * (0.2 + (1 - mul) * 0.3)
+        ctx.lineCap = 'butt'
+        ctx.strokeStyle = '#161a40'
+        ctx.lineWidth = w + r * 0.09
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#b98a52'
+        ctx.lineWidth = w
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98, a0, a1)
+        ctx.stroke()
+        ctx.strokeStyle = '#7d5a35'
+        ctx.lineWidth = w * 0.3
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98 - w * 0.34, a0 + 0.03, a1 - 0.03)
+        ctx.stroke()
+        ctx.strokeStyle = '#e8c88e'
+        ctx.lineWidth = Math.max(1, w * 0.2)
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.98 + w * 0.3, a0 + 0.05, a1 - 0.05)
+        ctx.stroke()
+        for (let e = 0; e < 2; e++) {
+          const a = e === 0 ? a0 : a1
+          ctx.fillStyle = '#161a40'
+          ctx.beginPath()
+          ctx.arc(Math.cos(a) * r * 0.98, Math.sin(a) * r * 0.98, w * 0.64, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#b98a52'
+          ctx.beginPath()
+          ctx.arc(Math.cos(a) * r * 0.98, Math.sin(a) * r * 0.98, w * 0.5, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        for (let i = 0; i < 3; i++) {
+          const a = a0 + (a1 - a0) * (i + 0.5) / 3
+          const sx = Math.cos(a) * r * 0.98
+          const sy = Math.sin(a) * r * 0.98
+          ctx.fillStyle = '#161a40'
+          ctx.beginPath()
+          ctx.arc(sx, sy, w * 0.36, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#d6dde6'
+          ctx.beginPath()
+          ctx.arc(sx, sy, w * 0.29, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#ffffff'
+          ctx.beginPath()
+          ctx.arc(sx - w * 0.07, sy - w * 0.07, w * 0.1, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.lineCap = 'round'
+      } else if (mul < 1) {
         // Plate: dark outline, steel band, light top edge, rivets.
         const w = r * (0.16 + (1 - mul) * 0.25)
         ctx.strokeStyle = '#2b333d'
@@ -7143,7 +6885,7 @@ export const useSpinnerGame = () => {
     // Facing rules (render-only, never gameplay state):
     //  · aiming: the selected smasher turns to the launch direction;
     //  · launch: it turns to face where it is flying;
-    //  · impact (smasher hit, wall, island, bouncer, tower — any contact that
+    //  · impact (smasher hit, wall, island, solid, tower — any contact that
     //    marks a hit or bends its path): it gets a spin that decays, and it
     //    KEEPS whatever facing it ends on. It never drifts back to the camera.
     const look = getBladeLook(blade)
@@ -7151,7 +6893,7 @@ export const useSpinnerGame = () => {
     const moving = v2 > 0.5
     const wrapPi = (d: number): number => d - Math.round(d / (Math.PI * 2)) * Math.PI * 2
     // Impact detection: a hit timestamp, a wall bounce, or a sharp bend of the
-    // velocity between two frames (islands, bouncers, towers, other blades).
+    // velocity between two frames (islands, solids, towers, other blades).
     let impact = 0
     if (blade.lastHitTime !== look.lastHit) impact = 1
     if (blade.wallBounceCount !== look.lastWalls) impact = Math.max(impact, 0.8)
@@ -7205,6 +6947,14 @@ export const useSpinnerGame = () => {
     // Part of the disc, under the character: the plush is never covered (the
     // far-rim plate hides behind its body like any other part of the disc).
     if (blade.armor !== undefined) drawArmorArcs(ctx, blade, x, y, radius)
+    // #UX3 balloon HP: the balloons hang BEHIND the plush (tied to the far
+    // rim), so they never cover its face. Gauge builds skip this.
+    const balloons = BALLOON_HP_BUILD && (!CLEAN_FEED || CLEAN_HP_RINGS) ? balloonStateOf(blade) : null
+    if (balloons !== null) {
+      balloonPops += drawBalloonHp(ctx, balloonFx, balloons, x, y, radius, hp, maxHp, blade.vx, performance.now(), FX.low, deviceScale)
+      balloonDeviceScale = deviceScale
+      balloons.seen = balloonFrame
+    }
     drawSmasherFrame(ctx, look.smasherId, look.modelId, !!blade.config.isBoss, frame, x, y, radius, deviceScale)
 
     // Hit flash overlay (white -> red -> orange -> white)
@@ -7225,8 +6975,10 @@ export const useSpinnerGame = () => {
     // screen, and the one thing a "no UI, no counters" spec is certain to
     // mean. `?clean=1&rings=1` puts it back for a looser spec without
     // touching the code or re-cutting a scenario (see `utils/cleanFeed.ts`).
-    if (!CLEAN_FEED || CLEAN_HP_RINGS) {
-      renderHealthRing(ctx, x, y, hp, maxHp, radius, isPlayer)
+    if (balloons !== null) {
+      drawBalloonHpNumber(ctx, balloons, x, y, radius, hp, performance.now())
+    } else if (!BALLOON_HP_BUILD && (!CLEAN_FEED || CLEAN_HP_RINGS)) {
+      renderHealthRing(ctx, blade.id, x, y, hp, maxHp, radius, isPlayer)
     }
 
     // Per-blade skill effects (Guard Shell arc, phase hint).
@@ -7237,194 +6989,556 @@ export const useSpinnerGame = () => {
     if (needsAlpha) ctx.restore()
   }
 
-  const _hpFontCache = new Map<string, number>()
-  // Cached optical-center y-offset per (text, fontSize) pair. Canvas's
-  // `textBaseline = 'middle'` centers on the font's em-middle, which for
-  // Arial Bold sits a few pixels above the visual center of digit-only
-  // strings (digits have no descender so the perceived center is lower).
-  // We measure once with `actualBoundingBoxAscent / Descent` and cache
-  // the nudge — keyed identically to the font cache so a single lookup
-  // serves both. Caching matters because measureText is called every
-  // frame for every blade.
-  const _hpYOffsetCache = new Map<string, number>()
+  // ── HP gauge (smashers AND team towers — see @/use/hpGauge) ─────────────
+  // A notched team-coloured arc on the FRONT rim of the disc (never over the
+  // plush), damage chip, hit flash + shake, low-HP pulse, HP badge. One state
+  // object per blade id / tower side, created once.
+  const gaugeStates = new Map<number | string, HpGaugeState>()
+  const gaugeFrame = { cx: 0, cy: 0, rx: 0, ry: 0 }
+  const towerGauges = new WeakMap<TeamTower, HpGaugeState>()
+  const gaugeState = (key: number | string, hp: number): HpGaugeState => {
+    let st = gaugeStates.get(key)
+    if (!st) {
+      if (gaugeStates.size > 256) gaugeStates.clear()
+      st = newHpGaugeState(hp)
+      gaugeStates.set(key, st)
+    }
+    return st
+  }
+  // ── #UX3 balloon HP (smashers only, VITE_APP_BALOON_HP_BAR) ──────────────
+  // One state per blade id (cleared at initGame — ids restart every match).
+  // Pops are counted while drawing; renderBalloonLayer bursts knocked-out /
+  // removed blades, plays ONE pop sound per cooldown and draws the bursts.
+  const balloonStates = new Map<number, BalloonState>()
+  let balloonFrame = 0
+  let balloonPops = 0
+  let lastBalloonSfxAt = -1e9
+  let lastBalloonTickAt = -1
+  /** Device px per arena unit from the last balloon draw (no getTransform
+   *  per frame): picks painted pop sprites vs procedural, never upscaled. */
+  let balloonDeviceScale = 1
+  let sweepNow = 0
+  const sweepBalloon = (st: BalloonState, id: number): void => {
+    if (st.seen === balloonFrame) return
+    if (st.alive > 0 && balloonFx !== null) balloonPops += updateBalloonHp(balloonFx, st, st.x, st.y, st.r, 0, 1, sweepNow, FX.low)
+    balloonStates.delete(id)
+  }
+  const balloonStateOf = (blade: SpinnerState): BalloonState => {
+    let st = balloonStates.get(blade.id)
+    if (!st) {
+      if (balloonStates.size > 256) balloonStates.clear()
+      const minor = !!blade.isEmittedChild || !!blade.isSplitChild
+      const n = balloonCount(balloonTeamSize[blade.owner], !!blade.config.isBoss, minor)
+      st = newBalloonState(n, blade.hp, blade.maxHp, blade.owner === 'player')
+      balloonStates.set(blade.id, st)
+    }
+    return st
+  }
+  /** After the models: knockouts pop their last balloons, removed blades pop
+   *  theirs where they were last drawn, the pool ticks and draws, and one
+   *  balloon-pop sound plays per cooldown however many burst at once. */
+  const renderBalloonLayer = (ctx: CanvasRenderingContext2D) => {
+    if (balloonFx === null) return
+    const now = performance.now()
+    const low = FX.low
+    for (const blade of allBlades.value) {
+      if (blade.hp > 0) continue
+      const st = balloonStates.get(blade.id)
+      if (st === undefined) continue
+      st.seen = balloonFrame
+      if (st.alive > 0) balloonPops += updateBalloonHp(balloonFx, st, blade.x, blade.y, blade.radius, 0, blade.maxHp, now, low)
+    }
+    // Every blade still in the match was stamped this frame (drawn alive or
+    // seen knocked out above): an unstamped state belongs to a removed blade.
+    sweepNow = now
+    balloonStates.forEach(sweepBalloon)
+    if (balloonPops > 0 && newSlotOn('balloon-pop') && now - lastBalloonSfxAt >= BALLOON_HP.POP_SFX_COOLDOWN_MS) {
+      lastBalloonSfxAt = now
+      try { playSound(BALLOON_POP_SFX, BALLOON_HP.POP_SFX_GAIN, 0, 0.94 + Math.random() * 0.12) } catch { /* audio optional */ } // vfx-rng
+    }
+    balloonPops = 0
+    balloonFrame++
+    const dt = lastBalloonTickAt < 0 ? 16 : Math.min(50, Math.max(0, now - lastBalloonTickAt))
+    lastBalloonTickAt = now
+    tickBalloonPopFx(balloonFx, dt)
+    drawBalloonPopFx(ctx, balloonFx, balloonDeviceScale)
+  }
 
-  // Inline the ring every frame. An earlier attempt cached the whole
-  // ring (bg stroke + HP arc + strokeText + fillText) into a per-blade
-  // OffscreenCanvas and replaced it with a single drawImage. On paper
-  // that cut draw calls; in practice it slowed down Chromium / Brave
-  // because `drawImage` is a different batch kind than `stroke`/`fill`,
-  // so each blade forced an extra GPU batch flush. The four-primitive
-  // inline path is faster because it groups naturally with the team-
-  // aura `fill` that follows.
   const renderHealthRing = (
     ctx: CanvasRenderingContext2D,
+    id: number,
     x: number, y: number,
     hp: number, maxHp: number,
     bladeRadius: number,
     isPlayer: boolean
   ) => {
-    const hpPct = Math.max(0, Math.min(1, hp / maxHp))
-    const ringR = bladeRadius * 0.45
-    const ringWidth = 2.5
-
-    // Background ring
-    ctx.strokeStyle = 'rgba(22, 26, 64, 0.6)'
-    ctx.lineWidth = ringWidth
-    ctx.beginPath()
-    ctx.arc(x, y, ringR, 0, Math.PI * 2)
-    ctx.stroke()
-
-    // HP arc
-    const hue = hpPct * 120
-    ctx.strokeStyle = `hsl(${hue}, 90%, 50%)`
-    ctx.lineWidth = ringWidth
-    ctx.lineCap = 'round'
-    const start = -Math.PI / 2
-    const end = start + hpPct * Math.PI * 2
-    ctx.beginPath()
-    ctx.arc(x, y, ringR, start, end)
-    ctx.stroke()
-    ctx.lineCap = 'butt'
-
-    // HP number (dynamically sized to fit inside the ring)
-    const hpText = Math.ceil(hp).toString()
-    const innerDiameter = (ringR - ringWidth) * 2
-    const cacheKey = `${hpText.length}_${Math.round(innerDiameter)}`
-    let fontSize = _hpFontCache.get(cacheKey)
-    if (fontSize === undefined) {
-      fontSize = innerDiameter
-      ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
-      let measured = ctx.measureText(hpText).width
-      while (measured > innerDiameter * 0.85 && fontSize > 4) {
-        fontSize -= 1
-        ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
-        measured = ctx.measureText(hpText).width
-      }
-      _hpFontCache.set(cacheKey, fontSize)
-    }
-    ctx.font = `900 ${fontSize}px Nunito, Arial, sans-serif`
-
-    // Compute the optical-center offset once per (text, fontSize) and
-    // cache it. With `textBaseline = 'alphabetic'`, drawing at
-    // `y + (ascent - descent) / 2` puts the visual middle of the glyph
-    // exactly on `y` — the previous `'middle'` baseline was off by a
-    // few pixels (digits have no descender so font-middle sits above
-    // visual-middle), which is what made the HP number feel slightly
-    // high inside the ring.
-    let yOffset = _hpYOffsetCache.get(cacheKey)
-    if (yOffset === undefined) {
-      const m = ctx.measureText(hpText)
-      // actualBoundingBox{Ascent,Descent} is supported on every browser
-      // we ship to (Chrome 77+, Safari 11.1+, Firefox 74+). Fall back
-      // to a sensible empirical fudge if the metrics are missing.
-      const a = typeof m.actualBoundingBoxAscent === 'number' ? m.actualBoundingBoxAscent : fontSize * 0.7
-      const d = typeof m.actualBoundingBoxDescent === 'number' ? m.actualBoundingBoxDescent : fontSize * 0.05
-      yOffset = (a - d) / 2
-      _hpYOffsetCache.set(cacheKey, yOffset)
-    }
-    const drawY = y + yOffset
-
-    ctx.fillStyle = isPlayer ? '#38c4ff' : '#ff5c8f'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'alphabetic'
-    ctx.strokeStyle = '#161a40'
-    ctx.lineWidth = 2
-    ctx.strokeText(hpText, x, drawY)
-    ctx.fillText(hpText, x, drawY)
+    discGaugeFrame(x, y, bladeRadius, gaugeFrame)
+    drawHpGauge(ctx, gaugeState(id, hp), gaugeFrame.cx, gaugeFrame.cy, gaugeFrame.rx, gaugeFrame.ry,
+      hp, maxHp, isPlayer, 1, performance.now())
   }
+  /** Tower HP: the same gauge, on the arena side of the tree (npc tower at the
+   *  top → arc below it; player tower at the bottom → arc above it). */
+  const renderTowerGauge = (ctx: CanvasRenderingContext2D, t: TeamTower) => {
+    const r = t.radius * TOWER_GAUGE_R
+    // ONE gauge state PER TREE: a side has 2-3 trees, and a state shared by all of them
+    // saw a different tree's HP every frame, read each switch as a fresh hit and sat in
+    // the white hit-flash for good (white bars, dark digits on a dark badge).
+    let st = towerGauges.get(t)
+    if (!st) {
+      st = newHpGaugeState(t.hp)
+      towerGauges.set(t, st)
+    }
+    drawHpGauge(ctx, st, t.x, t.y, r, r,
+      t.hp, t.maxHp, t.side === 'player', t.y > 0 ? -1 : 1, performance.now(), TOWER_GAUGE_LOOK)
+  }
+  /** Tower gauge radius over the collision radius: tight around the painted
+   *  tree's base (TOWER_ART_HALF_W 1.2). Owner 2026-10-23: the old wide arcs
+   *  of neighbouring trees overlapped, so it is shorter, slimmer and hugs the
+   *  trunk bottom. */
+  const TOWER_GAUGE_R = 1.22
+  const TOWER_GAUGE_LOOK = { halfSpan: 0.72, bar: 3.8 } as const
 
+  /** Selection highlight: a flat yellow ring with a dark outline (no glow
+   *  halo) hugging the disc's own ellipse, so it frames the disc without
+   *  crossing the plush or the HP badge below it. */
   const renderSelectionGlow = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
-    // Glow = a wider translucent ring under the line (no shadowBlur).
-    if (!FX.low) {
-      ctx.strokeStyle = 'rgba(255, 221, 0, 0.3)'
-      ctx.lineWidth = 7
-      ctx.beginPath()
-      ctx.arc(blade.x, blade.y, blade.radius + 2, 0, Math.PI * 2)
-      ctx.stroke()
-    }
-    ctx.strokeStyle = '#ffdd00'
-    ctx.lineWidth = 2
+    const side = blade.radius * 0.2
+    const rx = blade.radius + 2.5
+    const ry = blade.radius * DISC_SQUASH_RENDER + 2.5 + side * 0.5
+    const cy = blade.y + side * 0.5
+    ctx.strokeStyle = '#1b1530'
+    ctx.lineWidth = 4.2
     ctx.beginPath()
-    ctx.arc(blade.x, blade.y, blade.radius + 2, 0, Math.PI * 2)
+    ctx.ellipse(blade.x, cy, rx, ry, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.strokeStyle = '#ffdd00'
+    ctx.lineWidth = 2.2
+    ctx.beginPath()
+    ctx.ellipse(blade.x, cy, rx, ry, 0, 0, Math.PI * 2)
     ctx.stroke()
   }
 
-  const renderDragIndicator = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
-    // Compute pull vector from blade center to pointer
-    const pullDx = dragCurrent.value.x - blade.x
-    const pullDy = dragCurrent.value.y - blade.y
-    const pullMag = Math.sqrt(pullDx * pullDx + pullDy * pullDy)
-    const inCancelZone = pullMag < blade.radius
+  // ── Aim preview (slingshot pull-back) — ui-catalog.md §7 "Aim preview" ───
+  // Toy-box style (DESIGN.md): chunky shapes, a bold navy outline, flat fills
+  // with a hard light band, team colour, a 0-blur drop. No glow, no gradient,
+  // no blur. Everything is sized in game units (it scales with the arena and
+  // the renderer draws at css × dpr, so it stays crisp) and allocation-free:
+  // constant colour strings and dash arrays, no per-frame objects.
+  //  · pull band   — a tapered rubber band from the disc to the finger;
+  //  · power arrow — a thick outlined arrow on the LAUNCH side (never under
+  //                  the finger) whose 5 notched segments fill with the pull
+  //                  and step sun → orange → pink; at full power the head
+  //                  turns berry, the arrow snaps (one ring burst) and pulses;
+  //  · guide dots  — bold dots past the arrow head in the launch direction,
+  //                  shrinking with distance, as many as the power is long;
+  //                  they stop at the arena wall with a hit marker;
+  //  · cancel      — near the disc a dashed ring marks the cancel zone; inside
+  //                  it the disc gets a berry ring and an ✕ badge ABOVE it
+  //                  (a thumb comes from below), and no arrow is drawn.
+  const AIM_INK = '#161a40'
+  const AIM_WELL = '#1b2a7a'
+  const AIM_ICE = '#eef5ff'
+  const AIM_TEAM = '#13a3f2'
+  const AIM_TEAM_HI = '#7fdcff'
+  const AIM_TEAM_LO = '#0b80d0'
+  const AIM_BERRY = '#f2306b'
+  const AIM_BERRY_HI = '#ff5c8f'
+  const AIM_SUN = '#ffd21a'
+  /** Notch fill per power tier (< 40 %, < 75 %, < max, max) and its light band. */
+  const AIM_FILL = ['#ffd21a', '#ffae00', '#ff5c8f', '#f2306b'] as const
+  const AIM_FILL_HI = ['#fff7a3', '#ffd21a', '#ffa3c4', '#ff5c8f'] as const
+  const AIM_SEGMENTS = 5
+  const AIM_OUTLINE = 2.6
+  const AIM_NO_DASH: number[] = []
+  const AIM_CANCEL_DASH: number[] = [5, 4]
+  /** performance.now() when the pull reached full power (-1 = below max). */
+  let aimMaxSince = -1
 
-    ctx.save()
-    // Cancel zone circle
-    const cancelAlpha = inCancelZone ? 0.6 : 0.2
-    ctx.strokeStyle = `rgba(255, 80, 80, ${cancelAlpha})`
-    ctx.lineWidth = inCancelZone ? 2.5 : 1.5
-    ctx.setLineDash([3, 3])
+  const aimTier = (ratio: number): 0 | 1 | 2 | 3 =>
+    ratio >= 0.999 ? 3 : ratio >= 0.75 ? 2 : ratio >= 0.4 ? 1 : 0
+
+  /** Track the full-power moment (snap burst + pulse clock). */
+  const noteAimPower = (ratio: number, now: number) => {
+    if (ratio >= 0.999) {
+      if (aimMaxSince < 0) aimMaxSince = now
+    } else aimMaxSince = -1
+  }
+
+  /** Arrow silhouette along +x: flat tail at s0, shaft to s1, head to tip. */
+  const aimArrowPath = (ctx: CanvasRenderingContext2D, s0: number, s1: number, tip: number, hw: number, hh: number) => {
     ctx.beginPath()
-    ctx.arc(blade.x, blade.y, blade.radius, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.setLineDash([])
+    ctx.moveTo(s0, -hw)
+    ctx.lineTo(s1, -hw)
+    ctx.lineTo(s1, -hh)
+    ctx.lineTo(tip, 0)
+    ctx.lineTo(s1, hh)
+    ctx.lineTo(s1, hw)
+    ctx.lineTo(s0, hw)
+    ctx.closePath()
+  }
 
-    if (inCancelZone) {
-      // X icon
-      const s = blade.radius * 0.35
-      ctx.strokeStyle = 'rgba(255, 80, 80, 0.8)'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(blade.x - s, blade.y - s)
-      ctx.lineTo(blade.x + s, blade.y + s)
-      ctx.moveTo(blade.x + s, blade.y - s)
-      ctx.lineTo(blade.x - s, blade.y + s)
-      ctx.stroke()
-    }
+  /**
+   * The power arrow from (ox, oy), starting `startR` out in the launch
+   * direction (nx, ny). `size` scales it (1 on a smasher, smaller on the
+   * joystick). Returns the tip's distance from (ox, oy) for the guide dots.
+   */
+  const drawAimArrow = (
+    ctx: CanvasRenderingContext2D, ox: number, oy: number, startR: number,
+    nx: number, ny: number, ratio: number, size: number, now: number
+  ): number => {
+    const tier = aimTier(ratio)
+    const maxed = tier === 3
+    const pulse = maxed && aimMaxSince >= 0 ? 1 + 0.06 * Math.sin((now - aimMaxSince) * 0.018) : 1
+    const k = size * pulse
+    const hw = 6.5 * k
+    const hh = 14.5 * k
+    const s0 = startR + 4 * size
+    const s1 = s0 + 56 * k
+    const tip = s1 + 20 * k
+    const ang = Math.atan2(ny, nx)
+    const ow = AIM_OUTLINE * size
+
+    // Hard 0-blur drop, straight down on screen.
+    ctx.save()
+    ctx.translate(ox, oy + 3 * size)
+    ctx.rotate(ang)
+    aimArrowPath(ctx, s0, s1, tip, hw, hh)
+    ctx.globalAlpha = 0.32
+    ctx.fillStyle = AIM_INK
+    ctx.fill()
     ctx.restore()
 
-    if (pullMag < 3) return
-
-    const ratio = dragForceRatio.value
-
     ctx.save()
-    // Pull line (dashed) — blade center to pointer
-    ctx.strokeStyle = 'rgba(255,170,0,0.5)'
-    ctx.lineWidth = 2
-    ctx.setLineDash([6, 4])
-    ctx.beginPath()
-    ctx.moveTo(blade.x, blade.y)
-    ctx.lineTo(dragCurrent.value.x, dragCurrent.value.y)
+    ctx.translate(ox, oy)
+    ctx.rotate(ang)
+    aimArrowPath(ctx, s0, s1, tip, hw, hh)
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = ow * 2
+    ctx.strokeStyle = AIM_INK
     ctx.stroke()
-    ctx.setLineDash([])
+    ctx.fillStyle = AIM_WELL
+    ctx.fill()
 
-    // Launch arrow (opposite of pull direction, using same vector)
-    const nx = -pullDx / pullMag
-    const ny = -pullDy / pullMag
-    const arrowLen = 30 + 50 * ratio
-    const endX = blade.x + nx * arrowLen
-    const endY = blade.y + ny * arrowLen
+    // Notched power segments: each fills in turn, all in the tier colour,
+    // with a hard light band on the top third.
+    const pad = 1.8 * k
+    const gap = 2.4 * k
+    const segW = (s1 - s0 - pad * 2 - gap * (AIM_SEGMENTS - 1)) / AIM_SEGMENTS
+    const segH = (hw - pad) * 2
+    for (let i = 0; i < AIM_SEGMENTS; i++) {
+      const f = Math.min(1, ratio * AIM_SEGMENTS - i)
+      if (f <= 0) break
+      const x = s0 + pad + i * (segW + gap)
+      ctx.fillStyle = AIM_FILL[tier]
+      ctx.fillRect(x, -hw + pad, segW * f, segH)
+      ctx.fillStyle = AIM_FILL_HI[tier]
+      ctx.fillRect(x, -hw + pad, segW * f, segH * 0.36)
+    }
 
-    const r = Math.floor(255 * ratio)
-    const g = Math.floor(255 * (1 - ratio * 0.6))
-    ctx.strokeStyle = `rgb(${r}, ${g}, 0)`
-    ctx.fillStyle = `rgb(${r}, ${g}, 0)`
-    ctx.lineWidth = 3
+    // Head: team colour while aiming, berry at full power; light upper half.
+    const hp = 2.2 * k
+    ctx.fillStyle = maxed ? AIM_BERRY : AIM_TEAM
     ctx.beginPath()
-    ctx.moveTo(blade.x, blade.y)
-    ctx.lineTo(endX, endY)
-    ctx.stroke()
-
-    // Arrowhead (tip extends past line end)
-    const headSize = 8
-    const angle = Math.atan2(ny, nx)
-    const tipX = endX + nx * headSize
-    const tipY = endY + ny * headSize
+    ctx.moveTo(s1 + hp, -(hh - hp * 1.7))
+    ctx.lineTo(tip - hp * 2, 0)
+    ctx.lineTo(s1 + hp, hh - hp * 1.7)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = maxed ? AIM_BERRY_HI : AIM_TEAM_HI
     ctx.beginPath()
-    ctx.moveTo(tipX, tipY)
-    ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
-    ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
+    ctx.moveTo(s1 + hp, -(hh - hp * 1.7))
+    ctx.lineTo(tip - hp * 2, 0)
+    ctx.lineTo(s1 + hp, 0)
     ctx.closePath()
     ctx.fill()
 
+    // Max-power snap: one ring burst off the head as the pull hits full.
+    if (maxed && aimMaxSince >= 0) {
+      const age = now - aimMaxSince
+      if (age < 260) {
+        const u = age / 260
+        ctx.globalAlpha = 1 - u
+        ctx.beginPath()
+        ctx.arc(tip - 6 * k, 0, (8 + 20 * u) * size, 0, Math.PI * 2)
+        ctx.lineWidth = (5 * (1 - u) + 1.5) * size
+        ctx.strokeStyle = AIM_INK
+        ctx.stroke()
+        ctx.lineWidth = (2.6 * (1 - u) + 0.8) * size
+        ctx.strokeStyle = AIM_SUN
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+    }
+    ctx.restore()
+    return tip
+  }
+
+  /** Solid obstacles the guide dots stop at (terrain solids + towers),
+   *  rebuilt only when the match's layout / tower count changes. */
+  let aimSolids: { x: number; y: number; radius: number }[] = []
+  let aimSolidsKey: TerrainLayout | null | undefined
+  let aimSolidsTowers = -1
+  let aimSolidsShape: ArenaShape | null = null
+  /** Inside the arena wall, a solid or a tower? (> 0 = blocked). */
+  const aimBlocked = (x: number, y: number, r: number): number => {
+    if (aimSolidsKey !== terrain || aimSolidsTowers !== towers.length || aimSolidsShape !== arenaShape.value) {
+      aimSolidsKey = terrain
+      aimSolidsShape = arenaShape.value
+      aimSolidsTowers = towers.length
+      aimSolids = terrain !== null ? terrainSolidCircles(terrain) : []
+      for (const t of towers) aimSolids.push({ x: t.x, y: t.y, radius: t.radius })
+    }
+    let worst = shapeSdf(arenaShape.value, x, y, ARENA_RADIUS) + r
+    for (let i = 0; i < aimSolids.length; i++) {
+      const c = aimSolids[i]!
+      const dx = x - c.x
+      const dy = y - c.y
+      const pen = c.radius + r - Math.sqrt(dx * dx + dy * dy)
+      if (pen > worst) worst = pen
+    }
+    return worst
+  }
+
+  /** Guide dots past the arrow head; they stop (with a hit marker) at the
+   *  arena wall, a terrain solid (island / mushroom / log) or a tower. */
+  const drawAimDots = (
+    ctx: CanvasRenderingContext2D, ox: number, oy: number, startR: number, from: number,
+    nx: number, ny: number, ratio: number, fade = 1
+  ) => {
+    const count = 2 + Math.round(8 * ratio)
+    const step = 13
+    let wallAt = -1
+    let freeAt = startR
+    // Under the arrow first: an obstacle right in front of the disc gets the
+    // marker and no dots (the shot meets it before the arrow head).
+    for (let d = startR; d < from; d += 6) {
+      if (aimBlocked(ox + nx * d, oy + ny * d, 0) > 0) {
+        wallAt = d
+        break
+      }
+      freeAt = d
+    }
+    if (wallAt < 0) {
+      let d = from + 11
+      freeAt = from
+      ctx.lineWidth = 2.2
+      ctx.strokeStyle = AIM_INK
+      ctx.fillStyle = AIM_ICE
+      for (let i = 0; i < count; i++) {
+        const r = 4.6 - 2.6 * (i / 9)
+        const x = ox + nx * d
+        const y = oy + ny * d
+        if (aimBlocked(x, y, r) > 0) {
+          wallAt = d
+          break
+        }
+        ctx.globalAlpha = fade * (1 - 0.35 * (i / 9))
+        ctx.beginPath()
+        ctx.arc(x, y, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+        freeAt = d
+        d += step
+      }
+      ctx.globalAlpha = fade
+    }
+    if (wallAt < 0) return
+    // The first contact between the last free sample and this one (bisection).
+    let lo = freeAt
+    let hi = wallAt
+    for (let it = 0; it < 7; it++) {
+      const mid = (lo + hi) / 2
+      if (aimBlocked(ox + nx * mid, oy + ny * mid, 0) > 0) hi = mid
+      else lo = mid
+    }
+    const wx = ox + nx * lo
+    const wy = oy + ny * lo
+    // Hit marker: a stop bar across the path, wider than the arrow, navy
+    // outline + ice face (reads on the sun / pink notches and on the floor).
+    const px = -ny * 10.5
+    const py = nx * 10.5
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(wx - px, wy - py)
+    ctx.lineTo(wx + px, wy + py)
+    ctx.lineWidth = 7.5
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.lineWidth = 3.4
+    ctx.strokeStyle = AIM_ICE
+    ctx.stroke()
+    ctx.lineCap = 'butt'
+  }
+
+  /** Rubber band from the disc rim to the finger, thinner as it stretches. */
+  const drawPullBand = (
+    ctx: CanvasRenderingContext2D, bx: number, by: number, rimR: number,
+    fx: number, fy: number, ratio: number, size: number
+  ) => {
+    const dx = fx - bx
+    const dy = fy - by
+    const d = Math.sqrt(dx * dx + dy * dy)
+    if (d <= rimR + 2 * size) return
+    const ux = dx / d
+    const uy = dy / d
+    const sx = bx + ux * rimR * 0.85
+    const sy = by + uy * rimR * 0.85
+    const w0 = (7 - 2.5 * ratio) * size
+    const w1 = 3.2 * size
+    ctx.beginPath()
+    ctx.moveTo(sx - uy * w0, sy + ux * w0)
+    ctx.lineTo(fx - uy * w1, fy + ux * w1)
+    ctx.lineTo(fx + uy * w1, fy - ux * w1)
+    ctx.lineTo(sx + uy * w0, sy - ux * w0)
+    ctx.closePath()
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = AIM_OUTLINE * 2 * size
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.fillStyle = AIM_TEAM_HI
+    ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(sx, sy)
+    ctx.lineTo(fx, fy)
+    ctx.lineWidth = 1.6 * size
+    ctx.strokeStyle = AIM_TEAM_LO
+    ctx.stroke()
+    // Grip at the finger end.
+    ctx.beginPath()
+    ctx.arc(fx, fy, 6.5 * size, 0, Math.PI * 2)
+    ctx.fillStyle = AIM_ICE
+    ctx.fill()
+    ctx.lineWidth = AIM_OUTLINE * size
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(fx, fy, 3 * size, 0, Math.PI * 2)
+    ctx.fillStyle = AIM_TEAM
+    ctx.fill()
+  }
+
+  /** Inside the cancel zone: berry ring on the disc + an ✕ badge above it. */
+  const drawAimCancel = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
+    const side = blade.radius * 0.2
+    const rx = blade.radius + 2.5
+    const ry = blade.radius * DISC_SQUASH_RENDER + 2.5 + side * 0.5
+    const cy = blade.y + side * 0.5
+    ctx.beginPath()
+    ctx.ellipse(blade.x, cy, rx, ry, 0, 0, Math.PI * 2)
+    ctx.lineWidth = 6.4
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.lineWidth = 3.2
+    ctx.strokeStyle = AIM_BERRY
+    ctx.stroke()
+    const bx = blade.x
+    const by = cy - ry - 15
+    const r = 9.5
+    // Hard drop, then the berry badge with its navy outline.
+    ctx.beginPath()
+    ctx.arc(bx, by + 2.5, r + AIM_OUTLINE, 0, Math.PI * 2)
+    ctx.fillStyle = AIM_INK
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(bx, by, r, 0, Math.PI * 2)
+    ctx.lineWidth = AIM_OUTLINE * 2
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.fillStyle = AIM_BERRY
+    ctx.fill()
+    const s = r * 0.42
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(bx - s, by - s)
+    ctx.lineTo(bx + s, by + s)
+    ctx.moveTo(bx + s, by - s)
+    ctx.lineTo(bx - s, by + s)
+    ctx.lineWidth = 5
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.lineWidth = 2.6
+    ctx.strokeStyle = AIM_ICE
+    ctx.stroke()
+    ctx.lineCap = 'butt'
+  }
+
+  /** The pointer is back on the disc: releasing there cancels (releaseDrag). */
+  const inAimCancelZone = (blade: SpinnerState): boolean => {
+    const dx = dragCurrent.value.x - blade.x
+    const dy = dragCurrent.value.y - blade.y
+    return dx * dx + dy * dy < blade.radius * blade.radius
+  }
+
+  /** Under the models: pull band, power arrow and guide dots of a drag. */
+  const renderAimPreview = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
+    if (inAimCancelZone(blade)) {
+      aimMaxSince = -1
+      return
+    }
+    const fx = dragCurrent.value.x
+    const fy = dragCurrent.value.y
+    const now = performance.now()
+    // The preview shows what releaseDrag fires: the drag vector (press →
+    // finger) and its force ratio (wall-proximity boost included).
+    const ratio = dragForceRatio.value
+    ctx.save()
+    drawPullBand(ctx, blade.x, blade.y, blade.radius, fx, fy, ratio, 1)
+    const ldx = dragStart.value.x - fx
+    const ldy = dragStart.value.y - fy
+    const lmag = Math.sqrt(ldx * ldx + ldy * ldy)
+    if (lmag >= 5) {
+      noteAimPower(ratio, now)
+      const nx = ldx / lmag
+      const ny = ldy / lmag
+      const tip = drawAimArrow(ctx, blade.x, blade.y, blade.radius, nx, ny, ratio, 1, now)
+      drawAimDots(ctx, blade.x, blade.y, blade.radius, tip, nx, ny, ratio)
+    } else aimMaxSince = -1
+    ctx.restore()
+  }
+
+  /** Under the models: the same arrow + dots for a joystick aim. */
+  const renderJoystickAimPreview = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
+    const { dx, dy } = joystickVector.value
+    const mag = Math.sqrt(dx * dx + dy * dy)
+    if (mag < JOYSTICK_CANCEL_RADIUS) {
+      aimMaxSince = -1
+      return
+    }
+    const ratio = joystickForceRatio.value
+    const now = performance.now()
+    noteAimPower(ratio, now)
+    const nx = -dx / mag
+    const ny = -dy / mag
+    ctx.save()
+    const tip = drawAimArrow(ctx, blade.x, blade.y, blade.radius, nx, ny, ratio, 1, now)
+    drawAimDots(ctx, blade.x, blade.y, blade.radius, tip, nx, ny, ratio)
+    ctx.restore()
+  }
+
+  /** Over the models: the cancel zone (dashed ring near it, ✕ badge in it). */
+  const renderDragIndicator = (ctx: CanvasRenderingContext2D, blade: SpinnerState) => {
+    ctx.save()
+    if (inAimCancelZone(blade)) {
+      drawAimCancel(ctx, blade)
+      ctx.restore()
+      return
+    }
+    const dx = dragCurrent.value.x - blade.x
+    const dy = dragCurrent.value.y - blade.y
+    const pullMag = Math.sqrt(dx * dx + dy * dy)
+    // Near the zone: its border fades in as a dashed ring.
+    const near = 1 - (pullMag - blade.radius) / (blade.radius * 0.9)
+    if (near > 0) {
+      ctx.globalAlpha = Math.min(1, near) * 0.85
+      ctx.setLineDash(AIM_CANCEL_DASH)
+      ctx.beginPath()
+      ctx.arc(blade.x, blade.y, blade.radius, 0, Math.PI * 2)
+      ctx.lineWidth = 2.2
+      ctx.strokeStyle = AIM_INK
+      ctx.stroke()
+      ctx.setLineDash(AIM_NO_DASH)
+      ctx.globalAlpha = 1
+    }
     ctx.restore()
   }
 
@@ -7436,92 +7550,72 @@ export const useSpinnerGame = () => {
 
     ctx.save()
 
-    // Base circle (dark translucent disc)
-    ctx.fillStyle = 'rgba(25, 32, 50, 0.42)'
+    // Base: a navy well with a hard drop and a royal inner ring (toy-box
+    // style, same language as the aim preview — no translucent glass).
     ctx.beginPath()
-    ctx.arc(jc.x, jc.y, JOYSTICK_RADIUS, 0, Math.PI * 2)
+    ctx.arc(jc.x, jc.y + 2.5, JOYSTICK_RADIUS, 0, Math.PI * 2)
+    ctx.globalAlpha = 0.35
+    ctx.fillStyle = AIM_INK
     ctx.fill()
-
-    // Base ring
-    ctx.strokeStyle = 'rgba(100, 160, 255, 0.35)'
-    ctx.lineWidth = 1.5
+    ctx.globalAlpha = 0.82
     ctx.beginPath()
     ctx.arc(jc.x, jc.y, JOYSTICK_RADIUS, 0, Math.PI * 2)
+    ctx.fillStyle = AIM_WELL
+    ctx.fill()
+    ctx.globalAlpha = 1
+    ctx.lineWidth = AIM_OUTLINE
+    ctx.strokeStyle = AIM_INK
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(jc.x, jc.y, JOYSTICK_RADIUS - 4, 0, Math.PI * 2)
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#4570f0'
     ctx.stroke()
 
-    // Cancel zone indicator (dashed inner circle)
-    ctx.strokeStyle = dragging ? 'rgba(255, 80, 80, 0.4)' : 'rgba(255, 80, 80, 0.15)'
-    ctx.lineWidth = 1
-    ctx.setLineDash([2, 2])
+    // Cancel zone (dashed ring): berry while dragging inside it.
+    const { dx, dy } = joystickVector.value
+    const mag = Math.sqrt(dx * dx + dy * dy)
+    const inCancel = dragging && mag < JOYSTICK_CANCEL_RADIUS
+    ctx.setLineDash(AIM_CANCEL_DASH)
     ctx.beginPath()
     ctx.arc(jc.x, jc.y, JOYSTICK_CANCEL_RADIUS, 0, Math.PI * 2)
+    ctx.lineWidth = inCancel ? 2.4 : 1.4
+    ctx.strokeStyle = inCancel ? AIM_BERRY : AIM_ICE
+    ctx.globalAlpha = inCancel ? 1 : 0.45
     ctx.stroke()
-    ctx.setLineDash([])
+    ctx.setLineDash(AIM_NO_DASH)
+    ctx.globalAlpha = 1
 
     // Knob position
     const kx = dragging ? joystickKnob.value.x : jc.x
     const ky = dragging ? joystickKnob.value.y : jc.y
 
-    // Slingshot visual: dashed pull line to knob + launch arrow opposite
-    if (dragging) {
-      const { dx, dy } = joystickVector.value
-      const mag = Math.sqrt(dx * dx + dy * dy)
-      if (mag >= JOYSTICK_CANCEL_RADIUS) {
-        const ratio = joystickForceRatio.value
-        const r = Math.floor(255 * ratio)
-        const g = Math.floor(255 * (1 - ratio * 0.6))
-
-        // Pull line (dashed) — center to knob
-        ctx.strokeStyle = 'rgba(255,170,0,0.5)'
-        ctx.lineWidth = 1.5
-        ctx.setLineDash([4, 3])
-        ctx.beginPath()
-        ctx.moveTo(jc.x, jc.y)
-        ctx.lineTo(kx, ky)
-        ctx.stroke()
-        ctx.setLineDash([])
-
-        // Launch arrow (opposite of pull direction)
-        const nx = -dx / mag
-        const ny = -dy / mag
-        const arrowLen = 12 + 20 * ratio
-        const endX = jc.x + nx * arrowLen
-        const endY = jc.y + ny * arrowLen
-
-        ctx.strokeStyle = `rgb(${r}, ${g}, 0)`
-        ctx.fillStyle = `rgb(${r}, ${g}, 0)`
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(jc.x, jc.y)
-        ctx.lineTo(endX, endY)
-        ctx.stroke()
-
-        // Arrowhead
-        const headSize = 5
-        const angle = Math.atan2(ny, nx)
-        const tipX = endX + nx * headSize
-        const tipY = endY + ny * headSize
-        ctx.beginPath()
-        ctx.moveTo(tipX, tipY)
-        ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
-        ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
-        ctx.closePath()
-        ctx.fill()
-      }
+    // Slingshot visual: the rubber band to the knob + a small power arrow on
+    // the opposite (launch) side.
+    if (dragging && mag >= JOYSTICK_CANCEL_RADIUS) {
+      const ratio = joystickForceRatio.value
+      drawPullBand(ctx, jc.x, jc.y, 0, kx, ky, ratio, 0.55)
+      drawAimArrow(ctx, jc.x, jc.y, 2, -dx / mag, -dy / mag, ratio, 0.34, performance.now())
     }
 
-    // Knob
-    ctx.fillStyle = dragging ? 'rgba(110, 170, 240, 0.7)' : 'rgba(80, 130, 220, 0.5)'
+    // Knob: an ice 3D token with a sky core and a hard drop.
     ctx.beginPath()
-    ctx.arc(kx, ky, JOYSTICK_KNOB_RADIUS, 0, Math.PI * 2)
+    ctx.arc(kx, ky + 2, JOYSTICK_KNOB_RADIUS, 0, Math.PI * 2)
+    ctx.globalAlpha = 0.4
+    ctx.fillStyle = AIM_INK
     ctx.fill()
-
-    // Knob rim
-    ctx.strokeStyle = dragging ? 'rgba(160, 210, 255, 0.7)' : 'rgba(100, 160, 255, 0.4)'
-    ctx.lineWidth = 1
+    ctx.globalAlpha = 1
     ctx.beginPath()
     ctx.arc(kx, ky, JOYSTICK_KNOB_RADIUS, 0, Math.PI * 2)
+    ctx.fillStyle = AIM_ICE
+    ctx.fill()
+    ctx.lineWidth = AIM_OUTLINE
+    ctx.strokeStyle = AIM_INK
     ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(kx, ky + 1, JOYSTICK_KNOB_RADIUS * 0.55, 0, Math.PI * 2)
+    ctx.fillStyle = dragging ? AIM_TEAM : AIM_TEAM_HI
+    ctx.fill()
 
     ctx.restore()
   }
@@ -7531,10 +7625,10 @@ export const useSpinnerGame = () => {
   const pixelToGame = (
     px: number, py: number, canvasWidth: number, canvasHeight: number
   ): { x: number; y: number } => {
-    const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2
-    const fitSize = Math.min(canvasWidth, canvasHeight)
-    const scale = fitSize / (ARENA_RADIUS * 2 + ARENA_PADDING)
+    const view = arenaViewFor(canvasWidth, canvasHeight)
+    const centerX = view.cx
+    const centerY = view.cy
+    const scale = view.scale
     return {
       x: (px - centerX) / scale,
       y: (py - centerY) / scale
@@ -7543,98 +7637,146 @@ export const useSpinnerGame = () => {
 
   // ─── Hint Animation ─────────────────────────────────────────────────────
 
-  const renderHintAnimation = (ctx: CanvasRenderingContext2D, showHint: boolean) => {
-    if (!showHint || phase.value !== 'player_turn' || isDragging.value) return
+  // The idle hint is a looping DEMO PULL drawn with the real aim kit
+  // (ui-catalog.md §7.1 "Idle hint"): the rubber band stretches back from the
+  // disc to a ghost grip, the notched power arrow fills sun → orange → pink on
+  // the launch side, the guide dots run ahead (stopping at walls like a real
+  // aim), then the band snaps back and the arrow shoots forward as the
+  // release cue, and it rests. It aims at the nearest enemy (teaches "pull
+  // AWAY from the target"), on every living player smasher (CG QA), at hint
+  // opacity. Band + arrow are composed at full opacity in a small reused
+  // layer and blitted once at the hint alpha (real GROUP opacity, so the navy
+  // outline never shows through the fills) at whole device pixels — pixel-
+  // exact, no resampling. FX.low draws straight onto the canvas.
+  // Reduced motion: a still arrow at 60 % power. No per-frame allocation.
+  const HINT_CYCLE_MS = 2400
+  const HINT_ALPHA = 0.72
+  const HINT_RATIO = 0.85
+  let hintLayer: OffscreenCanvas | HTMLCanvasElement | null = null
+  let hintLayerCtx: CanvasRenderingContext2D | null = null
+  let hintStill: boolean | null = null
 
-    const blades = livingBlades(playerBlades.value)
-    if (blades.length === 0) return
+  /** The hint's compose layer, grown (never shrunk) to at least w × h. */
+  const hintLayerFor = (w: number, h: number): CanvasRenderingContext2D | null => {
+    if (hintLayer !== null && hintLayer.width >= w && hintLayer.height >= h) return hintLayerCtx
+    const W = Math.max(w, hintLayer?.width ?? 0)
+    const H = Math.max(h, hintLayer?.height ?? 0)
+    if (typeof OffscreenCanvas !== 'undefined') hintLayer = new OffscreenCanvas(W, H)
+    else if (typeof document !== 'undefined') {
+      const el = document.createElement('canvas')
+      el.width = W
+      el.height = H
+      hintLayer = el
+    } else return null
+    hintLayerCtx = hintLayer.getContext('2d') as CanvasRenderingContext2D | null
+    return hintLayerCtx
+  }
 
-    // Looping animation: 0→1 pull back, then hold, then release flash
-    const cycleDuration = 2000 // ms
-    const t = (Date.now() % cycleDuration) / cycleDuration
+  const renderHintAnimation = (
+    ctx: CanvasRenderingContext2D, showHint: boolean,
+    cx: number, cy: number, scale: number, devPx: number
+  ) => {
+    if (!showHint || phase.value !== 'player_turn' || isDragging.value || isJoystickDragging.value) return
+    const blades = playerBlades.value
+    if (hintStill === null) hintStill = prefersStill()
 
-    // Phase 0–0.5: pull back, 0.5–0.8: hold, 0.8–1.0: release fade
-    const pullDir = Math.PI * 0.75 // pull down-left
-    let pullDist: number
+    // Pose of the loop: appear, pull back (ease-out), hold, snap + shoot, rest.
+    const t = hintStill ? 600 : performance.now() % HINT_CYCLE_MS
+    let ratio: number
     let alpha: number
-    let showArrow = true
+    let slide = 0
+    let dots = 1
+    if (hintStill) {
+      ratio = 0.6
+      alpha = HINT_ALPHA
+    } else if (t < 180) {
+      ratio = 0
+      alpha = HINT_ALPHA * (t / 180)
+    } else if (t < 1080) {
+      const u = (t - 180) / 900
+      ratio = HINT_RATIO * (1 - (1 - u) * (1 - u) * (1 - u))
+      alpha = HINT_ALPHA
+    } else if (t < 1480) {
+      ratio = HINT_RATIO + 0.015 * Math.sin((t - 1080) * 0.03)
+      alpha = HINT_ALPHA
+    } else if (t < 1700) {
+      const u = (t - 1480) / 220
+      ratio = HINT_RATIO * (1 - u) * (1 - u)
+      slide = 34 * u
+      dots = 0
+      alpha = HINT_ALPHA * (1 - u)
+    } else return
+    if (alpha < 0.03) return
+    const arrowRatio = slide > 0 ? HINT_RATIO : ratio
+    const k = devPx * scale
 
-    if (t < 0.5) {
-      // Pull back phase
-      pullDist = (t / 0.5) * 60
-      alpha = 0.5
-    } else if (t < 0.8) {
-      // Hold phase
-      pullDist = 60
-      alpha = 0.5 + 0.2 * Math.sin((t - 0.5) / 0.3 * Math.PI)
-    } else {
-      // Release fade
-      pullDist = 60 * (1 - (t - 0.8) / 0.2)
-      alpha = 0.5 * (1 - (t - 0.8) / 0.2)
-      if (alpha < 0.05) showArrow = false
+    for (let bi = 0; bi < blades.length; bi++) {
+      const blade = blades[bi]!
+      if (blade.hp <= 0) continue
+      // Launch toward the nearest living enemy (fallback: up the arena).
+      let nx = 0
+      let ny = -1
+      let best = Infinity
+      const foes = npcBlades.value
+      for (let j = 0; j < foes.length; j++) {
+        const f = foes[j]!
+        if (f.hp <= 0) continue
+        const dx = f.x - blade.x
+        const dy = f.y - blade.y
+        const d2 = dx * dx + dy * dy
+        if (d2 < best && d2 > 1) {
+          best = d2
+          const d = Math.sqrt(d2)
+          nx = dx / d
+          ny = dy / d
+        }
+      }
+      const pull = ratio * MAX_PULL_DISTANCE
+      const gx = blade.x - nx * pull
+      const gy = blade.y - ny * pull
+      const ox = blade.x + nx * slide
+      const oy = blade.y + ny * slide
+      const tipR = blade.radius + 84
+
+      // Band + arrow bounding box (arena units) → device px rect.
+      const ex = ox + nx * tipR
+      const ey = oy + ny * tipR
+      const minX = Math.min(gx, blade.x, ex) - blade.radius * 0.6 - 18
+      const maxX = Math.max(gx, blade.x, ex) + blade.radius * 0.6 + 18
+      const minY = Math.min(gy, blade.y, ey) - blade.radius * 0.6 - 18
+      const maxY = Math.max(gy, blade.y, ey) + blade.radius * 0.6 + 21
+      const dx0 = Math.floor(devPx * (cx + scale * minX))
+      const dy0 = Math.floor(devPx * (cy + scale * minY))
+      const w = Math.ceil(devPx * (cx + scale * maxX)) - dx0
+      const h = Math.ceil(devPx * (cy + scale * maxY)) - dy0
+      const lc = FX.low ? null : hintLayerFor(w, h)
+
+      if (lc !== null && hintLayer !== null) {
+        lc.setTransform(1, 0, 0, 1, 0, 0)
+        lc.clearRect(0, 0, w, h)
+        lc.setTransform(k, 0, 0, k, devPx * cx - dx0, devPx * cy - dy0)
+        drawPullBand(lc, blade.x, blade.y, blade.radius, gx, gy, ratio, 1)
+        if (arrowRatio > 0.02) drawAimArrow(lc, ox, oy, blade.radius, nx, ny, arrowRatio, 1, 0)
+        ctx.save()
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.globalAlpha = alpha
+        ctx.drawImage(hintLayer as CanvasImageSource, 0, 0, w, h, dx0, dy0, w, h)
+        ctx.restore()
+      } else {
+        ctx.save()
+        ctx.globalAlpha = alpha
+        drawPullBand(ctx, blade.x, blade.y, blade.radius, gx, gy, ratio, 1)
+        if (arrowRatio > 0.02) drawAimArrow(ctx, ox, oy, blade.radius, nx, ny, arrowRatio, 1, 0)
+        ctx.restore()
+      }
+      if (dots > 0 && ratio > 0.15) {
+        ctx.save()
+        // drawAimArrow's tip distance at size 1 (not maxed): startR + 4 + 56 + 20
+        const tip = blade.radius + 80
+        drawAimDots(ctx, blade.x, blade.y, blade.radius, tip, nx, ny, ratio, alpha)
+        ctx.restore()
+      }
     }
-
-    if (!showArrow) return
-
-    const launchNx = -Math.cos(pullDir)
-    const launchNy = -Math.sin(pullDir)
-    const ratio = pullDist / 60
-    const arrowLen = 30 + 50 * ratio
-    const r = Math.floor(255 * ratio)
-    const g = Math.floor(255 * (1 - ratio * 0.6))
-    const arrowColor = `rgb(${r}, ${g}, 0)`
-    const headSize = 8
-    const angle = Math.atan2(launchNy, launchNx)
-
-    ctx.save()
-    ctx.globalAlpha = alpha
-
-    // Mirror the launch hint onto every living player blade (CG QA: "show
-    // the arrowLaunchIndicator on the other Spinner too" — was previously
-    // only drawn on `livingBlades(...)[0]`).
-    for (const blade of blades) {
-      const pullX = blade.x + Math.cos(pullDir) * pullDist
-      const pullY = blade.y + Math.sin(pullDir) * pullDist
-      const endX = blade.x + launchNx * arrowLen
-      const endY = blade.y + launchNy * arrowLen
-
-      // Pull line (dashed)
-      ctx.strokeStyle = 'rgba(255,170,0,0.7)'
-      ctx.lineWidth = 2
-      ctx.setLineDash([6, 4])
-      ctx.beginPath()
-      ctx.moveTo(blade.x, blade.y)
-      ctx.lineTo(pullX, pullY)
-      ctx.stroke()
-      ctx.setLineDash([])
-
-      // Phantom finger circle at pull point
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'
-      ctx.beginPath()
-      ctx.arc(pullX, pullY, 8, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Launch arrow
-      ctx.strokeStyle = arrowColor
-      ctx.fillStyle = arrowColor
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.moveTo(blade.x, blade.y)
-      ctx.lineTo(endX, endY)
-      ctx.stroke()
-
-      // Arrowhead (tip extends past line end)
-      const tipX = endX + launchNx * headSize
-      const tipY = endY + launchNy * headSize
-      ctx.beginPath()
-      ctx.moveTo(tipX, tipY)
-      ctx.lineTo(tipX - Math.cos(angle - 0.4) * headSize, tipY - Math.sin(angle - 0.4) * headSize)
-      ctx.lineTo(tipX - Math.cos(angle + 0.4) * headSize, tipY - Math.sin(angle + 0.4) * headSize)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    ctx.restore()
   }
 
   // ── Tutorial: orbiting yellow arrows around player spinners ──────────────
@@ -7685,33 +7827,13 @@ export const useSpinnerGame = () => {
 
     ctx.save()
     ctx.globalAlpha = alpha
-    ctx.fillStyle = '#facc15' // tailwind yellow-400
-    ctx.strokeStyle = '#000'
-    ctx.lineWidth = 1
-
     for (const blade of blades) {
-      const orbitR = (blade.radius + 14) * scale
-      const arrowSize = 7 * scale
+      const orbitR = (blade.radius + 16) * scale
+      const arrowSize = 7.5 * scale
       for (let i = 0; i < 3; i++) {
         const angle = baseAngle + (i * Math.PI * 2) / 3
-        const ax = blade.x + Math.cos(angle) * orbitR
-        const ay = blade.y + Math.sin(angle) * orbitR
-        const inward = angle + Math.PI
-        const tipX = ax + Math.cos(inward) * arrowSize
-        const tipY = ay + Math.sin(inward) * arrowSize
-        const lAng = inward + (Math.PI * 2) / 3
-        const rAng = inward - (Math.PI * 2) / 3
-        const lx = ax + Math.cos(lAng) * arrowSize
-        const ly = ay + Math.sin(lAng) * arrowSize
-        const rx = ax + Math.cos(rAng) * arrowSize
-        const ry = ay + Math.sin(rAng) * arrowSize
-        ctx.beginPath()
-        ctx.moveTo(tipX, tipY)
-        ctx.lineTo(lx, ly)
-        ctx.lineTo(rx, ry)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
+        // ornamented arrow (pullArrowArt.ts), tip pointing inward at the disc
+        drawPullArrow(ctx, blade.x + Math.cos(angle) * orbitR, blade.y + Math.sin(angle) * orbitR, angle + Math.PI, arrowSize)
       }
     }
 
@@ -7733,7 +7855,6 @@ export const useSpinnerGame = () => {
     dragStart,
     dragCurrent,
     dragForceRatio,
-    meteorParticles,
     isBossStage,
     arenaType,
     powerups,
@@ -7751,6 +7872,9 @@ export const useSpinnerGame = () => {
     isJoystickVisible,
     isJoystickDragging,
     renderJoystickOverlay,
+    setArenaFitHud,
+    arenaViewFor,
+    arenaScreenLayout,
     startPhysics,
     stopPhysics,
     disposePhysics,
@@ -7761,8 +7885,6 @@ export const useSpinnerGame = () => {
     ghostMode,
     /** Seed the running match's RNG started from (PvP: the host's broadcast). */
     getMatchSeed: (): number => matchSeed,
-    /** This match's bouncers (seeded battles place them from the aux stream); tests / QA. */
-    bouncers: (): readonly Readonly<Bouncer>[] => arenaBouncers,
     /** Tree Smashers terrain layout of this match (null = plain arena); tests / QA. */
     terrainLayout: (): Readonly<TerrainLayout> | null => terrain,
     /** Team towers of this match ([] = towers off); tests / QA / cheats. */

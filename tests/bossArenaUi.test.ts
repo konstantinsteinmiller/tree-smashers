@@ -142,14 +142,14 @@ describe('trait forwarding into the engine (BW6 blocker)', () => {
 
   it.each([110, 120, 130, 160, 200])('stage %i as the arena builds it turns the engine\'s traits on', (id) => {
     const e = useSpinnerGame()
-    e.initGame(team(), stageEnemyConfigs(getStageById(id)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 7 })
+    e.initGame(team(), stageEnemyConfigs(getStageById(id)), false, 'boss', false, undefined, null, 'circle', { seed: 7 })
     expect(e.traitsActive()).toBe(true)
     e.disposePhysics()
   })
 
   it('a classic boss stage stays on the no-trait path', () => {
     const e = useSpinnerGame()
-    e.initGame(team(), stageEnemyConfigs(getStageById(100)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 7 })
+    e.initGame(team(), stageEnemyConfigs(getStageById(100)), false, 'boss', false, undefined, null, 'circle', { seed: 7 })
     expect(e.traitsActive()).toBe(false)
     e.disposePhysics()
   })
@@ -274,13 +274,16 @@ describe('Frost Lock: HUD row + refused tap on the frozen spinner', () => {
     const warden = stageEnemyConfigs(getStageById(120))
     // Unseeded: the scripted Math.random drives the Warden's aim (a seeded
     // match would roll its AI on the seed's aux stream — LG-DET).
-    e.initGame(team(), warden, false, 'boss', 0, false, undefined, null, 'circle')
+    e.initGame(team(), warden, false, 'boss', false, undefined, null, 'circle')
     e.startPhysics()
     const [a, b] = e.playerBlades.value as [SpinnerState, SpinnerState]
     const w = e.npcBlades.value[0]!
     place(w, 0, -90)
     place(a, 0, 20)
     place(b, 160, 80)
+    // The ram must not kill a (the test reads the lock, not the damage;
+    // the hit itself depends on the team-size disc radii).
+    a.maxHp = a.hp = 500
     e.phase.value = 'npc_turn'
     until(() => e.phase.value === 'npc_launched')
     until(() => e.phase.value === 'player_turn')
@@ -297,6 +300,9 @@ describe('Frost Lock: HUD row + refused tap on the frozen spinner', () => {
     expect(frozenBladeAtTap(e.playerBlades.value, rows, 400, 400)).toBe(-1)
 
     const selected = e.selectedBladeId.value
+    // Hear the tap alone: the ram's own freeze / crack sounds (how many depends
+    // on the disc radii) must not hold the 400 ms limiter or the overlap cap.
+    __resetBossSfx()
     played.length = 0
     e.refuseFrozenTap(a)
     expect(played).toContain('boss-crack')
@@ -388,7 +394,7 @@ describe('Boss Lab', () => {
   it('every Lab stage turns the engine traits on', () => {
     for (const entry of BOSS_LAB_ENTRIES) {
       const e = useSpinnerGame()
-      e.initGame(team(), stageEnemyConfigs(buildBossLabStage(entry.id, opts)), false, 'boss', 0, false, undefined, null, 'circle', { seed: 3 })
+      e.initGame(team(), stageEnemyConfigs(buildBossLabStage(entry.id, opts)), false, 'boss', false, undefined, null, 'circle', { seed: 3 })
       expect(e.traitsActive(), entry.id).toBe(true)
       e.disposePhysics()
     }

@@ -233,6 +233,40 @@ stage-195 fight, not dearer.
 
 ---
 
+## 2026-10-20 — ONE static layer (background + props + floor + rim + terrain + tower bodies)
+
+Hypothesis: the frame drew two cached buffers (a full-screen background +
+props layer, an arena-local floor/rim/terrain buffer blitted with a scale)
+plus every tower body each frame; baking all of it into ONE buffer at the
+canvas's own backing size and blitting it 1:1 saves a full-screen-ish blit,
+a resampled blit and ~16 tower draw calls per frame. Build-time A/B switch
+`?bake=split` (the previous two-buffer path), removed after this run.
+
+Stage 48 (ice arena → snowy theme, 3 bouncers, towers), 412×915 @ DPR 3,
+4× CPU, quality pinned high, 4 interleaved reps × 30 s each arm.
+**Machine load: heavy** — two other Claude sessions were running vitest /
+vite builds / Gemini automation on this machine during the run, so the
+rep-to-rep spread is larger than the measured difference.
+
+| metric (median of reps) | one layer (A) | split (B, before) | B vs A |
+|---|---|---|---|
+| workP50 | 12.95 ms | 15.45 ms | +19 % |
+| workP95 | 30.35 ms | 37.05 ms | +22 % |
+| deltaP95 | 41.7 ms | 50.05 ms | +20 % |
+| fps | 44.9 | 39.4 | −12 % |
+| long tasks / 30 s | 24 | 41.5 | +73 % |
+| draw calls / frame (1 rep, `--dc`) | 150 | 167 | +11 % |
+| A spread (P50 work) | 16.4 ms | | |
+
+Verdict: **KEPT** — every median and the draw-call count favour the one
+layer, and it needs less memory (one css×dpr canvas instead of a css×dpr
+background canvas plus a (560 × device px/unit)² arena canvas). The timing
+gain is NOT proven at this noise level (spread > delta); re-run on an idle
+machine before quoting it as a number. Re-bake cost: one full layer per
+art arrival / tower felled / resize, never per frame.
+
+---
+
 ## Adaptive quality tier (`src/use/useQuality.ts`)
 
 A per-device tier, not an experiment flag — it stays. `high` is the full look;
@@ -284,6 +318,72 @@ one at all, so the tier never engaged. Switched to a **wall-clock** window
 
 ---
 
+## 2026-10-23 — Ring meteor shower (default intro variant, `src/use/ringShower.ts`)
+
+Not an optimization: the chaos-arena-style ring burst replaced the strike as
+the default (strike kept behind `?meteor=strike`); the budget was "no more than
+the strike". Same isolated render bench as the strike entry: only the shower on
+a 1170×2532 canvas (390×844 @3 touch), 4× CPU throttle, a 1-px `getImageData`
+forcing a synchronous raster each frame, the full 2.56 s shower, own headless
+Chrome + own dev server (`dev/meteor-shower.html?bench=1&bare=1`), arms
+interleaved per round, median ms/frame. The machine was loaded (20/20 worker
+budget in use), so the arms' spread is noisy; the ranking held every round.
+
+| arm | none | strike high | ring high (painted) | ring high (procedural) | strike low | ring low |
+|-----|------|-------------|---------------------|------------------------|-----------|----------|
+| ms (7 rounds) | 22.1 | 42.0 (+19.9) | 32.4 (+10.3) | — | 29.2 (+7.1) | 27.9 (+5.8) |
+| ms (5 rounds) | 33.0 | 58.6 (+25.6) | — | 45.5 (+12.5) | — | — |
+
+Ring ≈ half the strike's cost on high and below it on low, painted or not:
+no persistent craters, no dust, no frame bands; one path per colour layer
+(≤ 25 paint ops, unit-tested); the painted sprites are one `drawImage` each
+and cheaper than the 6 procedural passes. Zero per-frame allocation (fixed
+pool, Float32Array sparks, save/translate/rotate for sprites, no getTransform).
+An earlier run WITH the arena blit under it (100 ms frames) was pure noise —
+the 3× arena blit + readback dominates; use `bare=1` to rank shower cost.
+
+## 2026-10-22 — Meteor shower redesign (pre-battle intro, `src/use/meteorShower.ts`)
+
+Not an optimization: a visibility redesign whose cost had to stay bounded. The
+old shower (80 two-unit streaks) was nearly free because it was nearly
+invisible. Measured with a scratch harness (own no-HMR dev server, own
+headless Chrome per rep, 412×915 @3 touch, 4× CPU throttle, stage 12 volcanic,
+the shower measured on a WARMED second intro — the first one is dominated by
+first-battle decode / bake: 250 ms frames either way).
+
+**In-game, interleaved ON / OFF** (OFF = the same build with the shower killed
+through the dev hook as `meteor_intro` starts; 10 reps high, 8 low). The machine
+was loaded by other agents' jobs (idle frames 66 ms vs 16.7 ms unloaded), so
+magnitudes are noisy; the delta is what counts:
+
+| tier | shower mean | p50 | p95 | vs OFF |
+|------|-------------|-----|-----|--------|
+| high | 83.3 ms | 66.7 | 100.1 | +8.6 ms mean (+12 %), p95 +16 |
+| low  | 94.7 ms | 67.4 | 116.6 | +7.0 ms mean, p50 unchanged |
+
+**Isolated render bench** (only the shower on a 1170×2532 canvas, a 1-px
+`getImageData` forcing a synchronous software raster every frame — this
+inflates per-pixel cost and is a worst-case ranking tool, not a frame-time
+prediction). ms per frame over the 2.56 s shower, median of 5–7 interleaved reps:
+
+| arm | none | old shower | new, high | new, low |
+|-----|------|------------|-----------|----------|
+| ms  | ~20  | +10.5      | +55 → +62 (noisy) | +17 |
+
+What the bench found and what changed because of it:
+- the screen-edge vignette as three even-odd "rect minus ellipse" fills cost
+  +17 ms (three full-screen path rasters) → two thin nested frames of
+  `fillRect` strips (rect fast path, edge area only), off on FX.low;
+- a dashed reticle stroke (`setLineDash` path effect) → solid double ring;
+- dust 3 → 2 layers and 4 puffs (−5 ms), crater 5 → 4 layers; FX.low drops dust,
+  the crater rim and the frame bands (low: +38 → +17 ms in the bench).
+- Remaining cost is the ten persistent craters (≈ 40 ellipse subpaths a frame)
+  and the hero flash (10 frames of one full-screen `fillRect`).
+JS side: zero per-frame allocation (fixed pool + Float32Array tables, analytic
+in time); the old shower re-assigned a Vue ref with `slice()` every tick.
+
+---
+
 ## Rejected / not attempted, with reasons
 
 | Idea                                                                              | Why not                                                                                                                                                                                 |
@@ -293,7 +393,7 @@ one at all, so the tier never engaged. Switched to a **wall-clock** window
 | Remove the per-blade `ctx.clip()`                                                 | Measured null (32.5 → 32.2 fps).                                                                                                                                                        |
 | Cap DPR (A8)                                                                      | Already effectively capped: the canvas backing store is sized in **CSS** pixels (`canvas.width = visualViewport.width`), so it never rasterises at DPR 2 or 3 to begin with.            |
 | Move blade state off deep-reactive `ref([])` (framework in the hot path)          | Looked like the obvious structural win. The trace said otherwise while raster dominated. **Now worth revisiting** — the post-fix trace is 39 % FunctionCall, so JS is the new top cost. |
-| Cache bouncer sprites (2 gradients + a `shadowBlur` stroke per bouncer per frame) | Not measured yet. Bouncers were absent from the stage-1 ablation set, and stage 48 already clears 54 fps at 4×. Next candidate if a later trace asks for it.                            |
+| Cache bouncer sprites (2 gradients + a `shadowBlur` stroke per bouncer per frame) | **Obsolete (2026-10-20)**: the pinball bumpers were removed from the game (terrain obstacles replace them). Rows above that name bouncers (stage 48 etc.) were measured with them.   |
 
 ---
 

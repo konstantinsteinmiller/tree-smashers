@@ -3,7 +3,7 @@
 // spawn of that layout must sit fully inside its wall.
 import { describe, expect, it } from 'vitest'
 import { TERRAIN_SHAPES, isInside, sdf, shapeOutline } from '@/use/arenaShapes'
-import { TERRAIN_LAYOUT_COUNT, buildTerrainLayout, createTower } from '@/use/arenaTerrain'
+import { CENTRE_LANE_HALF, MAX_SOLID_OBSTACLES, TERRAIN_LAYOUT_COUNT, buildTerrainLayout, createTower, solidBudgetFor } from '@/use/arenaTerrain'
 
 const R = 200
 const BLADE = 28
@@ -48,15 +48,14 @@ describe('arena clearing shapes', () => {
       }
       for (const side of ['player', 'npc'] as const) {
         const t = createTower(side, R, BLADE, 100, shape)
-        // Set into the border: 40–50 % of its outline inside the clearing.
+        // Inside the clearing (owner 2026-10-22): more than half its outline.
         let inside = 0
         const N = 720
         for (let i = 0; i < N; i++) {
           const a = (i / N) * Math.PI * 2
           if (sdf(shape, t.x + Math.cos(a) * t.radius, t.y + Math.sin(a) * t.radius, R) < 0) inside++
         }
-        expect(inside / N, `${side} tower`).toBeGreaterThanOrEqual(0.4)
-        expect(inside / N, `${side} tower`).toBeLessThanOrEqual(0.5)
+        expect(inside / N, `${side} tower`).toBeGreaterThanOrEqual(0.5)
       }
       // Player row (y = 0.4R, x spread ±0.35R) and its mirror.
       for (const x of [-0.35 * R, 0, 0.35 * R]) {
@@ -66,4 +65,69 @@ describe('arena clearing shapes', () => {
       }
     })
   }
+})
+
+describe('obstacle budget', () => {
+  it(`every layout has at most ${MAX_SOLID_OBSTACLES} solid obstacles`, () => {
+    for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
+      const l = buildTerrainLayout(id)
+      expect(l.islands.length + l.mushrooms.length + l.logs.length, `layout ${id}`).toBeLessThanOrEqual(MAX_SOLID_OBSTACLES)
+    }
+  })
+
+  // Owner 2026-10-22: obstacles are RARE — most clearings open, one side
+  // obstacle every 4th stage, a mirrored pair every 9th, a big centre island
+  // to fling around every 12th; never an obstacle blocking the middle lane.
+  it('follows the rarity schedule exactly', () => {
+    const tally = { 0: 0, 1: 0, 2: 0, centre: 0 }
+    for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
+      const l = buildTerrainLayout(id)
+      const n = l.islands.length + l.mushrooms.length + l.logs.length
+      const b = solidBudgetFor(id)
+      if (b.bigCentre) {
+        tally.centre++
+        expect(l.mushrooms.length + l.logs.length, `layout ${id}`).toBe(0)
+        expect(l.islands, `layout ${id}`).toHaveLength(1)
+        expect(l.islands[0]!.x).toBe(0)
+      } else {
+        expect(n, `layout ${id}`).toBe(b.count)
+        tally[b.count]++
+      }
+    }
+    expect(tally).toEqual({ 0: 30, 1: 11, 2: 5, centre: 4 })
+    // never two obstacle stages of the 2-kind closer than 8 apart, centre
+    // islands 12 apart
+    for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
+      if (solidBudgetFor(id).count === 2 && !solidBudgetFor(id).bigCentre) for (let k = 1; k < 8; k++) expect(solidBudgetFor(id + k).count === 2 && !solidBudgetFor(id + k).bigCentre).toBe(false)
+    }
+  })
+
+  it('no non-centre obstacle reaches into the central lane', () => {
+    for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
+      if (solidBudgetFor(id).bigCentre) continue
+      const l = buildTerrainLayout(id)
+      for (const d of [...l.islands, ...l.mushrooms]) expect(Math.abs(d.x) - d.radius, `layout ${id}`).toBeGreaterThanOrEqual(CENTRE_LANE_HALF)
+      for (const g of l.logs) {
+        expect(Math.sign(g.ax) === Math.sign(g.bx), `layout ${id} log spans x=0`).toBe(true)
+        expect(Math.min(Math.abs(g.ax), Math.abs(g.bx)) - g.radius, `layout ${id}`).toBeGreaterThanOrEqual(CENTRE_LANE_HALF)
+      }
+    }
+  })
+
+  it('the centre island leaves a lane for the largest disc on both sides and clears the spawn rows', () => {
+    const DISC = 28 * 1.35
+    for (let id = 0; id < TERRAIN_LAYOUT_COUNT; id++) {
+      if (!solidBudgetFor(id).bigCentre) continue
+      const shape = TERRAIN_SHAPES[id]!
+      const isl = buildTerrainLayout(id).islands[0]!
+      for (const sign of [-1, 1]) {
+        // a disc grazing the island's side still fits inside the wall
+        const x = isl.x + sign * (isl.radius + DISC + 2)
+        expect(isInside(shape, x, isl.y, R, DISC + 2), `layout ${id} lane ${sign}`).toBe(true)
+        expect(isInside(shape, x, -isl.y, R, DISC + 2), `layout ${id} lane ${sign} (flip)`).toBe(true)
+      }
+      // spawn rows (y = ±0.4R) for team sizes 1–3 at the largest disc
+      expect(0.4 * R - Math.abs(isl.y) - isl.radius, `layout ${id}`).toBeGreaterThanOrEqual(DISC + 2)
+    }
+  })
 })

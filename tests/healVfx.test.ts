@@ -277,6 +277,10 @@ describe('heal — life-leech attacker', () => {
     const n = s.g.npcBlades.value[0]!
     p.isLifeLeech = true
     p.hp = p.maxHp - missing
+    // The victim must survive the hit (a kill ends the match and its VFX):
+    // a lone part-only NPC's HP depends on the campaign team-size tuning.
+    n.maxHp = Math.max(n.maxHp, 60)
+    n.hp = n.maxHp
     p.x = -p.radius - 1
     p.y = 0
     p.vx = 6

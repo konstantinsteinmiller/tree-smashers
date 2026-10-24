@@ -95,11 +95,11 @@ const stageChip = computed<string>(() => {
 </template>
 
 <style scoped lang="sass">
-// Royal plate with flat stripes (design.sass .ui-wood); a boss stage turns
+// Royal plate with a two-tone facet (design.sass .ui-wood); a boss stage turns
 // the plate berry so the danger reads before the text.
 .stage-plank
   border-radius: var(--radius-ui)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   &.is-boss
     background-color: var(--color-berry-600)
     box-shadow: inset 0 3px 0 var(--color-berry-400), inset 0 -4px 0 var(--color-berry-700), 0 var(--ui-drop) 0 var(--color-ink)

@@ -32,6 +32,8 @@ const files = walk(ROOT)
 /** Strip // and /* *\/ comments plus pug `//-` lines so prose can mention the rules. */
 const code = (src: string): string =>
   src
+    // CRLF-tolerant: a `\r` would stop `.*$` and leave a comment in the code.
+    .replace(/\r/g, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .split('\n')
     .map((l) => l.replace(/(^|\s)\/\/.*$/, ''))
@@ -95,5 +97,58 @@ describe('UI style rules (no blur, no radial gradients)', () => {
     expect(isBlurred('inset 0 3px 0 var(--color-leaf-300)')).toBe(false)
     expect(isBlurred('0 0 0 3px var(--color-ink)')).toBe(false)
     expect(isBlurred('2px -2px 0 #161a40')).toBe(false)
+  })
+})
+
+// #UX1c: diagonal stripes mean ONE thing — "off" (disabled buttons, locked
+// cards / tiers / slots). Plates, badges, chips, modal frames, banners and the
+// boss-defeated slash use solid fills, two-tone facets, bevels, notches,
+// sparkles and flat rays instead. The old `--ui-stripes` token is gone; the
+// hatch tokens may only appear in a rule about a disabled / locked state.
+describe('UI style rules (stripes mean "off" only)', () => {
+  it('no --ui-stripes token and no diagonal repeating gradient outside the design tokens', () => {
+    const bad: string[] = []
+    for (const f of files) {
+      const src = code(readFileSync(f.p, 'utf8'))
+      if (/--ui-stripes/.test(src)) bad.push(`${f.rel}: --ui-stripes`)
+      if (f.rel === 'assets/css/design.sass') continue
+      const re = /repeating-linear-gradient\(\s*(-?\d+)deg/g
+      for (let m = re.exec(src); m; m = re.exec(src)) {
+        const deg = ((Number(m[1]) % 180) + 180) % 180
+        if (deg !== 90 && deg !== 0) bad.push(`${f.rel}: repeating-linear-gradient(${m[1]}deg)`)
+      }
+    }
+    expect(bad).toEqual([])
+  })
+
+  it('the hatch is only used for a disabled / locked state', () => {
+    const bad: string[] = []
+    for (const f of files) {
+      // Raw lines (a comment may name the state); the match must be live code.
+      const lines = readFileSync(f.p, 'utf8').split('\n')
+      lines.forEach((l, i) => {
+        if (!/var\(--ui-hatch/.test(code(l))) return
+        const ctx = lines.slice(Math.max(0, i - 14), i + 1).join('\n')
+        if (!/disabled|lock|cant-afford|unavailable/i.test(ctx)) bad.push(`${f.rel}:${i + 1}`)
+      })
+    }
+    expect(bad).toEqual([])
+  })
+})
+
+// #UX1c owner rule: stitches (dashed seams) belong only to FABRIC — the plush
+// smashers, plush trees / props, felt rims (their own art / canvas rig). Hard
+// UI objects use solid bevels and outlines: no dashed border / outline in UI
+// styles, and no dashed SVG stroke (a single-value `stroke-dasharray` used
+// with a dashoffset for a progress ring is fine).
+describe('UI style rules (no stitch dashes on hard UI)', () => {
+  it('no dashed border / outline and no two-value SVG dash pattern in UI files', () => {
+    const bad: string[] = []
+    for (const f of files) {
+      const src = code(readFileSync(f.p, 'utf8'))
+      if (/\b(border|outline)(-(top|right|bottom|left))?\s*:[^;\n]*\bdashed\b/.test(src)) bad.push(`${f.rel}: dashed border / outline`)
+      if (/stroke-dasharray\s*=\s*"\s*[\d.]+[\s,]+[\d.]+/.test(src)) bad.push(`${f.rel}: dashed SVG stroke`)
+    }
+    expect(bad).toEqual([])
   })
 })

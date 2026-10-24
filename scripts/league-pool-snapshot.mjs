@@ -34,7 +34,7 @@ import { gzipSync } from 'node:zlib'
 // module is worker-shared and written in erasable-only TypeScript.
 import { buildDigest, buildPower, validatePlayerBuildShape } from '../src/utils/playerBuild.ts'
 
-export const DEFAULT_SOURCE = 'https://leaderboard-tree-smashers.rodent-race.workers.dev'
+export const DEFAULT_SOURCE = 'https://leaderboard-tree-smashers.hyperg8.workers.dev'
 
 export const POOL_FILE = resolve(fileURLToPath(new URL('../data/league-pool.json', import.meta.url)))
 const LEADERBOARD_FILE = resolve(fileURLToPath(new URL('../data/leaderboard-snapshot.json', import.meta.url)))

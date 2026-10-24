@@ -116,6 +116,10 @@ let gameplayActive = false
 
 const getSdk = (): any => (typeof window !== 'undefined' ? window.CrazyGames?.SDK ?? null : null)
 
+/** The initialised SDK while it is active on a crazy-web build, else null —
+ *  for the multiplayer bridge (`@/use/crazyMultiplayer`). */
+export const getActiveCrazySdk = (): any => (isSdkActive.value ? sdk : null)
+
 const isActiveEnv = (s: any): boolean => {
   if (!s) return false
   const env = s.environment

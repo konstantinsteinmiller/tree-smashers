@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { movieIconSrc } from '@/use/badgeIconArt'
 import { revealRewards } from '@/use/useRewardReveal'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -139,7 +140,7 @@ const grantReward = () => {
         div.flex.items-center.gap-1
           span.game-text.leading-tight(v-if="isNative" class="text-[10px] sm:text-xs") {{ t('spinner.ad') }}
           img.object-contain(
-            src="/images/icons/movie_128x96.webp"
+            :src="movieIconSrc()"
             class="h-5 w-5 sm:h-5 sm:w-5"
             :alt="t('spinner.ad')"
           )

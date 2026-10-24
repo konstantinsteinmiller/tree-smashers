@@ -100,7 +100,7 @@ const sandbox = (
   p: SpinnerConfig[], n: SpinnerConfig[], arena: ArenaType = 'boss', mine?: SkillLoadout, seed: number | null = 99
 ): Engine => {
   const e = useSpinnerGame()
-  e.initGame(p, n, false, arena, 0, false, undefined, null, 'circle',
+  e.initGame(p, n, false, arena, false, undefined, null, 'circle',
     seed === null ? { skillLoadout: mine } : { seed, skillLoadout: mine })
   e.startPhysics()
   return e
@@ -223,10 +223,12 @@ describe('Ember Nova (Cinder Tyrant)', () => {
   it('Twin carriers: still one hit per victim per nova; allies are immune', () => {
     const { e, a, b, c } = setup(undefined, [boss('ember'), cfg()])
     const [, c2, ally] = e.npcBlades.value as SpinnerState[]
+    // A side of three: every blade at the ×0.675 team size, so the reach
+    // (2.2 × carrier radius + victim radius) is ~82 for a, ~79 for the ally.
     place(a, 0, 0)
-    place(c, -60, -60)
-    place(c2!, 60, -60)
-    place(ally!, 0, -110) // inside c's reach, same owner
+    place(c, -45, -45)
+    place(c2!, 45, -45)
+    place(ally!, 0, -90) // inside c's reach, same owner
     launchAndHold(e, b)
     const hp0 = a.hp
     frames(120)
@@ -464,7 +466,7 @@ describe('trait rosters are deterministic; trait-free matches stay on the fast p
         topLevel: 30,
         bottomLevel: 30
       })],
-      team, false, 'boss', 0, false, undefined, null, 'circle', { seed })
+      team, false, 'boss', false, undefined, null, 'circle', { seed })
     e.startMatch()
     const hashes: string[] = []
     let last = e.phase.value

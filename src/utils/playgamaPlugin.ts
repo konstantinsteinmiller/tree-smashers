@@ -90,6 +90,11 @@ const MESSAGE = {
 export const isPlaygamaSdkActive = ref(false)
 export const isPlaygamaAdsBlocked = ref(false)
 export const isPlaygamaAdShowing = ref(false)
+/** False once the Bridge says this portal can NEVER serve a rewarded ad
+ *  (`bridge.advertisement.isRewardedSupported`, read after `initialize()`).
+ *  The ad-unlock placements (skins, premium smashers) then fall back to their
+ *  coin price instead of a button that can never fill. True until known. */
+export const isPlaygamaRewardedSupported = ref(true)
 export const playgamaLocale = ref<string | null>(null)
 export const playgamaDetectedId = ref<string | null>(null)
 
@@ -345,6 +350,10 @@ export const playgamaPlugin = (): Promise<void> => {
       // Same rule for audio: the initial value must be read manually on game
       // start — `AUDIO_STATE_CHANGED` only covers subsequent changes.
       readPlatformAudioState()
+      try {
+        isPlaygamaRewardedSupported.value = bridge.advertisement?.isRewardedSupported !== false
+      } catch { /* older Bridge without the flag: assume supported */
+      }
       // Resolve the locale gate regardless of the outcome so `main.ts` stops
       // waiting the moment we know the answer (or know there is not one).
       resolveLocaleReady()

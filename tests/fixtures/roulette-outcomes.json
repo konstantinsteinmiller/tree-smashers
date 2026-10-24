@@ -104,12 +104,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -146,12 +146,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -287,12 +287,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -509,12 +509,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -607,12 +607,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -721,12 +721,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -784,12 +784,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -955,12 +955,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1123,12 +1123,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1233,12 +1233,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1332,12 +1332,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1440,12 +1440,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1578,12 +1578,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1710,12 +1710,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1889,12 +1889,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -1934,12 +1934,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2132,12 +2132,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2288,12 +2288,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2372,12 +2372,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2488,12 +2488,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2578,12 +2578,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2782,12 +2782,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -2845,12 +2845,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3015,12 +3015,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3209,12 +3209,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -3259,12 +3259,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3358,12 +3358,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3568,12 +3568,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -3661,12 +3661,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3750,12 +3750,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -3879,12 +3879,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4029,12 +4029,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4200,12 +4200,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4290,12 +4290,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4481,12 +4481,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -4577,12 +4577,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4706,12 +4706,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4847,12 +4847,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -4997,12 +4997,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5125,12 +5125,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5197,12 +5197,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5305,12 +5305,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5479,12 +5479,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5533,12 +5533,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5640,12 +5640,12 @@
     ],
     "respinSegments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5832,12 +5832,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -5949,12 +5949,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6063,12 +6063,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6276,12 +6276,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6317,12 +6317,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6470,12 +6470,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6578,12 +6578,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6749,12 +6749,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -6848,12 +6848,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7039,12 +7039,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7156,12 +7156,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7243,12 +7243,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7345,12 +7345,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7510,12 +7510,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7569,12 +7569,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7745,12 +7745,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -7937,12 +7937,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8038,12 +8038,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8173,12 +8173,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8232,12 +8232,12 @@
     ],
     "respinSegments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8397,12 +8397,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8571,12 +8571,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8637,12 +8637,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8802,12 +8802,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -8951,12 +8951,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9043,12 +9043,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9169,12 +9169,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9360,12 +9360,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -9432,12 +9432,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9557,12 +9557,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9710,12 +9710,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -9911,12 +9911,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -9989,12 +9989,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10106,12 +10106,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10255,12 +10255,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10360,12 +10360,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10519,12 +10519,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -10660,12 +10660,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -10791,12 +10791,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10892,12 +10892,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -10988,12 +10988,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11183,12 +11183,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -11234,12 +11234,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11330,12 +11330,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11461,12 +11461,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11590,12 +11590,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11788,12 +11788,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -11889,12 +11889,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12072,12 +12072,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12140,12 +12140,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12296,12 +12296,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12419,12 +12419,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12479,12 +12479,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12658,12 +12658,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12756,12 +12756,12 @@
     ],
     "respinSegments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -12954,12 +12954,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13014,12 +13014,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13206,12 +13206,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13365,12 +13365,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -13415,12 +13415,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13543,12 +13543,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13684,12 +13684,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -13891,12 +13891,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14029,12 +14029,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -14100,12 +14100,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14250,12 +14250,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -14364,12 +14364,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14460,12 +14460,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14664,12 +14664,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14792,12 +14792,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -14900,12 +14900,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15029,12 +15029,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15152,12 +15152,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -15194,12 +15194,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15421,12 +15421,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -15532,12 +15532,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15625,12 +15625,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15762,12 +15762,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15915,12 +15915,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -15995,12 +15995,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16159,12 +16159,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16318,12 +16318,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16450,12 +16450,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16617,12 +16617,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -16685,12 +16685,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16853,12 +16853,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -16934,12 +16934,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17078,12 +17078,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17120,12 +17120,12 @@
     "adReady": true,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17308,12 +17308,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17416,12 +17416,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17626,12 +17626,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17680,12 +17680,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17806,12 +17806,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -17961,12 +17961,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18042,12 +18042,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18138,12 +18138,12 @@
     "adReady": false,
     "segments": [
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18351,12 +18351,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18456,12 +18456,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18653,12 +18653,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18782,12 +18782,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       }
     ],
@@ -18893,12 +18893,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -18971,12 +18971,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -19049,12 +19049,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {
@@ -19249,12 +19249,12 @@
         }
       },
       {
-        "kind": "diamonds",
-        "label": "5",
+        "kind": "jackpot",
+        "label": "15000",
         "weight": 0.26,
         "result": {
-          "type": "diamonds",
-          "diamonds": 5
+          "type": "jackpot",
+          "coins": 15000
         }
       },
       {

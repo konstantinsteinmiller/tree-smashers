@@ -100,14 +100,14 @@ watch(hasBonusToShow, (on) => {
 </template>
 
 <style scoped lang="sass">
-// Banners sit on the arena: a flat plate with flat stripes, an ink outline
+// Banners sit on the arena: a flat plate with a two-tone facet, an ink outline
 // and a hard 0-blur drop, sliding up with a little overshoot. Bonus = leaf
 // (celebratory), offline = royal (informational).
 .save-banner
   border: 3px solid var(--color-ink)
   border-radius: var(--radius-ui)
   color: var(--color-ice-50)
-  background-image: var(--ui-stripes)
+  background-image: var(--ui-facet)
   animation: save-banner-in 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) both
   &.is-bonus
     background-color: var(--color-leaf-500)

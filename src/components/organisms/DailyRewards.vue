@@ -4,7 +4,7 @@ import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FButton from '@/components/atoms/FButton.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
-import IconGift from '@/components/icons/IconGift.vue'
+import UiIcon from '@/components/icons/UiIcon.vue'
 import useSpinnerConfig from '@/use/useSpinnerConfig'
 import {
   SKINS_PER_TOP,
@@ -272,7 +272,7 @@ const collect = (dayIndex: number) => {
   //- The bounce lives on the wrapper so it never fights the button's own
   //- press transform (the .ui-btn recipe sinks it into its lip).
   div.daily-rewards(:class="{ 'hint-bounce': hasDailyRewardReady }")
-    button.daily-hud-btn.ui-btn.ui-btn--primary.ui-btn--icon.cursor-pointer.z-10(
+    button.daily-hud-btn.ui-btn.ui-btn--primary.ui-btn--icon.ui-hit-44.cursor-pointer.z-10(
       ref="dailyBtnRef"
       type="button"
       :aria-label="t('dailyRewards')"
@@ -282,7 +282,8 @@ const collect = (dayIndex: number) => {
     )
       //- Leaf HUD button (free = leaf), gift glyph, "+N" coins.
       span.relative.font-black.flex.flex-col.items-center
-        IconGift.text-cream-50(class="w-5 h-5 drop-shadow-[1px_1px_0_var(--color-ink)]")
+        span.block(class="w-6 h-6 -mt-0.5" aria-hidden="true")
+          UiIcon(name="daily")
         span.flex.items-center(class="gap-0.5")
           span.font-black.ui-outline-sm.leading-tight(class="text-[10px] sm:text-xs") +{{ DAILY_REWARDS[state.currentDay] }}
           IconCoin(class="w-4 h-4 text-sun-300")
@@ -322,6 +323,8 @@ const collect = (dayIndex: number) => {
           :class="{ 'is-past': i < state.currentDay, 'is-today': i === state.currentDay, 'is-ready': i === state.currentDay && !collectedToday, 'ui-shine': i === state.currentDay && !collectedToday, 'is-skin': isSkinDay(i) }"
           :style="{ '--i': i }"
         )
+          //- Today's claimable tile twinkles (#UX1c).
+          span.ui-sparkle.ui-sparkle--sun.day-sp(v-if="i === state.currentDay && !collectedToday" aria-hidden="true")
           //- Day label. The "D" prefix was hardcoded, so every locale showed
           //- "D1…D7". It goes through i18n now — each language picks its own
           //- abbreviation, kept short because the card is only ~80px wide.
@@ -344,7 +347,9 @@ const collect = (dayIndex: number) => {
             IconCoin(class="w-5 h-5 sm:w-6 sm:h-6 text-sun-500 my-0.5")
 
           //- Skin label (only when a skin is actually offered for this day)
-          div.font-black.text-plum-700.leading-tight(
+          //- Long names ("Monarchfalter") break with a hyphen instead of
+          //- spilling over the card edge.
+          div.skin-label.font-black.text-plum-700.leading-tight(
             v-if="isSkinDay(i) && dailySkinForDay(i)"
             class="text-[0.6rem] sm:text-[0.75rem]"
           ) {{ t('skins.' + dailySkinForDay(i)) }}
@@ -410,10 +415,13 @@ const collect = (dayIndex: number) => {
 // HUD button: a leaf (free reward) .ui-btn — sinks into its lip on press;
 // a berry "!" sticker while a reward is waiting (the wrapper bounces).
 .daily-hud-btn
+  // Same box as its neighbour (daily ↔ battle pass) so the bottom-left row
+  // lines up: fixed height, same padding, content centred.
   flex-direction: column
-  padding: 0.25rem 0.5rem 0.35rem
+  justify-content: center
+  padding: 0.3rem 0.6rem 0.4rem
   min-width: 2.75rem
-  min-height: 2.75rem
+  height: 3.6rem
 
 .daily-notify
   position: absolute
@@ -426,9 +434,9 @@ const collect = (dayIndex: number) => {
 
 // ── Day tiles: little collectible cards ───────────────────────────────────
 //   future  ice card, muted
-//   ready   sun edge + stripes, lifted and tilted, bouncing arrow, shine
+//   ready   sun edge + facet, lifted and tilted, bouncing arrow, shine, twinkle
 //   claimed lime face with a slanted "✓" stamp
-//   skin    plum edge + plum corner stripes (the big days)
+//   skin    plum edge + plum corner notch (the big days)
 .day-tile
   --edge: var(--color-ice-400)
   position: relative
@@ -447,8 +455,10 @@ const collect = (dayIndex: number) => {
     right: 0
     width: 1.3rem
     height: 1.3rem
-    background-image: repeating-linear-gradient(315deg, var(--edge) 0 3px, transparent 3px 6px)
-    clip-path: polygon(30% 0, 100% 0, 100% 70%)
+    // Corner notch (#UX1c): a solid dog-ear in the edge colour, no stripes.
+    background-color: var(--edge)
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45)
+    clip-path: polygon(0 0, 100% 0, 100% 100%)
     border-top-right-radius: calc(var(--radius-ui) - 2px)
     pointer-events: none
   &.is-skin
@@ -461,12 +471,18 @@ const collect = (dayIndex: number) => {
     --edge: var(--color-sun-500)
     z-index: 1
     background-color: var(--color-sun-200)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet-ink)
     box-shadow: inset 0 0 0 2px var(--edge), inset 0 -5px 0 var(--edge), 0 0 0 3px var(--color-sun-400), 0 5px 0 var(--color-ink)
     transform: translateY(-4px) rotate(-2deg)
 
 .day-label
   color: var(--ui-text-muted)
+
+.day-sp
+  left: 0.3rem
+  top: 0.35rem
+  --sp-size: 0.85rem
+  --sp-delay: 0.6s
 
 .is-ready .day-label, .is-ready .day-amount
   color: var(--ui-text)
@@ -514,4 +530,11 @@ const collect = (dayIndex: number) => {
     animation: none
   .day-tile
     transition: none
+
+.skin-label
+  width: 100%
+  max-width: 100%
+  text-align: center
+  hyphens: auto
+  overflow-wrap: anywhere
 </style>

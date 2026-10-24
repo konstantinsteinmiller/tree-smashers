@@ -138,7 +138,7 @@ describe('engine, flag off', () => {
     expect(game.hasSkillEngine()).toBe(false)
     const engine = game.useSpinnerGame()
     const cfg = { topPartId: 'round', bottomPartId: 'balanced', topLevel: 3, bottomLevel: 3 } as const
-    engine.initGame([{ ...cfg }], [{ ...cfg }], false, 'default', 0, false, undefined, null, 'circle', {
+    engine.initGame([{ ...cfg }], [{ ...cfg }], false, 'default', false, undefined, null, 'circle', {
       skillLoadout: [{ id: 'guard_shell', level: 5 }],
       enemySkillLoadout: [{ id: 'homing_rockets', level: 5 }]
     })
@@ -208,7 +208,7 @@ describe('SpinnerArena, flag off', () => {
       await arena.settle(500)
       // The menu really rendered: a stage-40 player, Team button on screen.
       expect(document.querySelector('.stage-badge')?.textContent).toContain('40')
-      expect(document.querySelector('img[src*="team_128x128"]')).not.toBeNull()
+      expect(document.querySelector('[data-testid="hud-team"]')).not.toBeNull()
       for (const sel of SKILL_DOM) expect(document.querySelector(sel), sel).toBeNull()
       // The Team modal opens (smasher detail) with no SKILLS row.
       await arena.openTeam()

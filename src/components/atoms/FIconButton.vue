@@ -62,8 +62,11 @@ const sizeClasses = computed(() => {
     :aria-label="ariaLabel"
     :class="[toneClass, sizeClasses.btn, sizeClasses.scale, 'z-10']"
   )
+    //- A drawn/painted icon component (e.g. UiIcon) in the image slot size.
+    span.f-icon-img.block(v-if="$slots.default" :class="sizeClasses.img" aria-hidden="true")
+      slot
     img.f-icon-img(
-      v-if="imgSrc"
+      v-else-if="imgSrc"
       :src="imgSrc"
       alt=""
       draggable="false"

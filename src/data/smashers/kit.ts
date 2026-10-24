@@ -32,6 +32,12 @@ export interface SmasherSkillDef {
 export interface SmasherArmor {
   front: number
   back: number
+  /** How a reinforced zone is DRAWN: 'blade' = the sharp riveted steel plate
+   *  (an attacker's edge), 'bulwark' = a chunky domed shield wall (a tank's
+   *  fortification). Default: 'blade' for a damage-scaling smasher (profile
+   *  damage >= BLADE_LOOK_DAMAGE), 'bulwark' for everyone else. Presentation
+   *  only — the multipliers above are the whole mechanic. */
+  look?: 'blade' | 'bulwark'
 }
 
 export interface SmasherDefOf<Id extends string> {

@@ -85,6 +85,13 @@ export const loadSmasherSkillText = (): Promise<SmasherSkillTextModule | null> =
 export const loadSkillSfx = (): Promise<SkillSfxModule | null> =>
   SKILLS_BUILD ? import('@/use/skills/skillSfx') : Promise.resolve(null)
 
+export type IntroSkillsModule = typeof import('@/use/skills/introSkills')
+
+/** The first-launch intro's skill showcase (battle skill VFX, callouts, SFX).
+ *  Null when off: the intro then plays without its skill layer. */
+export const loadIntroSkills = (): Promise<IntroSkillsModule | null> =>
+  SKILLS_BUILD ? import('@/use/skills/introSkills') : Promise.resolve(null)
+
 /** Arm the gated skill-SFX preload (useAssets' deferred tier). No-op when off. */
 export const armSkillSfx = (): void => {
   if (SKILLS_BUILD) {

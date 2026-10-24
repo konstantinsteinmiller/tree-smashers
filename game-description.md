@@ -17,6 +17,8 @@ forest clearing in turn-based battles powered by real physics. Protect your own 
   and boar, each with its own fighting style
 - **Level them up with coins** — every smasher has 3 unique skills: the second unlocks at level 10, the third at level 20
 - **Team Towers** — destroy the enemy's tree to win, and keep yours standing
+- **Fight solo, as a duo or as a trio** — start with one smasher, unlock the second and third as you clear stages, and
+  pick how many go into battle: a lone smasher hits harder, a trio brings more bodies (and more friendly bumps)
 - **Forest arenas** with islands, speed boosters and pot holes that change every launch
 - **100+ campaign stages** with boss fights that get wilder the further you go
 - **PvP multiplayer** — share a link and battle your friends in real time

@@ -33,6 +33,11 @@ const wedge = (i: number, inner: number, outer: number, halfDeg: number): string
 }
 const backRays = Array.from({ length: WEDGES }, (_, i) => wedge(i, 16, 100, 7.5)).join(' ')
 const frontRays = Array.from({ length: WEDGES }, (_, i) => wedge(i + 0.5, 20, 92, 3.2)).join(' ')
+// #UX1c: thin SOLID streaks in the reward tone between the wide rays. The
+// tone is no longer laid thin over the navy stage (a translucent sun or
+// legendary gold over navy mixes to a muddy grey-olive); the wide rays are
+// the stage's own royal blue, the tone rides on these saturated streaks.
+const toneStreaks = Array.from({ length: WEDGES }, (_, i) => wedge(i + 0.5, 30, 100, 1.1)).join(' ')
 
 const style = computed(() => ({ '--tone': props.tone }))
 </script>
@@ -45,9 +50,10 @@ const style = computed(() => ({ '--tone': props.tone }))
     aria-hidden="true"
   )
     svg.reward-stage__rays.is-back(viewBox="-100 -100 200 200")
-      path(:d="backRays" :fill="tone" fill-opacity="0.22")
+      path(:d="backRays" fill="#4570f0" fill-opacity="0.42")
     svg.reward-stage__rays.is-front(viewBox="-100 -100 200 200")
-      path(:d="frontRays" fill="#ffffff" fill-opacity="0.16")
+      path(:d="frontRays" fill="#ffffff" fill-opacity="0.12")
+      path(:d="toneStreaks" :fill="tone" fill-opacity="0.75")
     div.reward-stage__pool
       span.reward-stage__disc.is-1
       span.reward-stage__disc.is-2
@@ -85,10 +91,11 @@ const style = computed(() => ({ '--tone': props.tone }))
   height: 0
 
 // A glow as stacked SOLID discs — the flat stand-in for a radial bloom.
+// #UX1c: royal-light discs (a translucent tone over navy read muddy).
 .reward-stage__disc
   position: absolute
   border-radius: 50%
-  background-color: var(--tone)
+  background-color: var(--color-royal-400)
   transform: translate(-50%, -50%)
 
   &.is-1

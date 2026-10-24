@@ -22,7 +22,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   brock: {
     id: 'brock', archetype: { top: 'quadratic', bottom: 'tanky' },
     profile: p(1.17, 1.03, 1.1, 0.85, 1.2), unlockStage: 56,
-    disc: 1.2, armor: { front: 0.7, back: 1.3 },
+    disc: 1.2, armor: { front: 0.7, back: 0.7, look: 'bulwark' },
     skills: [
       sk('burrow_guard', 'guard_shell', { shield: 1.3 }),
       sk('badger_bite', 'lucky_edge', { mult: 1.2, chance: 0.85 }),
@@ -51,7 +51,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
       sk('lily_hop', 'phase_step', { cooldownMs: 0.8, chance: 0.85 })
     ]
   },
-  // Stoat — tiny glass-front striker: smallest disc, hits hard, bruises in front.
+  // Koala — tiny glass-front striker: smallest disc, hits hard, bruises in front.
   slinky: {
     id: 'slinky', archetype: { top: 'star', bottom: 'speedy' },
     profile: p(0.95, 1.34, 0.9, 1.2, 0.8), unlockStage: 68,

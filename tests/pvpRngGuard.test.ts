@@ -27,7 +27,7 @@ const functionBody = (name: string): { body: string; line: number } => {
   return { body: SRC.slice(start, i + 1), line: SRC.slice(0, start).split('\n').length }
 }
 
-const GUARDED = ['resolveCollision', 'bounceOffWalls', 'bounceOffBouncers', 'applyBladeDamage']
+const GUARDED = ['resolveCollision', 'bounceOffWalls', 'bounceOffIslands', 'applyBladeDamage']
 
 describe('PvP RNG guard — useSpinnerGame damage/collision paths', () => {
   for (const name of GUARDED) {
@@ -46,8 +46,8 @@ describe('PvP RNG guard — useSpinnerGame damage/collision paths', () => {
     expect(body.match(/topPartId === 'star'[^\n]*matchRng\(\) < 0\.08/g)?.length).toBe(2)
   })
 
-  it('walls and bouncers carry no shock zap (arena retired) and no wall clock', () => {
-    for (const name of ['bounceOffWalls', 'bounceOffBouncers']) {
+  it('walls and islands carry no shock zap (arena retired) and no wall clock', () => {
+    for (const name of ['bounceOffWalls', 'bounceOffIslands']) {
       const { body } = functionBody(name)
       expect(body).not.toContain('lastShockMs')
       expect(body).not.toMatch(/performance\.now\(\)/)

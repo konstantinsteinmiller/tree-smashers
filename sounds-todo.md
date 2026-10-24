@@ -2,7 +2,7 @@
 
 **Review page: https://claude.ai/artifact/6d68XaKNSdLEuDMkt8kEj9** — every old sound next to its redesign, with Approve / Reject and a comment per sound. Private to the owner (share it from the page's Share menu if someone else should review).
 
-Status: **r1 of all 45 sounds is live on the page, awaiting verdicts.** Nothing in the game is switched yet — every entry in `src/audio/audioVersions.ts` is still `'v1'`.
+Status: **r1 of all 47 sounds is live on the page, awaiting verdicts.** Nothing in the game is switched yet — every entry in `src/audio/audioVersions.ts` is still `'v1'`.
 
 ## Reading the verdicts back (for Claude)
 
@@ -18,7 +18,7 @@ Status: **r1 of all 45 sounds is live on the page, awaiting verdicts.** Nothing 
 
 ## What happens after a verdict
 
-- **Approved** → flip that sound's line in `src/audio/audioVersions.ts` from `'v1'` to `'v2'` (after the one-time hook-up listed at the top of that file; proposals `menu-1`, `boss-1`, `tower-fall` also need their trigger). Tick it below.
+- **Approved** → flip that sound's line in `src/audio/audioVersions.ts` from `'v1'` to `'v2'` (after the one-time hook-up listed at the top of that file; new slots `menu-1`, `boss-1`, `tree-hit`, `tree-stage`, `tree-fall` also need their trigger, see "Tree-tower hook points" below). Tick it below.
 - **Rejected** → make revision r(n+1):
   1. Change the recipe (`tools/audio-v2/sfx.mjs`, `music.mjs`, or `src/audio/uiSfxV2.ts` for UI / intro cues) to answer the comment.
   2. Append `{ "rev": n+1, "note": "what changed" }` to that id in `tools/audio-v2/review-revisions.json` (create the file / key if missing; r1 is implicit).
@@ -32,7 +32,7 @@ Status: **r1 of all 45 sounds is live on the page, awaiting verdicts.** Nothing 
 All in `tools/audio-v2/`, pure Node + ffmpeg, deterministic (seeded noise), no samples or licences:
 
 - `lib/dsp.mjs` (oscillators, modal synthesis, Karplus-Strong strings, filters, reverb, compressor), `lib/instruments.mjs` (marimba, xylophone, glockenspiel, kalimba, guitar / mandolin / bass / pizzicato, tin whistle, accordion reeds, horns, folk percussion), `lib/seq.mjs` (note shorthand, chords, buses set by loudness), `lib/master.mjs` (EBU R128 meter, 4× true peak, look-ahead limiter, loop wrap, encode).
-- `music.mjs` — the five loops and two stingers as notes and patterns. `sfx.mjs` — the 22 file SFX. `catalog.mjs` — this inventory (source of the page and the tables below).
+- `music.mjs` — the five loops and two stingers as notes and patterns. `sfx.mjs` — the 21 file SFX plus the 6 tree-tower files. `catalog.mjs` — this inventory (source of the page and the tables below).
 - `build.mjs` renders, levels, encodes to `public/audio/v2/{music,sfx}/*.ogg` and writes `report.json` with QA measured on the **decoded .ogg**.
 - `render-procedural.mjs` renders the OLD (`uiSfx.ts`, `introAudio.ts`) and NEW (`src/audio/uiSfxV2.ts`) live-synth sounds through a real `OfflineAudioContext` in a private headless Chrome.
 - `tests/audioVersions.test.ts` guards the switchboard (every path it can hand out exists).
@@ -40,11 +40,11 @@ All in `tools/audio-v2/`, pure Node + ffmpeg, deterministic (seeded noise), no s
 Quality targets and results (r1):
 
 - Music: **-16 LUFS integrated** (all five: -16.0…-16.1), true peak ≤ -1 dBTP (worst -1.3), loops wrapped so reverb/release tails continue across the loop point; sample step at the seam 0.07–0.74× the local max slope (no click), decoded length = exact loop length. Stereo correlation 0.95–0.98 (mono-safe). Ogg Vorbis q2, 410–610 KB per loop.
-- SFX: levelled to a per-sound max-momentary target chosen against the old file so the existing call-site gains still make sense (all within ±0.5 dB of target), TP ≤ -1 dBTP (worst -1.2), 44.1 kHz mono (stingers stereo) Vorbis q4, 5–19 KB each. Fixed on the way: old `clash-4` clipped at **+11.3 dBTP** (10 dB louder than its siblings), `celebration-1` was 10 dB quieter than `celebration-2` (same event), `level-up` and `explosion-1` were quieter than a clash.
+- SFX: levelled to a per-sound max-momentary target chosen against the old file so the existing call-site gains still make sense (all within ±0.5 dB of target), TP ≤ -1 dBTP (worst -1.2), 44.1 kHz mono (stingers stereo) Vorbis q4, 5–23 KB each. Fixed on the way: old `clash-4` clipped at **+11.3 dBTP** (10 dB louder than its siblings), `celebration-1` was 10 dB quieter than `celebration-2` (same event), `level-up` and `explosion-1` were quieter than a clash.
 - UI / intro live synth: every v2 recipe within ±0.6 dB of the old sound's loudness at the same gain, so the UI mix hierarchy in `uiSfx.ts` is unchanged.
 - No voice ends on a non-zero sample (fade-outs on every voice), sub-40 Hz energy ≤ 6.5 % of the total (explosion), DC offset ≈ 0.001 or less.
 
-## Inventory (45 sounds: 3 music loops + 2 new music slots, 2 stingers, 22 file SFX + 1 new SFX slot, 12 UI sounds, 4 intro cues)
+## Inventory (47 sounds: 3 music loops + 2 new music slots, 2 stingers, 21 file SFX, 3 new tree-tower SFX slots (6 files), 12 UI sounds, 4 intro cues)
 
 Status column: tick it here when the verdict is approved and the switch is flipped.
 
@@ -75,9 +75,17 @@ Status column: tick it here when the verdict is approved and the switch is flipp
 | `clash-4` | `clash-4.ogg` 0.78 s, -3.6 LUFS-M, TP 11.3 **clips** | Two smashers collide (random variant of five, throttled per pair, capped overlap) - the most frequent sound in the game. The intro cutscene uses them for boss hits too. (0.025 (intro: 0.022-0.034)) | Double clack, two discs rattling against each other. Short (about 0.3 s), rounded transient, no harsh highs - it plays dozens of times per match. | `v2/sfx/clash-4.ogg` 0.36 s, -14.3 LUFS-M, TP -1.5, 5 KB | r1 awaiting verdict |
 | `clash-5` | `clash-5.ogg` 0.70 s, -12.5 LUFS-M, TP -0.2 | Two smashers collide (random variant of five, throttled per pair, capped overlap) - the most frequent sound in the game. The intro cutscene uses them for boss hits too. (0.025 (intro: 0.022-0.034)) | Clack with a short ringing wooden "tonk" tail. Short (about 0.3 s), rounded transient, no harsh highs - it plays dozens of times per match. | `v2/sfx/clash-5.ogg` 0.36 s, -14.0 LUFS-M, TP -1.5, 5 KB | r1 awaiting verdict |
 | `explosion-1` | `explosion-1.ogg` 1.01 s, -17.3 LUFS-M, TP -2.7 | A smasher is knocked out (spawnExplosion), meteor impacts at match start, and the slam / KO beats of the intro cutscene. (0.025 (intro 0.03-0.04)) | Plush "poof!" knockout: a big soft low thump, a fluffy puff of air, small wood-splinter crackles and a scatter of leaves. Satisfying, not violent. | `v2/sfx/explosion-1.ogg` 1.05 s, -13.0 LUFS-M, TP -3.1, 13 KB | r1 awaiting verdict |
-| `celebration-1` | `celebration-1.ogg` 1.34 s, -25.4 LUFS-M, TP -12.6 | Match start (random with celebration-2) AND a tree tower destroyed (onTowerDestroyed); also the reward reveal (RewardRevealHost, ratio 0.06). (0.025 (reveal 0.06)) | "Let's go!" start cue: two tom hits, a bright guitar strum and a rising three-note whistle call. (Tower destruction gets its own proposed sound, tower-fall.) | `v2/sfx/celebration-1.ogg` 1.35 s, -15.0 LUFS-M, TP -4.3, 14 KB | r1 awaiting verdict |
+| `celebration-1` | `celebration-1.ogg` 1.34 s, -25.4 LUFS-M, TP -12.6 | Match start (random with celebration-2) AND a tree tower destroyed (onTowerDestroyed); also the reward reveal (RewardRevealHost, ratio 0.06). (0.025 (reveal 0.06)) | "Let's go!" start cue: two tom hits, a bright guitar strum and a rising three-note whistle call. (Tower destruction gets its own proposed sound, tree-fall.) | `v2/sfx/celebration-1.ogg` 1.35 s, -15.0 LUFS-M, TP -4.3, 14 KB | r1 awaiting verdict |
 | `celebration-2` | `celebration-2.ogg` 1.30 s, -15.4 LUFS-M, TP -4.7 | Match start (random with celebration-1). (0.025) | Second start variant: woodblock triple, marimba "ta-da-daa" and a clap - same energy as celebration-1, different colour. | `v2/sfx/celebration-2.ogg` 1.35 s, -15.0 LUFS-M, TP -2.9, 12 KB | r1 awaiting verdict |
-| `tower-fall` | — (new slot) | NEW slot (proposal): a tree tower is destroyed. Today that reuses celebration-1 (the match-start cheer). (0.025 (suggested)) | A tree tower going down: sharp trunk crack, a short creak, a falling swish and a heavy wooden thud with leaves raining down. About 1.3 s. | `v2/sfx/tower-fall.ogg` 1.50 s, -13.2 LUFS-M, TP -2.3, 19 KB | r1 awaiting verdict |
+| `balloon-pop` | — (new slot, #UX3) | NEW slot, **wired**: a smasher loses one of its HP balloons (balloon builds, `VITE_APP_BALOON_HP_BAR=true`) — one per lost share of max HP, the rest on a knockout; one sound per 90 ms cooldown however many pop at once, rate 0.94–1.06×. (0.032 ≈ a clash at 0.025) | Mario-Kart-style balloon burst: a sharp rubber BANG (crack, short low pop body, air snap) and a softer rubber-tear tail — flapping shreds and a fine crinkle thinning out. ~0.3 s audible, never harsh (it lands on top of clashes). | `v2/sfx/balloon-pop.ogg` 0.50 s, -17.8 LUFS-M, TP -2.0, 7 KB | **wired, pending review** (r1 not on the page yet) |
+
+### Tree-tower SFX (new slots)
+
+| Sound | Old file (length, loudness, true peak) | Where / when (in-game gain) | New: what it should feel like | New file (loudness, TP, size) | Status |
+|---|---|---|---|---|---|
+| `tree-hit` | — (new slot) | NEW slot: every damaging hit of a smasher on a team tree (the plush oak tower), where the wood-splinter burst spawns (5-16 chips scaling with damage). Today tower hits are silent. (0.025 (suggested, like a clash)) | A satisfying wooden thunk with a soft plush body, a small crack and a short splinter crackle. Three round-robin variants (tree-hit-1/2/3) so repeats never sound identical, plus a damage-scaled layer (tree-hit-heavy: deeper trunk boom, sharper crack, longer splinter spray) added on hard hits. The preview plays 1, 2, 3, 1, then 2 and 3 with the heavy layer. | `v2/sfx/tree-hit-1.ogg` 0.42 s, -14.4 LUFS-M, TP -2.7, 6 KB<br>`v2/sfx/tree-hit-2.ogg` 0.42 s, -14.5 LUFS-M, TP -2.7, 6 KB<br>`v2/sfx/tree-hit-3.ogg` 0.42 s, -14.5 LUFS-M, TP -2.6, 6 KB<br>`v2/sfx/tree-hit-heavy.ogg` 0.60 s, -16.0 LUFS-M, TP -3.9, 8 KB<br>hit + heavy together: -11.9 LUFS-M | r1 awaiting verdict |
+| `tree-stage` | — (new slot) | NEW slot: the tree drops a damage state (healthy -> damaged at 60 %, -> nearly destroyed at 25 %), together with the leaf cascade. (0.025 (suggested)) | A soft trunk creak and a rustle of leaves letting go - a gentle "it is weakening" cue that sits under the fight. About 1.1 s. | `v2/sfx/tree-stage.ogg` 1.15 s, -18.0 LUFS-M, TP -3.2, 14 KB | r1 awaiting verdict |
+| `tree-fall` | — (new slot) | NEW slot: the tree is felled (onTowerDestroyed). Today that reuses celebration-1, the match-start cheer. (0.025 (suggested)) | The plush oak going down: a big trunk crack, a creak that speeds up as it gives way, a falling swish, a heavy soft landing and leaves raining down. Refines the earlier tower-fall proposal. About 2 s. | `v2/sfx/tree-fall.ogg` 2.00 s, -13.0 LUFS-M, TP -1.9, 23 KB | r1 awaiting verdict |
 
 ### Rewards and progression
 
@@ -133,6 +141,24 @@ Status column: tick it here when the verdict is approved and the switch is flipp
 | `intro-heart` | introAudio.ts `heart` | Heartbeat while the smasher lies defeated. | Soft, round double heartbeat thump. | -27.1 → -27.2 LUFS (-0.1 dB) | r1 awaiting verdict |
 | `intro-whoosh` | introAudio.ts `whoosh` | The thunder wind-up in the intro fight. | Airy rising wind swish (replaces a buzzy sawtooth sweep). | -47.4 → -47.2 LUFS (+0.2 dB) | r1 awaiting verdict |
 
+## Wired, pending review
+
+Sounds that already play in the game while their r1 still waits for the owner's verdict. They are NOT on the review page yet — the next review-pack run picks them up from `tools/audio-v2/catalog.mjs` (upload their previews and republish the page, steps 4–5 above).
+
+- [ ] `balloon-pop` (#UX3 balloon HP) — `public/audio/v2/sfx/balloon-pop.ogg` (recipe `balloonPop` in `tools/audio-v2/sfx.mjs`, re-render with `node tools/audio-v2/build.mjs --only balloon-pop`). Switch: `NEW_SLOT_VERSION['balloon-pop']` in `src/audio/audioVersions.ts` is `'v2'` (on) because the owner asked for it wired; `'v1'` silences it (the balloons still pop visually). Played from `renderBalloonLayer` in `src/use/useSpinnerGame.ts` (gain `BALLOON_HP.POP_SFX_GAIN` 0.032, cooldown `POP_SFX_COOLDOWN_MS` 90 ms), preloaded with the core SFX only on balloon builds. Rejected → new revision as above; the in-game gain lives in `src/use/balloonHp.ts`.
+
+- [ ] `vs-whoosh`, `vs-thump`, `vs-slam` (#UX4 VS intro) — `public/audio/v2/sfx/vs-*.ogg` (recipes `vsWhoosh` / `vsThump` / `vsSlam` in `tools/audio-v2/sfx.mjs`, catalog entries in `catalog.mjs`; re-render with `node tools/audio-v2/build.mjs --only vs-whoosh,vs-thump,vs-slam`). r1: whoosh -17.3 LUFS-M / TP -2.3 / 0.50 s, thump -15.9 / -1.9 / 0.34 s, slam -13.0 / -3.1 / 1.25 s. Switch: `NEW_SLOT_VERSION['vs-intro']` in `src/audio/audioVersions.ts` is `'v2'` (on, owner request); `'v1'` silences all three. Cues + gains in `src/use/vsIntro.ts` `VS_SOUND_CUES` (whoosh 0.025 at 0 ms and 0.016 ×1.25 on the exit wipe, thumps 0.022 as each side's cards land, slam 0.028 on the VS landing); played from `VsIntro.vue`, never under an ad / pause, preloaded with the core SFX.
+
+## Tree-tower hook points (not wired — waiting for approval)
+
+All in `src/use/useSpinnerGame.ts`; play through `playSound` (after the `sfxPath` hook-up) and keep the sound **outside** the `if (!FX.low)` VFX gate so low-tier devices still hear it:
+
+- **`tree-hit`** — the tower-contact loop, right after `tower.hp = Math.max(0, tower.hp - dmg)` / `tower.flash = 1`, beside `spawnSplinters(towerFx, …, dmg)`. Play `treeHitName(n++)` (round-robin `tree-hit-1/2/3`) and, when `dmg >= tower.maxHp * 0.06` (the same hard-hit test as the leaf shake), also `TREE_HIT_HEAVY`. The contact re-arm (`CONTACT_REARM_MS`) already spaces hits per blade; a ~120 ms global cooldown like the clash one is still advisable when several blades hit at once.
+- **`tree-stage`** — `tickTowerVfx`, where `noteTowerStage(towerFx, i, st)` returns `n > 0`: play it for `st === 1` (damaged, ≤ 60 %) and `st === 2` (nearly destroyed, ≤ 25 %); `st === 3` is the felled moment, which is `tree-fall`.
+- **`tree-fall`** — `onTowerDestroyed`, replacing `playSound('celebration-1')`.
+- Switch: `NEW_SLOT_VERSION['tree-hit' | 'tree-stage' | 'tree-fall']` in `src/audio/audioVersions.ts` (`'v1'` = today: silent / celebration-1), checked with `newSlotOn(slot)`.
+- Levels: the hit variants sit 0.5 dB under a clash, the heavy layer adds about 2.5 dB on hard hits (hit + heavy ≈ -11.9 LUFS-M at file level; in game both mix ~30 dB lower, so the stack cannot clip), the stage cue is soft (-18), the fall matches a knockout (-13).
+
 ## Not reviewed: unused audio
 
 - `public/audio/sfx/celebration-3.ogg` — not referenced (match start picks celebration-1 or -2).
@@ -143,5 +169,5 @@ Status column: tick it here when the verdict is approved and the switch is flipp
 ## Open questions
 
 - In-game gain staging is very low: SFX play at `userSoundVolume × 0.025` and music at `userMusicVolume × 0.025` (about -35 dB). Files are levelled to keep today's balance; whether the master levels themselves are right is a separate decision.
-- Proposals need code beyond the switch: menu music (the menu is silent today), a boss track on boss stages, and a dedicated `tower-fall` instead of reusing the match-start `celebration-1`.
+- Proposals need code beyond the switch: menu music (the menu is silent today), a boss track on boss stages, and the tree-tower sounds (`tree-hit`, `tree-stage`, `tree-fall`; tree-fall replaces the reused match-start `celebration-1`).
 - Battle music plays through `HTMLAudioElement.loop`; the files loop seamlessly, but some browsers add a few ms gap at the media-element loop point. Moving music to Web Audio would remove it.

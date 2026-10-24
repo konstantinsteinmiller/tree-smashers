@@ -45,7 +45,7 @@ import { isDenylistedName, safeNameFor } from '../src/utils/nameDenylist.ts'
  * Deliberately NOT read from `VITE_LEADERBOARD_URL`: the builds that need this
  * are precisely the builds that set that variable to empty.
  */
-export const DEFAULT_SOURCE = 'https://leaderboard-tree-smashers.rodent-race.workers.dev'
+export const DEFAULT_SOURCE = 'https://leaderboard-tree-smashers.hyperg8.workers.dev'
 
 export const SNAPSHOT_FILE = resolve(
   fileURLToPath(new URL('../data/leaderboard-snapshot.json', import.meta.url))
@@ -145,6 +145,14 @@ export const refreshSnapshot = async (source = process.env.LEADERBOARD_SNAPSHOT_
     controller.abort()
   }
   const snapshot = buildSnapshot(top, origin)
+  // The committed synthetic pool stays until the live board has more players
+  // than it (a fresh, nearly empty board must not shrink the pool to a handful
+  // of rows). LEADERBOARD_SNAPSHOT_FORCE=1 overrides.
+  const onDisk = readSnapshot()
+  if (onDisk?.synthetic && snapshot.total < onDisk.total && !process.env.LEADERBOARD_SNAPSHOT_FORCE) {
+    console.log(`[leaderboard] live board has ${snapshot.total} players < synthetic pool ${onDisk.total} — keeping the synthetic snapshot`)
+    return onDisk
+  }
   mkdirSync(dirname(SNAPSHOT_FILE), { recursive: true })
   writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2) + '\n', 'utf-8')
   return snapshot

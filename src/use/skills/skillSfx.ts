@@ -198,9 +198,16 @@ export function requestSkillBattleSfx(): void {
 
 // ─── Test hooks ────────────────────────────────────────────────────────────
 
+/** Route skill SFX through another player (null = back to
+ *  useSounds().playSound). The intro cutscene installs a gated one so a cue is
+ *  never started on a suspended AudioContext (src/use/skills/introSkills.ts). */
+export function setSkillSfxPlayer(p: Player | null): void {
+  player = p
+}
+
 /** Tests: replace the sound player (null = back to useSounds().playSound). */
 export function __setSkillSfxPlayer(p: Player | null): void {
-  player = p
+  setSkillSfxPlayer(p)
 }
 
 /** Tests: clear throttle / overlap state. */

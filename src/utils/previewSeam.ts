@@ -216,6 +216,18 @@ export const installPreviewSeam = (deps: PreviewSeamDeps): (() => void) => {
       return true
     },
 
+    /** Re-dress living blades of one side as the given smashers (render-only
+     *  look; store screenshots pick the cast). Ids are not validated here. */
+    dress(side: 'player' | 'npc', ids: string[]) {
+      const list = living(side === 'player' ? deps.playerBlades.value : deps.npcBlades.value)
+      list.forEach((b, i) => {
+        const id = ids[i]
+        if (id) (b.config as { smasherId?: string }).smasherId = id
+      })
+      ;(window as unknown as { __smashersLooks?: { clear: () => void } }).__smashersLooks?.clear()
+      return list.length
+    },
+
     /** Stop the physics tick the instant `target` is entered — synchronously,
      *  inside the tick that enters it, so no think-time elapses first.
      *

@@ -85,3 +85,6 @@ perf/last-trace-summary.json
 # Cloudflare Worker local secrets (wrangler dev: LEAGUE_SECRET, SCORE_SECRET)
 worker/.dev.vars
 worker/.dev.vars.*
+
+# UI kit screenshot-diff harness: current captures + diff images (baselines are tracked)
+tools/ui-kit-diff/out/

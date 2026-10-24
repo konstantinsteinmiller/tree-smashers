@@ -1,8 +1,19 @@
 import { ref } from 'vue'
+import { movieIconPath } from '@/use/badgeIconArt'
 import useSpinnerCampaign, { type ArenaType } from '@/use/useSpinnerCampaign.ts'
 import { prependBaseUrl } from '@/utils/function.ts'
 import { FLAME_BURN_SRC } from '@/use/borderFx'
 import { armSkillSfx } from '@/skills/skillsGate'
+import { BALLOON_HP_BUILD } from '@/use/balloonHpFlag'
+import { BALLOON_POP_SFX, VS_INTRO_SFX, newSlotOn, sfxPath } from '@/audio/audioVersions'
+import { isIntroLikely } from '@/use/introGate'
+import { warmIntroCutscene } from '@/use/introCutsceneLoader'
+import { hudUiIconPreloads } from '@/use/uiIconArt'
+import { preloadBackdropArt } from '@/use/arenaBackdrop'
+import { preloadFloorArt } from '@/use/arenaFloorArt'
+import { borderKeyFor, preloadBorderArt } from '@/use/arenaBorderArt'
+import { floorKeyFor, themeFor } from '@/use/arenaThemes'
+import { layoutForStage } from '@/use/arenaTerrain'
 
 // Shared state so it can be accessed by both the loader and the progress component
 const loadingProgress = ref(0)
@@ -140,16 +151,12 @@ export const loadAudioBuffer = async (src: string): Promise<AudioBuffer | null> 
 //
 //  3. preloadRemainingSkins — every skin not needed for the current
 //     stage. Triggered from SpinnerArena on mount, fire-and-forget.
+// The HUD core buttons' icons are painted UI icons (UiIcon → images/ui-icons/,
+// drawn SVG fallback): their sprites join this tier at the size this display's
+// srcset will pick (hudUiIconPreloads). The old images/icons team / chest /
+// trophy webps are no longer shown, so they are no longer preloaded.
 const STATIC_IMAGES = [
-  'images/logo/logo_256x256.webp',
-  'images/icons/difficulty-icon_128x128.webp',
-  'images/icons/settings-icon_128x128.webp',
-  'images/icons/sound-icon_128x128.webp',
-  'images/icons/team_128x128.webp',
-  'images/icons/gears_128x128.webp',
-  'images/icons/movie_128x96.webp',
-  'images/icons/chest_128x128.webp',
-  'images/icons/trophy_128x128.webp',
+  movieIconPath(),
   'images/bg/bg-tile_400x400.webp'
 ]
 
@@ -165,6 +172,29 @@ const VFX_ASSETS = [
 // reached any other way (next stage, PvP, cheats).
 const ARENA_VFX_ASSETS: Partial<Record<ArenaType, string[]>> = {
   lava: [FLAME_BURN_SRC]
+}
+
+// The current stage's arena art (backdrop tile + prop atlas, floor, border) is
+// the first thing the player sees behind the menu, so the splash waits for it
+// like the rest of the critical tier — capped, so a stalled file never holds
+// the game; whatever lands later still re-bakes the static layer.
+const ARENA_ART_WAIT_MS = 4000
+
+const currentArenaArtJobs = (): Promise<void>[] => {
+  try {
+    const stage = useSpinnerCampaign().currentStage.value
+    if (!stage) return []
+    const arenaType = stage.arenaType ?? 'default'
+    const layout = layoutForStage(stage.id)
+    const theme = themeFor(arenaType, layout)
+    return [
+      preloadBackdropArt(theme),
+      preloadFloorArt(floorKeyFor(theme, layout)),
+      preloadBorderArt(borderKeyFor(arenaType, theme))
+    ]
+  } catch {
+    return []
+  }
 }
 
 const currentArenaVfx = (): string[] => {
@@ -188,7 +218,11 @@ const SOUND_ASSETS = [
   'audio/sfx/level-up.ogg',
   'audio/sfx/win.ogg',
   'audio/sfx/lose.ogg',
-  'audio/sfx/reward-continue.ogg'
+  'audio/sfx/reward-continue.ogg',
+  // #UX3: only balloon builds burst HP balloons (VITE_APP_BALOON_HP_BAR).
+  ...(BALLOON_HP_BUILD && newSlotOn('balloon-pop') ? [sfxPath(BALLOON_POP_SFX)] : []),
+  // The VS intro before every battle (whoosh, card thumps, the VS slam).
+  ...(newSlotOn('vs-intro') ? VS_INTRO_SFX.map(n => sfxPath(n)) : [])
 ]
 
 // Skill SFX (skills-feature.md §8.3) are deferred AND gated: their file list
@@ -214,19 +248,22 @@ const MUSIC_ASSETS = [
 ]
 
 /**
- * First-launch intro cutscene: its three skins (boss + the two Lv. 30 blues).
+ * First-launch intro cutscene (#Intro1): its chunk and every painted file it
+ * draws (team trees, thorns, tree-hit FX, the meadow backdrop / props / floor,
+ * the five smasher sheets, the intro paintings) — introCutsceneLoader.ts.
  * Requested the moment the splash-critical tier resolves — first in line, ahead
- * of the SFX/VFX tier — and never awaited by the splash. Measured on the
- * production build: putting them IN the splash tier added ~200 ms to the loader
- * (request queueing on an HTTP/1.1 origin, not bytes — they are ~30 KB
- * together). The cutscene waits for their decode (capped) before its clock
- * starts, behind its own fade-from-black, so nothing is ever drawn without
- * them. Only for a probable first-timer. (The explosion sheet it also uses is
- * in the deferred VFX tier, needed ~4 s in.)
+ * of the SFX/VFX tier — and never awaited by the splash (putting files IN the
+ * splash tier cost the loader ~200 ms of request queueing). The cutscene waits
+ * (capped) for the arena art before its clock starts, under the fading splash.
+ * Only for a probable first-timer (isIntroLikely).
  */
 const preloadIntroSkins = (): void => {
-  // Smasher portraits are drawn on demand by the rig (src/smashers) — there
-  // are no skin image files to fetch any more. Kept as the tier hook.
+  let likely = false
+  try {
+    likely = isIntroLikely(k => window.localStorage.getItem(k))
+  } catch { /* storage blocked: the gate fails closed anyway */
+  }
+  if (likely) warmIntroCutscene()
 }
 
 type AssetEntry = { src: string; type: 'image' | 'audio' }
@@ -310,18 +347,24 @@ export default () => {
     // chain below so the loader can hit 100% as soon as the player can
     // actually see something.
     const criticalAssets: AssetEntry[] = [
-      ...STATIC_IMAGES.map(src => ({ src: prependBaseUrl(src), type: 'image' as const })),
+      ...[...STATIC_IMAGES, ...hudUiIconPreloads(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)]
+        .map(src => ({ src: prependBaseUrl(src), type: 'image' as const })),
     ]
 
+    const arenaJobs = currentArenaArtJobs()
     let loadedCount = 0
-    const totalCount = criticalAssets.length
+    const totalCount = criticalAssets.length + arenaJobs.length
     const onOne = () => {
       loadedCount++
       loadingProgress.value = Math.floor((loadedCount / totalCount) * 100)
     }
+    const arenaArt = Promise.race([
+      Promise.all(arenaJobs.map(j => j.then(onOne))),
+      new Promise(resolve => setTimeout(resolve, ARENA_ART_WAIT_MS))
+    ])
 
     try {
-      await runInChunks(criticalAssets, 10, onOne)
+      await Promise.all([runInChunks(criticalAssets, 10, onOne), arenaArt])
       // The intro's skins go out the instant the splash-critical tier is in —
       // first in line, ahead of SFX/VFX, but never in the splash's way.
       preloadIntroSkins()

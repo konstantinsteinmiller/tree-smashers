@@ -5,7 +5,11 @@
 > beaver, ram, fox, turtle, woodpecker, sloth, squirrel, owl, boar; see `src/data/smasherCatalog.ts`) riding turning
 > discs. Each smasher levels up with coins and has 3 unique skills (slot 2 at level 10, slot 3 at level 20). Each team
 > has a Team Tower (a little tree); destroying the enemy tower wins the battle. Arenas are forest clearings with
-> islands, speed boosters and pot holes. Sections below that talk about blades/parts describe the old build and remain
+> islands, speed boosters and pot holes. **Team size:** the player fields 1, 2 or 3 smashers (their choice among the
+> open slots — slot 2 after winning stage 3, slot 3 after winning stage 10; `src/data/teamSize.ts`). Stages 1–3 are a 1v1 tutorial (one enemy each — Turtle Lv 1/1, Mystic Eye Lv 2/3, Eagle Lv 4/5 — also on replay); the moment stage 3 is won a 2nd smasher joins automatically ("New slot" toast + Team "!" badge), even over an earlier size-1 pick, and a later ✕ in the team modal is respected. Every smasher is
+> ×0.9 of the old blade radius, ×1 / 0.87 / 0.75 again by its side's count; a side of one gets ×1.2 damage and HP.
+> Campaign NPC teams keep their composition (sized by their own count), league fights and ghosts are 2v2, PvP lobbies
+> offer 1v1 / 2v2 / 3v3 (host's pick, synced in the lobby config, protocol v4). Sections below that talk about blades/parts describe the old build and remain
 > as implementation reference.
 
 > A reusable reference for recreating the proven features of Tree Smashers in a new casual game project using **Vue 3 +
@@ -715,7 +719,7 @@ canvas(:style="shakeStyle")
 - Invite link: `{baseUrl}#/battle?pvp={encodedPeerId}`.
 - Invite expiry: 2 minutes with countdown timer.
 - Message protocol (typed union):
-    - `game-config` — host→guest arena/teamSize/levelOne sync.
+    - `game-config` — host→guest arena/teamSize (1 | 2 | 3, default 2)/levelOne sync.
     - `player-ready` / `player-unready` — with team data.
     - `game-start` — host sends `firstTurn: 'host' | 'guest'` (random 50/50).
     - `launch` — `{ bladeIndex, ax, ay }` for remote blade launches.

@@ -64,14 +64,6 @@ export interface Stage {
   rewardWin: number
   rewardLose: number
   /**
-   * Number of pinball-style bouncer obstacles placed on the arena floor
-   * for this stage (1-3). Each bouncer behaves like the arena wall —
-   * blades ricochet off it with a small speed boost — so encounters with
-   * bouncers play out very differently from an empty floor. Undefined /
-   * 0 means no bouncers on this stage.
-   */
-  bouncers?: number
-  /**
    * Set on the stage-101+ boss encounters (bosses-100-feature.md §5) — the
    * `BOSS_ENCOUNTERS` row this stage was built from. Absent on every stage of
    * the base table and its cycle copies.
@@ -118,7 +110,7 @@ const s = (
   enemyTeam: StageBladeConfig[],
   rewardWin: number,
   rewardLose: number,
-  opts: { isBoss?: boolean; arenaType?: ArenaType; bouncers?: number } = {}
+  opts: { isBoss?: boolean; arenaType?: ArenaType } = {}
 ): Stage => {
   // Boss stages default to the dedicated 'boss' arena (red borders) UNLESS the
   // stage explicitly names another arena (e.g. a boss fight staged in 'lava').
@@ -143,17 +135,21 @@ const s = (
 
 const BASE_STAGES: Stage[] = [
   // ── Tutorial Arc (1-5) ────────────────────────────────────────────────────
+  // Stages 1–3 (#G1): the tutorial is 1 vs 1 — the player owns one team slot
+  // until stage 3 is won, so each opening stage fields ONE enemy, on a gentle
+  // ramp: a slow defensive Turtle, then a balanced Mystic Eye, then a fast
+  // Eagle (the first attacker). The designed lineup stays 1 enemy on replay
+  // too (deterministic). A lone NPC's solo boost is cancelled
+  // (CAMPAIGN_NPC_TUNING soloHpMul / soloDmgMul); the player's lone smasher
+  // keeps its ×1.2. Levels fitted with `balance-sim.mjs camp` (~70–85 % wins).
   s(1, 'stage_1', [
-    e('cushioned', 'balanced', 0, 0, 'shell'),
-    e('round', 'balanced', 0, 0, 'turtle')
+    e('round', 'balanced', 1, 1, 'turtle')
   ], 100, 30),
   s(2, 'stage_2', [
-    e('quadratic', 'balanced', 0, 0, 'mysticaleye'),
-    e('triangle', 'balanced', 0, 0, 'thunder')
+    e('quadratic', 'balanced', 2, 3, 'mysticaleye')
   ], 100, 30),
   s(3, 'stage_3', [
-    e('triangle', 'speedy', 1, 0, 'eagle'),
-    e('round', 'tanky', 0, 1, 'bear')
+    e('triangle', 'speedy', 4, 5, 'eagle')
   ], 100, 35),
   s(4, 'stage_4', [
     e('star', 'balanced', 1, 0, 'reddragon'),
@@ -173,7 +169,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 2, 2, 'tornado'),
     e('triangle', 'speedy', 2, 1, 'thunder'),
     e('quadratic', 'balanced', 1, 1, 'mysticaleye')
-  ], 160, 50, { bouncers: 1 }),
+  ], 160, 50),
   s(8, 'stage_8', [
     e('star', 'balanced', 3, 2, 'axe'),
     e('cushioned', 'tanky', 2, 3, 'castle')
@@ -195,7 +191,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 4, 3, 'axe'),
     e('round', 'tanky', 3, 4, 'turtle'),
     e('quadratic', 'balanced', 3, 3, 'mysticaleye')
-  ], 210, 65, { arenaType: 'lava', bouncers: 2 }),
+  ], 210, 65, { arenaType: 'lava' }),
   s(13, 'stage_13', [
     e('round', 'tanky', 4, 4, 'galaxy'),
     e('cushioned', 'balanced', 3, 3, 'mountain')
@@ -212,7 +208,7 @@ const BASE_STAGES: Stage[] = [
   s(16, 'stage_16', [
     e('star', 'speedy', 5, 4, 'reddragon'),
     e('quadratic', 'tanky', 4, 5, 'angelic')
-  ], 240, 75, { bouncers: 2 }),
+  ], 240, 75),
   s(17, 'stage_17', [
     e('star', 'speedy', 5, 5, 'axe'),
     e('triangle', 'balanced', 5, 4, 'phoenix'),
@@ -221,7 +217,7 @@ const BASE_STAGES: Stage[] = [
   s(18, 'stage_18', [
     e('quadratic', 'balanced', 5, 5, 'prisma'),
     e('cushioned', 'tanky', 5, 5, 'mountain')
-  ], 250, 75, { arenaType: 'ice', bouncers: 2 }),
+  ], 250, 75, { arenaType: 'ice' }),
   s(19, 'stage_19', [
     e('star', 'speedy', 6, 5, 'ice'),
     e('triangle', 'speedy', 5, 5, 'salamaner'),
@@ -253,7 +249,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 7, 7, 'axe'),
     e('triangle', 'speedy', 7, 6, 'snake'),
     e('cushioned', 'tanky', 6, 7, 'gear')
-  ], 340, 100, { bouncers: 1 }),
+  ], 340, 100),
   // 25 — HEALERS boss (archetype 5)
   s(25, 'stage_25', [
     e('cushioned', 'speedy', 7, 6, 'mountain', 'healers'),
@@ -268,11 +264,11 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 8, 8, 'axe'),
     e('triangle', 'speedy', 8, 8, 'thunder'),
     e('cushioned', 'tanky', 8, 8, 'mountain')
-  ], 380, 110, { arenaType: 'lava', bouncers: 3 }),
+  ], 380, 110, { arenaType: 'lava' }),
   s(28, 'stage_28', [
     e('star', 'speedy', 9, 8, 'tornado'),
     e('round', 'tanky', 8, 9, 'piranha')
-  ], 370, 105, { arenaType: 'forest', bouncers: 2 }),
+  ], 370, 105, { arenaType: 'forest' }),
   s(29, 'stage_29', [
     e('star', 'speedy', 12, 8, 'blades'),
     e('triangle', 'speedy', 9, 12, 'eagle'),
@@ -285,7 +281,7 @@ const BASE_STAGES: Stage[] = [
   s(31, 'stage_31', [
     e('triangle', 'speedy', 12, 9, 'phoenix'),
     e('quadratic', 'tanky', 9, 9, 'angelic')
-  ], 430, 125, { arenaType: 'forest', bouncers: 1 }),
+  ], 430, 125, { arenaType: 'forest' }),
   s(32, 'stage_32', [
     e('star', 'speedy', 10, 9, 'axe'),
     e('cushioned', 'tanky', 9, 10, 'gear'),
@@ -295,7 +291,7 @@ const BASE_STAGES: Stage[] = [
     e('round', 'tanky', 10, 10, 'galaxy'),
     e('cushioned', 'balanced', 9, 10, 'mountain'),
     e('star', 'speedy', 9, 9, 'reddragon')
-  ], 460, 135, { arenaType: 'ice', bouncers: 2 }),
+  ], 460, 135, { arenaType: 'ice' }),
   s(34, 'stage_34', [
     e('quadratic', 'balanced', 10, 10, 'mysticaleye'),
     e('triangle', 'speedy', 10, 9, 'eagle')
@@ -316,7 +312,7 @@ const BASE_STAGES: Stage[] = [
   s(38, 'stage_38', [
     e('cushioned', 'balanced', 11, 11, 'mountain'),
     e('round', 'balanced', 11, 11, 'turtle')
-  ], 480, 140, { arenaType: 'forest', bouncers: 1 }),
+  ], 480, 140, { arenaType: 'forest' }),
   s(39, 'stage_39', [
     e('star', 'speedy', 12, 11, 'ice'),
     e('triangle', 'speedy', 11, 11, 'eagle'),
@@ -334,7 +330,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 13, 14, 'axe'),
     e('cushioned', 'tanky', 12, 15, 'gear'),
     e('round', 'tanky', 12, 14, 'turtle')
-  ], 540, 160, { arenaType: 'lava', bouncers: 3 }),
+  ], 540, 160, { arenaType: 'lava' }),
   s(43, 'stage_43', [
     e('round', 'tanky', 13, 13, 'galaxy'),
     e('quadratic', 'balanced', 12, 12, 'mysticaleye')
@@ -353,7 +349,7 @@ const BASE_STAGES: Stage[] = [
   s(46, 'stage_46', [
     e('star', 'speedy', 14, 13, 'tornado'),
     e('triangle', 'speedy', 13, 14, 'eagle')
-  ], 560, 170, { arenaType: 'forest', bouncers: 2 }),
+  ], 560, 170, { arenaType: 'forest' }),
   s(47, 'stage_47', [
     e('star', 'speedy', 14, 14, 'axe'),
     e('cushioned', 'tanky', 13, 14, 'gear')
@@ -362,7 +358,7 @@ const BASE_STAGES: Stage[] = [
     e('round', 'tanky', 14, 14, 'galaxy'),
     e('quadratic', 'balanced', 14, 13, 'prisma'),
     e('star', 'speedy', 13, 14, 'reddragon')
-  ], 580, 175, { arenaType: 'ice', bouncers: 3 }),
+  ], 580, 175, { arenaType: 'ice' }),
   s(49, 'stage_49', [
     e('cushioned', 'balanced', 14, 14, 'mountain'),
     e('triangle', 'speedy', 14, 13, 'salamaner'),
@@ -412,7 +408,7 @@ const BASE_STAGES: Stage[] = [
     e('round', 'tanky', 16, 16, 'galaxy'),
     e('cushioned', 'balanced', 16, 16, 'shell'),
     e('star', 'speedy', 15, 16, 'tornado')
-  ], 670, 200, { arenaType: 'ice', bouncers: 2 }),
+  ], 670, 200, { arenaType: 'ice' }),
   s(59, 'stage_59', [
     e('star', 'speedy', 17, 16, 'ice'),
     e('triangle', 'speedy', 16, 17, 'eagle')
@@ -425,7 +421,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 17, 17, 'blades'),
     e('triangle', 'speedy', 17, 17, 'snake'),
     e('cushioned', 'tanky', 17, 17, 'gear')
-  ], 690, 210, { arenaType: 'ice', bouncers: 1 }),
+  ], 690, 210, { arenaType: 'ice' }),
   s(62, 'stage_62', [
     e('star', 'speedy', 18, 17, 'axe'),
     e('round', 'tanky', 17, 21, 'bear')
@@ -486,7 +482,7 @@ const BASE_STAGES: Stage[] = [
     e('cushioned', 'balanced', 20, 20, 'mountain'),
     e('triangle', 'speedy', 20, 19, 'eagle'),
     e('star', 'speedy', 19, 20, 'reddragon')
-  ], 820, 245, { arenaType: 'forest', bouncers: 3 }),
+  ], 820, 245, { arenaType: 'forest' }),
   // 75 — HEALERS boss
   s(75, 'stage_75', [
     e('cushioned', 'balanced', 20, 20, 'mountain', 'healers'),
@@ -570,7 +566,7 @@ const BASE_STAGES: Stage[] = [
     e('star', 'speedy', 25, 25, 'blades'),
     e('piercer', 'speedy', 25, 24, 'demon'),
     e('triangle', 'speedy', 24, 25, 'eagle')
-  ], 1000, 300, { bouncers: 3 }),
+  ], 1000, 300),
   s(92, 'stage_92', [
     e('star', 'speedy', 26, 25, 'axe'),
     e('cushioned', 'tanky', 25, 26, 'castle'),
@@ -782,9 +778,44 @@ export const BOTTOM_UPGRADE_BONUS: Record<BottomPartId, { speed: number; decay: 
 //                ~14–17 (41–60)                   → ×0.97–1.0
 //                ~19–27 (61–100)                  → ×1.15
 //                ≥ 33 (101+)                      → ×1.07
-export const CAMPAIGN_NPC_TUNING: { hpCurve: [number, number][]; dmgMul: number } = {
+//
+// TEAM SIZE (src/data/teamSize.ts). A side that fields one blade gets the solo
+// boost (×1.2 damage and max HP) — owner-agnostic, so a LONE campaign NPC (a
+// solo boss: stages 5, 10, 15, 30 …) would get it too. Campaign compositions
+// are designed, not chosen, so a part-only NPC fighting alone has the boost
+// offset here (soloHpMul / soloDmgMul, × the boost = its designed strength):
+// measured with the boost kept, solo-boss stages fell 71 → 44 % (stages 5, 10)
+// and 23 → 16 % (later solo bosses) for the default player.
+//
+// The sizes themselves also move the curve: every blade is sized by its own
+// side's count, so a stage's NPC team of 1 / 3 / 4 is no longer the player's
+// size (2 → ×0.783, 3+ → ×0.675, a lone boss ×0.9 × 1.6). countHpMul (keyed
+// on the NPC team's count, 4+ → [4]) refits that, measured per stage type
+// with `scripts/balance-sim.mjs camp --team-late 1|2|3` (numbers: roadmap.md,
+// "Team size" entry).
+export const CAMPAIGN_NPC_TUNING: {
+  hpCurve: [number, number][]
+  dmgMul: number
+  soloHpMul: number
+  soloDmgMul: number
+  countHpMul: [number, number, number, number]
+  /** HP multiplier of a campaign BOSS blade (was a flat 2). Retuned with the
+   *  spiked boss tree (arenaTerrain TOWER_TUNING): the tree is no longer the
+   *  easy route, so the knock-out route gives a little back. */
+  bossHpMul: number
+} = {
   hpCurve: [[0, 0.8], [3, 0.92], [5, 1.1], [8, 1.25], [11, 0.92], [14, 0.97], [17, 1.0], [20, 1.15], [27, 1.15], [33, 1.07]],
-  dmgMul: 1
+  dmgMul: 1,
+  soloHpMul: 1 / 1.2,
+  soloDmgMul: 1 / 1.2,
+  countHpMul: [0.88, 1, 0.9, 0.85],
+  bossHpMul: 1.75
+}
+
+/** HP multiplier of a part-only NPC on a campaign team of `count` blades. */
+export const campaignNpcCountHpMul = (count: number): number => {
+  const c = CAMPAIGN_NPC_TUNING.countHpMul
+  return c[Math.min(4, Math.max(1, Math.floor(count))) - 1] ?? 1
 }
 
 /** HP multiplier of a part-only NPC blade at part level `level`. */

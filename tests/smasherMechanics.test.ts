@@ -22,6 +22,7 @@ import { sanitizeSkillLoadout } from '@/use/skills/skillLoadoutSanitizer'
 import { sanitizePvpTeam } from '@/use/loadoutSanitizer'
 import { encodePlayerBuild, validatePlayerBuildShape } from '@/utils/playerBuild'
 import { TERRAIN_SHAPES, isInside } from '@/use/arenaShapes'
+import { sideSizeMul } from '@/data/teamSize'
 import type { SkillLoadout } from '@/types/skills'
 import type { SpinnerConfig, SpinnerState } from '@/types/spinner'
 
@@ -281,17 +282,18 @@ const untilPhase = (e: ReturnType<GameModule['useSpinnerGame']>, p: string, max 
 }
 
 describe('engine — disc radius propagation', () => {
-  it('collision / drawn radius = BLADE_RADIUS × disc; a boss size stacks on top', async () => {
+  it('collision / drawn radius = BLADE_RADIUS × team size × disc; a boss size stacks on top', async () => {
     const game = await loadGame()
     const e = game.useSpinnerGame()
     const boss: SpinnerConfig = { ...smasherConfig(BIG, 5), isBoss: true }
     e.initGame([smasherConfig(BIG, 5), smasherConfig(SMALL, 5)], [boss, smasherConfig(NEUTRAL, 5)],
-      false, 'default', 0, false, undefined, null, 'circle', { seed: 7 })
-    const R = game.BLADE_RADIUS
+      false, 'default', false, undefined, null, 'circle', { seed: 7 })
+    // Both sides field two: 0.9 base × 0.87 (src/data/teamSize.ts).
+    const R = game.BLADE_RADIUS * sideSizeMul(2)
     const [pBig, pSmall] = e.playerBlades.value
     expect(pBig!.radius).toBeCloseTo(R * discOf({ smasherId: BIG }))
     expect(pSmall!.radius).toBeCloseTo(R * discOf({ smasherId: SMALL }))
-    expect(e.npcBlades.value[0]!.radius).toBeCloseTo(R * 1.6 * discOf({ smasherId: BIG }))
+    expect(e.npcBlades.value[0]!.radius).toBeCloseTo(R * 1.2 * discOf({ smasherId: BIG }))
     expect(e.npcBlades.value[1]!.radius).toBeCloseTo(R)
     // Stats stay the profile's: a disc does not change HP.
     const plain = smasherConfig(BIG, 5)
@@ -305,7 +307,7 @@ describe('engine — disc radius propagation', () => {
     for (let layout = 0; layout < 8; layout++) {
       const e = game.useSpinnerGame()
       const team = byDisc.slice(0, 4).map(s => smasherConfig(s.id, 10))
-      e.initGame(team, team.map(c => ({ ...c })), false, 'default', 3, false, undefined, null, 'circle',
+      e.initGame(team, team.map(c => ({ ...c })), false, 'default', false, undefined, null, 'circle',
         { seed: 100 + layout, terrain: { layout, towers: true } })
       const blades = e.allBlades.value
       const lay = e.terrainLayout()
@@ -313,10 +315,8 @@ describe('engine — disc radius propagation', () => {
       for (const b of blades) {
         expect(isInside(shape, b.x, b.y, game.ARENA_RADIUS, b.radius - 0.01), `layout ${layout} wall`).toBe(true)
         for (const t of e.towers()) expect(Math.hypot(b.x - t.x, b.y - t.y), `layout ${layout} tower`).toBeGreaterThanOrEqual(b.radius + t.radius)
-        // Islands are fixed terrain; bumpers may fall back to a ring slot
-        // when crowded (pre-existing rule) and are not checked here.
-        for (const isl of e.bouncers().filter(x => x.island !== undefined)) {
-          expect(Math.hypot(b.x - isl.x, b.y - isl.y), `layout ${layout} island/bumper`).toBeGreaterThanOrEqual(b.radius + isl.radius)
+        for (const isl of lay?.islands ?? []) {
+          expect(Math.hypot(b.x - isl.x, b.y - isl.y), `layout ${layout} island`).toBeGreaterThanOrEqual(b.radius + isl.radius)
         }
       }
       for (let i = 0; i < blades.length; i++) {
@@ -335,9 +335,9 @@ describe('engine — disc radius propagation', () => {
     const e = game.useSpinnerGame()
     const team = [smasherConfig(NEUTRAL, 3), smasherConfig(NEUTRAL, 3)]
     const plainTeam: SpinnerConfig[] = team.map(c => ({ topPartId: c.topPartId, bottomPartId: c.bottomPartId, topLevel: 2, bottomLevel: 2 }))
-    e.initGame(team, team.map(c => ({ ...c })), false, 'default', 2, false, undefined, null, 'circle', { seed: 9 })
+    e.initGame(team, team.map(c => ({ ...c })), false, 'default', false, undefined, null, 'circle', { seed: 9 })
     const a = e.allBlades.value.map(b => `${b.x},${b.y}`).join('|')
-    e.initGame(plainTeam, plainTeam.map(c => ({ ...c })), false, 'default', 2, false, undefined, null, 'circle', { seed: 9 })
+    e.initGame(plainTeam, plainTeam.map(c => ({ ...c })), false, 'default', false, undefined, null, 'circle', { seed: 9 })
     expect(e.allBlades.value.map(b => `${b.x},${b.y}`).join('|')).toBe(a)
     e.disposePhysics()
   })
@@ -351,7 +351,7 @@ const firstHitLoss = async (
 ): Promise<{ loss: number; player: SpinnerState }> => {
   const game = await loadGame()
   const e = game.useSpinnerGame()
-  e.initGame([smasherConfig(NEUTRAL, 1)], [smasherConfig(npcId, 1)], false, 'default', 0, false, undefined, null,
+  e.initGame([smasherConfig(NEUTRAL, 1)], [smasherConfig(npcId, 1)], false, 'default', false, undefined, null,
     'circle', { seed: 42, firstTurn: 'player' })
   e.startMatch()
   untilPhase(e, 'player_turn')
@@ -400,7 +400,7 @@ describe('engine — new effects in a real match', () => {
     if (!withNew) return
     const game = await loadGame(true)
     const e = game.useSpinnerGame()
-    e.initGame([smasherConfig(withNew.id, 30)], [smasherConfig(NEUTRAL, 30)], false, 'default', 0, false, undefined, null,
+    e.initGame([smasherConfig(withNew.id, 30)], [smasherConfig(NEUTRAL, 30)], false, 'default', false, undefined, null,
       'circle', { seed: 3 })
     const s = e.playerBlades.value[0]!.skills!
     for (const k of withNew.skills) expect(s.ids).toContain(k.effect)

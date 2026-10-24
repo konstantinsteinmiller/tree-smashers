@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import {
   leaderboardFailed, leaderboardVisible, playerTotal, rankFor
 } from '@/use/useLiveLeaderboard'
+import { fmtGrouped } from '@/utils/localeNumber'
+import UiIcon from '@/components/icons/UiIcon.vue'
 
 /**
  * ─── "#1130 of 2345" ────────────────────────────────────────────────────────
@@ -48,7 +50,7 @@ const props = withDefaults(defineProps<{
   compact?: boolean
 }>(), { compact: false })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 /**
  * The rank as PROSE — `#42`, `…`, or empty.
@@ -64,7 +66,8 @@ const label = computed<string>(() => {
   // without a reload.
   if (!leaderboardVisible.value) return ''
   const rank = rankFor(props.score)
-  if (rank > 0) return `#${rank}`
+  // #UX1c: grouped per locale ("#33,883" / "#33.883"), Latin digits.
+  if (rank > 0) return `#${fmtGrouped(rank, locale.value)}`
   // `0` is the only non-answer `rankFor` has, and it means "nothing honest to
   // say yet" — not "unknowable". Until the endpoint has actually failed that is
   // a request still in flight, so hold the slot; after it, give the slot back.
@@ -74,12 +77,13 @@ const label = computed<string>(() => {
 /** Only once the population has actually landed. Before that there is no "of N"
  *  to print, and a placeholder there would be a second unanswered question. */
 const showTotal = computed(() => !props.compact && playerTotal.value > 0)
+const totalText = computed(() => fmtGrouped(playerTotal.value, locale.value))
 
 /** One accessible name for the whole pill. Without it a screen reader reads
  *  "number 1130 of 2345" with no idea what is being counted. */
 const ariaLabel = computed(() =>
   showTotal.value
-    ? `${t('leaderboard.title')}: ${label.value} ${t('leaderboard.of', { n: playerTotal.value })}`
+    ? `${t('leaderboard.title')}: ${label.value} ${t('leaderboard.of', { n: totalText.value })}`
     : `${t('leaderboard.title')}: ${label.value}`
 )
 </script>
@@ -87,13 +91,11 @@ const ariaLabel = computed(() =>
 <template lang="pug">
   //- No cell at all when there is nothing honest to say.
   div.rank-badge(v-if="label" role="img" :aria-label="ariaLabel")
-    //- Inline rather than an <img>: it inherits `currentColor`, so the glyph
-    //- and the number can never drift apart, and it costs no request. Swap it
-    //- for the project's own icon component if there is one.
-    svg.rank-badge__icon(viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
-      path(d="M6 3h12v2h3v3a5 5 0 0 1-4.6 5A6 6 0 0 1 13 16.9V19h3.5v2h-9v-2H11v-2.1a6 6 0 0 1-3.4-3.9A5 5 0 0 1 3 8V5h3V3Zm0 4H5v1a3 3 0 0 0 1.6 2.7A8 8 0 0 1 6 8V7Zm12 0v1a8 8 0 0 1-.6 2.7A3 3 0 0 0 19 8V7h-1Z")
+    //- The painted leaderboard icon (the same sprite as the HUD button); the drawn trophy
+    //- is its automatic fallback inside UiIcon.
+    UiIcon.rank-badge__icon(name="leaderboard" aria-hidden="true")
     span.rank-badge__rank {{ label }}
-    span.rank-badge__of(v-if="showTotal") {{ t('leaderboard.of', { n: playerTotal }) }}
+    span.rank-badge__of(v-if="showTotal") {{ t('leaderboard.of', { n: totalText }) }}
 </template>
 
 <style scoped lang="sass">
@@ -119,7 +121,7 @@ const ariaLabel = computed(() =>
     border: 2px solid var(--color-ink)
     border-radius: 0.45rem
     background-color: var(--color-royal-600)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 2px 0 var(--color-royal-400), inset 0 -3px 0 var(--color-royal-800), 0 3px 0 var(--color-ink)
     transform: skewX(-10deg)
 
@@ -139,8 +141,8 @@ const ariaLabel = computed(() =>
   // the baseline, and a glyph hung off it sits where a capital letter would.
   align-self: center
   flex: 0 0 auto
-  width: clamp(0.85rem, 4vmin, 1.2rem)
-  height: clamp(0.85rem, 4vmin, 1.2rem)
+  width: clamp(1rem, 4.8vmin, 1.5rem)
+  height: clamp(1rem, 4.8vmin, 1.5rem)
   filter: drop-shadow(0 1.5px 0 var(--color-ink))
 
 .rank-badge__rank

@@ -62,7 +62,8 @@ const mountModal = async (coins: number, team = ['bramble', 'thumper'] as const)
   const smashers = await import('@/use/useSmashers')
   const config = await import('@/use/useSpinnerConfig')
   const w = mount(SmasherTeamModal, {
-    props: { modelValue: true, initialTeam: team.map(id => smasherConfig(id, 1)), bestStage: 1 },
+    // Stage 4 reached = stage 3 won: both team slots open.
+    props: { modelValue: true, initialTeam: team.map(id => smasherConfig(id, 1)), bestStage: 4 },
     global: { plugins: [i18n()], stubs: { teleport: true, BGSkinButton: true } },
     attachTo: document.body
   })
@@ -133,7 +134,7 @@ describe('per-blade loadouts reach initGame', () => {
     const team = teamConfigs([smasherConfig('bramble', 1), smasherConfig('thumper', 1)])
     const engine = game.useSpinnerGame()
     const npc = { topPartId: 'round', bottomPartId: 'balanced', topLevel: 0, bottomLevel: 0 } as const
-    engine.initGame(team, [{ ...npc }], false, 'default', 0, false, undefined, null, 'circle', {
+    engine.initGame(team, [{ ...npc }], false, 'default', false, undefined, null, 'circle', {
       skillLoadout: [],
       enemySkillLoadout: []
     })

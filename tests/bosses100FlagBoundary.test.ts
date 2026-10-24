@@ -143,7 +143,7 @@ describe('rule 3 — the boundary modules pull in nothing obfuscated', () => {
     for (const file of BOUNDARY_DATA) {
       for (const imp of importsOf(src(file))) {
         if (imp.typeOnly) continue
-        if (file === 'src/data/bossArt.ts' && imp.spec === '@/utils/function') continue
+        if (file === 'src/data/bossArt.ts' && (imp.spec === '@/utils/function' || imp.spec === '@/use/badgeIconArt')) continue // the shared URL helper + the painted-badge path helper
         bad.push(`${file} → ${imp.spec}`)
       }
     }
@@ -171,7 +171,8 @@ describe('campaign, peek, shop and arena: every runtime use folds on BOSSES100_B
 
   it('the skin shop hides unowned trophy cards on an off build', () => {
     const modal = src('src/components/organisms/SmasherTeamModal.vue')
-    expect(modal).toMatch(/return BOSSES100_BUILD \? all : all\.filter\(id => !isEarnOnlySkin\(id\) \|\| isSkinOwned\(topId, id\)\)/)
+    // 2026-10-23: the picker lists the default, the smasher's own skin and the trophies (all of them on a flagged build, owned ones otherwise)
+    expect(modal).toMatch(/const trophies = BOSSES100_BUILD \? all\.filter\(id => isEarnOnlySkin\(id\)\) : all\.filter\(id => isEarnOnlySkin\(id\) && isSkinOwned\(topId, id\)\)/)
     expect(modal).toContain('v-for="modelId in pickerSkins"')
     expect(modal).toMatch(/const n = BOSSES100_BUILD \? trophySkinFirstStage\(modelId\) : null/)
   })

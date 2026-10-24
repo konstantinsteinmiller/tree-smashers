@@ -119,7 +119,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   buford: {
     id: 'buford', archetype: { top: 'quadratic', bottom: 'tanky' },
     profile: p(1.27, 1.07, 1.1, 0.85, 1.3), unlockStage: 160,
-    disc: 1.2, armor: { front: 0.65, back: 1.3 },
+    disc: 1.2, armor: { front: 0.65, back: 0.7, look: 'bulwark' },
     skills: [
       sk('herd_rush', 'momentum', { perStack: 1.2 }),
       sk('dust_storm', 'homing_rockets', { frac: 1.25, everyN: 1.3 }),

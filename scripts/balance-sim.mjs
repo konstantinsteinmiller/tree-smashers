@@ -15,8 +15,12 @@
 //   node scripts/balance-sim.mjs report                                          # → balance-report.md
 //
 // Options: --levels 5,15,30  --seeds N  --rr2 N  --stages 1-100,110  --tuning file.json
+//          --team progression|fixed2  --team-late 1|2|3 (camp: the team size per
+//          stage — 1 on stages 1–3, 2 on 4–10, then team-late; fixed2 = always 2)
 //          --sample k (rr1: k opponents per smasher, quick loop)
 //          --legacy (smashers on the legacy part tables, NPC compensation off)
+//          --tower-aim p (scripted player aims at the enemy tower with chance p per
+//          launch, default 0.2; 0.7 = a "tower rush" — tools/balance-sim/towerstats.mjs)
 //          --print (print the merged summary of this run)
 
 import { spawn } from 'node:child_process'
@@ -85,9 +89,12 @@ const run = async (mode) => {
     ...(opt('seeds') ? { BALANCE_SEEDS: opt('seeds') } : {}),
     ...(opt('rr2') ? { BALANCE_RR2: opt('rr2') } : {}),
     ...(opt('rosters') ? { BALANCE_ROSTERS: opt('rosters') } : {}),
+    ...(opt('team') ? { BALANCE_TEAM: opt('team') } : {}),
+    ...(opt('team-late') ? { BALANCE_TEAM_LATE: opt('team-late') } : {}),
     ...(opt('sample') ? { BALANCE_RR1_SAMPLE: opt('sample') } : {}),
     ...(opt('stages') ? { BALANCE_STAGES: opt('stages') } : {}),
     ...(opt('tuning') ? { BALANCE_TUNING: resolve(opt('tuning')) } : {}),
+    ...(opt('tower-aim') ? { BALANCE_TOWER_AIM: opt('tower-aim') } : {}),
     ...(flag('legacy') ? { BALANCE_LEGACY: '1' } : {})
   }
   const t0 = Date.now()
@@ -104,7 +111,7 @@ const run = async (mode) => {
     p.on('exit', code => (code === 0 && existsSync(out) ? ok() : fail(new Error(`shard ${i} failed (${code})\n${err.slice(-2000)}`))))
   })))
   const shards = Array.from({ length: n }, (_, i) => JSON.parse(readFileSync(join(dir, `shard-${i}.json`), 'utf8')))
-  const merged = { mode, tag, at: new Date().toISOString(), env: { levels: env.BALANCE_LEVELS, seeds: env.BALANCE_SEEDS, rr2: env.BALANCE_RR2, stages: env.BALANCE_STAGES, legacy: !!env.BALANCE_LEGACY, tuning: env.BALANCE_TUNING ? JSON.parse(readFileSync(env.BALANCE_TUNING, 'utf8')) : null }, rows: shards.flatMap(s => s.rows), ...(shards[0].levels ? { levels: shards[0].levels } : {}), arche: shards[0].arche }
+  const merged = { mode, tag, at: new Date().toISOString(), env: { levels: env.BALANCE_LEVELS, seeds: env.BALANCE_SEEDS, rr2: env.BALANCE_RR2, stages: env.BALANCE_STAGES, legacy: !!env.BALANCE_LEGACY, team: env.BALANCE_TEAM ?? (mode === 'camp' ? 'progression' : undefined), teamLate: env.BALANCE_TEAM_LATE, towerAim: env.BALANCE_TOWER_AIM, tuning: env.BALANCE_TUNING ? JSON.parse(readFileSync(env.BALANCE_TUNING, 'utf8')) : null }, rows: shards.flatMap(s => s.rows), ...(shards[0].levels ? { levels: shards[0].levels } : {}), arche: shards[0].arche }
   const file = opt('out') ? resolve(opt('out')) : join(RES, `${tag}-${mode}.json`)
   writeFileSync(file, JSON.stringify(merged))
   rmSync(dir, { recursive: true, force: true })

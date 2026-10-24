@@ -8,8 +8,9 @@
 // every other id a hashed hue shift. Boss trophy skins get their own palettes.
 // Pure — no DOM.
 
-import { SMASHER_LIST, SMASHERS, isSmasherId, type SmasherId } from '@/data/smasherCatalog'
+import { RELEASED_SMASHER_LIST, SMASHERS, isReleasedSmasher, isSmasherId, type SmasherId } from '@/data/smasherCatalog'
 import { SKINS_PER_TOP, topPartOfSkin, type SpinnerModelId } from '@/data/skinCatalog'
+import { SMASHER_SKINS, smasherOfSkinId } from '@/data/smasherSkinCatalog'
 import { SIGNATURE_PALETTES, mixHex, shiftHex, type SmasherPalette } from '@/smashers/smasherRig'
 
 type Tint = { tint: string; amount: number; accent?: string; belly?: string }
@@ -61,15 +62,24 @@ const hash = (s: string): number => {
 /** The smasher a skin's portrait shows when no smasher is given: a smasher
  *  of the skin's top part, picked by the skin id. */
 export const smasherForSkin = (modelId: string): SmasherId => {
+  const owner = smasherOfSkinId(modelId)
+  // a RELEASED smasher's own skin shows that smasher; an unreleased smasher's skin falls back to
+  // the hashed pick below, so no portrait ever shows a held-back smasher (release gate)
+  if (owner !== null && isSmasherId(owner) && isReleasedSmasher(owner)) return owner
   const top = topPartOfSkin(modelId as SpinnerModelId)
-  const pool = top ? SMASHER_LIST.filter(s => s.archetype.top === top) : SMASHER_LIST
+  const pool = top ? RELEASED_SMASHER_LIST.filter(s => s.archetype.top === top) : RELEASED_SMASHER_LIST
   if (!pool.length) return 'bramble'
   return pool[hash(modelId) % pool.length]!.id
 }
 
 /** True when `modelId` is the default (signature) skin of the smasher. */
-const isSignature = (id: SmasherId, modelId: string | undefined): boolean =>
-  !modelId || SKINS_PER_TOP[SMASHERS[id].archetype.top]?.[0] === modelId
+const isSignature = (id: SmasherId, modelId: string | undefined): boolean => {
+  // Another smasher's own skin (the owned-skin / selection keys are per top
+  // part, so a shared top can hand it over) is just the signature look here.
+  const owner = modelId ? smasherOfSkinId(modelId) : null
+  if (owner !== null && owner !== id) return true
+  return !modelId || SKINS_PER_TOP[SMASHERS[id].archetype.top]?.[0] === modelId
+}
 
 const paletteCache = new Map<string, SmasherPalette>()
 
@@ -83,7 +93,8 @@ export const smasherPalette = (id: SmasherId, modelId?: string): SmasherPalette 
   if (isSignature(id, modelId)) {
     pal = base
   } else {
-    const theme = THEMES[modelId!]
+    // A smasher's own skin wears its placeholder colourway until it is painted.
+    const theme = THEMES[smasherOfSkinId(modelId!) !== null ? SMASHER_SKINS[id]?.theme ?? modelId! : modelId!]
     if (theme) {
       pal = {
         ...base,

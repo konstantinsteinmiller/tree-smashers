@@ -6,7 +6,7 @@
 //
 //   · the match stream (`matchRng`) is seeded from `seed` — as before;
 //   · every other gameplay roll the engine makes OUTSIDE PvP — NPC spawn
-//     jitter, bouncer placement, the NPC AI's blade/target/angle/force picks,
+//     jitter, the NPC AI's blade/target/angle/force picks,
 //     split-child jitter — draws from an AUX stream derived from the seed,
 //     never from `matchRng` (its draw order is untouched) and never from
 //     Math.random;
@@ -111,7 +111,6 @@ interface Battle {
   player: SpinnerConfig[]
   enemy: SpinnerConfig[] | BossEncounterId
   arena: ArenaType
-  bouncers: number
   mine?: SkillLoadout
   theirs?: SkillLoadout
 }
@@ -128,7 +127,6 @@ interface Env {
 
 interface Run {
   spawn: string
-  bouncers: string
   hashes: string[]
   events: string[]
   result: string | null
@@ -151,10 +149,9 @@ const runBattle = async (b: Battle, env: Env, maxFrames = 60 * 60 * 5): Promise<
   const enc = await import('@/data/bossEncounters')
   const enemy = typeof b.enemy === 'string' ? enc.buildBossEncounterStage(b.enemy).enemyTeam.map(toCfg) : b.enemy
   const e = game.useSpinnerGame()
-  e.initGame(b.player, enemy, false, b.arena, b.bouncers, false, undefined, null, 'circle',
+  e.initGame(b.player, enemy, false, b.arena, false, undefined, null, 'circle',
     { ...(env.seed !== undefined ? { seed: env.seed } : {}), skillLoadout: b.mine, enemySkillLoadout: b.theirs })
   const spawn = e.allBlades.value.map(x => `${x.syncKey}:${x.x.toFixed(6)},${x.y.toFixed(6)}`).join('|')
-  const bouncers = e.bouncers().map(x => `${x.x.toFixed(6)},${x.y.toFixed(6)}`).join('|')
   e.startMatch()
   // The accumulator baselined on the wall clock inside startMatch; from here
   // the wall clock jumps and drifts away from the frame clock.
@@ -213,7 +210,7 @@ const runBattle = async (b: Battle, env: Env, maxFrames = 60 * 60 * 5): Promise<
   const hp = [...e.allBlades.value].sort((p, q) => p.syncKey - q.syncKey)
     .map(x => `${x.syncKey}:${x.hp.toFixed(6)}`).join('|')
   e.disposePhysics()
-  return { spawn, bouncers, hashes, events, result: e.gameResult.value, hp, skillEvents, traitEvents }
+  return { spawn, hashes, events, result: e.gameResult.value, hp, skillEvents, traitEvents }
 }
 
 // Page A and page B: different Math.random, different wall clock behaviour.
@@ -223,24 +220,24 @@ const PAGE_B = { mathSeed: 987_654_321, wallOffset: 4_000_000, wallDrift: 23 }
 const BATTLES: Record<string, Battle> = {
   // Ember Nova + skills on both sides.
   cinder: {
-    player: PLAYER, enemy: 'cinder_tyrant', arena: 'boss', bouncers: 0,
+    player: PLAYER, enemy: 'cinder_tyrant', arena: 'boss',
     mine: L('guard_shell', 'homing_rockets'), theirs: L('static_charge', 'phase_step')
   },
-  // Three trait carriers (ember / frost / chill), partners, skills both sides, bouncers.
+  // Three trait carriers (ember / frost / chill), partners, skills both sides.
   court: {
-    player: PLAYER, enemy: 'elemental_court', arena: 'boss', bouncers: 2,
+    player: PLAYER, enemy: 'elemental_court', arena: 'boss',
     mine: L('hazard_ward', 'momentum'), theirs: L('mirror_plate', 'lucky_edge')
   },
   // Split boss: split-child jitter + shard chill.
   glacier: {
-    player: PLAYER, enemy: 'shattering_glacier', arena: 'boss', bouncers: 1,
+    player: PLAYER, enemy: 'shattering_glacier', arena: 'boss',
     mine: L('opening_salvo', 'second_wind'), theirs: L('guard_shell', 'static_charge')
   },
-  // Ghost-build shape: 4 AI blades (grid jitter, AI picks), 3 bouncers, forest arena.
+  // Ghost-build shape: 4 AI blades (grid jitter, AI picks), forest arena.
   ghost: {
     player: [cfg('star', 'tanky', 12), cfg('round', 'speedy', 12)],
     enemy: [cfg('triangle', 'tanky', 11), cfg('piercer', 'balanced', 11), cfg('star', 'speedy', 11), cfg('round', 'tanky', 11)],
-    arena: 'forest', bouncers: 3,
+    arena: 'forest',
     mine: L('guard_shell', 'static_charge'), theirs: L('homing_rockets', 'phase_step')
   }
 }
@@ -251,7 +248,6 @@ describe('league determinism — a seeded battle is a function of its seed', () 
       const a = await runBattle(battle, { seed: 0x1ea9e, ...PAGE_A })
       const b = await runBattle(battle, { seed: 0x1ea9e, ...PAGE_B })
       expect(b.spawn).toBe(a.spawn)
-      expect(b.bouncers).toBe(a.bouncers)
       expect(b.hashes).toEqual(a.hashes)
       expect(b.events).toEqual(a.events)
       expect(b.hp).toBe(a.hp)
@@ -264,21 +260,20 @@ describe('league determinism — a seeded battle is a function of its seed', () 
     }, 60_000)
   }
 
-  it('different seeds diverge (spawn, bouncers, hash sequence)', async () => {
+  it('different seeds diverge (spawn, hash sequence)', async () => {
     const a = await runBattle(BATTLES.ghost!, { seed: 101, ...PAGE_A })
     const b = await runBattle(BATTLES.ghost!, { seed: 202, ...PAGE_A })
     expect(b.spawn).not.toBe(a.spawn)
-    expect(b.bouncers).not.toBe(a.bouncers)
     expect(b.hashes).not.toEqual(a.hashes)
   }, 60_000)
 
-  it('aux rolls never touch matchRng: the match stream after initGame ignores roster size and bouncers', async () => {
-    const nextAfterInit = async (enemy: SpinnerConfig[], bouncers: number, seed?: number): Promise<number> => {
+  it('aux rolls never touch matchRng: the match stream after initGame ignores roster size', async () => {
+    const nextAfterInit = async (enemy: SpinnerConfig[], seed?: number): Promise<number> => {
       const { game, rng } = await loadPage()
       const e = game.useSpinnerGame()
       if (seed === undefined) rng.seedMatchRng(0xabc) // unseeded: pin the random reseed below
       vi.spyOn(Math, 'random').mockImplementation(() => 0.5)
-      e.initGame(PLAYER, enemy, false, 'forest', bouncers, false, undefined, null, 'circle',
+      e.initGame(PLAYER, enemy, false, 'forest', false, undefined, null, 'circle',
         seed !== undefined ? { seed } : {})
       const next = rng.matchRng()
       e.disposePhysics()
@@ -286,22 +281,20 @@ describe('league determinism — a seeded battle is a function of its seed', () 
     }
     const four = BATTLES.ghost!.enemy as SpinnerConfig[]
     const one = [four[0]!]
-    // Seeded: 4 AI blades + 3 bouncers make many aux draws, 1 blade + 0 none.
-    expect(await nextAfterInit(four, 3, 7)).toBe(await nextAfterInit(one, 0, 7))
+    // Seeded: 4 AI blades make many aux draws (spawn jitter), 1 blade few.
+    expect(await nextAfterInit(four, 7)).toBe(await nextAfterInit(one, 7))
     // Unseeded: the same holds for the Math.random rolls.
-    expect(await nextAfterInit(four, 3)).toBe(await nextAfterInit(one, 0))
+    expect(await nextAfterInit(four)).toBe(await nextAfterInit(one))
   })
 
-  it('unseeded (campaign) battles keep Math.random for spawn jitter, bouncers and AI', async () => {
+  it('unseeded (campaign) battles keep Math.random for spawn jitter and AI', async () => {
     const a = await runBattle(BATTLES.ghost!, { ...PAGE_A })
     const b = await runBattle(BATTLES.ghost!, { ...PAGE_A })
     const c = await runBattle(BATTLES.ghost!, { ...PAGE_A, mathSeed: 4242 })
-    // Spawn jitter + bouncers follow Math.random (the match itself is not
+    // Spawn jitter follows Math.random (the match itself is not
     // reproducible: VFX rolls interleave with the AI's on the same stream).
     expect(b.spawn).toBe(a.spawn)
-    expect(b.bouncers).toBe(a.bouncers)
     expect(c.spawn).not.toBe(a.spawn)
-    expect(c.bouncers).not.toBe(a.bouncers)
   }, 60_000)
 })
 
@@ -327,7 +320,7 @@ describe('league determinism — no unreviewed Math.random in useSpinnerGame', (
     expect(SRC.slice(at, SRC.indexOf('\n', SRC.indexOf('\n', at) + 1))).toContain('// gameplay-rng fallback')
   })
 
-  it('spawn, bouncer, NPC AI and split-child rolls go through gameplayRand', () => {
+  it('spawn, NPC AI and split-child rolls go through gameplayRand', () => {
     const body = (name: string): string => {
       const start = SRC.indexOf(`const ${name} = (`)
       expect(start, `${name} not found — guard must follow a rename`).toBeGreaterThanOrEqual(0)

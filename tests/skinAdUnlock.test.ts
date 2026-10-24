@@ -1,8 +1,9 @@
-// The newest 4 skins of every top part (the 2026-09 expansion):
-//   • on a build WITH rewarded ads they are not sold for coins — ONE
-//     completed rewarded ad unlocks one in the skin shop;
-//   • on a build WITHOUT rewarded ads the ad button is hidden and they sell
-//     for 3x the special-skin coin price.
+// Skin ad unlock. Since the owner rule of 2026-10-21 EVERY shop skin
+// (regular, special and the 2026-09 expansion) is ONE completed rewarded ad on
+// a build WITH rewarded ads, never coins; earn-only boss trophies stay earned.
+// On a build WITHOUT rewarded ads the ad button is hidden and the old coin
+// prices apply (300 / 1 500, and 3x the special price for the expansion).
+// (The platform matrix + mock-SDK flows: tests/premiumSmashers.test.ts.)
 // The reward systems — Skin Chest, roulette wheel, Battle Pass, Daily
 // Rewards — keep handing them out, and a player who bought one with coins
 // before the rule keeps it. Progress saved under the old 3-ad rule settles
@@ -63,17 +64,12 @@ describe('ad-unlock skins — catalog', () => {
     expect(SKIN_AD_UNLOCK_ADS).toBe(1)
   })
 
-  it('ad build: not coin-purchasable, while every older skin still is', () => {
-    const adIds = new Set<string>(AD_UNLOCK_SKINS)
-    for (const id of AD_UNLOCK_SKINS) {
-      expect(isCoinPurchasable(id, true), id).toBe(false)
-      expect(isAdUnlockSkin(id, true), id).toBe(true)
-    }
+  it('ad build: EVERY shop skin is an ad unlock and none is coin-purchasable (trophies, defaults excluded)', () => {
     for (const ids of Object.values(SKINS_PER_TOP)) {
-      for (const id of ids) {
-        if (adIds.has(id) || isEarnOnlySkin(id)) continue
-        expect(isCoinPurchasable(id, true), id).toBe(true)
-        expect(isAdUnlockSkin(id, true), id).toBe(false)
+      for (const [i, id] of ids.entries()) {
+        if (i === 0) continue // the free default: always owned, never sold
+        expect(isCoinPurchasable(id, true), id).toBe(false)
+        expect(isAdUnlockSkin(id, true), id).toBe(!isEarnOnlySkin(id))
       }
     }
   })
@@ -146,12 +142,12 @@ describe('HAS_REWARDED_ADS — build-time gate', () => {
 })
 
 describe('ad-unlock skins — shop paths', () => {
-  it('ad build: the coin purchase refuses an ad-unlock skin and grants a legacy one', async () => {
+  it('ad build: the coin purchase refuses every skin', async () => {
     const { models } = await freshImport()
-    expect(models.purchaseSkinWithCoins('star', 'cheetah', true)).toBe(false)
-    expect(models.isSkinOwned('star', 'cheetah')).toBe(false)
-    expect(models.purchaseSkinWithCoins('star', 'ice', true)).toBe(true)
-    expect(models.isSkinOwned('star', 'ice')).toBe(true)
+    for (const [top, id] of [['star', 'cheetah'], ['star', 'ice'], ['quadratic', 'rainbow']] as const) {
+      expect(models.purchaseSkinWithCoins(top, id, true), id).toBe(false)
+      expect(models.isSkinOwned(top, id), id).toBe(false)
+    }
   })
 
   it('no-ad build: the coin purchase grants an ad-unlock skin', async () => {
@@ -173,10 +169,17 @@ describe('ad-unlock skins — shop paths', () => {
     expect(reloaded.isSkinOwned('piercer', 'lancer')).toBe(true)
   })
 
-  it('an ad watch never unlocks a coin skin', async () => {
+  it('one ad unlocks any shop skin (regular, special) but never a trophy, a default or a wrong top part', async () => {
     const { models } = await freshImport()
-    for (let i = 0; i < 3; i++) models.recordSkinAdWatch('star', 'ice')
-    expect(models.isSkinOwned('star', 'ice')).toBe(false)
+    expect(models.recordSkinAdWatch('star', 'ice')).toBe(true)
+    expect(models.isSkinOwned('star', 'ice')).toBe(true)
+    expect(models.recordSkinAdWatch('quadratic', 'rainbow')).toBe(true)
+    expect(models.isSkinOwned('quadratic', 'rainbow')).toBe(true)
+    expect(models.recordSkinAdWatch('round', 'cinder')).toBe(false)
+    expect(models.isSkinOwned('round', 'cinder')).toBe(false)
+    expect(models.recordSkinAdWatch('star', 'blades')).toBe(false) // the free default
+    expect(models.recordSkinAdWatch('round', 'ice')).toBe(false) // ice is a star skin
+    expect(models.isSkinOwned('round', 'ice')).toBe(false)
   })
 
   it('a skin already bought with coins before the rule stays owned', async () => {
@@ -225,14 +228,16 @@ describe('ad-unlock skins — legacy 3-ad progress', () => {
 })
 
 describe('ad-unlock skins — shop UI', () => {
-  it('renders the ad button only for isAdUnlockSkin (hidden on no-ad builds), gated on readiness', () => {
+  it('renders the ad button for every shop skin on a session with rewarded ads, gated on readiness', () => {
     const src = modalSrc()
-    expect(src).toMatch(/v-else-if="isAdUnlockSkin\(modelId\)"/)
+    expect(src).toMatch(/v-else-if="isSkinAd\(modelId\)"/)
+    expect(src).toMatch(/isAdUnlockSkin\(modelId, adUnlock\.value\)/)
+    expect(src).toMatch(/const adUnlock = computed\(\(\) => rewardedUnlocksAvailable\.value\)/)
     expect(src).not.toMatch(/AD_UNLOCK_SKINS\.has/)
-    expect(src).toMatch(/:disabled="!isRewardedReady/)
-    expect(src).toMatch(/if \(skinAdPending\.value \|\| !isRewardedReady\.value\) return/)
+    expect(src).toMatch(/:disabled="!adReady/)
+    expect(src).toMatch(/if \(skinAdPending\.value \|\| !adReady\.value\) \{/)
     expect(src).toMatch(/if \(ok\) recordSkinAdWatch/)
-    expect(src).toMatch(/movie_128x96\.webp/)
+    expect(src).toMatch(/movie_128x96[.]webp|movieIconSrc[(][)]/)
   })
 
   it('shows no x/N progress counter', () => {
@@ -242,7 +247,7 @@ describe('ad-unlock skins — shop UI', () => {
 
   it('falls through to the coin price, charging only on a real grant', () => {
     const src = modalSrc()
-    expect(src).toMatch(/purchaseSkinWithCoins\(topId, modelId\)\) addCoins\(-cost\)/)
+    expect(src).toMatch(/purchaseSkinWithCoins\(topId, modelId, adUnlock\.value\)\) addCoins\(-cost\)/)
     expect(src).toMatch(/span\.game-text \{\{ skinCost\(modelId\) \}\}/)
     expect(src).not.toMatch(/\bbuySkin\(/)
   })

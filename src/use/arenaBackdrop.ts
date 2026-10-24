@@ -1,37 +1,54 @@
-// ─── Arena backdrop: painted ground + decorative props around the clearing ───
+// ─── Arena backdrop: the theme's ground + props around the clearing ──────────
 //
-// Replaces the flat FOREST_BACKDROP fill of the default background skin with
-//  1. a painted, seamless highland-grass tile (PAINTED_BACKDROP, made by
+// Paints, into the engine's ONE static layer (useSpinnerGame drawStaticLayer —
+// background, props, floor, rim, terrain features and tower bases baked
+// together at css × dpr, one blit per frame):
+//  1. the arena theme's flat ground colour (THEME_LOOK[theme].backdrop), then
+//     its painted, seamless tile (PAINTED_BACKDROPS, made by
 //     tools/bg-tile/make-tile.mjs), anchored at the arena centre and scaled
 //     with the arena — but NEVER above its own resolution (the tile shrinks
-//     in arena units on a dense screen instead of being upscaled), and
-//  2. the layout's deterministic prop scatter (arenaProps.ts) from the
-//     painted prop atlas (paintedProps.ts).
-// Both are pre-rendered ONCE into a device-resolution buffer (css × dpr, read
-// from the context transform — render-sharpness rule) keyed on the viewport,
-// the layout, the shape and the art load state; a frame is one opaque blit.
-// Purely decorative: reads nothing from and writes nothing to the match.
-//
-// Returns false until the tile has loaded (the caller keeps its flat fill),
-// with `?art=procedural`, and in jsdom / node.
+//     in arena units on a dense screen instead of being upscaled);
+//  2. the theme's deterministic prop layout (arenaProps.ts) from that theme's
+//     painted atlas (paintedProps.ts) — a match loads only its own theme.
+// Art loads lazily per theme; backdropArtRevision() bumps on every arrival
+// so the layer re-bakes. Purely decorative: reads nothing from and writes
+// nothing to the match. Disabled with `?art=procedural` and in jsdom / node
+// (the flat colour still paints).
 import { arenaPropLayout, PROP_KIND_BY_ID } from '@/use/arenaProps'
+
+/**
+ * How a backdrop prop may vary per instance (owner 2026-10-23). The old rule was a
+ * regex (`/rift|crack|flow/`) that also matched "flowers" / "sunflowers", so flower
+ * patches were spun to random angles. Now explicit, per prop id:
+ *   free  — flat ground cracks / flows: any angle (a field of rifts never runs one way)
+ *   flip  — rocks, boulders, stones, gravestones, honeycombs, logs, stumps, columns:
+ *           mirrored left-right on the vertical axis only (they have no 'up' to lose)
+ *   fixed — everything else: trees, flowers, bushes, ferns, toys, ponds, drifts, slabs
+ *           — painted upright / in the 3/4 view, so never rotated and never mirrored.
+ */
+export type PropTurn = 'free' | 'flip' | 'fixed'
+const FREE_TURN: ReadonlySet<string> = new Set(['rift', 'ruinsRift', 'riftSmall', 'ashCrack', 'cooledFlow'])
+const FLIP_TURN: ReadonlySet<string> = new Set([
+  'stones', 'boulder', 'boulderPair', 'mossBoulder', 'greyBoulder', 'snowBoulder', 'boulderCluster',
+  'snowStones', 'lavaStones', 'lavaRock', 'obsidian', 'pebbles', 'rubble', 'rockSpire', 'basaltColumns',
+  'standingStone', 'brokenColumn', 'fallenColumn', 'ruinWall', 'runeStone', 'iceCrystals',
+  'graveHeart', 'gravePaw', 'beehive', 'honeyPot', 'log', 'logPile', 'hollowLog', 'mossyStump', 'charredStump'
+])
+export const propTurn = (kind: string): PropTurn => FREE_TURN.has(kind) ? 'free' : FLIP_TURN.has(kind) ? 'flip' : 'fixed'
 import type { ArenaShape } from '@/use/arenaShapes'
+import { whenDecoded } from '@/use/imageDecode'
+import { THEME_LOOK, type ArenaTheme } from '@/use/arenaThemes'
+import { PAINTED_BACKDROPS } from '@/use/paintedBackdrops'
 import { PAINTED_PROPS } from '@/use/paintedProps'
 import { prependBaseUrl } from '@/utils/function'
 
-/** The painted backdrop tile (public/images/bg/). `units` = the most arena
- *  units one tile spans (it spans fewer where that would upscale it). */
-export const PAINTED_BACKDROP = { file: 'highland-tile_768x768.webp', size: 768, units: 230, v: '094f4c95' } as const
-
-type Buf = OffscreenCanvas | HTMLCanvasElement
 type BufCtx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 
-let tileImg: HTMLImageElement | null = null
-let atlasImg: HTMLImageElement | null = null
-let started = false
+const tiles = new Map<ArenaTheme, HTMLImageElement | null>()
+const atlases = new Map<ArenaTheme, HTMLImageElement | null>()
 let revision = 0
-let buffer: Buf | null = null
-let bufferKey = ''
+/** Bumps whenever a backdrop tile or prop atlas finished loading. */
+export const backdropArtRevision = (): number => revision
 
 const artAllowed = (): boolean => {
   if (typeof Image === 'undefined' || typeof location === 'undefined') return false
@@ -39,51 +56,76 @@ const artAllowed = (): boolean => {
   return !/[?&]art=procedural(?:&|$)/.test(location.search)
 }
 
-const load = (src: string, done: (img: HTMLImageElement) => void) => {
-  const img = new Image()
-  img.decoding = 'async'
-  img.onload = () => {
-    done(img)
-    revision++
-  }
-  img.src = prependBaseUrl(src)
+// One settle-promise per requested file, so the splash can wait on the current
+// stage's art (useAssets) — resolves on load AND on error, never rejects.
+const settled = new Map<string, Promise<void>>()
+
+const load = (map: Map<ArenaTheme, HTMLImageElement | null>, theme: ArenaTheme, src: string): Promise<void> => {
+  const url = prependBaseUrl(src)
+  const known = settled.get(url)
+  if (known) return known
+  map.set(theme, null)
+  const p = new Promise<void>((resolve) => {
+    const img = new Image()
+    img.decoding = 'async'
+    img.onload = () => whenDecoded(img, () => {
+      map.set(theme, img)
+      revision++
+      resolve()
+    })
+    img.onerror = () => resolve()
+    img.src = url
+  })
+  settled.set(url, p)
+  return p
 }
 
-const start = (): void => {
-  if (started) return
-  started = true
-  load(`images/bg/${PAINTED_BACKDROP.file}?v=${PAINTED_BACKDROP.v}`, img => { tileImg = img })
-  if (PAINTED_PROPS) load(`images/props/${PAINTED_PROPS.file}?v=${PAINTED_PROPS.v}`, img => { atlasImg = img })
+/** Start loading a theme's tile + prop atlas (idempotent); settles once both
+ *  are in (or failed). */
+export const preloadBackdropArt = (theme: ArenaTheme): Promise<void> => {
+  if (!artAllowed()) return Promise.resolve()
+  const jobs: Promise<void>[] = []
+  const t = PAINTED_BACKDROPS[theme]
+  if (t) jobs.push(load(tiles, theme, `images/bg/${t.file}?v=${t.v}`))
+  const a = PAINTED_PROPS[theme]
+  if (a) jobs.push(load(atlases, theme, `images/props/${a.file}?v=${a.v}`))
+  return Promise.all(jobs).then(() => undefined)
 }
 
-const newBuffer = (w: number, h: number): Buf => {
-  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h)
-  const c = document.createElement('canvas')
-  c.width = w
-  c.height = h
-  return c
-}
-
-const bake = (b: BufCtx, bw: number, bh: number, unit: number, layoutId: number | null, shape: ArenaShape) => {
-  const cx = bw / 2
-  const cy = bh / 2
+/**
+ * Paint the backdrop of `theme` over a whole device-pixel buffer `bw` × `bh`
+ * (identity transform). (cx, cy) = the arena centre in device px, `unit` =
+ * device px per arena unit.
+ */
+export const paintArenaBackdrop = (
+  b: BufCtx, bw: number, bh: number, cx: number, cy: number, unit: number,
+  theme: ArenaTheme, layoutId: number | null, shape: ArenaShape
+): void => {
+  b.fillStyle = THEME_LOOK[theme].backdrop
+  b.fillRect(0, 0, bw, bh)
+  preloadBackdropArt(theme)
   // 1. ground tile — device size ≤ its own pixels (never upscaled)
-  const tile = tileImg!
-  const s = Math.min(1, (PAINTED_BACKDROP.units * unit) / tile.naturalWidth)
-  const pat = b.createPattern(tile, 'repeat')
-  if (pat) {
-    b.save()
-    b.translate(cx, cy)
-    b.scale(s, s)
-    b.fillStyle = pat
-    b.fillRect(-cx / s, -cy / s, bw / s, bh / s)
-    b.restore()
+  const meta = PAINTED_BACKDROPS[theme]
+  const tile = tiles.get(theme)
+  if (meta && tile) {
+    const s = Math.min(1, (meta.units * unit) / tile.naturalWidth)
+    const pat = b.createPattern(tile, 'repeat')
+    if (pat) {
+      b.save()
+      b.translate(cx, cy)
+      b.scale(s, s)
+      b.fillStyle = pat
+      b.fillRect(-cx / s, -cy / s, bw / s, bh / s)
+      b.restore()
+    }
   }
   // 2. props
-  if (!atlasImg || !PAINTED_PROPS) return
-  const sprites = PAINTED_PROPS.sprites
+  const atlas = PAINTED_PROPS[theme]
+  const atlasImg = atlases.get(theme)
+  if (!atlas || !atlasImg) return
+  const sprites = atlas.sprites
   b.imageSmoothingQuality = 'high'
-  for (const p of arenaPropLayout(layoutId, shape)) {
+  for (const p of arenaPropLayout(theme, layoutId, shape)) {
     const sp = sprites[p.kind]
     if (!sp) continue
     const px = cx + p.x * unit
@@ -98,41 +140,22 @@ const bake = (b: BufCtx, bw: number, bh: number, unit: number, layoutId: number 
       b.fill()
     }
     const k = rr / sp.footR
-    b.drawImage(atlasImg, sp.x, sp.y, sp.w, sp.h, px - (sp.cx - sp.x) * k, py - (sp.cy - sp.y) * k, sp.w * k, sp.h * k)
+    // Per-instance variety (deterministic from the position): every prop may
+    // be mirrored; flat ground decals (rifts, cracks, ponds …) also turn to a
+    // free angle so a field of rifts never runs all one way. Both turn about
+    // the footprint centre, so the sprite stays inside its footprint circle.
+    const h = Math.sin(p.x * 12.9898 + p.y * 78.233) * 43758.5453
+    const u = h - Math.floor(h)
+    const turn = propTurn(p.kind)
+    const flip = turn !== 'fixed' && u < 0.5 ? -1 : 1
+    // Only flat cracks turn freely (see PropTurn): ponds, slabs and drifts are painted in the
+    // 3/4 view (thick rim at the bottom) and look upside-down when rotated.
+    const ang = turn === 'free' ? u * Math.PI * 2 : 0
+    b.save()
+    b.translate(px, py)
+    if (ang) b.rotate(ang)
+    b.scale(flip, 1)
+    b.drawImage(atlasImg, sp.x, sp.y, sp.w, sp.h, -(sp.cx - sp.x) * k, -(sp.cy - sp.y) * k, sp.w * k, sp.h * k)
+    b.restore()
   }
-}
-
-/**
- * Paint the backdrop for a canvas of `w` × `h` CSS px (the context carries
- * the dpr transform). `viewShortHalf` = arena units from the centre to the
- * edge of the screen's SHORT axis (the engine's camera fit). Returns false
- * when nothing was drawn (art not ready / disabled).
- */
-export const drawArenaBackdrop = (
-  ctx: CanvasRenderingContext2D, w: number, h: number,
-  layoutId: number | null, shape: ArenaShape, viewShortHalf: number
-): boolean => {
-  if (!artAllowed()) return false
-  start()
-  if (!tileImg) return false
-  let dpr = 1
-  try {
-    const m = ctx.getTransform()
-    dpr = Math.hypot(m.a, m.b) || 1
-  } catch { /* old engines: 1 */ }
-  const bw = Math.max(1, Math.round(w * dpr))
-  const bh = Math.max(1, Math.round(h * dpr))
-  const key = `${bw}x${bh}:${layoutId ?? '-'}:${shape}:${revision}`
-  if (key !== bufferKey || !buffer) {
-    if (!buffer || buffer.width !== bw || buffer.height !== bh) buffer = newBuffer(bw, bh)
-    const b = buffer.getContext('2d') as BufCtx | null
-    if (!b) return false
-    b.setTransform(1, 0, 0, 1, 0, 0)
-    b.fillStyle = '#4f7d45'
-    b.fillRect(0, 0, bw, bh)
-    bake(b, bw, bh, Math.min(bw, bh) / (2 * viewShortHalf), layoutId, shape)
-    bufferKey = key
-  }
-  ctx.drawImage(buffer as CanvasImageSource, 0, 0, w, h)
-  return true
 }

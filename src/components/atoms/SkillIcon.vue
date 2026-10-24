@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SKILLS } from '@/data/skillCatalog'
 import type { SkillId } from '@/types/skills'
@@ -8,7 +8,7 @@ import { paintedSkillIconUrl, smasherSkillArt } from '@/use/skills/smasherSkillA
 /**
  * ─── Skill medallion ────────────────────────────────────────────────────────
  *
- * One inline SVG, no image request: an ink-edged wood rim with a stitched
+ * One inline SVG, no image request: an ink-edged royal rim with a solid bevel
  * ring, a flat disc in the skill's accent colour and the cream catalog glyph (24×24 solid path, the
  * game-ui-icon-set style) on top. The same path feeds `new Path2D()` on the
  * canvas, so DOM and canvas show the identical shape.
@@ -47,7 +47,10 @@ const { t } = useI18n()
 const def = computed(() => SKILLS[props.id])
 const color = computed(() => (props.locked ? '#aab4cc' : def.value.color))
 const art = computed(() => smasherSkillArt(props.skillKey))
-const painted = computed(() => (props.skillKey && art.value ? paintedSkillIconUrl(props.skillKey) : null))
+// A painting that fails to load falls back to the drawing (retried on a new key).
+const paintFailed = ref(false)
+watch(() => props.skillKey, () => { paintFailed.value = false })
+const painted = computed(() => (props.skillKey && art.value && !paintFailed.value ? paintedSkillIconUrl(props.skillKey) : null))
 const label = computed(() => {
   if (props.locked) return '?'
   return art.value ? t(`smasher_skill_${props.skillKey}`) : t(`skills.names.${props.id}`)
@@ -75,7 +78,8 @@ const artTransform = computed(() => (props.plate ? 'translate(9 9) scale(1.25)' 
       circle.sk-rim(cx="24" cy="24" r="21.6")
       //- 3D: a darker band along the rim's lower half (the medallion's depth).
       path.sk-band(d="M4.2 27.5A20.2 20.2 0 0 0 43.8 27.5" fill="none" stroke-width="2.6" stroke-linecap="round")
-      circle.sk-stitch(cx="24" cy="24" r="19.6" fill="none" stroke-width="1.1" stroke-dasharray="2.4 2")
+      //- A solid light bevel ring (#UX1c: no stitch dashes on a hard medallion).
+      circle.sk-stitch(cx="24" cy="24" r="19.6" fill="none" stroke-width="1.1")
       circle.sk-ink(cx="24" cy="24" r="17.6")
       circle(cx="24" cy="24" r="16.4" :style="{ fill: color }")
       path.sk-lip(d="M12.2 20.5A12.4 12.4 0 0 1 35.8 20.5" fill="none" stroke-width="2.2" stroke-linecap="round")
@@ -92,6 +96,7 @@ const artTransform = computed(() => (props.plate ? 'translate(9 9) scale(1.25)' 
       :href="painted"
       :x="plate ? 9 : 0" :y="plate ? 9 : 0"
       :width="plate ? 30 : 48" :height="plate ? 30 : 48"
+      @error="paintFailed = true"
     )
     g(v-else-if="art" :transform="artTransform" stroke-linejoin="round" stroke-linecap="round")
       template(v-for="(L, i) in art.icon" :key="i")
@@ -132,7 +137,8 @@ circle.sk-ink
   stroke: var(--color-royal-800)
 
 .sk-stitch
-  stroke: var(--color-ice-200)
+  stroke: var(--color-royal-300)
+  stroke-opacity: 0.7
 
 .sk-lip
   stroke: rgba(255, 255, 255, 0.55)

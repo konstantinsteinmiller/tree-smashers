@@ -2,24 +2,48 @@
 //
 // Uses PeerJS (WebRTC) for direct browser-to-browser connections.
 // Host creates a lobby, guest joins via invite link or CrazyGames invite.
+// Random search ("Find opponent", `startQuickMatch`) pairs two searchers over
+// well-known PeerJS slot ids, and falls back to a bot (src/use/pvpBots.ts)
+// when no human turns up within a random 15–25 s.
 //
 // Feature-gated: only active when VITE_APP_PVP_ENABLED=true.
 
-import { ref, computed, watch, type Ref } from 'vue'
+import { ref, computed, watch, shallowRef, type Ref, type ShallowRef } from 'vue'
 // PeerJS itself is loaded lazily — see `loadPeerCtor` below. The static
 // import was bundling the entire ~50KB library into every build (including
 // CrazyGames, which doesn't ship PvP) before this change. Type-only imports
 // have zero runtime cost so the rest of the file compiles unchanged.
 import type Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
-import { sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
+import { ARENA_TYPES, sanitizeArenaType, type ArenaType } from '@/use/useSpinnerCampaign'
 import type { SpinnerConfig } from '@/types/spinner'
 import { isSdkActive } from '@/use/useCrazyGames'
 import { isCrazyGamesFullRelease, isDebug } from '@/use/useMatch'
 import { seedMatchRng, seedMatchRngRandom } from '@/use/useDeterministicRng'
 import type { SkillLoadout } from '@/types/skills'
+import { clampTeamSize, PVP_DEFAULT_TEAM_SIZE, type TeamSize } from '@/data/teamSize'
 import { sanitizePvpLoadout, type SkillSanitizer } from '@/use/loadoutSanitizer'
 import { loadSkillLoadoutSanitizer } from '@/skills/skillsGate'
+import {
+  BOT_FOUND_CARD_MS,
+  bracketTier,
+  createBotFillTimer,
+  rollBotWaitMs,
+  type BotFillTimer,
+  type BotOpponent,
+  type OpponentProfile
+} from '@/use/pvpBots'
+import {
+  CG_MULTIPLAYER,
+  cleanInviteName,
+  crazyInviteLink,
+  crazyRoomStateFor,
+  isCrazyInstantMultiplayer,
+  onCrazyJoinRoom,
+  readCrazyInvite,
+  syncCrazyRoom,
+  type CrazyInvite
+} from '@/use/crazyMultiplayer'
 
 // Skill loadouts in the ready exchange (§9.1) go through the catalog-aware
 // sanitiser, which only a skills build loads (skills gate). Until it resolves
@@ -76,6 +100,8 @@ export type PvPRole = 'host' | 'guest' | null
 
 export type PvPStatus =
   | 'idle'              // Not in PvP
+  | 'searching'         // Random search: looking for a human (bot fallback armed)
+  | 'found'             // Random search: a bot was picked — its card shows, then it starts
   | 'creating'          // Host: creating peer
   | 'waiting'           // Host: waiting for guest to join
   | 'connecting'        // Guest: connecting to host
@@ -88,7 +114,7 @@ export type PvPStatus =
 
 export interface PvPGameConfig {
   arenaType: ArenaType
-  teamSize: 1 | 2         // 1v1 or 2v2
+  teamSize: TeamSize       // 1v1, 2v2 or 3v3 (src/data/teamSize.ts)
   levelOne: boolean        // true = all parts forced to level 1
 }
 
@@ -103,10 +129,18 @@ export interface PvPGameConfig {
  * match RNG, PvP sim frozen between launches, turn ends when ALL blades rest).
  * 2 → 3: skills — `player-ready` carries the team's skill loadout and both
  * clients build `blade.skills` for both sides (skills-feature.md §9.1).
+ * 3 → 4: team sizes — every blade is smaller (×0.9 base × 1 / 0.87 / 0.75 by
+ * team size), a side of one gets ×1.2 damage + HP, lobbies offer 3v3, and the
+ * state hash carries both team sizes (src/data/teamSize.ts).
+ * 4 → 5: a `hello` message on connection open (name — the CrazyGames username
+ * where there is one — and team level for the lobby's opponent card), and the
+ * random-search handshake built on it: a slot host accepts a searcher by
+ * answering its hello. The simulation itself is unchanged.
  */
-export const PVP_PROTOCOL_VERSION = 3
+export const PVP_PROTOCOL_VERSION = 5
 
 export type PvPMessage =
+  | { type: 'hello'; proto: number; name: string; level: number }
   | { type: 'game-config'; config: PvPGameConfig }
   | { type: 'player-ready'; team: SpinnerConfig[]; skills?: SkillLoadout; proto?: number }
   | { type: 'proto-mismatch'; proto: number }
@@ -156,7 +190,7 @@ const remotePeerId: Ref<string> = ref('')
 const inviteLink: Ref<string> = ref('')
 const expirySeconds: Ref<number> = ref(0)
 const errorMessage: Ref<string> = ref('')
-const gameConfig: Ref<PvPGameConfig> = ref({ arenaType: 'default', teamSize: 1, levelOne: false })
+const gameConfig: Ref<PvPGameConfig> = ref({ arenaType: 'default', teamSize: PVP_DEFAULT_TEAM_SIZE, levelOne: false })
 const hostReady: Ref<boolean> = ref(false)
 const guestReady: Ref<boolean> = ref(false)
 const hostTeam: Ref<SpinnerConfig[]> = ref([])
@@ -165,6 +199,40 @@ const guestTeam: Ref<SpinnerConfig[]> = ref([])
 const hostSkills: Ref<SkillLoadout> = ref([])
 const guestSkills: Ref<SkillLoadout> = ref([])
 const remotePlayerName: Ref<string> = ref('')
+
+/** How this session found its opponent: an invite room, a random search that
+ *  met a human, or a random search that fell back to a bot. */
+export type PvPMatchKind = 'private' | 'quick' | 'bot' | null
+const matchKind: Ref<PvPMatchKind> = ref(null)
+/** Random search: ms since the search started (the lobby's elapsed timer). */
+const searchElapsedMs: Ref<number> = ref(0)
+/** The opponent's lobby card (name, level, bracket) — from their hello, or
+ *  the bot's generated profile. */
+const opponentProfile: Ref<OpponentProfile | null> = ref(null)
+/** Joining through a friend's invite: their name ("Joining X's match"), or
+ *  '' when the invite carried none. null when not an invite join. */
+const joiningFriendName: Ref<string | null> = ref(null)
+/** The bot match being shown / played (random-search fallback). */
+const botMatch: ShallowRef<BotOpponent | null> = shallowRef(null)
+
+/** Debug builds tag bots in the lobby (never in a production build). */
+export const revealBots = computed(() => isDebug.value)
+
+/** What this client tells its opponent about itself in the hello. The lobby
+ *  sets it (display name — the CrazyGames username when signed in — and the
+ *  average level of the team it would field). */
+export interface LocalPvpProfile {
+  name: string
+  level: number
+}
+let localProfile: LocalPvpProfile = { name: '', level: 1 }
+export const setLocalPvpProfile = (p: LocalPvpProfile): void => {
+  localProfile = { name: cleanInviteName(p.name) ?? '', level: clampLevel(p.level) }
+}
+const clampLevel = (n: unknown): number => {
+  const v = Math.round(Number(n))
+  return Number.isFinite(v) ? Math.min(30, Math.max(1, v)) : 1
+}
 
 /** This client's lobby role, readable without instantiating the composable.
  *  The engine uses it to give each blade a peer-independent `syncKey` when
@@ -189,6 +257,48 @@ const extractPvpFromHash = (): string | null => {
 const _earlyInvite = extractPvpFromHash()
 if (_earlyInvite) pvpLog(`early invite capture: ${_earlyInvite}`)
 export const pendingInviteCode: Ref<string | null> = ref(_earlyInvite)
+/** The inviting friend's name for `pendingInviteCode`, when the invite
+ *  carried one (CrazyGames invites do). */
+export const pendingInviteHost: Ref<string | null> = ref(null)
+
+/**
+ * A CrazyGames invite this session was opened with (or one a friend sent while
+ * the game runs, via the join-room listener): queue it exactly like an invite
+ * link. Returns whether one was queued. Inert off the CrazyGames-full build.
+ */
+export const queueInvite = (invite: CrazyInvite | null): boolean => {
+  if (!invite) return false
+  pendingInviteCode.value = invite.roomId
+  pendingInviteHost.value = invite.hostName
+  return true
+}
+export const consumeCrazyInvite = (): boolean => (CG_MULTIPLAYER ? queueInvite(readCrazyInvite()) : false)
+
+/**
+ * CrazyGames-full build: once the SDK is active, queue the invite this session
+ * opened with, queue every invite a friend accepts while the game runs (the
+ * join-room listener — no page reload), and, with no invite, honour
+ * `isInstantMultiplayer` ("put the player straight into a private room").
+ * Returns the unsubscribe. A no-op everywhere else.
+ */
+export const startCrazyMultiplayer = (hooks: { onInstantMultiplayer?: () => void } = {}): (() => void) => {
+  if (!CG_MULTIPLAYER) return () => {}
+  let begun = false
+  let offJoin: () => void = () => {}
+  const stopWatch = watch(isSdkActive, (active) => {
+    if (!active || begun) return
+    begun = true
+    const invited = consumeCrazyInvite()
+    offJoin = onCrazyJoinRoom((invite) => {
+      queueInvite(invite)
+    })
+    if (!invited && isCrazyInstantMultiplayer()) hooks.onInstantMultiplayer?.()
+  }, { immediate: true })
+  return () => {
+    stopWatch()
+    offJoin()
+  }
+}
 
 let peer: Peer | null = null
 let conn: DataConnection | null = null
@@ -198,6 +308,11 @@ let connOpenTimeout: ReturnType<typeof setTimeout> | null = null
 let connRetried = false
 let pingInterval: ReturnType<typeof setInterval> | null = null
 let lastPongAt = 0
+/** Invite join: give up when the host never answers (signaling down, room gone). */
+let joinWatchdog: ReturnType<typeof setTimeout> | null = null
+const JOIN_WATCHDOG_MS = 25_000
+/** The slot host gave its signaling id back once matched: never reconnect. */
+let signalingReleased = false
 
 // Callbacks for game events — set by SpinnerArena
 let onGameStart: ((firstTurn: 'host' | 'guest') => void) | null = null
@@ -205,6 +320,7 @@ let onRemoteLaunch: ((bladeIndex: number, ax: number, ay: number) => void) | nul
 let onRemoteSurrender: (() => void) | null = null
 let onRemoteStateCheck: ((hash: string, turn: number) => void) | null = null
 let onReturnToLobby: (() => void) | null = null
+let onBotMatchStart: ((bot: BotOpponent) => void) | null = null
 
 /** Return both players to lobby without destroying the connection. */
 const goBackToLobby = () => {
@@ -245,12 +361,21 @@ const cleanup = () => {
     clearInterval(pingInterval)
     pingInterval = null
   }
+  if (joinWatchdog) {
+    clearTimeout(joinWatchdog)
+    joinWatchdog = null
+  }
+  stopQuickMatchTimers()
   if (conn) {
+    // Detach BEFORE closing: PeerJS emits 'close' synchronously, and the
+    // close handler must read a deliberate teardown as one (not as the
+    // opponent leaving — which would restart a random search).
+    const c = conn
+    conn = null
     try {
-      conn.close()
+      c.close()
     } catch {
     }
-    conn = null
   }
   if (peer) {
     try {
@@ -278,6 +403,13 @@ const resetState = () => {
   hostSkills.value = []
   guestSkills.value = []
   remotePlayerName.value = ''
+  matchKind.value = null
+  searchElapsedMs.value = 0
+  opponentProfile.value = null
+  joiningFriendName.value = null
+  botMatch.value = null
+  signalingReleased = false
+  qm = null
 }
 
 const send = (msg: PvPMessage) => {
@@ -309,7 +441,7 @@ if (import.meta.env.VITE_APP_PVP_ENABLED === 'true') document.addEventListener('
   if (document.hidden) return
 
   // Reconnect PeerJS signaling if the peer was dropped while backgrounded
-  if (peer && !peer.destroyed && peer.disconnected) {
+  if (peer && !peer.destroyed && peer.disconnected && !signalingReleased) {
     pvpLog('peer disconnected from signaling — reconnecting')
     try {
       peer.reconnect()
@@ -410,14 +542,27 @@ const handleMessage = (msg: PvPMessage) => {
   try {
     if (!msg || typeof msg !== 'object' || !('type' in msg)) return
     switch (msg.type) {
+      case 'hello':
+        // The opponent's card. Another protocol: a private room says why
+        // (both reload); a random-search probe was already refused in its
+        // own handshake and never gets here.
+        if (msg.proto !== PVP_PROTOCOL_VERSION) {
+          refuseProtocolMismatch()
+          send({ type: 'proto-mismatch', proto: PVP_PROTOCOL_VERSION })
+          break
+        }
+        adoptRemoteHello(msg)
+        break
+
       case 'game-config':
         // Retired arena names from an older host map to a live arena.
-        gameConfig.value = { ...msg.config, arenaType: sanitizeArenaType(msg.config.arenaType) }
+        gameConfig.value = { ...msg.config, arenaType: sanitizeArenaType(msg.config.arenaType), teamSize: clampTeamSize(msg.config.teamSize) }
         // Mirror the host's updateGameConfig: a config change un-readies
         // both sides, so every build is re-sent (and re-sanitised) under the
         // new team size / "level 1" rule — never a stale clamp.
         hostReady.value = false
         guestReady.value = false
+        if (qm) qm.gotConfig = true
         break
 
       case 'player-ready':
@@ -466,6 +611,7 @@ const handleMessage = (msg: PvPMessage) => {
         break
 
       case 'game-start':
+        if (qm) qm.started = true
         status.value = 'playing'
         // Host broadcasts the match seed so both peers share the same RNG
         // sequence for powerup spawns, turn-order roll, and stat picks.
@@ -511,7 +657,7 @@ export const receivePvpMessage = (msg: PvPMessage): void => handleMessage(msg)
 
 // ─── Connection Setup ──────────────────────────────────────────────────────
 
-const setupConnection = (connection: DataConnection) => {
+const setupConnection = (connection: DataConnection, opts: { handover?: boolean } = {}) => {
   conn = connection
   pvpLog(`setupConnection: connId=${connection.connectionId} peer=${connection.peer} type=${connection.type} reliable=${connection.reliable}`)
 
@@ -564,7 +710,7 @@ const setupConnection = (connection: DataConnection) => {
     return false
   }
   // Try immediately, then retry a few times
-  if (!hookIce()) {
+  if (!opts.handover && !hookIce()) {
     let attempts = 0
     const icePoller = setInterval(() => {
       if (hookIce() || ++attempts > 10) clearInterval(icePoller)
@@ -575,7 +721,7 @@ const setupConnection = (connection: DataConnection) => {
   // likely failed (NAT traversal / signaling issue). For guests, try
   // reconnecting once before giving up — the host may have briefly
   // lost signaling while sharing the invite link.
-  connOpenTimeout = setTimeout(() => {
+  if (!opts.handover) connOpenTimeout = setTimeout(() => {
     if (conn && !conn.open) {
       pvpLog(`conn open timeout after ${CONN_OPEN_TIMEOUT_MS}ms — role=${role.value}`)
       if (role.value === 'guest' && peer && !peer.destroyed && !connRetried) {
@@ -597,13 +743,20 @@ const setupConnection = (connection: DataConnection) => {
     }
   }, CONN_OPEN_TIMEOUT_MS)
 
-  conn.on('open', () => {
+  const onOpen = () => {
     pvpLog(`conn.open: role=${role.value} connOpen=${conn?.open}`)
     // Cancel the open timeout — we made it
     if (connOpenTimeout) {
       clearTimeout(connOpenTimeout)
       connOpenTimeout = null
     }
+    if (joinWatchdog) {
+      clearTimeout(joinWatchdog)
+      joinWatchdog = null
+    }
+    // Who we are, for the opponent's lobby card (a random-search pairing
+    // already traded hellos in its handshake).
+    if (!opts.handover) send(helloMessage())
     if (role.value === 'host') {
       // Stop expiry countdown
       if (expiryTimer) {
@@ -622,7 +775,9 @@ const setupConnection = (connection: DataConnection) => {
       status.value = 'lobby'
     }
     startPingLoop()
-  })
+  }
+  if (opts.handover) onOpen()
+  else conn.on('open', onOpen)
 
   conn.on('data', (data: unknown) => {
     handleMessage(data as PvPMessage)
@@ -630,6 +785,15 @@ const setupConnection = (connection: DataConnection) => {
 
   conn.on('close', () => {
     pvpLog(`conn.close: status=${status.value} role=${role.value}`)
+    if (conn !== connection) return // a replaced / torn-down connection
+    // A random-search partner who left before the first match started: look
+    // again (same elapsed timer, the bot deadline kept) instead of an error.
+    const run = qm
+    if (run && run.matched && !run.started && matchKind.value === 'quick') {
+      conn = null
+      startQuickMatchImpl(run.opts, { startedAt: run.startedAt, botDeadline: run.botDeadline })
+      return
+    }
     if (status.value === 'playing') {
       status.value = 'disconnected'
       errorMessage.value = 'Opponent disconnected.'
@@ -651,6 +815,508 @@ const setupConnection = (connection: DataConnection) => {
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
+// ─── Hello ───────────────────────────────────────────────────────────────────
+
+const helloMessage = (): PvPMessage => ({
+  type: 'hello',
+  proto: PVP_PROTOCOL_VERSION,
+  name: localProfile.name,
+  level: localProfile.level
+})
+
+const adoptRemoteHello = (msg: Extract<PvPMessage, { type: 'hello' }>) => {
+  const name = cleanInviteName(msg.name) ?? ''
+  const level = clampLevel(msg.level)
+  remotePlayerName.value = name
+  opponentProfile.value = { name, level, tier: bracketTier(level) }
+}
+
+const closeQuietly = (c: DataConnection | null | undefined) => {
+  try {
+    c?.close()
+  } catch { /* already gone */ }
+}
+const destroyQuietly = (p: Peer | null | undefined) => {
+  try {
+    p?.destroy()
+  } catch { /* already gone */ }
+}
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+// ─── Ready / start (module scope: the random search auto-readies) ───────────
+
+/** Mark the local player ready with their team + skill loadout. Sanitised
+ *  by the same rules the receiver applies, and the SANITISED copy is what
+ *  this client keeps — so both clients hold identical builds. */
+const setReadyImpl = (team: SpinnerConfig[], skills: SkillLoadout = []) => {
+  const clean = sanitizePvpLoadout(team, skills, gameConfig.value, skillSanitizer)
+  if (!clean) return
+  if (role.value === 'host') {
+    hostReady.value = true
+    hostTeam.value = clean.team
+    hostSkills.value = clean.skills
+  } else {
+    guestReady.value = true
+    guestTeam.value = clean.team
+    guestSkills.value = clean.skills
+  }
+  send({ type: 'player-ready', team: clean.team, skills: clean.skills, proto: PVP_PROTOCOL_VERSION })
+}
+
+/** Host only: start the match once both players are ready */
+const startMatchImpl = () => {
+  if (role.value !== 'host' || !(hostReady.value && guestReady.value)) return
+  const firstTurn = Math.random() < 0.5 ? 'host' : 'guest' as const
+  // Seed the shared match RNG locally and broadcast so the guest's
+  // mulberry32 state matches byte-for-byte.
+  const seed = seedMatchRngRandom()
+  status.value = 'playing'
+  send({ type: 'game-start', firstTurn, seed })
+  onGameStart?.(firstTurn)
+}
+
+// ─── Random search ("Find opponent") ─────────────────────────────────────────
+//
+// Serverless pairing on the public PeerJS signaling server: QM_SLOTS
+// well-known ids per protocol version and team size. A searcher tries to
+// CLAIM slot 0 (it then hosts there and waits); a claim refused with
+// `unavailable-id` means someone is waiting there, so it KNOCKS: connects
+// with its own random id and sends its hello. The slot host accepts the
+// first knock whose hello matches by answering with its own hello, then gives
+// the slot id back (`peer.disconnect()` keeps the data connection) so the
+// next searcher can host there; any other knock is closed and that searcher
+// tries the next slot. A knock that is not answered within QM_PROBE_MS moves
+// on too (a stale id the server has not timed out yet).
+//
+// Bot fallback: `createBotFillTimer` with a uniform 15–25 s wait per search;
+// a knock or an incoming knock in flight at the deadline buys one grace, so a
+// human who is being paired is always preferred. Once the bot is picked every
+// peer is destroyed — no human can arrive into a bot match.
+//
+// Matched with a human: both sides auto-ready (the lobby's team builder) and
+// the host starts after the found card; later rematches in the same pairing
+// go through the normal manual lobby.
+
+const QM_SLOTS = 4
+const QM_PROBE_MS = 7000
+const QM_RETRY_MS = 2500
+
+export const quickMatchSlotId = (teamSize: TeamSize, slot: number): string =>
+  `ts-qm${PVP_PROTOCOL_VERSION}-${clampTeamSize(teamSize)}v-${slot}`
+
+export interface QuickMatchOptions {
+  teamSize: TeamSize
+  /** The team this client fields under a lobby config (used to auto-ready
+   *  against a human, and as the player's side of a bot match). */
+  teamFor: (config: PvPGameConfig) => SpinnerConfig[]
+  /** Builds the bot when no human turned up (null → the search fails). */
+  createBot: () => BotOpponent | null
+  /** Wait before the bot. Default: uniform 15–25 s (`rollBotWaitMs`). */
+  botWaitMs?: number
+  rand?: () => number
+}
+
+interface QuickMatchRun {
+  token: number
+  opts: QuickMatchOptions
+  startedAt: number
+  botDeadline: number
+  /** Handshakes in flight (knocks out + knocks in). */
+  pending: number
+  matched: boolean
+  /** The pairing's first match started (rematches are manual). */
+  started: boolean
+  /** Guest: the host's lobby config arrived. */
+  gotConfig: boolean
+  hostPeer: Peer | null
+  guestPeer: Peer | null
+  probes: Set<DataConnection>
+  bot: BotFillTimer | null
+  ticker: ReturnType<typeof setInterval> | null
+  startTimer: ReturnType<typeof setTimeout> | null
+}
+
+let qm: QuickMatchRun | null = null
+let qmToken = 0
+
+const isLive = (run: QuickMatchRun): boolean =>
+  qm === run && run.token === qmToken && status.value === 'searching' && !run.matched
+
+/** Stop looking: the bot timer, the elapsed ticker, every spare peer and probe. */
+const stopSearch = (run: QuickMatchRun) => {
+  run.bot?.cancel()
+  run.bot = null
+  if (run.ticker) clearInterval(run.ticker)
+  run.ticker = null
+  for (const c of run.probes) closeQuietly(c)
+  run.probes.clear()
+  if (run.hostPeer && run.hostPeer !== peer) destroyQuietly(run.hostPeer)
+  if (run.guestPeer && run.guestPeer !== peer) destroyQuietly(run.guestPeer)
+  run.hostPeer = null
+  run.guestPeer = null
+}
+
+function stopQuickMatchTimers () {
+  const run = qm
+  if (!run) return
+  stopSearch(run)
+  if (run.startTimer) clearTimeout(run.startTimer)
+  run.startTimer = null
+}
+
+const peerOptions = () => ({ config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 10 } })
+
+/** Claim a slot id: 'open' → we host there, 'taken' → someone waits there. */
+const claimSlot = (PeerC: typeof Peer, run: QuickMatchRun, slotId: string): Promise<'open' | 'taken' | 'error'> =>
+  new Promise((resolve) => {
+    let settled = false
+    let p: Peer
+    try {
+      p = new PeerC(slotId, peerOptions())
+    } catch {
+      resolve('error')
+      return
+    }
+    const timer = setTimeout(() => {
+      destroyQuietly(p)
+      done('error')
+    }, QM_PROBE_MS)
+    function done (r: 'open' | 'taken' | 'error') {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve(r)
+    }
+    p.on('open', () => {
+      if (!isLive(run)) {
+        destroyQuietly(p)
+        done('error')
+        return
+      }
+      run.hostPeer = p
+      hostSlot(p, run)
+      done('open')
+    })
+    p.on('error', (err: any) => {
+      if (!settled) {
+        destroyQuietly(p)
+        done(err?.type === 'unavailable-id' ? 'taken' : 'error')
+        return
+      }
+      pvpLog(`slot host peer.error: ${err?.type}`)
+    })
+  })
+
+/** Host a claimed slot: accept the first knock whose hello matches. */
+const hostSlot = (p: Peer, run: QuickMatchRun) => {
+  p.on('connection', (c: DataConnection) => {
+    if (!isLive(run)) {
+      closeQuietly(c)
+      return
+    }
+    run.pending++
+    run.probes.add(c)
+    let finished = false
+    const fin = (accepted: boolean) => {
+      if (finished) return
+      finished = true
+      run.pending--
+      clearTimeout(timer)
+      if (!accepted) {
+        run.probes.delete(c)
+        closeQuietly(c)
+      }
+    }
+    const timer = setTimeout(() => fin(false), QM_PROBE_MS)
+    c.on('data', (d: unknown) => {
+      const m = d as PvPMessage
+      if (finished || !m || typeof m !== 'object' || m.type !== 'hello') return
+      if (m.proto !== PVP_PROTOCOL_VERSION || !isLive(run)) {
+        fin(false)
+        return
+      }
+      fin(true)
+      acceptMatch(run, p, c, 'host', m)
+    })
+    c.on('close', () => fin(false))
+    c.on('error', () => fin(false))
+  })
+  p.on('disconnected', () => {
+    if (isLive(run) && !p.destroyed && !signalingReleased) {
+      try {
+        p.reconnect()
+      } catch { /* the bot timer covers a dead signaling server */ }
+    }
+  })
+}
+
+/** This searcher's own random-id peer, for knocking (created once per run). */
+const ensureGuestPeer = (PeerC: typeof Peer, run: QuickMatchRun): Promise<Peer | null> => {
+  if (run.guestPeer && !run.guestPeer.destroyed) return Promise.resolve(run.guestPeer)
+  return new Promise((resolve) => {
+    let settled = false
+    let p: Peer
+    try {
+      p = new PeerC(generatePeerId(), peerOptions())
+    } catch {
+      resolve(null)
+      return
+    }
+    const timer = setTimeout(() => {
+      destroyQuietly(p)
+      done(null)
+    }, QM_PROBE_MS)
+    function done (r: Peer | null) {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve(r)
+    }
+    p.on('open', () => {
+      if (!isLive(run)) {
+        destroyQuietly(p)
+        done(null)
+        return
+      }
+      run.guestPeer = p
+      done(p)
+    })
+    p.on('error', (err: any) => {
+      if (!settled) {
+        destroyQuietly(p)
+        done(null)
+      } else pvpLog(`searcher peer.error: ${err?.type}`)
+    })
+    p.on('disconnected', () => {
+      if (isLive(run) && !p.destroyed) {
+        try {
+          p.reconnect()
+        } catch { /* ignore */ }
+      }
+    })
+  })
+}
+
+/** Knock on a taken slot. Resolves true once its host answered our hello. */
+const knock = async (PeerC: typeof Peer, run: QuickMatchRun, slotId: string): Promise<boolean> => {
+  const gp = await ensureGuestPeer(PeerC, run)
+  if (!gp || !isLive(run)) return false
+  return new Promise((resolve) => {
+    run.pending++
+    let finished = false
+    let c: DataConnection | null = null
+    const onPeerError = (err: any) => {
+      if (err?.type === 'peer-unavailable') fin(false)
+    }
+    const fin = (ok: boolean) => {
+      if (finished) return
+      finished = true
+      run.pending--
+      clearTimeout(timer)
+      gp.off('error', onPeerError)
+      if (!ok && c) {
+        run.probes.delete(c)
+        closeQuietly(c)
+      }
+      resolve(ok)
+    }
+    const timer = setTimeout(() => fin(false), QM_PROBE_MS)
+    gp.on('error', onPeerError)
+    try {
+      c = gp.connect(slotId, { reliable: true, serialization: 'json' })
+    } catch {
+      fin(false)
+      return
+    }
+    const probe = c
+    run.probes.add(probe)
+    probe.on('open', () => {
+      try {
+        probe.send(helloMessage())
+      } catch { /* closes below */ }
+    })
+    probe.on('data', (d: unknown) => {
+      const m = d as PvPMessage
+      if (finished || !m || typeof m !== 'object' || m.type !== 'hello') return
+      if (m.proto !== PVP_PROTOCOL_VERSION || !isLive(run)) {
+        fin(false)
+        return
+      }
+      fin(true)
+      acceptMatch(run, gp, probe, 'guest', m)
+    })
+    probe.on('close', () => fin(false))
+    probe.on('error', () => fin(false))
+  })
+}
+
+/** A human pairing is made: hand the probe over to the normal lobby. */
+const acceptMatch = (
+  run: QuickMatchRun,
+  p: Peer,
+  c: DataConnection,
+  myRole: 'host' | 'guest',
+  hello: Extract<PvPMessage, { type: 'hello' }>
+) => {
+  run.matched = true
+  run.probes.delete(c)
+  if (myRole === 'host') run.hostPeer = null
+  else run.guestPeer = null
+  peer = p
+  stopSearch(run)
+  role.value = myRole
+  peerId.value = p.id
+  remotePeerId.value = c.peer
+  adoptRemoteHello(hello)
+  if (myRole === 'host') {
+    // Our hello IS the acceptance. Then give the slot id back for the next
+    // searcher — the data connection survives a signaling disconnect.
+    try {
+      c.send(helloMessage())
+    } catch { /* the close handler searches again */ }
+    signalingReleased = true
+    try {
+      p.disconnect()
+    } catch { /* ignore */ }
+  }
+  conn = null
+  setupConnection(c, { handover: true })
+}
+
+/** No human in time: the bot's found card, then its match. */
+const fireBot = (run: QuickMatchRun) => {
+  if (qm !== run || run.matched || status.value !== 'searching') return
+  run.matched = true
+  stopSearch(run)
+  destroyQuietly(peer)
+  peer = null
+  const bot = run.opts.createBot()
+  if (!bot) {
+    status.value = 'error'
+    errorMessage.value = translate('pvp.searchFailed')
+    return
+  }
+  matchKind.value = 'bot'
+  role.value = 'host'
+  botMatch.value = bot
+  opponentProfile.value = bot.profile
+  remotePlayerName.value = bot.profile.name
+  hostTeam.value = run.opts.teamFor(gameConfig.value)
+  guestTeam.value = bot.team.map(c => ({ ...c }))
+  hostSkills.value = []
+  guestSkills.value = []
+  hostReady.value = true
+  guestReady.value = true
+  status.value = 'found'
+  run.startTimer = setTimeout(() => {
+    run.startTimer = null
+    if (qm !== run || status.value !== 'found' || matchKind.value !== 'bot') return
+    run.started = true
+    status.value = 'playing'
+    onBotMatchStart?.(bot)
+  }, BOT_FOUND_CARD_MS)
+}
+
+const searchLoop = async (run: QuickMatchRun) => {
+  let PeerC: typeof Peer
+  try {
+    PeerC = await loadPeerCtor()
+  } catch {
+    return // offline / disabled: the bot timer covers it
+  }
+  while (isLive(run)) {
+    for (let slot = 0; slot < QM_SLOTS && isLive(run); slot++) {
+      const slotId = quickMatchSlotId(gameConfig.value.teamSize, slot)
+      const claim = await claimSlot(PeerC, run, slotId)
+      if (claim === 'open') return // hosting: knocks come to us
+      if (claim === 'error' || !isLive(run)) return // no signaling: the bot covers it
+      if (await knock(PeerC, run, slotId)) return // matched
+    }
+    if (!isLive(run)) return
+    await delay(QM_RETRY_MS)
+  }
+}
+
+/** Start a random search (also the restart after a partner left early). */
+const startQuickMatchImpl = (opts: QuickMatchOptions, carry?: { startedAt: number; botDeadline: number }) => {
+  resetState()
+  const token = ++qmToken
+  const now = Date.now()
+  const rand = opts.rand ?? Math.random
+  const waitMs = carry
+    ? Math.max(3000, carry.botDeadline - now)
+    : (opts.botWaitMs ?? rollBotWaitMs(rand))
+  const run: QuickMatchRun = {
+    token,
+    opts,
+    startedAt: carry?.startedAt ?? now,
+    botDeadline: now + waitMs,
+    pending: 0,
+    matched: false,
+    started: false,
+    gotConfig: false,
+    hostPeer: null,
+    guestPeer: null,
+    probes: new Set(),
+    bot: null,
+    ticker: null,
+    startTimer: null
+  }
+  qm = run
+  matchKind.value = 'quick'
+  status.value = 'searching'
+  const arenas = ARENA_TYPES.filter(a => a !== 'boss')
+  gameConfig.value = {
+    arenaType: arenas[Math.min(arenas.length - 1, Math.floor(rand() * arenas.length))] ?? 'default',
+    teamSize: clampTeamSize(opts.teamSize),
+    levelOne: false
+  }
+  searchElapsedMs.value = now - run.startedAt
+  run.ticker = setInterval(() => {
+    if (qm === run) searchElapsedMs.value = Date.now() - run.startedAt
+  }, 250)
+  run.bot = createBotFillTimer({
+    waitMs,
+    isHumanPending: () => run.pending > 0,
+    onFire: () => fireBot(run)
+  })
+  void searchLoop(run)
+}
+
+/** A human pairing auto-readies; the host starts after the found card. */
+const maybeAutoQuickStart = () => {
+  const run = qm
+  if (!run || !run.matched || run.started || matchKind.value !== 'quick') return
+  if (status.value !== 'lobby' && status.value !== 'ready') return
+  const mine = role.value === 'host' ? hostReady.value : guestReady.value
+  if (!mine && (role.value === 'host' || run.gotConfig)) {
+    const team = run.opts.teamFor(gameConfig.value)
+    if (team.length) setReadyImpl(team, [])
+  }
+  if (role.value === 'host' && hostReady.value && guestReady.value && !run.startTimer) {
+    run.startTimer = setTimeout(() => {
+      run.startTimer = null
+      if (qm !== run || run.started || matchKind.value !== 'quick') return
+      run.started = true
+      startMatchImpl()
+    }, BOT_FOUND_CARD_MS)
+  }
+}
+watch([status, hostReady, guestReady, gameConfig], maybeAutoQuickStart)
+
+// CrazyGames Room Data + invite button follow the lobby state (full build only).
+if (CG_MULTIPLAYER) {
+  watch([status, role, peerId, remotePeerId, matchKind], () => {
+    syncCrazyRoom(crazyRoomStateFor({
+      status: status.value,
+      role: role.value,
+      roomId: role.value === 'host' ? peerId.value : remotePeerId.value,
+      matchKind: matchKind.value,
+      hostName: role.value === 'host' ? (localProfile.name || null) : (joiningFriendName.value || null)
+    }))
+  }, { flush: 'sync' })
+}
+
 const usePVP = () => {
   const canShowPvP = computed(() =>
     isPvpEnabled && ((isSdkActive.value && isCrazyGamesFullRelease) || isDebug.value || window?.location.host === 'konstantinsteinmiller.github.io')
@@ -665,6 +1331,7 @@ const usePVP = () => {
       resetState()
       role.value = 'host'
       status.value = 'creating'
+      matchKind.value = 'private'
       gameConfig.value = config
 
       const id = generatePeerId()
@@ -676,6 +1343,13 @@ const usePVP = () => {
         pvpLog(`host peer.open: id=${openId}`)
         peerId.value = openId
         inviteLink.value = buildInviteLink(openId)
+        // CrazyGames: the platform's own invite link (opens the game on
+        // crazygames.com with this room's invite params).
+        if (CG_MULTIPLAYER) {
+          void crazyInviteLink(openId, localProfile.name || null).then((link) => {
+            if (link && peerId.value === openId) inviteLink.value = link
+          })
+        }
         status.value = 'waiting'
         startExpiryCountdown()
       })
@@ -725,13 +1399,25 @@ const usePVP = () => {
   }
 
   /** Guest: join a host's lobby by their peer ID */
-  const joinLobby = async (hostPeerId: string) => {
+  const joinLobby = async (hostPeerId: string, opts: { friendName?: string | null } = {}) => {
     try {
       pvpLog(`joinLobby: hostPeerId=${hostPeerId}`)
       resetState()
       role.value = 'guest'
       status.value = 'connecting'
+      matchKind.value = 'private'
+      joiningFriendName.value = opts.friendName ?? null
       remotePeerId.value = hostPeerId
+      // A host that never answers (gone, signaling down) must not leave the
+      // player on a spinner: fail with a way back.
+      joinWatchdog = setTimeout(() => {
+        joinWatchdog = null
+        if (status.value === 'connecting') {
+          status.value = 'error'
+          errorMessage.value = translate('pvp.joinFailed')
+          cleanup()
+        }
+      }, JOIN_WATCHDOG_MS)
 
       const myId = generatePeerId()
       pvpLog(`joinLobby: myPeerId=${myId}`)
@@ -749,7 +1435,7 @@ const usePVP = () => {
         console.error('[PvP] Peer error:', err)
         if (err.type === 'peer-unavailable') {
           status.value = 'error'
-          errorMessage.value = 'Lobby not found — invite may have expired.'
+          errorMessage.value = translate('pvp.joinFailed')
         } else {
           status.value = 'error'
           errorMessage.value = `Connection failed: ${err.type || err.message || 'unknown'}`
@@ -779,23 +1465,8 @@ const usePVP = () => {
     }
   }
 
-  /** Mark the local player ready with their team + skill loadout. Sanitised
-   *  by the same rules the receiver applies, and the SANITISED copy is what
-   *  this client keeps — so both clients hold identical builds. */
-  const setReady = (team: SpinnerConfig[], skills: SkillLoadout = []) => {
-    const clean = sanitizePvpLoadout(team, skills, gameConfig.value, skillSanitizer)
-    if (!clean) return
-    if (role.value === 'host') {
-      hostReady.value = true
-      hostTeam.value = clean.team
-      hostSkills.value = clean.skills
-    } else {
-      guestReady.value = true
-      guestTeam.value = clean.team
-      guestSkills.value = clean.skills
-    }
-    send({ type: 'player-ready', team: clean.team, skills: clean.skills, proto: PVP_PROTOCOL_VERSION })
-  }
+  /** Mark the local player ready (see `setReadyImpl`). */
+  const setReady = (team: SpinnerConfig[], skills: SkillLoadout = []) => setReadyImpl(team, skills)
 
   /** Unmark local player as ready */
   const setUnready = () => {
@@ -808,16 +1479,7 @@ const usePVP = () => {
   }
 
   /** Host only: start the match once both players are ready */
-  const startMatch = () => {
-    if (role.value !== 'host' || !bothReady.value) return
-    const firstTurn = Math.random() < 0.5 ? 'host' : 'guest' as const
-    // Seed the shared match RNG locally and broadcast so the guest's
-    // mulberry32 state matches byte-for-byte.
-    const seed = seedMatchRngRandom()
-    status.value = 'playing'
-    send({ type: 'game-start', firstTurn, seed })
-    onGameStart?.(firstTurn)
-  }
+  const startMatch = () => startMatchImpl()
 
   /** Send a launch command to the remote peer */
   const sendSurrender = () => {
@@ -860,13 +1522,32 @@ const usePVP = () => {
 
   /** Signal both players to return to lobby (keeps connection alive). */
   const returnToLobby = () => {
+    // A bot match has no lobby to return to: back to the start screen.
+    if (matchKind.value === 'bot') {
+      resetState()
+      return
+    }
     send({ type: 'return-to-lobby' })
     goBackToLobby()
   }
 
+  /** Random search ("Find opponent"); see `startQuickMatchImpl`. */
+  const startQuickMatch = (opts: QuickMatchOptions) => startQuickMatchImpl(opts)
+
+  /** Stop searching (or leave the found card) and go back to the start screen. */
+  const cancelQuickMatch = () => {
+    resetState()
+  }
+
+  /** The arena's bot-match start (the found card has shown). */
+  const registerBotMatchStart = (cb: ((bot: BotOpponent) => void) | null) => {
+    onBotMatchStart = cb
+  }
+
   /** Generate a WhatsApp share link */
   const whatsappShareLink = computed(() => {
-    if (!inviteLink.value) return ''
+    // Folded out of a CrazyGames build: invites go through the platform there.
+    if (import.meta.env.VITE_APP_CRAZY_WEB === 'true' || !inviteLink.value) return ''
     const text = encodeURIComponent(`Join my Tree Smashers PvP battle!\n${inviteLink.value}`)
     return `https://wa.me/?text=${text}`
   })
@@ -881,16 +1562,12 @@ const usePVP = () => {
     }
   }
 
-  /** Try to use CrazyGames SDK invite if available */
+  /** CrazyGames: copy this room's invite link. On the CG-full build
+   *  `inviteLink` already IS the platform's link (`game.inviteLink` with the
+   *  room's invite params); the friends list invites through the platform's
+   *  own Invite button, which the room sync shows while the room waits. */
   const sendCrazyGamesInvite = () => {
-    try {
-      const sdk = (window as any).CrazyGames?.SDK
-      if (sdk?.game?.inviteLink) {
-        sdk.game.inviteLink({ url: inviteLink.value })
-      }
-    } catch (e) {
-      console.warn('[PvP] CrazyGames invite failed:', e)
-    }
+    void copyInviteLink()
   }
 
   /** Check URL for incoming PvP invite on page load.
@@ -901,6 +1578,7 @@ const usePVP = () => {
     if (pendingInviteCode.value) {
       const code = pendingInviteCode.value
       pendingInviteCode.value = null
+      pendingInviteHost.value = null
       return code
     }
     // Fallback: re-check the hash in case it was set after module init
@@ -938,8 +1616,14 @@ const usePVP = () => {
     canShowPvP,
     bothReady,
     whatsappShareLink,
+    matchKind,
+    searchElapsedMs,
+    opponentProfile,
+    joiningFriendName,
+    botMatch,
 
     pendingInviteCode,
+    pendingInviteHost,
     // Actions
     createLobby,
     joinLobby,
@@ -955,7 +1639,10 @@ const usePVP = () => {
     sendCrazyGamesInvite,
     checkInviteFromUrl,
     returnToLobby,
-    leavePvP
+    leavePvP,
+    startQuickMatch,
+    cancelQuickMatch,
+    registerBotMatchStart
   }
 }
 

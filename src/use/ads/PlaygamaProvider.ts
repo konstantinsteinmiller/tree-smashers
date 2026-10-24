@@ -33,6 +33,7 @@ import type { AdProvider } from './types'
 export const createPlaygamaProvider = (): AdProvider => {
   const isReady = ref(false)
   const isAdsBlocked = ref(false)
+  const isRewardedSupported = ref(true)
 
   // Cache the plugin module so repeated method calls only pay one
   // dynamic-import round trip.
@@ -51,6 +52,7 @@ export const createPlaygamaProvider = (): AdProvider => {
     isRewardedReady: isReady,
     isInterstitialReady: isReady,
     isAdsBlocked,
+    isRewardedSupported,
     init: async () => {
       try {
         const m = await loadPlugin()
@@ -63,6 +65,9 @@ export const createPlaygamaProvider = (): AdProvider => {
         watch(m.isPlaygamaAdsBlocked, (v) => {
           isAdsBlocked.value = v
           if (v) isReady.value = false
+        }, { immediate: true })
+        watch(m.isPlaygamaRewardedSupported, (v) => {
+          isRewardedSupported.value = v
         }, { immediate: true })
       } catch (e) {
         console.warn('[ads/playgama] plugin init failed', e)

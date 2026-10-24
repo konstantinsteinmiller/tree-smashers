@@ -11,7 +11,7 @@
   )
     span(class="ui-label switch-label")
       slot
-    //- Track: lime with flat stripes when on, deep navy when off. The knob is
+    //- Track: lime with a two-tone facet when on, deep navy when off. The knob is
     //- a little 3D button (lip + drop) that springs across with an overshoot
     //- and shows a check / cross glyph, so the state reads without colour.
     div(
@@ -64,7 +64,7 @@ const toggle = () => {
   transition: background-color 0.15s ease
   &.is-on
     background-color: var(--color-leaf-500)
-    background-image: var(--ui-stripes)
+    background-image: var(--ui-facet)
     box-shadow: inset 0 4px 0 var(--color-leaf-700), 0 3px 0 var(--color-ink)
 
 .switch-knob

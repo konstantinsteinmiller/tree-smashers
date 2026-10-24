@@ -119,6 +119,8 @@ interface MatchSpec {
   terrain?: { layout: number; towers: boolean }
   /** Runs on each client right after its initGame (e.g. force proc streams). */
   afterInit?: (engine: Engine, role: 'host' | 'guest') => void
+  /** Every n-th launch of each client aims at the enemy tree (while it stands). */
+  towerEvery?: number
 }
 
 interface MatchResult {
@@ -175,7 +177,7 @@ const runMatch = async (spec: MatchSpec): Promise<MatchResult> => {
     const enemyTeam = c.role === 'host' ? spec.guest : spec.host
     const mySkills = c.role === 'host' ? spec.hostSkills : spec.guestSkills
     const theirSkills = c.role === 'host' ? spec.guestSkills : spec.hostSkills
-    c.engine.initGame(myTeam, enemyTeam, false, spec.arena, 0, false, undefined, {
+    c.engine.initGame(myTeam, enemyTeam, false, spec.arena, false, undefined, {
       enabled: true,
       myTurnFirst: spec.firstTurn === c.role,
       role: c.role
@@ -200,7 +202,8 @@ const runMatch = async (spec: MatchSpec): Promise<MatchResult> => {
     const theirs = e.npcBlades.value.filter(b => b.hp > 0)
     if (!mine.length || !theirs.length) return
     const b = mine[step.blade % mine.length]!
-    const t = theirs[step.target % theirs.length]!
+    const tree = spec.towerEvery ? e.towers().find(w => w.side === 'npc' && w.hp > 0) : undefined
+    const t: { x: number; y: number } = tree && c.launches % spec.towerEvery! === 0 ? tree : theirs[step.target % theirs.length]!
     const ang = Math.atan2(t.y - b.y, t.x - b.x) + step.offset
     const pull = step.pull * maxPull
     // Slingshot: drag AWAY from the direction of travel.
@@ -378,17 +381,17 @@ describe('PvP determinism — host and guest simulate the same match', () => {
     const { game, rng } = await loadClient()
     const e = game.useSpinnerGame()
     rng.seedMatchRng(0xabc)
-    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, {
+    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', false, undefined, {
       enabled: true,
       myTurnFirst: true,
       role: 'host'
     })
     expect(e.getMatchSeed()).toBe(0xabc)
     expect(rng.currentMatchSeed()).toBe(0xabc)
-    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', { seed: 555 })
+    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', false, undefined, null, 'circle', { seed: 555 })
     expect(e.getMatchSeed()).toBe(555)
     const first = rng.matchRng()
-    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined, null, 'circle', { seed: 555 })
+    e.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', false, undefined, null, 'circle', { seed: 555 })
     expect(rng.matchRng()).toBe(first)
     e.disposePhysics()
   })
@@ -489,13 +492,13 @@ describe('PvP determinism — skills on both sides', () => {
     const { game: gh, rng: rh } = await loadClient()
     const host = gh.useSpinnerGame()
     rh.seedMatchRng(0x77)
-    host.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', 0, false, undefined,
+    host.initGame(TWO_V_TWO[0], TWO_V_TWO[1], false, 'default', false, undefined,
       { enabled: true, myTurnFirst: true, role: 'host' }, 'circle',
       { skillLoadout: L('opening_salvo', 'guard_shell'), enemySkillLoadout: L('opening_salvo', 'mirror_plate', 4) })
     const { game: gg, rng: rg } = await loadClient()
     const guest = gg.useSpinnerGame()
     rg.seedMatchRng(0x77)
-    guest.initGame(TWO_V_TWO[1], TWO_V_TWO[0], false, 'default', 0, false, undefined,
+    guest.initGame(TWO_V_TWO[1], TWO_V_TWO[0], false, 'default', false, undefined,
       { enabled: true, myTurnFirst: false, role: 'guest' }, 'circle',
       { skillLoadout: L('opening_salvo', 'mirror_plate', 4), enemySkillLoadout: L('opening_salvo', 'guard_shell') })
     expect(host.phase.value).toBe('deciding_turn')
@@ -570,5 +573,58 @@ describe('PvP determinism — smasher discs, armour and the smasher-only effects
       firstTurn: 'guest',
       terrain: { layout: 5, towers: true }
     }, [...SEEDS, 99, 31337])
+  })
+
+  it('deep levels past the old cap (75 vs 50, tapered stats, both sides) stay in sync', async () => {
+    await expectSeedsInSync({
+      arena: 'default',
+      host: [smasherConfig(byDisc[0]!.id, 75), smasherConfig(pick(1), 50)],
+      guest: [smasherConfig(pick(2), 50), smasherConfig(armoured[0]!.id, 75)],
+      firstTurn: 'host',
+      terrain: { layout: 2, towers: true }
+    }, SEEDS)
+  })
+})
+
+describe('PvP determinism — team sizes (src/data/teamSize.ts)', () => {
+  const ids = SMASHER_LIST.map(s => s.id)
+  const team = (from: number, n: number) => ids.slice(from, from + n).map(id => smasherConfig(id, 12))
+
+  it('spiked trees (thorn recoil on every tree hit) stay in sync, both sides', async () => {
+    // PvP trees are bare by rule (only a boss's tree is spiked); force the
+    // cover on both trees so the recoil path — gameplay HP loss on the
+    // attacker — runs under lock-step on both peers.
+    const treeHp: number[] = []
+    let spiked = 0
+    for (const seed of SEEDS.slice(0, 3)) {
+      const r = await runMatch({
+        arena: 'default', host: team(0, 2), guest: team(2, 2), firstTurn: 'host', seed,
+        terrain: { layout: 4, towers: true }, towerEvery: 2,
+        afterInit: (e) => { for (const t of e.towers()) { (t as { spiked: boolean }).spiked = true; spiked++ } }
+      })
+      expectInSync(r)
+      for (const t of r.host.engine.towers()) treeHp.push(t.hp / t.maxHp)
+    }
+    expect(spiked).toBe(12)
+    // The trees were actually hit (so the thorns pricked someone).
+    expect(treeHp.some(f => f < 1)).toBe(true)
+  })
+
+  it('3v3 smashers on terrain with towers stay in sync (size ×0.75 both sides)', async () => {
+    await expectSeedsInSync({
+      arena: 'default', host: team(0, 3), guest: team(3, 3), firstTurn: 'host', terrain: { layout: 7, towers: true }
+    }, SEEDS)
+  })
+
+  it('1v1 smashers (solo boost both sides) stay in sync', async () => {
+    await expectSeedsInSync({
+      arena: 'default', host: team(6, 1), guest: team(9, 1), firstTurn: 'guest', terrain: { layout: 3, towers: true }
+    }, SEEDS)
+  })
+
+  it('uneven sides (1 vs 3) still agree: each side sized and boosted by its own count', async () => {
+    await expectSeedsInSync({
+      arena: 'forest', host: team(12, 1), guest: team(15, 3), firstTurn: 'host'
+    }, SEEDS.slice(0, 2))
   })
 })
