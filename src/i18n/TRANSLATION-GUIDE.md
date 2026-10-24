@@ -94,7 +94,7 @@ On this machine wrap test / screenshot runs in the worker budget:
 ```ts
 // src/i18n/locales/it.ts
 export default {
-  'stages': { 'stage_1': 'Arena delle reclute', … },   // same tree as en.ts
+  'stages': { 'stage_1': 'Prato soleggiato', … },   // same tree as en.ts
   'spinner': { 'youWin': 'HAI VINTO!', … },
   …
   'sfc': {                                              // component copy
@@ -159,8 +159,11 @@ What the terms mean in the game:
   word for a spinning top / battle top, or the loanword players know from
   Beyblade-style games. `Blade` in the tabs ("Blade 1") means one spinner.
 - **Stage** — one of 100 campaign levels. Every 5th is a **boss** stage; the
-  `stages.*` values are arena/boss names — translate them as evocative names,
-  not literally word by word. **Arena** — the round battlefield; `arenas.*` are
+  `stages.*` values are arena/boss names in a cosy plush-forest tone (a meadow,
+  a snowy glade, a toy-box corner; bosses are playful-menacing plush animals,
+  "The Masked Raccoon") — translate them as short, playful names, not
+  literally word by word, and keep them as short as the stage badge allows
+  (≈ 22 characters). **Arena** — the round battlefield; `arenas.*` are
   arena types (Lava, Ice, Forest, Thunder, Shock).
 - **Stage-101+ bosses** — `stages.boss_*` are encounter names shown on the
   boss intro card and the stage badge; the game appends a Roman numeral on a
