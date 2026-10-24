@@ -8,20 +8,13 @@ export default {
   // The developer team every game of this studio lives under (the same slug as
   // the sibling repos' configs).
   team: 'hyperg8',
-  // NOT KNOWN YET, and deliberately not guessed. Until Battlecross exists in
-  // P4D and its uuid is pasted here (or passed as `--game-id <uuid>`), every mode
-  // that talks to P4D refuses to start — see lib/target.mjs. This repo was
-  // copied from Mega Droid (and that one from Survivalist) and this field used
-  // to hold their ids; an upload with one of them would have landed in THAT
-  // game's Versions list, so both are refused outright even if pasted back in.
-  // `--gates-only` (offline) needs no id.
-  gameId: '5f6415aa-a3f3-461d-9d5a-93edf2b16b2e',
-  gameName: 'Battlecross',
+  gameId: 'fc0f6448-06aa-4897-9a98-aa96fdc41026',
+  gameName: 'Tree Smashers',
 
   build: 'pnpm build:poki',
   dist: 'dist',
   // What `build:poki` writes (its tail is `node tools/poki-deploy/pack.mjs`).
-  zip: 'dist/battlecross-poki.zip',
+  zip: 'dist/tree-smashers-poki.zip',
 
   /** Pack `dist` into `zip` with the pipeline's own zip writer instead of
    *  trusting a shell `tar -a -cf`, which silently produces a TAR named `.zip`
@@ -33,10 +26,10 @@ export default {
 
   /** What the version is called in P4D. Keep the version number in it — it is
    *  the only thing tying a live build back to a commit. */
-  versionName: version => `Battlecross ${version}`,
+  versionName: version => `Tree Smashers ${version}`,
 
   /** Extra hosts the gates and the runtime sweep should accept. Anything here
-   *  needs a matching per-URL approval in P4D → Settings → CSP. Battlecross
+   *  needs a matching per-URL approval in P4D → Settings → CSP. Tree Smashers
    *  makes no external requests on Poki (the leaderboard is baked), so: none. */
   allowHosts: [],
 
@@ -68,7 +61,7 @@ export default {
    *  "not applicable" or a real question — a game WITH usernames must not have
    *  its profanity-filter step reported as n/a.
    *
-   *  Battlecross has neither on Poki: there is no name-entry UI anywhere
+   *  Tree Smashers has neither on Poki: there is no name-entry UI anywhere
    *  (`setPlayerName` has no caller), and with `VITE_LEADERBOARD_URL` empty the
    *  Poki build shows only a rank badge — the top-100 list, the one place other
    *  players' names appear, is compiled out (`leaderboardListEnabled` is false)
@@ -80,7 +73,7 @@ export default {
 
   /** Expressions evaluated INSIDE the game's iframe during the QA pass. */
   hooks: {
-    /** A snapshot that must survive a reload. Battlecross keeps ALL of its
+    /** A snapshot that must survive a reload. Tree Smashers keeps ALL of its
      *  state in ONE localStorage blob, `bcross_state`, keyed by `bc_*`
      *  fields (src/keys.ts). Only DURABLE progress is read — counters that
      *  change on a visit's result, never on a mere reload — so a timestamp
@@ -108,7 +101,7 @@ export default {
       } catch (e) { return null }
     })()`,
 
-    /** Open the game's rewarded-ad flow. Battlecross has no rewarded ads at
+    /** Open the game's rewarded-ad flow. Tree Smashers has no rewarded ads at
      *  all (interstitials only, after a result screen) — left null, and the
      *  step is reported as not applicable rather than silently ticked. */
     triggerRewarded: null,

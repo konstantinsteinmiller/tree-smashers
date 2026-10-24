@@ -280,6 +280,11 @@ const metaFor = (item, ver) => {
     const v = ver === 'old' ? m.oldMomentary : m.newMomentary
     return `${num(v)} LUFS max · preview +${(m.previewGainDb ?? 0).toFixed(1)} dB on both${ver === 'new' ? ` · ${num(m.diffDb)} dB vs old` : ''}`
   }
+  if (m.variants && ver === 'new') {
+    const v = m.variants.filter((x) => !x.id.endsWith('heavy'))
+    const h = m.variants.find((x) => x.id.endsWith('heavy'))
+    return `${v.length} variants ${num(Math.max(...v.map((x) => x.momentaryMax)))} LUFS max each · heavy layer ${num(h?.momentaryMax)} · hit + heavy ${num(m.combined?.momentaryMax)} LUFS (preview turned down so the stacked layers can't clip) · TP ≤ ${num(Math.max(...m.variants.map((x) => x.truePeak)))} dB · ${Math.round(m.bytes / 1024)} KB total`
+  }
   if (ver === 'old') {
     const o = m.old
     if (!o) return ''

@@ -2,7 +2,11 @@
 /**
  * Painted terrain features → runtime atlas.
  *
- *   node tools/terrain-sheets/slice-painted.mjs [--cell 320] [--q 0.8]
+ *   node tools/terrain-sheets/slice-painted.mjs [--cell 320] [--q 0.8] [--set features|obstacles-a|obstacles-b]
+ *
+ * --set obstacles-a|-b: art-sheets/painted/terrain-<set>.png against
+ * art-sheets/terrain/<set>.png → public/images/terrain/<set>_<3c>x<3c>.webp +
+ * src/use/paintedObstacles{A,B}.ts (cells in arenaThemes OBSTACLE_LOOKS_A/_B order).
  *
  * In:  art-sheets/painted/terrain-features.png (3 × 3, any size, magenta ground)
  *      art-sheets/terrain/features.png (export.mjs: the real draw functions,
@@ -13,7 +17,7 @@
  * Each cell's solid bbox is registered onto the reference cell's (uniform scale
  * = mean of the width and height ratios, bbox centre → centre). A cell that is
  * empty, off by more than 0.6–1.6×, or whose width and height ratios disagree
- * by more than 1.35× REFUSES the sheet; the painting moves to painted/stale/.
+ * by more than --max-aspect (default 1.35)× REFUSES the sheet; the painting moves to painted/stale/.
  * 320 px cells → a feature radius of 115 px: the arena bakes a feature of radius
  * ≤ 25 units at ≤ ~4.6 device px / unit (1080p desktop at 2×), and falls back to the
  * vector drawing above the sprite's own resolution.
@@ -33,9 +37,11 @@ const CELL = +opt('cell', 320)
 const Q = +opt('q', 0.8)
 const KINDS = ['stump', 'rock', 'pond', 'mushroom', 'mud', 'deepHole', 'honey', 'booster', 'leafArrow']
 const R_FRAC = 0.36
+const SET = opt('set', 'features')
+if (!['features', 'obstacles-a', 'obstacles-b'].includes(SET)) { console.error(`unknown --set ${SET}`); process.exit(2) }
 const paintedDir = join(ROOT, 'art-sheets', 'painted')
-const inPath = join(paintedDir, 'terrain-features.png')
-const refPath = join(ROOT, 'art-sheets', 'terrain', 'features.png')
+const inPath = join(paintedDir, `terrain-${SET}.png`)
+const refPath = join(ROOT, 'art-sheets', 'terrain', `${SET}.png`)
 if (!existsSync(inPath)) { console.error(`missing ${inPath}`); process.exit(2) }
 const OUT_DIR = join(ROOT, 'public', 'images', 'terrain')
 const dataUrl = p => `data:image/png;base64,${readFileSync(p).toString('base64')}`
@@ -44,7 +50,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH 
 let res
 try {
   const page = await browser.newPage()
-  res = await page.evaluate(async ([paintUrl, refUrl, CELL, Q]) => {
+  res = await page.evaluate(async ([paintUrl, refUrl, CELL, Q, MAXA]) => {
     const load = async u => { const i = new Image(); i.src = u; await i.decode(); return i }
     const grab = img => {
       const c = new OffscreenCanvas(img.width, img.height)
@@ -118,7 +124,7 @@ try {
       const rw = ((rb.r - rb.l) / RC) / ((pb.r - pb.l) / pcw)
       const rh = ((rb.b - rb.t) / RC) / ((pb.b - pb.t) / pch)
       if (rw < 0.6 || rw > 1.6 || rh < 0.6 || rh > 1.6) errors.push(`cell ${c}: size off by x${rw.toFixed(2)}/x${rh.toFixed(2)}`)
-      if (Math.max(rw, rh) / Math.min(rw, rh) > 1.35) errors.push(`cell ${c}: shape disagrees (w x${rw.toFixed(2)} vs h x${rh.toFixed(2)})`)
+      if (Math.max(rw, rh) / Math.min(rw, rh) > MAXA) errors.push(`cell ${c}: shape disagrees (w x${rw.toFixed(2)} vs h x${rh.toFixed(2)})`)
       const kk = CELL / RC
       const s = (((rb.r - rb.l) + (rb.b - rb.t)) * kk) / ((pb.r - pb.l) + (pb.b - pb.t))
       const dcx = col * CELL + ((rb.l + rb.r) / 2) * kk
@@ -151,27 +157,37 @@ try {
       preview: await toB64(await pv.convertToBlob({ type: 'image/png' })),
       report
     }
-  }, [dataUrl(inPath), dataUrl(refPath), CELL, Q])
+  }, [dataUrl(inPath), dataUrl(refPath), CELL, Q, +opt('max-aspect', 1.35)])
 } finally {
   await browser.close()
 }
 
 if (res.errors) {
-  console.error('REFUSED terrain features:\n  ' + res.errors.join('\n  '))
+  console.error(`REFUSED terrain ${SET}:\n  ` + res.errors.join('\n  '))
   mkdirSync(join(paintedDir, 'stale'), { recursive: true })
-  renameSync(inPath, join(paintedDir, 'stale', `terrain-features.${Date.now()}.png`))
+  renameSync(inPath, join(paintedDir, 'stale', `terrain-${SET}.${Date.now()}.png`))
   console.error('  → moved to art-sheets/painted/stale/ (re-paint it)')
   process.exit(1)
 }
 mkdirSync(OUT_DIR, { recursive: true })
-const file = `features_${CELL * 3}x${CELL * 3}.webp`
-for (const f of readdirSync(OUT_DIR)) if (f.startsWith('features_') && f !== file) unlinkSync(join(OUT_DIR, f))
+const file = `${SET}_${CELL * 3}x${CELL * 3}.webp`
+for (const f of readdirSync(OUT_DIR)) if (f.startsWith(`${SET}_`) && f !== file) unlinkSync(join(OUT_DIR, f))
 const buf = Buffer.from(res.webp, 'base64')
 writeFileSync(join(OUT_DIR, file), buf)
-writeFileSync(join(ROOT, 'art-sheets', 'terrain', 'features.sliced-preview.png'), Buffer.from(res.preview, 'base64'))
+writeFileSync(join(ROOT, 'art-sheets', 'terrain', `${SET}.sliced-preview.png`), Buffer.from(res.preview, 'base64'))
 console.error(`ratios ${res.report.join(' ')}`)
 console.log(`${file} ${(buf.length / 1024).toFixed(1)} kB`)
 const v = createHash('sha1').update(buf).digest('hex').slice(0, 8)
+if (SET !== 'features') {
+  const AB = SET === 'obstacles-a' ? 'A' : 'B'
+  writeFileSync(join(ROOT, 'src', 'use', `paintedObstacles${AB}.ts`), `// GENERATED by tools/terrain-sheets/slice-painted.mjs --set ${SET} — do not edit by hand.
+// Painted themed-obstacle atlas in public/images/terrain/: 3 × 3 cells in
+// arenaThemes OBSTACLE_LOOKS_${AB} order, each look centred with its radius = rFrac of a cell.
+export const PAINTED_OBSTACLES_${AB}: { file: string, cell: number, rFrac: number, v: string } | null =
+  { file: ${JSON.stringify(file)}, cell: ${CELL}, rFrac: ${R_FRAC}, v: '${v}' }
+`)
+  process.exit(0)
+}
 writeFileSync(join(ROOT, 'src', 'use', 'paintedTerrain.ts'), `// GENERATED by tools/terrain-sheets/slice-painted.mjs — do not edit by hand.
 // Painted terrain feature atlas in public/images/terrain/: 3 × 3 cells in
 // PAINTED_TERRAIN_KINDS order, each feature centred with its radius = rFrac of

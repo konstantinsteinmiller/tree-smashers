@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 /**
- * Painted arena props → one runtime atlas.
+ * Painted arena props → one runtime atlas PER ARENA THEME.
  *
  *   node tools/arena-props/pack.mjs [--ppu 3.2] [--q 0.82]
  *
  * In:  art-sheets/painted/props-<sheet>.png for every sheet in SHEETS that has
  *      been painted (3 × 3 objects on flat magenta, any size; prompts in
- *      art-sheets/props/<sheet>.prompt.txt — TEXT-ONLY, no reference).
- * Out: public/images/props/props_<w>x<h>.webp — every sprite keyed to alpha,
- *      trimmed, shelf-packed;
+ *      art-sheets/props/<sheet>.prompt.txt — TEXT-ONLY, no reference, written
+ *      by tools/arena-themes/prompts.mjs).
+ * Out: public/images/props/<theme>_<w>x<h>.webp — every sprite of that theme
+ *      (arenaProps.PROP_KINDS[].theme — a sheet may feed two themes, e.g.
+ *      forest-a's fir goes to woodland, its oak to meadow) keyed to alpha,
+ *      trimmed, shelf-packed; a match loads only its own theme's atlas;
  *      src/use/paintedProps.ts — generated registry (rect, anchor, footprint);
- *      art-sheets/props/atlas.preview.png — the atlas on the backdrop green.
+ *      art-sheets/props/atlas-<theme>.preview.png — each atlas on its ground.
+ * A refused sheet (an empty cell) is moved to art-sheets/painted/stale/ and
+ * left out; the others still pack (exit 1 so a queue knows to re-paint it).
  *
  * Key + despill: the smasher slicer's (tools/smasher-sheets/slice-painted.mjs):
  * the ground colour is measured on the frame, alpha ramps on the distance to
@@ -49,7 +54,13 @@ const Q = +opt('q', 0.82)
 export const SHEETS = {
   'forest-a': ['oak', 'fir', 'blossom', 'boulder', 'boulderPair', 'stones', 'bush', 'flowers', 'fern'],
   'forest-b': ['log', 'logPile', 'beehive', 'pond', 'pondReeds', 'graveHeart', 'gravePaw', 'sunflowers', 'honeyPot'],
-  'bedroom-a': ['blocks', 'bricks', 'teddy', 'bunny', 'ball', 'train', 'rings', 'duck', 'crayons']
+  'bedroom-a': ['blocks', 'bricks', 'teddy', 'bunny', 'ball', 'train', 'rings', 'duck', 'crayons'],
+  'bedroom-b': ['rockingHorse', 'pullDuck', 'toyCar', 'toyChest', 'books', 'xylophone', 'spinningTop', 'drum', 'plushElephant'],
+  'rocky-a': ['greyBoulder', 'boulderCluster', 'rockSpire', 'sandSlab', 'rift', 'riftSmall', 'dryTuft', 'featherGrass', 'pebbles'],
+  'snowy-a': ['snowFir', 'snowFirPair', 'snowBoulder', 'iceCrystals', 'snowDrift', 'snowman', 'snowStones', 'frozenPond', 'hollyBush'],
+  'volcanic-a': ['basaltColumns', 'lavaRock', 'lavaStones', 'charredStump', 'deadTree', 'ashTuft', 'cooledFlow', 'ashCrack', 'obsidian'],
+  'ruins-a': ['brokenColumn', 'fallenColumn', 'standingStone', 'ruinWall', 'stoneArch', 'rubble', 'ruinsRift', 'heathBush', 'runeStone'],
+  'woodland-a': ['spruce', 'birch', 'mossyStump', 'toadstools', 'mushroomRing', 'hollowLog', 'mossBoulder', 'blueberry', 'leafPile']
 }
 
 // The catalogue's largest footprint per kind (TS → bundled with esbuild).
@@ -57,14 +68,17 @@ const esbuild = (() => {
   try { return require('esbuild') } catch { return createRequire(require.resolve('tsx'))('esbuild') }
 })()
 const built = await esbuild.build({
-  stdin: { contents: `export { PROP_KINDS } from '@/use/arenaProps'`, resolveDir: ROOT, loader: 'ts' },
+  stdin: { contents: `export { PROP_KINDS } from '@/use/arenaProps'\nexport { THEME_LOOK } from '@/use/arenaThemes'`, resolveDir: ROOT, loader: 'ts' },
   bundle: true, write: false, format: 'esm', platform: 'node', alias: { '@': join(ROOT, 'src') }, logLevel: 'error'
 })
 const tmpMod = join(tmpdir(), `arena-props-${process.pid}.mjs`)
 writeFileSync(tmpMod, built.outputFiles[0].text)
-const { PROP_KINDS } = await import(pathToFileURL(tmpMod).href)
+const { PROP_KINDS, THEME_LOOK } = await import(pathToFileURL(tmpMod).href)
 unlinkSync(tmpMod)
 const maxR = Object.fromEntries(PROP_KINDS.map(k => [k.id, k.r[1]]))
+const themeOf = Object.fromEntries(PROP_KINDS.map(k => [k.id, k.theme]))
+const grounds = Object.fromEntries(Object.entries(THEME_LOOK).map(([t, l]) => [t, l.backdrop]))
+for (const [s, ids] of Object.entries(SHEETS)) for (const id of ids) if (!themeOf[id]) { console.error(`${s}: ${id} is not in PROP_KINDS`); process.exit(2) }
 
 const paintedDir = join(ROOT, 'art-sheets', 'painted')
 const sheets = Object.keys(SHEETS).filter(s => existsSync(join(paintedDir, `props-${s}.png`)))
@@ -75,7 +89,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH 
 let res
 try {
   const page = await browser.newPage()
-  res = await page.evaluate(async ([inputs, PPU, Q]) => {
+  res = await page.evaluate(async ([inputs, PPU, Q, themeOf, grounds]) => {
     const load = async u => { const i = new Image(); i.src = u; await i.decode(); return i }
     const keyPainting = (P) => {
       const c = new OffscreenCanvas(P.width, P.height)
@@ -85,13 +99,28 @@ try {
       const d = pd.data
       const W = P.width
       const H = P.height
-      const edge = []
-      for (let x = 0; x < W; x += 4) for (const y of [0, 1, H - 2, H - 1]) { const i = (y * W + x) * 4; edge.push([d[i], d[i + 1], d[i + 2]]) }
-      const med = k => edge.map(e => e[k]).sort((p, q) => p - q)[edge.length >> 1]
-      const G = [med(0), med(1), med(2)]
+      // Ground = the most common colour (16-level buckets, averaged) — the
+      // canvas edge is not trusted: Gemini sometimes frames the sheet or
+      // draws its cell grid in dark magenta despite the prompt.
+      const buckets = new Map()
+      for (let i = 0; i < d.length; i += 16) {
+        const key = (d[i] >> 4) << 8 | (d[i + 1] >> 4) << 4 | (d[i + 2] >> 4)
+        const b = buckets.get(key) ?? [0, 0, 0, 0]
+        b[0]++; b[1] += d[i]; b[2] += d[i + 1]; b[3] += d[i + 2]
+        buckets.set(key, b)
+      }
+      let best = [0, 255, 0, 255]
+      for (const b of buckets.values()) if (b[0] > best[0]) best = b
+      const G = [best[1] / best[0], best[2] / best[0], best[3] / best[0]].map(Math.round)
       for (let i = 0; i < d.length; i += 4) {
         const dist = Math.hypot(d[i] - G[0], d[i + 1] - G[1], d[i + 2] - G[2])
         d[i + 3] = Math.round(Math.max(0, Math.min(1, (dist - 45) / 75)) * 255)
+        // Magenta family at any brightness (grid lines, dark frame, shade of
+        // the key): green far below an even red + blue. No prop colour is
+        // magenta / purple (the prompts forbid it), so this is the ground.
+        const lo = Math.min(d[i], d[i + 2])
+        const hi = Math.max(d[i], d[i + 2])
+        if (lo > 60 && d[i + 1] < lo * 0.45 && hi - lo < hi * 0.25) d[i + 3] = 0
       }
       const near = new Uint8Array(W * H)
       for (let y = 0; y < H; y++) {
@@ -120,7 +149,7 @@ try {
       const stack = []
       for (let p0 = 0; p0 < W * H; p0++) {
         if (lab[p0] !== -1 || d[p0 * 4 + 3] <= 140) continue
-        const b = { l: 1e9, t: 1e9, r: -1, b: -1, n: 0, sx: 0, sy: 0 }
+        const b = { l: 1e9, t: 1e9, r: -1, b: -1, n: 0, sx: 0, sy: 0, lum: 0, light: 0 }
         lab[p0] = out.length
         stack.push(p0)
         while (stack.length) {
@@ -128,6 +157,8 @@ try {
           const x = p % W
           const y = (p - x) / W
           b.n++; b.sx += x; b.sy += y
+          const i4 = p * 4
+          if (d[i4] > 215 && d[i4 + 1] > 215 && d[i4 + 2] > 215) b.light++
           if (x < b.l) b.l = x
           if (x > b.r) b.r = x
           if (y < b.t) b.t = y
@@ -138,12 +169,20 @@ try {
         }
         out.push(b)
       }
-      return out.filter(b => b.n >= 40)
+      // Caption glyphs: Gemini sometimes letters each object ("SPRUCE") despite
+      // the prompt. A caption (a word or a glyph) is a short blob, almost all white —
+      // no prop is (a snowman / snow drift is far taller and carries its
+      // outline and shading in the same blob).
+      const glyph = b => b.light > b.n * 0.4 && (b.b - b.t) < H * 0.05
+      dropped += out.filter(b => b.n >= 40 && glyph(b)).length
+      return out.filter(b => b.n >= 40 && !glyph(b))
     }
     const sprites = []
     const errors = []
     const report = []
+    let dropped = 0
     for (const { sheet, url, names, maxR } of inputs) {
+      dropped = 0
       const K = keyPainting(await load(url))
       const cells = names.map(() => null)
       for (const b of blobs(K.d, K.W, K.H)) {
@@ -153,7 +192,7 @@ try {
         const c = cells[k]
         cells[k] = c ? { l: Math.min(c.l, b.l), t: Math.min(c.t, b.t), r: Math.max(c.r, b.r), b: Math.max(c.b, b.b) } : { l: b.l, t: b.t, r: b.r, b: b.b }
       }
-      report.push(`${sheet}: ground rgb(${K.G.join(',')})`)
+      report.push(`${sheet}: ground rgb(${K.G.join(',')})${dropped ? `, ${dropped} caption glyphs dropped` : ''}`)
       names.forEach((name, k) => {
         const c = cells[k]
         if (!c) { errors.push(`${sheet} cell ${k} (${name}): empty`); return }
@@ -173,90 +212,110 @@ try {
         }
         foot += 1
         const s = Math.min(1, (PPU * maxR[name]) / foot)
-        sprites.push({ name, src: K.canvas, l, t, w, h, s, footR: foot * s, painted: Math.round(foot) })
+        sprites.push({ sheet, name, src: K.canvas, l, t, w, h, s, footR: foot * s, painted: Math.round(foot) })
       })
     }
-    if (errors.length) return { errors }
-    // shelf pack, tallest first
-    const W = 1024
-    const PAD = 2
-    const items = sprites.map(sp => ({ ...sp, dw: Math.ceil(sp.w * sp.s), dh: Math.ceil(sp.h * sp.s) }))
-    items.sort((p, q) => q.dh - p.dh)
-    let x = 0, y = 0, rowH = 0
-    for (const it of items) {
-      if (x + it.dw + PAD > W) { x = 0; y += rowH + PAD; rowH = 0 }
-      it.ax = x; it.ay = y
-      x += it.dw + PAD
-      rowH = Math.max(rowH, it.dh)
-    }
-    const H = Math.ceil((y + rowH) / 4) * 4
-    const out = new OffscreenCanvas(W, H)
-    const ox = out.getContext('2d')
-    ox.imageSmoothingQuality = 'high'
-    const meta = {}
-    for (const it of items) {
-      ox.drawImage(it.src, it.l, it.t, it.w, it.h, it.ax, it.ay, it.dw, it.dh)
-      meta[it.name] = {
-        x: it.ax, y: it.ay, w: it.dw, h: it.dh,
-        cx: +(it.ax + it.w * it.s / 2).toFixed(2), cy: +(it.ay + it.h * it.s / 2).toFixed(2),
-        footR: +it.footR.toFixed(2)
-      }
-      report.push(`${it.name.padEnd(12)} painted footR ${it.painted}px → ${it.footR.toFixed(0)}px (x${it.s.toFixed(2)}), ${it.dw}x${it.dh}`)
-    }
+    const refused = new Set(errors.map(e => e.split(' ')[0]))
     const toB64 = async blob => {
       const buf = new Uint8Array(await blob.arrayBuffer())
       let bin = ''
       for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
       return btoa(bin)
     }
-    const pv = new OffscreenCanvas(W, H)
-    const px = pv.getContext('2d')
-    px.fillStyle = '#4f7d45'
-    px.fillRect(0, 0, W, H)
-    px.drawImage(out, 0, 0)
-    return {
-      webp: await toB64(await out.convertToBlob({ type: 'image/webp', quality: Q })),
-      preview: await toB64(await pv.convertToBlob({ type: 'image/png' })),
-      meta, W, H, report
+    const atlases = {}
+    const byTheme = {}
+    for (const sp of sprites) if (!refused.has(sp.sheet)) (byTheme[themeOf[sp.name]] ??= []).push(sp)
+    for (const [theme, list] of Object.entries(byTheme)) {
+      // shelf pack, tallest first
+      const W = 1024
+      const PAD = 2
+      const items = list.map(sp => ({ ...sp, dw: Math.ceil(sp.w * sp.s), dh: Math.ceil(sp.h * sp.s) }))
+      items.sort((p, q) => q.dh - p.dh)
+      let x = 0, y = 0, rowH = 0
+      for (const it of items) {
+        if (x + it.dw + PAD > W) { x = 0; y += rowH + PAD; rowH = 0 }
+        it.ax = x; it.ay = y
+        x += it.dw + PAD
+        rowH = Math.max(rowH, it.dh)
+      }
+      const H = Math.ceil((y + rowH) / 4) * 4
+      const out = new OffscreenCanvas(W, H)
+      const ox = out.getContext('2d')
+      ox.imageSmoothingQuality = 'high'
+      const meta = {}
+      for (const it of items) {
+        ox.drawImage(it.src, it.l, it.t, it.w, it.h, it.ax, it.ay, it.dw, it.dh)
+        meta[it.name] = {
+          x: it.ax, y: it.ay, w: it.dw, h: it.dh,
+          cx: +(it.ax + it.w * it.s / 2).toFixed(2), cy: +(it.ay + it.h * it.s / 2).toFixed(2),
+          footR: +it.footR.toFixed(2)
+        }
+        report.push(`${theme.padEnd(9)} ${it.name.padEnd(14)} painted footR ${it.painted}px → ${it.footR.toFixed(0)}px (x${it.s.toFixed(2)}), ${it.dw}x${it.dh}`)
+      }
+      const pv = new OffscreenCanvas(W, H)
+      const px = pv.getContext('2d')
+      px.fillStyle = grounds[theme] ?? '#4f7d45'
+      px.fillRect(0, 0, W, H)
+      px.drawImage(out, 0, 0)
+      atlases[theme] = {
+        webp: await toB64(await out.convertToBlob({ type: 'image/webp', quality: Q })),
+        preview: await toB64(await pv.convertToBlob({ type: 'image/png' })),
+        meta, W, H
+      }
     }
-  }, [sheets.map(s => ({ sheet: s, url: dataUrl(join(paintedDir, `props-${s}.png`)), names: SHEETS[s], maxR })), PPU, Q])
+    return { errors, refused: [...refused], atlases, report }
+  }, [sheets.map(s => ({ sheet: s, url: dataUrl(join(paintedDir, `props-${s}.png`)), names: SHEETS[s], maxR })), PPU, Q, themeOf, grounds])
 } finally {
   await browser.close()
 }
 
-if (res.errors) {
+let exit = 0
+if (res.errors.length) {
   console.error('REFUSED:\n  ' + res.errors.join('\n  '))
   mkdirSync(join(paintedDir, 'stale'), { recursive: true })
-  for (const e of res.errors) {
-    const s = e.split(' ')[0]
-    const p = join(paintedDir, `props-${s}.png`)
-    if (existsSync(p)) renameSync(p, join(paintedDir, 'stale', `props-${s}.${Date.now()}.png`))
+  for (const sh of res.refused) {
+    const p = join(paintedDir, `props-${sh}.png`)
+    if (existsSync(p)) renameSync(p, join(paintedDir, 'stale', `props-${sh}.${Date.now()}.png`))
   }
-  console.error('  → moved to art-sheets/painted/stale/ (re-paint it)')
-  process.exit(1)
+  console.error('  → moved to art-sheets/painted/stale/ (re-paint it); packing the rest')
+  exit = 1
 }
 const OUT_DIR = join(ROOT, 'public', 'images', 'props')
 mkdirSync(OUT_DIR, { recursive: true })
-const file = `props_${res.W}x${res.H}.webp`
-for (const f of readdirSync(OUT_DIR)) if (f.startsWith('props_') && f !== file) unlinkSync(join(OUT_DIR, f))
-const buf = Buffer.from(res.webp, 'base64')
-writeFileSync(join(OUT_DIR, file), buf)
-writeFileSync(join(ROOT, 'art-sheets', 'props', 'atlas.preview.png'), Buffer.from(res.preview, 'base64'))
-console.error(res.report.join('\n'))
-console.log(`${file} ${(buf.length / 1024).toFixed(1)} kB, ${Object.keys(res.meta).length} sprites from ${sheets.join(', ')}`)
-const v = createHash('sha1').update(buf).digest('hex').slice(0, 8)
-const rows = Object.keys(res.meta).sort().map(k => `    ${k}: ${JSON.stringify(res.meta[k]).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', ')}`)
-writeFileSync(join(ROOT, 'src', 'use', 'paintedProps.ts'), `// GENERATED by tools/arena-props/pack.mjs — do not edit by hand.
-// Painted arena props (decor around the clearing) in public/images/props/.
-// Each sprite: its rect in the atlas (x, y, w, h), its anchor (cx, cy = the
-// centre of its footprint circle) and footR = the radius of the circle around
-// the anchor that holds every visible pixel (alpha > 0.1), all in atlas px.
-export interface PaintedPropSprite { x: number, y: number, w: number, h: number, cx: number, cy: number, footR: number }
-export const PAINTED_PROPS: { file: string, v: string, sprites: Readonly<Record<string, PaintedPropSprite>> } | null = {
-  file: ${JSON.stringify(file)},
-  v: '${v}',
-  sprites: {
+const files = new Set()
+const entries = []
+for (const [theme, at] of Object.entries(res.atlases).sort()) {
+  const file = `${theme}_${at.W}x${at.H}.webp`
+  files.add(file)
+  const buf = Buffer.from(at.webp, 'base64')
+  writeFileSync(join(OUT_DIR, file), buf)
+  writeFileSync(join(ROOT, 'art-sheets', 'props', `atlas-${theme}.preview.png`), Buffer.from(at.preview, 'base64'))
+  console.log(`${file} ${(buf.length / 1024).toFixed(1)} kB, ${Object.keys(at.meta).length} sprites`)
+  const v = createHash('sha1').update(buf).digest('hex').slice(0, 8)
+  const rows = Object.keys(at.meta).sort().map(k => `      ${k}: ${JSON.stringify(at.meta[k]).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', ')}`)
+  entries.push(`  ${theme}: {
+    file: ${JSON.stringify(file)},
+    v: '${v}',
+    sprites: {
 ${rows.join(',\n')}
-  }
+    }
+  }`)
+}
+for (const f of readdirSync(OUT_DIR)) if (f.endsWith('.webp') && !files.has(f)) unlinkSync(join(OUT_DIR, f))
+const old = join(ROOT, 'art-sheets', 'props', 'atlas.preview.png')
+if (existsSync(old)) unlinkSync(old)
+console.error(res.report.join('\n'))
+writeFileSync(join(ROOT, 'src', 'use', 'paintedProps.ts'), `// GENERATED by tools/arena-props/pack.mjs — do not edit by hand.
+// Painted arena props (decor around the clearing) in public/images/props/,
+// one atlas per arena theme (a match loads only its own). Each sprite: its
+// rect in the atlas (x, y, w, h), its anchor (cx, cy = the centre of its
+// footprint circle) and footR = the radius of the circle around the anchor
+// that holds every visible pixel (alpha > 0.1), all in atlas px.
+import type { ArenaTheme } from '@/use/arenaThemes'
+export interface PaintedPropSprite { x: number, y: number, w: number, h: number, cx: number, cy: number, footR: number }
+export interface PaintedPropAtlas { file: string, v: string, sprites: Readonly<Record<string, PaintedPropSprite>> }
+export const PAINTED_PROPS: Readonly<Partial<Record<ArenaTheme, PaintedPropAtlas>>> = {
+${entries.join(',\n')}
 }
 `)
+process.exit(exit)

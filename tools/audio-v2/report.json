@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-20T12:21:16.044Z",
+  "generated": "2026-10-21T20:26:07.774Z",
   "items": {
     "clash-1": {
       "file": "public/audio/v2/sfx/clash-1.ogg",
@@ -242,33 +242,6 @@
         "highShare8k": 0,
         "subShare40": 0.1,
         "dcOffset": 0.000037
-      }
-    },
-    "tower-fall": {
-      "file": "public/audio/v2/sfx/tower-fall.ogg",
-      "kind": "sfx",
-      "target": {
-        "momentary": -13,
-        "truePeak": -1
-      },
-      "render": {
-        "rawMomentary": -11.5,
-        "gainDb": -1.5,
-        "limited": true,
-        "tpBeforeLimit": -1.3
-      },
-      "qa": {
-        "integrated": -16.2,
-        "momentaryMax": -13.2,
-        "shortTermMax": null,
-        "samplePeak": -3,
-        "truePeak": -2.3,
-        "durationSec": 1.5,
-        "channels": 1,
-        "bytes": 19064,
-        "highShare8k": 0.3,
-        "subShare40": 6.5,
-        "dcOffset": 0.000311
       }
     },
     "happy": {
@@ -1224,6 +1197,276 @@
           "truePeak": -27.8
         },
         "loudnessDiffDb": 0.2
+      }
+    },
+    "tree-hit-1": {
+      "file": "public/audio/v2/sfx/tree-hit-1.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14.5,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -12.1,
+        "gainDb": -2.4,
+        "limited": false,
+        "tpBeforeLimit": -2.9
+      },
+      "qa": {
+        "integrated": -14.4,
+        "momentaryMax": -14.4,
+        "shortTermMax": null,
+        "samplePeak": -2.7,
+        "truePeak": -2.7,
+        "durationSec": 0.417,
+        "channels": 1,
+        "bytes": 6481,
+        "highShare8k": 0,
+        "subShare40": 0.3,
+        "dcOffset": 0.000381
+      }
+    },
+    "tree-hit-2": {
+      "file": "public/audio/v2/sfx/tree-hit-2.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14.5,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -11.9,
+        "gainDb": -2.6,
+        "limited": false,
+        "tpBeforeLimit": -3
+      },
+      "qa": {
+        "integrated": -14.5,
+        "momentaryMax": -14.5,
+        "shortTermMax": null,
+        "samplePeak": -2.7,
+        "truePeak": -2.7,
+        "durationSec": 0.417,
+        "channels": 1,
+        "bytes": 6278,
+        "highShare8k": 0,
+        "subShare40": 0.3,
+        "dcOffset": 0.000323
+      }
+    },
+    "tree-hit-3": {
+      "file": "public/audio/v2/sfx/tree-hit-3.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -14.5,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -12,
+        "gainDb": -2.5,
+        "limited": false,
+        "tpBeforeLimit": -2.8
+      },
+      "qa": {
+        "integrated": -14.5,
+        "momentaryMax": -14.5,
+        "shortTermMax": null,
+        "samplePeak": -2.6,
+        "truePeak": -2.6,
+        "durationSec": 0.417,
+        "channels": 1,
+        "bytes": 6030,
+        "highShare8k": 0,
+        "subShare40": 0.5,
+        "dcOffset": 0.000212
+      }
+    },
+    "tree-hit-heavy": {
+      "file": "public/audio/v2/sfx/tree-hit-heavy.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -11.5,
+        "gainDb": -4.5,
+        "limited": false,
+        "tpBeforeLimit": -4.3
+      },
+      "qa": {
+        "integrated": -17.9,
+        "momentaryMax": -16,
+        "shortTermMax": null,
+        "samplePeak": -4,
+        "truePeak": -3.9,
+        "durationSec": 0.597,
+        "channels": 1,
+        "bytes": 7824,
+        "highShare8k": 0.2,
+        "subShare40": 1.2,
+        "dcOffset": 0.000177
+      }
+    },
+    "tree-stage": {
+      "file": "public/audio/v2/sfx/tree-stage.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -18,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -20.9,
+        "gainDb": 2.9,
+        "limited": false,
+        "tpBeforeLimit": -3.3
+      },
+      "qa": {
+        "integrated": -23.8,
+        "momentaryMax": -18,
+        "shortTermMax": null,
+        "samplePeak": -3.2,
+        "truePeak": -3.2,
+        "durationSec": 1.15,
+        "channels": 1,
+        "bytes": 14585,
+        "highShare8k": 0.6,
+        "subShare40": 1.4,
+        "dcOffset": 0.000115
+      }
+    },
+    "tree-fall": {
+      "file": "public/audio/v2/sfx/tree-fall.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -13,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -10.3,
+        "gainDb": -2.7,
+        "limited": false,
+        "tpBeforeLimit": -2.4
+      },
+      "qa": {
+        "integrated": -16.5,
+        "momentaryMax": -13,
+        "shortTermMax": null,
+        "samplePeak": -2.4,
+        "truePeak": -1.9,
+        "durationSec": 2,
+        "channels": 1,
+        "bytes": 23304,
+        "highShare8k": 0.5,
+        "subShare40": 3.4,
+        "dcOffset": 0.000182
+      }
+    },
+    "balloon-pop": {
+      "file": "public/audio/v2/sfx/balloon-pop.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -17,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -20.3,
+        "gainDb": 3.3,
+        "limited": true,
+        "tpBeforeLimit": 1.6
+      },
+      "qa": {
+        "integrated": -17.8,
+        "momentaryMax": -17.8,
+        "shortTermMax": null,
+        "samplePeak": -2.1,
+        "truePeak": -2,
+        "durationSec": 0.497,
+        "channels": 1,
+        "bytes": 6831,
+        "highShare8k": 0.2,
+        "subShare40": 0.1,
+        "dcOffset": 0.000429
+      }
+    },
+    "vs-whoosh": {
+      "file": "public/audio/v2/sfx/vs-whoosh.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -17,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -15.7,
+        "gainDb": -1.3,
+        "limited": true,
+        "tpBeforeLimit": 0.9
+      },
+      "qa": {
+        "integrated": -17.3,
+        "momentaryMax": -17.3,
+        "shortTermMax": null,
+        "samplePeak": -2.3,
+        "truePeak": -2.3,
+        "durationSec": 0.497,
+        "channels": 1,
+        "bytes": 6984,
+        "highShare8k": 0,
+        "subShare40": 4.9,
+        "dcOffset": 0.001214
+      }
+    },
+    "vs-thump": {
+      "file": "public/audio/v2/sfx/vs-thump.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -16,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -14.4,
+        "gainDb": -1.6,
+        "limited": false,
+        "tpBeforeLimit": -1.9
+      },
+      "qa": {
+        "integrated": -15.9,
+        "momentaryMax": -15.9,
+        "shortTermMax": null,
+        "samplePeak": -1.9,
+        "truePeak": -1.9,
+        "durationSec": 0.341,
+        "channels": 1,
+        "bytes": 5071,
+        "highShare8k": 0,
+        "subShare40": 1.3,
+        "dcOffset": 0.00091
+      }
+    },
+    "vs-slam": {
+      "file": "public/audio/v2/sfx/vs-slam.ogg",
+      "kind": "sfx",
+      "target": {
+        "momentary": -13,
+        "truePeak": -1
+      },
+      "render": {
+        "rawMomentary": -9.2,
+        "gainDb": -3.8,
+        "limited": false,
+        "tpBeforeLimit": -3.6
+      },
+      "qa": {
+        "integrated": -17.5,
+        "momentaryMax": -13,
+        "shortTermMax": null,
+        "samplePeak": -3.1,
+        "truePeak": -3.1,
+        "durationSec": 1.25,
+        "channels": 1,
+        "bytes": 13208,
+        "highShare8k": 0,
+        "subShare40": 4.7,
+        "dcOffset": 0.000043
       }
     }
   }

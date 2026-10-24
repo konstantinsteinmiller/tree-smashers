@@ -3,5 +3,6 @@
     "node",
     "art/slice-return.mjs",
     "{painting}"
-  ]
+  ],
+  "gemini": { "gapSeconds": 45, "jitterSeconds": 33 }
 }

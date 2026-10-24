@@ -6,7 +6,7 @@
 //   daily rewards       DailyRewards.vue [100,200,300,400,500,750,1000], skin on days 3/5/7
 //   battle pass         useBattlePass.ts bpCoinReward, 50xp win / 12.5xp loss, 100xp per tier,
 //                       skin tiers 10,20..100, diamond tiers 15,35,55
-import { getStageById, upgradeCost, lockstepLevel } from './data.mjs'
+import { getStageById, upgradeCost, lockstepLevel, smasherLevelCost } from './data.mjs'
 
 const round5 = (v) => Math.round(v / 5) * 5
 export const ROULETTE_EV = (0.5 * 16.66 + 1 * 50.01 + 1.5 * 15 + 2 * 10 + 3 * 3 + 1 * 11) / (16.66 + 50.01 + 15 + 10 + 3 + 0.26 + 11)
@@ -86,4 +86,24 @@ export const econLevel = (s, share = 0.5) => {
   let L = 0
   while (cumPartCost(L + 1) <= budget) L++
   return L
+}
+
+/** Smasher levels of the two fielded smashers when a typical player reaches
+ *  stage `s` — the game-side campaign model of tests/balance.sim.test.ts
+ *  (`campLevels`): typical income of every stage BEFORE `s` (no battle pass),
+ *  all of it spent on the two smashers, cheapest level first
+ *  (smasherLevelCost from the catalog). Returns [l1, l2]. */
+export const smasherEconLevels = (s, n = 2) => {
+  let coins = 0
+  for (let i = 1; i < s; i++) coins += incomeAtStage(i, PROFILES.typical)
+  const lv = Array(n).fill(1)
+  for (;;) {
+    let k = 0
+    for (let i = 1; i < n; i++) if (lv[i] < lv[k]) k = i
+    const c = smasherLevelCost(lv[k])
+    if (c === null || c > coins) break
+    coins -= c
+    lv[k]++
+  }
+  return lv
 }

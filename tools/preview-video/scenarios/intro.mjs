@@ -5,7 +5,7 @@
  * IntroCutscene.vue) — the cutscene itself is rendered and simulated live in
  * the game; nothing recorded here ships. Output goes wherever `--out` says.
  *
- *   pnpm preview:video --scenarios intro --formats 10s --duration 14.6 \
+ *   pnpm preview:video --scenarios intro --formats 10s --duration 16.2 \
  *     --no-clean --quality high --out <dir>
  *
  * `--no-clean` is required: the clean feed hides every DOM node but the arena
@@ -13,8 +13,8 @@
  *
  * SETUP (real time): the runner opened the game on a FRESH profile, so the
  * gate classifies it as a first-timer and the intro starts by itself. Wait for
- * its DEV seam (`window.__intro`), hold its clock and rewind to 0 — the fight
- * track is kept, so rewinding simply re-samples it.
+ * its DEV seam (`window.__intro`), hold its clock and rewind to 0 — the story is a pure function of T and its
+ * particle pools replay from 0 on a rewind.
  *
  * RECORD (virtual time): release and let it play. The recorder's virtual clock
  * drives rAF, so every frame advances the cutscene by exactly 1/fps.

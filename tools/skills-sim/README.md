@@ -5,10 +5,80 @@ proposed skills. It produces every balance number in **`skills-feature.md` §3**
 metric, singles, all 45 pairs, paired confirmation, per-spinner alternative, robustness)
 and the economy projections in **§6.3**. Plain Node ≥ 20 ESM, no dependencies.
 
-`skills.mjs` reads the skill level tables from `src/data/skillCatalog.ts` (single source) and
-`data.mjs` reads the part tables, upgrade bonuses, the 100-stage table and `upgradeCost`
-straight from the TS sources and aborts if any of 26 physics constants drifted from
-`useSpinnerGame.ts` — a changed game rule shows up here, not as silently wrong numbers.
+`skills.mjs` reads the skill level tables from `src/data/skillCatalog.ts` (single source,
+the four smasher-only effects included) and `data.mjs` reads the part tables, upgrade
+bonuses, the 100-stage table, `upgradeCost`, the smasher part tables + `SMASHER_TUNING`, the
+whole smasher catalog and `CAMPAIGN_NPC_TUNING` straight from the TS sources. It aborts if
+any of 25 physics constants drifted from `useSpinnerGame.ts`, or if a formula the sim copies
+(smasher `computeStats`, `smasherConfig` / `smasherSkillLevel` / `smasherLevelCost`,
+`applySkillMods`, `campaignNpcHpMul`, the `isLegacyNpc` gate, disc / armour / heading,
+Thorns' spiked side, the rubber band) is no longer in the source — a changed game rule shows
+up here, not as silently wrong numbers.
+
+## Smasher teams and campaign NPC tuning
+
+The game fields smashers (`src/data/smasherCatalog.ts` + `src/data/smashers/batch*.ts`); the
+sim does too:
+
+- **Stats** — a config with `smasherId` reads `SMASHER_TOP_PARTS` / `SMASHER_BOTTOM_PARTS` /
+  `SMASHER_*_UPGRADE` × the smasher's profile (hp, damage, defense, speed; weight as
+  `profile.weight ** SMASHER_TUNING.profileWeightExp`, the square root); a level-L smasher
+  has both archetype parts at L − 1. Part-only configs keep the legacy tables.
+- **Disc and armour** — `disc` scales the blade radius (spawn, collisions,
+  power-up placement, the NPC lane check); `armor.front` / `.back` multiply the damage taken
+  in the ±60° cones around the heading (launch direction, then travel direction, kept when
+  stopped).
+- **Team size** (`src/data/teamSize.ts`) — each side's radius is ×0.9 × (1 / 0.87 / 0.75) by its own count
+  (folded into `disc`), a side of one gets ×1.2 damage + HP; a lone part-only campaign NPC has that offset and
+  part-only NPC HP is refit by team count (`CAMPAIGN_NPC_TUNING.soloHpMul / soloDmgMul / countHpMul`).
+- **Skills** — each smasher brings its unlocked skills (slot 1 at level 1, slot 2 at 10,
+  slot 3 at 20, skill level 1 + ⌊(L − open) / 2⌋, max 10), each = effect × mods
+  (`applySkillMods`: clamp 0.5–2, integer fields rounded, chances ≤ 0.95). The smasher-only
+  effects: Bank Shot (bonus hit after a rebound in the bearer's launch), Anchor (a
+  non-launched bearer keeps only part of the knockback, resist ≤ 0.8), Thorns (recoil off a
+  hit on the bearer's reinforced side, read before armour). Tower Breaker is inert (no team
+  towers in the sim). Smasher skills run on the player side; an NPC smasher config gets its
+  stats, disc and armour only.
+- **Teams** — `--team smashers` (the game's starting pair, `DEFAULT_TEAM_SMASHERS`) or any
+  ids joined by `+` (`--team grizzle+vixie`), in `run.mjs`, `confirm.mjs`, `bosses100.mjs`.
+  Levels: `--levelMode econ` (default) = `econ.mjs smasherEconLevels(stage)`, the game-side
+  campaign economy of `tests/balance.sim.test.ts` (identical levels, checked against
+  `tools/balance-sim/results/after-camp.json`); `--levelMode lock` = lockstep part level + 1;
+  `--smasherLevel 15[,12]` fixes them. `run.mjs` then runs `base` (no skills) and `own` (the
+  smashers' own skills), so `report.mjs` prints the smashers' skill power;
+  `confirm.mjs --pairs own` and `bosses100.mjs --configs none,own` do the same.
+- **Campaign NPC tuning** — every part-only NPC blade gets `campaignNpcHpMul(mean part level)`
+  and `CAMPAIGN_NPC_TUNING.dmgMul`, exactly the engine's `isLegacyNpc` gate (split children /
+  twins inherit through the parent's max HP, as in the game). On by default everywhere;
+  `--npcTuning off` (`opts.npcTuning: false`) restores the pre-smasher numbers bit for bit —
+  everything in `skills-feature.md`, `results/` and the league tables below was measured that
+  way. `league.mjs k` / `leagueSkill*.mjs` keep it off for the ghost (it stands in for another
+  player's smasher team), `league.mjs floor` keeps it on for the part-only gatekeepers;
+  `--npcTuning on|off` overrides.
+- **Boss rubber band** — the sim does not replay boss retries, so the loss streak is an
+  input: `--streak 0,2,4,10` (`opts.bossLossStreak`) applies the game's
+  `bossHpRubberBandMul` (−10 % per 2 losses, cap −50 %) to NPC bosses. `bosses100.mjs --rubber`
+  stays as a raw multiplier and overrides `--streak`.
+- **Player policy** — `opts.policy: 'scripted'` is the balance test's player (random
+  pickable blade, random target, ±0.25 rad, 55–100 % pull through the wall-proximity boost,
+  3–22 frame think time); `--policy scripted` in `run.mjs` / `confirm.mjs`. The default stays
+  the skills-feature "typical player".
+
+**Parity with the real engine (`validate.mjs`, 2026-10-20).** 16 fixed matchups × 200 seeds
+on both sides — the real headless engine (`validate/engineParity.sim.test.ts`, the
+`tests/balance.sim.test.ts` driver) and the sim with `policy: 'scripted'` — on the stage's
+own arena and power-ups, without terrain or towers (results measured before the pinball
+bumpers were removed from the game on 2026-10-20; the sim dropped them too). The two engines draw different
+random streams, so the comparison is per matchup, not per seed. Result: win rate within
+4.0 pts on average (pooled 41.8 % game vs 42.1 % sim), Pearson r 0.986 across matchups,
+|z| > 2 in 1 of 16 (grizzle+vixie @ stage 35, life-leech boss: 19 % game vs 32 % sim). HP
+margins agree within 2 SE in 13 of 16; two of the misses are near-0 % boss fights where the
+sim leaves the boss slightly more HP (≈ 5 points of HP share).
+
+```sh
+node "$B" run --want 10 -- node validate.mjs --n 200 --out out/parity.json   # ~4 min
+node validate.mjs --report out/parity.json
+```
 
 ## What it measures
 

@@ -86,8 +86,8 @@ export const saveFixture = (over = {}) => {
     // ── Progress ──
     // Stage 17: three enemies in a LAVA arena. Picked for the clip, not for
     // the difficulty — three enemies fill the frame, and the lava floor is
-    // the best-looking of the seven arena types at video size. Stage 12 (lava
-    // + 2 bouncers) and 22 (shock, four enemies) are the other candidates.
+    // the best-looking of the seven arena types at video size. Stage 12 (lava)
+    // and 22 (shock, four enemies) are the other candidates.
     smashers_campaign_stage: '17',
     smashers_player_max_stage: '17',
     smashers_coins: '8400',

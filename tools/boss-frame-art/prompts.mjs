@@ -1,0 +1,21 @@
+/**
+ * Painted "next boss" portal frame (BossPeekBadge.vue) — one TEXT-ONLY prompt.
+ * pack.mjs keys the magenta (ground AND the round centre hole), so the hole
+ * must be a clean, perfectly round disc of flat magenta.
+ */
+const CROWN_B = 'The GOLD CROWN is seated firmly ON the ring, not floating above it: it is a wide, low, chunky crown (five rounded points tipped with small red ruby gems) whose broad base band is tilted a few degrees to one side like a jaunty champion crown, and it sinks DOWN over the top of the wood ring so the ring top edge disappears behind the crown band (the crown overlaps roughly the top fifth of the ring, hugging its curve), with the two horns rising from just beside the crown. No gap between crown and ring.'
+const VARIANT = process.env.BOSS_FRAME_VARIANT ?? ''
+export const prompt = () => [
+  'Paint ONE game UI element for "Tree Smashers", a cosy, bright cartoon toy game where cute-but-angry plush creatures battle on spinning wooden discs: a grand, festive "NEXT CHAMPION" PORTRAIT FRAME — a round frame that a boss portrait will be placed inside. Seen straight from the FRONT, perfectly symmetric left/right, no perspective, no tilt.',
+  'Main shape: a THICK, chunky, perfectly ROUND carved WOODEN RING (warm honey-brown wood with a few simple carved grain lines and small carved notches), like the rim of a toy shield. Directly inside the wood ring, a second thinner inner rim in deep berry-plum (#7a1f4f-ish) with a bright raspberry (#e8456b-ish) highlight edge — a bold accent rim that frames the opening.',
+  'The CENTRE of the ring is a perfectly round, EMPTY HOLE (about 62% of the ring\'s outer diameter) filled with the SAME flat pure magenta (#FF00FF) as the background — nothing inside the hole at all: no character, no wood, no shadow, no texture, no gradient, just flat magenta.',
+  VARIANT === 'b' ? CROWN_B : 'On TOP of the ring sits a big shiny GOLD CROWN (sun-yellow #ffc93c gold with deep golden-orange shade, five chunky points tipped with small round red ruby gems), sitting on the ring and overlapping its top edge, upright and centred.',
+  'Around the ring, a dark green THORNY BRAMBLE vine wraps diagonally a few times (thick vine with rounded cartoon thorns and two or three small leaves), crossing OVER the wood but never entering the hole.',
+  'On the left and right sides of the ring, two curved ivory-white decorative HORNS point outward and upward, like the horns on a cartoon viking helmet, mirror images. At the very bottom of the ring, a small gold-and-berry emblem plate with a simple gold star on it.',
+  'Two or three tiny flat four-point gold sparkle stars near the crown (flat shapes with an outline, not glowing).',
+  'Style: chunky, bold, toy-like premium mobile game UI, bold and cute. A bold, even, thick dark navy (#161a40) outline around EVERY part (ring, inner rim, crown, horns, bramble, emblem) and around the hole edge. Flat cel shading, at most three tones per part (highlight, base, shade), crisp hard edges, saturated clean colours, no muddy browns.',
+  'NO stitches, NO stitching lines, NO dashed lines, NO seams, NO felt, NO fabric texture, NO plush texture (this is hard wood and metal). NO glow, NO blur, NO soft drop shadow, NO shadow on the ground, NO radial gradients, NO light rays, NO text, NO letters.',
+  'Composition: a SQUARE image (1:1). The whole frame (crown, horns and all) is centred and fills about 90% of the image, with an even magenta margin on every side; nothing is cut off at the edges.',
+  'Background: one perfectly flat, uniform pure magenta (#FF00FF) everywhere around the frame AND inside the centre hole — no gradient, no texture, no shadow on it. It will be keyed to transparency.',
+  'Generate the image now.'
+].join('\n')

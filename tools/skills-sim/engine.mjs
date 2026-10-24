@@ -7,8 +7,25 @@ const hyp = (x, y) => Math.sqrt(x * x + y * y)
 // (the fixed-step accumulator runs updatePhysics at 60 Hz, FIXED_STEP_MS).
 // Mirrors the post-WP0 engine: collision pairs in syncKey order, star-top crit
 // and child-emitter angle on the match RNG (here: the seeded physics stream `rng`).
-import { computeStats, getStageById, lockstepLevel } from './data.mjs'
-import { SKILL_PARAMS } from './skills.mjs'
+//
+// Smashers (smasherCatalog.ts): a config with `smasherId` reads the smasher
+// part tables x its profile (data.mjs computeStats), gets its disc radius and
+// directional armour (heading = launch direction, then travel direction) and
+// brings its own unlocked skills with their mods (slots at levels 1/10/20),
+// including the smasher-only effects bank_shot / anchor / thorns
+// (tower_breaker is a no-op: the sim has no team towers — so neither the tree
+// HP share nor the spiked boss tree's thorn recoil, arenaTerrain TOWER_TUNING,
+// is modelled; tower balance lives in scripts/balance-sim.mjs). Smasher skills are
+// modelled on the PLAYER side only (NPC smashers get stats, disc, armour).
+// Part-only NPCs get CAMPAIGN_NPC_TUNING (HP curve on their mean part level,
+// dmgMul) exactly like createBladeState's isLegacyNpc gate; NPC bosses get the
+// rubber band for opts.bossLossStreak (or a raw opts.bossHpMul).
+import {
+  computeStats, getStageById, lockstepLevel, isSmasherId, smasherConfig, smasherLoadout, discOf, armorOf,
+  ARMOR_CONE_COS, CAMPAIGN_NPC_TUNING, campaignNpcHpMul, bossHpRubberBandMul, applySkillMods,
+  DEFAULT_TEAM_SMASHERS, SKILL_BLADE_SLOTS, sideSizeMul, sideStatMul
+} from './data.mjs'
+import { SKILL_PARAMS, EFFECT_PARAMS } from './skills.mjs'
 
 // ── constants (useSpinnerGame.ts:63-137, 1103-1130, 1600-1619) ─────────────
 const ARENA_RADIUS = 200
@@ -20,9 +37,6 @@ const BOUNCE_DAMPENING = 0.75
 const WALL_BOOST_FACTOR = 1.08
 const WALL_BOUNCE_DECAY_PER_HIT = 0.12
 const WALL_BOUNCE_MIN_EFFECTIVENESS = 0.30
-const BOUNCER_RADIUS = 6
-const BOUNCER_MIN_R = ARENA_RADIUS * 0.25
-const BOUNCER_MAX_R = ARENA_RADIUS * 0.70
 const ACCEL_FRAMES = 28
 const NPC_THINK_MS = 500
 const POWERUP_INTERVAL = [10000, 15000]
@@ -44,7 +58,8 @@ const SPLIT_CHILD_WEIGHT_PCT = 0.33
 const SPLIT_CHILD_RADIUS_PCT = 0.62
 const SPLIT_CHILD_INVULN_MS = 1100
 const GHOST_SPLIT_OFFSET = 2.1
-const HEALER_RADIUS_MULT = 1.2
+const HEALER_RADIUS_MULT = 0.9
+const BOSS_RADIUS_MULT = 1.2
 const HEALER_CONTACT_HEAL = 2
 const HEALER_HEAL_COOLDOWN_MS = 250
 const FRIENDLY_FIRE_MUL = 0.25
@@ -52,6 +67,13 @@ const THUNDER_RADIUS_MUL = 1.8
 const THUNDER_COOLDOWN_MS = 1000
 const THUNDER_DAMAGE = 1
 const TICK_MS = 1000 / 60
+const PHASE_WINDOW_MS = 300
+const ANCHOR_RESIST_CAP = 0.8 // skillRuntime.ts createBladeSkills: Math.min(0.8, resist)
+// Scripted player policy (tests/balance.sim.test.ts battle()): drag length
+// -> force through MAX_PULL_DISTANCE and the wall-proximity boost.
+const MAX_PULL_DISTANCE = ARENA_RADIUS * 0.51
+const WALL_BOOST_START = 0.55
+const WALL_BOOST_MAX = 2.0
 
 // ── seeded RNG (mulberry32) — two independent streams so skill procs do not
 // shift the physics/AI random sequence (common random numbers across configs)
@@ -73,6 +95,14 @@ export const mulberry32 = (seed) => () => {
  * @param opts.playerStarts boolean (turn-order bias is applied by the caller)
  * @param opts.governor     enable the skill governor (caps) — default true
  * @param opts.maxTurns
+ * @param opts.policy       player policy: 'typical' (default, the skills-feature
+ *                          player) | 'scripted' (tests/balance.sim.test.ts: random
+ *                          pickable blade, random target, +-0.25 rad, 55-100 % pull)
+ * @param opts.smasherSkills false = smasher blades bring no skills (when no loadout is passed)
+ * @param opts.npcTuning    false = no CAMPAIGN_NPC_TUNING (pre-smasher numbers);
+ *                          opts.npcHpCurve / opts.npcDmgMul override the table
+ * @param opts.bossLossStreak campaign boss loss streak -> bossHpRubberBandMul
+ * @param opts.bossHpMul    raw NPC-boss HP multiplier (overrides the streak)
  */
 export const runBattle = (opts) => {
   const rng = mulberry32(opts.seed)
@@ -82,6 +112,19 @@ export const runBattle = (opts) => {
   const stage = getStageById(opts.stageId)
   const arena = stage.arenaType ?? 'default'
   const governor = opts.governor !== false
+  const scripted = opts.policy === 'scripted'
+  const prng = mulberry32((opts.seed ^ 0x5ca1ab1e) >>> 0) // scripted-policy stream
+  const npcTuning = opts.npcTuning !== false
+  const npcHpCurve = npcTuning ? (opts.npcHpCurve ?? CAMPAIGN_NPC_TUNING.hpCurve) : []
+  const npcDmgMul = npcTuning ? (opts.npcDmgMul ?? CAMPAIGN_NPC_TUNING.dmgMul) : 1
+  const bossRubberMul = opts.bossHpMul ?? bossHpRubberBandMul(opts.bossLossStreak ?? 0)
+  // useSpinnerGame.ts isLegacyNpc (the sim has no PvP)
+  const isLegacyNpc = (owner, config) => owner === 'npc' && !isSmasherId(config.smasherId)
+  let armorActive = false
+  // Team size (src/data/teamSize.ts): each side's radius multiplier (base 0.9 ×
+  // 1 / 0.87 / 0.75, folded into `disc`) and solo boost, by its own count.
+  const teamSizeMul = { player: sideSizeMul(opts.team.length), npc: sideSizeMul(stage.enemyTeam.length) }
+  const teamStatMul = { player: sideStatMul(opts.team.length), npc: sideStatMul(stage.enemyTeam.length) }
 
   let tick = 0
   const gameTime = () => tick * TICK_MS
@@ -116,6 +159,9 @@ export const runBattle = (opts) => {
     let dmg = st.damageMultiplier
     let def = st.defenseMultiplier
     let spd = st.speedMultiplier
+    if (isLegacyNpc(b.owner, b.config)) dmg *= npcDmgMul
+    dmg *= teamStatMul[b.owner]
+    if (teamStatMul[b.owner] !== 1 && isLegacyNpc(b.owner, b.config)) dmg *= CAMPAIGN_NPC_TUNING.soloDmgMul
     let weightMul = 1
     if (b.isSplitChild) {
       dmg *= SPLIT_CHILD_DAMAGE_PCT
@@ -141,19 +187,45 @@ export const runBattle = (opts) => {
     return r
   }
 
-  // createBladeState (1694-1752); difficulty MEDIUM → 1, no first-game boost,
-  // no boss rubber-band (measures the un-softened fight)
+  // createBladeState; difficulty MEDIUM -> 1, no first-game boost. Part-only
+  // NPCs: campaignNpcHpMul(mean part level); NPC bosses: x rubber band
+  // (opts.bossLossStreak / opts.bossHpMul, default streak 0 = full HP).
   const createBlade = (owner, x, y, config, isBoss = false) => {
     const st = computeStats(config)
-    const hp = st.maxHp * (isBoss ? 2 : 1)
+    const legacyMul = isLegacyNpc(owner, config)
+      ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2, npcHpCurve)
+      : 1
+    const rubber = isBoss && owner === 'npc' ? bossRubberMul : 1
+    const hp = st.maxHp * legacyMul * (isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul : 1) * rubber * teamStatMul[owner]
+      * (teamStatMul[owner] !== 1 && isLegacyNpc(owner, config) ? CAMPAIGN_NPC_TUNING.soloHpMul : 1)
+      * (isLegacyNpc(owner, config) ? (CAMPAIGN_NPC_TUNING.countHpMul[Math.min(4, Math.max(1, stage.enemyTeam.length)) - 1] ?? 1) : 1)
     let radiusMult = 1
-    if (isBoss) radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : 1.6
+    if (isBoss) radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : BOSS_RADIUS_MULT
+    const disc = discOf(config) * teamSizeMul[owner]
+    const armor = armorOf(config)
+    if (armor) armorActive = true
     return {
       id: nextId++, x, y, vx: 0, vy: 0, ax: 0, ay: 0, accelFramesLeft: 0,
-      radius: BLADE_RADIUS * radiusMult, hp, maxHp: hp, wallBounceCount: 0, lastHitTime: 0,
-      config, owner, isBoss, lastShockMs: -1e9, syncKey: -1
+      radius: BLADE_RADIUS * radiusMult * disc, hp, maxHp: hp, wallBounceCount: 0, lastHitTime: 0,
+      config, owner, isBoss, lastShockMs: -1e9, syncKey: -1,
+      disc, armor, hx: 0, hy: owner === 'player' ? -1 : 1
     }
   }
+  // smasherMechanics.ts: heading follow + armour zones
+  const followHeading = (b, vx, vy, minSpeed) => {
+    const sp = Math.sqrt(vx * vx + vy * vy)
+    if (!(sp >= minSpeed) || sp === 0) return
+    b.hx = vx / sp
+    b.hy = vy / sp
+  }
+  const ZONE_SIDE = 0, ZONE_FRONT = 1, ZONE_BACK = 2
+  const zoneOf = (d, ux, uy) => {
+    const c = d.hx * ux + d.hy * uy
+    return c >= ARMOR_CONE_COS ? ZONE_FRONT : c <= -ARMOR_CONE_COS ? ZONE_BACK : ZONE_SIDE
+  }
+  const armorMul = (armor, zone) => !armor ? 1 : zone === ZONE_FRONT ? armor.front : zone === ZONE_BACK ? armor.back : 1
+  // Thorns covers the reinforced cone: the back when armour is stronger behind, else the front
+  const spikedZone = (b) => (b.armor && b.armor.back < b.armor.front ? ZONE_BACK : ZONE_FRONT)
 
   const speed = (b) => Math.sqrt(b.vx * b.vx + b.vy * b.vy)
   const living = (arr) => arr.filter(b => b.hp > 0)
@@ -177,8 +249,21 @@ export const runBattle = (opts) => {
   }
 
   // ── skills: runtime state lives on the blade (`b.sk`) ────────────────────
+  // Loadout entry -> { id, level, p }: p = the level row x the entry's mods
+  // (smasher skills; team skills have none) — skillRuntime createBladeSkills.
   const skillOf = (b, id) => b.skills?.find(s => s.id === id)
-  const P = (id, lvl) => SKILL_PARAMS[id].levels[lvl - 1]
+  const equip = (loadout) => {
+    const out = []
+    for (const e of loadout ?? []) {
+      if (out.length >= SKILL_BLADE_SLOTS) break
+      if (!e || !EFFECT_PARAMS[e.id] || out.some(x => x.id === e.id)) continue
+      const level = Math.min(10, Math.max(1, Math.floor(e.level ?? 1)))
+      const p = applySkillMods(EFFECT_PARAMS[e.id].levels[level - 1], e.mods)
+      if (e.id === 'anchor') p.resist = Math.min(ANCHOR_RESIST_CAP, p.resist)
+      out.push({ id: e.id, level, p, key: e.key })
+    }
+    return out
+  }
 
   // Central HP-loss path. In the shipped code HP is decremented in three
   // places (applyBladeDamage, lava wall, thunder aura); the spec routes them
@@ -188,7 +273,7 @@ export const runBattle = (opts) => {
     // Hazard Ward reduces hazard + chip sources
     const hw = skillOf(target, 'hazard_ward')
     if (hw) {
-      const hp = P('hazard_ward', hw.level)
+      const hp = hw.p
       if (kind === 'lava') dmg *= 1 - hp.lava
       else if (kind === 'thunder') dmg *= 1 - hp.thunder
       else if (kind === 'chip') dmg *= 1 - hp.chip
@@ -209,8 +294,8 @@ export const runBattle = (opts) => {
     target.hp = Math.max(0, target.hp - dmg)
     // Second Wind
     const sw = skillOf(target, 'second_wind')
-    if (sw && !target.sk.swUsed && target.hp > 0 && target.hp <= target.maxHp * P('second_wind', sw.level).threshold) {
-      const heal = Math.min(target.maxHp - target.hp, target.maxHp * P('second_wind', sw.level).heal)
+    if (sw && !target.sk.swUsed && target.hp > 0 && target.hp <= target.maxHp * sw.p.threshold) {
+      const heal = Math.min(target.maxHp - target.hp, target.maxHp * sw.p.heal)
       target.hp += heal
       target.sk.swUsed = true
       m.healed += heal
@@ -240,15 +325,17 @@ export const runBattle = (opts) => {
   pTeam.forEach((cfg, i) => {
     const spreadX = pTeam.length === 1 ? 0 : (i / (pTeam.length - 1) - 0.5) * ARENA_RADIUS * 0.7
     const b = createBlade('player', spreadX, ARENA_RADIUS * 0.4, cfg)
-    b.skills = opts.loadouts?.[i] ?? []
+    // A smasher blade brings its own unlocked skills (smasherLoadout) unless
+    // the caller passes a loadout for it; opts.smasherSkills false = none.
+    b.skills = equip(opts.loadouts?.[i] ?? (opts.smasherSkills !== false ? smasherLoadout(cfg) : []))
     if (opts.playerBuff) b.buffs = { ...opts.playerBuff } // control experiment: plain stat buff
     if (opts.playerHpMul) {
       b.maxHp *= opts.playerHpMul
       b.hp = b.maxHp
     } // calibration: plain max-HP buff
-    b.sk = { shield: 0, swUsed: false, dodgeReadyAt: 0, phasedUntil: -1, stacks: 0, rocketCount: 0 }
+    b.sk = { shield: 0, swUsed: false, dodgeReadyAt: 0, phasedUntil: -1, stacks: 0, rocketCount: 0, banked: false, bankUsed: false }
     const gs = skillOf(b, 'guard_shell')
-    if (gs) b.sk.shield = b.maxHp * P('guard_shell', gs.level).shield
+    if (gs) b.sk.shield = b.maxHp * gs.p.shield
     player.push(b)
   })
   const nTeam = stage.enemyTeam.map(c => ({ ...c }))
@@ -320,32 +407,6 @@ export const runBattle = (opts) => {
   }
   for (const b of npc.concat(player)) if (b.config.modelId === 'teleporter') b.isTeleporter = true
 
-  // bouncers (2152-2203)
-  const bouncers = []
-  const bc = Math.max(0, Math.min(3, (stage.bouncers ?? 0) | 0))
-  if (bc > 0) {
-    const minSepB = BOUNCER_RADIUS * 2 + 12
-    const minSepBlade = BLADE_RADIUS + BOUNCER_RADIUS + 8
-    const spawns = allLive().map(b => ({ x: b.x, y: b.y }))
-    for (let i = 0; i < bc; i++) {
-      let placed = null
-      for (let a = 0; a < 40 && !placed; a++) {
-        const ang = rng() * Math.PI * 2
-        const r = BOUNCER_MIN_R + rng() * (BOUNCER_MAX_R - BOUNCER_MIN_R)
-        const { x, y } = clampInArena(Math.cos(ang) * r, Math.sin(ang) * r, BOUNCER_RADIUS, 6)
-        let ok = bouncers.every(b => hyp(b.x - x, b.y - y) >= minSepB)
-        if (ok) ok = spawns.every(s => hyp(s.x - x, s.y - y) >= minSepBlade)
-        if (ok) placed = { x, y, radius: BOUNCER_RADIUS }
-      }
-      if (!placed) {
-        const ang = (i / bc) * Math.PI * 2
-        const r = (BOUNCER_MIN_R + BOUNCER_MAX_R) / 2
-        placed = { ...clampInArena(Math.cos(ang) * r, Math.sin(ang) * r, BOUNCER_RADIUS, 6), radius: BOUNCER_RADIUS }
-      }
-      bouncers.push(placed)
-    }
-  }
-
   // maps (1093-1130, 1517, 1619)
   const contactTimes = new Map()
   const hugStart = new Map()
@@ -364,16 +425,18 @@ export const runBattle = (opts) => {
   let launchedId = null
   let npcThink = 0
   let playerThink = 0
+  let playerThinkMs = null
   let turns = 0
   let result = null
 
   // Opening Salvo fires ONCE per team when combat begins (meteor_intro →
   // deciding_turn), at the highest level any player blade carries it.
   {
-    const lv = Math.max(0, ...player.map(b => skillOf(b, 'opening_salvo')?.level ?? 0))
-    if (lv > 0) {
+    // highest salvo percent of any carrier (skillRuntime teamSalvoPct; mods included)
+    const pct = Math.max(0, ...player.map(b => skillOf(b, 'opening_salvo')?.p.pct ?? 0))
+    if (pct > 0) {
       for (const e of living(npc)) {
-        const dmg = Math.max(1, e.maxHp * P('opening_salvo', lv).pct)
+        const dmg = Math.max(1, e.maxHp * pct)
         const capped = Math.min(dmg, e.hp - 1) // non-lethal: leaves ≥ 1 HP
         if (capped > 0) applyBladeDamage(e, capped, 'player', 'salvo')
       }
@@ -392,6 +455,8 @@ export const runBattle = (opts) => {
     twin.ax = parent.ax
     twin.ay = parent.ay
     twin.accelFramesLeft = parent.accelFramesLeft
+    twin.hx = parent.hx
+    twin.hy = parent.hy
     parent.linkedIds = [...(parent.linkedIds ?? []), twin.id]
     twin.linkedIds = [parent.id]
     parent.ghostPending = false
@@ -407,7 +472,7 @@ export const runBattle = (opts) => {
     for (let i = 0; i < SPLIT_CHILD_COUNT; i++) {
       const ang = (i / SPLIT_CHILD_COUNT) * Math.PI * 2 + rng() * 0.25
       const dx = Math.cos(ang), dy = Math.sin(ang)
-      const cr = BLADE_RADIUS * SPLIT_CHILD_RADIUS_PCT
+      const cr = BLADE_RADIUS * teamSizeMul[parent.owner] * SPLIT_CHILD_RADIUS_PCT
       const dist = parent.radius + cr * 1.1
       const ch = createBlade(parent.owner, parent.x + dx * dist, parent.y + dy * dist, {
         ...parent.config,
@@ -435,10 +500,15 @@ export const runBattle = (opts) => {
     b.vy = 0
     b.ax = (nx * force) / ACCEL_FRAMES
     b.ay = (ny * force) / ACCEL_FRAMES
+    followHeading(b, b.ax, b.ay, 0) // armour faces where it flies
     b.accelFramesLeft = ACCEL_FRAMES
     b.wallBounceCount = 0
     launchedId = b.id
-    if (b.sk) b.sk.stacks = 0 // Momentum resets per launch
+    if (b.sk) {
+      b.sk.stacks = 0 // Momentum resets per launch
+      b.sk.banked = false
+      b.sk.bankUsed = false
+    }
     if (b.ghostPending) spawnGhostTwin(b)
   }
 
@@ -449,6 +519,18 @@ export const runBattle = (opts) => {
     const mine = living(player)
     const foes = living(npc)
     if (!mine.length || !foes.length) return false
+    if (scripted) {
+      const me = mine[Math.floor(prng() * mine.length)]
+      const t = foes[Math.floor(prng() * foes.length)]
+      const a = Math.atan2(t.y - me.y, t.x - me.x) + (prng() - 0.5) * 0.5
+      const pull = (0.55 + prng() * 0.45) * MAX_PULL_DISTANCE
+      const d = hyp(me.x, me.y)
+      const wt = (d / ARENA_RADIUS - WALL_BOOST_START) / (1 - WALL_BOOST_START)
+      const wallMul = wt <= 0 ? 1 : 1 + (WALL_BOOST_MAX - 1) * Math.min(wt, 1)
+      const ratio = Math.min(pull * wallMul / MAX_PULL_DISTANCE, 1)
+      launch(me, Math.cos(a), Math.sin(a), ratio * BASE_MAX_FORCE * statsFor(me).speedMultiplier)
+      return true
+    }
     const nearestTo = (b) => foes.reduce((a, f) => hyp(f.x - b.x, f.y - b.y) < hyp(a.x - b.x, a.y - b.y) ? f : a)
     const lowest = foes.reduce((a, f) => f.hp < a.hp ? f : a)
     let blade, target
@@ -494,7 +576,7 @@ export const runBattle = (opts) => {
         const ax = al.x - blade.x, ay = al.y - blade.y
         const proj = ax * c + ay * s
         if (proj < 0) continue
-        if (Math.abs(-ax * s + ay * c) < BLADE_RADIUS * 3) return true
+        if (Math.abs(-ax * s + ay * c) < BLADE_RADIUS * ((blade.disc ?? 1) + (al.disc ?? 1) + 1)) return true
       }
       return false
     }
@@ -543,6 +625,7 @@ export const runBattle = (opts) => {
     b.vy = (b.vy - 2 * dot * ny) * boost
     b.wallBounceCount++
     chargeMomentum(b)
+    armBank(b)
     if (b.accelFramesLeft > 0) {
       const aDot = b.ax * nx + b.ay * ny
       if (aDot > 0) {
@@ -559,28 +642,6 @@ export const runBattle = (opts) => {
     }
   }
 
-  // bounceOffBouncers (3049-3097)
-  const bounceOffBouncers = (b) => {
-    if (!bouncers.length || b.isTeleporter) return
-    for (const bo of bouncers) {
-      const dx = b.x - bo.x, dy = b.y - bo.y
-      const dist = hyp(dx, dy)
-      const minD = b.radius + bo.radius
-      if (dist >= minD || dist < 0.01) continue
-      const nx = dx / dist, ny = dy / dist
-      b.x += nx * (minD - dist)
-      b.y += ny * (minD - dist)
-      const dot = b.vx * nx + b.vy * ny
-      if (dot >= 0) continue
-      const st = statsFor(b)
-      const sr = Math.min(speed(b) / (BASE_MAX_FORCE * st.speedMultiplier), 1)
-      const boost = 1 + (WALL_BOOST_FACTOR - 1) * sr
-      b.vx = (b.vx - 2 * dot * nx) * boost
-      b.vy = (b.vy - 2 * dot * ny) * boost
-      chargeMomentum(b)
-    }
-  }
-
   const pairKey = (a, b) => (a.id < b.id ? `${a.id}_${b.id}` : `${b.id}_${a.id}`)
   const isEnemyPair = (a, b) => a.owner !== b.owner
 
@@ -591,16 +652,23 @@ export const runBattle = (opts) => {
     let mul = 1
     let skillCrit = false
     const le = skillOf(att, 'lucky_edge')
-    if (le && !isCrit && srng() < P('lucky_edge', le.level).chance) {
-      mul *= P('lucky_edge', le.level).mult
+    if (le && !isCrit && srng() < le.p.chance) {
+      mul *= le.p.mult
       skillCrit = true
       proc('lucky_edge')
     }
     const mo = skillOf(att, 'momentum')
     if (mo && launchedId === att.id) {
-      mul *= 1 + P('momentum', mo.level).perStack * att.sk.stacks
+      mul *= 1 + mo.p.perStack * att.sk.stacks
       if (att.sk.stacks > 0) proc('momentum')
-      att.sk.stacks = Math.min(P('momentum', mo.level).maxStacks, att.sk.stacks + 1)
+      att.sk.stacks = Math.min(mo.p.maxStacks, att.sk.stacks + 1)
+    }
+    // Bank Shot: one bonus hit per launch after a rebound of the launched bearer
+    const bs = skillOf(att, 'bank_shot')
+    if (bs && launchedId === att.id && att.sk.banked && !att.sk.bankUsed) {
+      mul *= 1 + bs.p.pct
+      att.sk.bankUsed = true
+      proc('bank_shot')
     }
     if (governor) mul = Math.min(mul, GOV.OUT_MUL_CAP)
     return { dmg: dmg * mul, skillCrit }
@@ -612,15 +680,15 @@ export const runBattle = (opts) => {
     const now = gameTime()
     if (now < def.sk.phasedUntil) return { taken: 0, reflect: 0 }
     const ps = skillOf(def, 'phase_step')
-    if (ps && now >= def.sk.dodgeReadyAt && srng() < P('phase_step', ps.level).chance) {
-      def.sk.dodgeReadyAt = now + P('phase_step', ps.level).cooldownMs
-      def.sk.phasedUntil = now + 300
+    if (ps && now >= def.sk.dodgeReadyAt && srng() < ps.p.chance) {
+      def.sk.dodgeReadyAt = now + ps.p.cooldownMs
+      def.sk.phasedUntil = now + PHASE_WINDOW_MS
       proc('phase_step')
       return { taken: 0, reflect: 0 }
     }
     const mp = skillOf(def, 'mirror_plate')
-    if (mp && srng() < P('mirror_plate', mp.level).chance) {
-      const share = P('mirror_plate', mp.level).share
+    if (mp && srng() < mp.p.chance) {
+      const share = mp.p.share
       proc('mirror_plate')
       return { taken: dmg * (1 - share), reflect: dmg * share / Math.max(1, statsFor(att).defenseMultiplier) }
     }
@@ -630,7 +698,18 @@ export const runBattle = (opts) => {
   const chargeMomentum = (b) => {
     if (!b.sk || launchedId !== b.id) return
     const mo = skillOf(b, 'momentum')
-    if (mo) b.sk.stacks = Math.min(P('momentum', mo.level).maxStacks, b.sk.stacks + 1)
+    if (mo) b.sk.stacks = Math.min(mo.p.maxStacks, b.sk.stacks + 1)
+  }
+  // Bank Shot arms on a rebound (wall; the sim has no terrain) during the bearer's own launch
+  const armBank = (b) => {
+    if (!b.sk || launchedId !== b.id || b.sk.bankUsed || !skillOf(b, 'bank_shot')) return
+    b.sk.banked = true
+  }
+  // Anchor: knockback kept by a NON-launched bearer on an enemy contact
+  const anchorKeep = (b) => {
+    if (!b.sk || launchedId === b.id) return 1
+    const an = skillOf(b, 'anchor')
+    return an ? 1 - an.p.resist : 1
   }
   // Reference hit: the collision formula at 50% of the attacker's max speed,
   // no crit, same piercer/star defence rules (resolveCollision 3375-3382)
@@ -649,7 +728,7 @@ export const runBattle = (opts) => {
     const hr = skillOf(bearer, 'homing_rockets')
     if (hr) {
       bearer.sk.rocketCount++
-      const p = P('homing_rockets', hr.level)
+      const p = hr.p
       if (bearer.sk.rocketCount >= p.everyN) {
         bearer.sk.rocketCount = 0
         const foes = living(npc).filter(f => !isInvuln(f)).sort((a, b) => a.hp - b.hp).slice(0, p.maxTargets)
@@ -663,7 +742,7 @@ export const runBattle = (opts) => {
     }
     const sc = skillOf(bearer, 'static_charge')
     if (sc && enemy.hp > 0 && launchedId === enemy.id && speed(enemy) > STOP_THRESHOLD) {
-      const p = P('static_charge', sc.level)
+      const p = sc.p
       const now = gameTime()
       if (now - enemy.lastShockMs >= 250 && srng() < p.chance) {
         enemy.lastShockMs = now
@@ -741,6 +820,18 @@ export const runBattle = (opts) => {
     a.vy = (a.vy - aDot * ny + bDot * ny) * BOUNCE_DAMPENING
     b.vx = (b.vx - bDot * nx + aDot * nx) * BOUNCE_DAMPENING
     b.vy = (b.vy - bDot * ny + aDot * ny) * BOUNCE_DAMPENING
+    if (a.owner !== b.owner && (a.skills?.length || b.skills?.length)) {
+      const ka = anchorKeep(a)
+      if (ka !== 1) {
+        a.vx *= ka
+        a.vy *= ka
+      }
+      const kb = anchorKeep(b)
+      if (kb !== 1) {
+        b.vx *= kb
+        b.vy *= kb
+      }
+    }
     const ov = minDist - dist
     a.x -= ov / 2 * nx
     a.y -= ov / 2 * ny
@@ -774,6 +865,16 @@ export const runBattle = (opts) => {
         if (b.config.topPartId === 'piercer') defMul = 1 + (defMul - 1) * 0.25
         else if (b.config.topPartId === 'star') defMul = 1 + (defMul - 1) * 0.75
         dBA = (closing * bSt.damageMultiplier * (bCrit ? 1.25 : 1) * bSt.totalWeight) / (aSt.totalWeight * defMul) * DAMAGE_SCALE * aAdv * (friendlyFire ? FRIENDLY_FIRE_MUL : 1)
+      }
+      // ── directional armour (smasher `armor`): damage TAKEN by where the hit
+      // lands vs the defender's heading; Thorns reads the unarmoured hit.
+      const zoneB = zoneOf(b, -nx, -ny)
+      const zoneA = zoneOf(a, nx, ny)
+      const thornsAB = dAB
+      const thornsBA = dBA
+      if (armorActive) {
+        if (dAB > 0 && b.armor) dAB *= armorMul(b.armor, zoneB)
+        if (dBA > 0 && a.armor) dBA *= armorMul(a.armor, zoneA)
       }
       // ── skills: outgoing multipliers, then incoming dodge/mirror ─────────
       dAB = outgoing(a, b, dAB, aCrit).dmg
@@ -812,6 +913,22 @@ export const runBattle = (opts) => {
       if (inA.reflect > 0 && b.hp > 0) {
         if (applyBladeDamage(b, inA.reflect, a.owner, 'reflect')) hadKill = true
       }
+      // Thorns: a hit on the bearer's spiked side recoils onto the attacker
+      // (skillCore thornsRecoil: share x unarmoured hit / max(1, attacker def))
+      if (dAB > 0 && a.hp > 0 && isEnemyPair(a, b)) {
+        const th = skillOf(b, 'thorns')
+        if (th && zoneB === spikedZone(b) && thornsAB > 0) {
+          proc('thorns')
+          if (applyBladeDamage(a, thornsAB * th.p.share / Math.max(1, aSt.defenseMultiplier), b.owner, 'reflect')) hadKill = true
+        }
+      }
+      if (dBA > 0 && b.hp > 0 && isEnemyPair(a, b)) {
+        const th = skillOf(a, 'thorns')
+        if (th && zoneA === spikedZone(a) && thornsBA > 0) {
+          proc('thorns')
+          if (applyBladeDamage(b, thornsBA * th.p.share / Math.max(1, bSt.defenseMultiplier), a.owner, 'reflect')) hadKill = true
+        }
+      }
       // contact-driven skills
       if (isEnemyPair(a, b)) {
         if (a.owner === 'player') onEnemyContact(a, b)
@@ -824,13 +941,13 @@ export const runBattle = (opts) => {
         const cnt = allLive().filter(x => x.isEmittedChild && x.owner === em.owner && x.hp > 0).length
         if (cnt >= 3) continue
         const ang = rng() * Math.PI * 2
-        const sd = em.radius + BLADE_RADIUS * 0.5 + 2
+        const sd = em.radius + BLADE_RADIUS * teamSizeMul[em.owner] * 0.5 + 2
         const ch = createBlade(em.owner, em.x + Math.cos(ang) * sd, em.y + Math.sin(ang) * sd, {
           ...em.config,
           bossAbility: undefined,
           isBoss: false
         }, false)
-        ch.radius = BLADE_RADIUS * 0.45
+        ch.radius = BLADE_RADIUS * teamSizeMul[em.owner] * 0.45
         em.emittedChildCount = (em.emittedChildCount ?? 0) + 1
         ch.maxHp = 1 + Math.floor(em.emittedChildCount / 2)
         ch.hp = ch.maxHp
@@ -886,7 +1003,7 @@ export const runBattle = (opts) => {
             const ang = rng() * Math.PI * 2
             const r = (ARENA_RADIUS - POWERUP_RADIUS - 12) * (0.25 + rng() * 0.7)
             const { x, y } = clampInArena(Math.cos(ang) * r, Math.sin(ang) * r, POWERUP_RADIUS, 12)
-            if (everyone.some(b => b.hp > 0 && hyp(b.x - x, b.y - y) < BLADE_RADIUS + POWERUP_RADIUS + 6)) continue
+            if (everyone.some(b => b.hp > 0 && hyp(b.x - x, b.y - y) < BLADE_RADIUS + POWERUP_RADIUS + 6 + BLADE_RADIUS * ((b.disc ?? 1) - 1))) continue
             if (powerups.some(p => hyp(p.x - x, p.y - y) < POWERUP_RADIUS * 2 + 8)) continue
             const stat = ['attack', 'defense', 'speed'][Math.floor(rng() * 3)]
             powerups.push({ x, y, stat, age: 0 })
@@ -919,14 +1036,17 @@ export const runBattle = (opts) => {
   }
 
   // ── main loop (updatePhysics 2650-2940) ──────────────────────────────────
-  const MAX_TICKS = 60 * 60 * 30
+  const MAX_TICKS = opts.maxTicks ?? 60 * 60 * 30
   while (!result && tick < MAX_TICKS) {
     tick++
     // launches happen "between" ticks, like a pointer release / NPC timer
     if (phase === 'player_turn') {
       playerThink += 16
-      if (playerThink >= 600) {
+      // scripted: 3-22 frames of 17 ms like the balance test; typical: 600 ms
+      if (playerThinkMs === null) playerThinkMs = scripted ? (3 + Math.floor(prng() * 20)) * 17 : 600
+      if (playerThink >= playerThinkMs) {
         playerThink = 0
+        playerThinkMs = null
         if (playerLaunch()) {
           phase = 'player_launched'
           turns++
@@ -967,9 +1087,8 @@ export const runBattle = (opts) => {
       if (speed(b) < STOP_THRESHOLD && b.accelFramesLeft === 0) {
         b.vx = 0
         b.vy = 0
-      }
+      } else followHeading(b, b.vx, b.vy, STOP_THRESHOLD) // kept when stopped
       bounceOffWalls(b)
-      bounceOffBouncers(b)
     }
     // All-pairs collision in canonical syncKey order (post-WP0 updatePhysics)
     const ord = orderedBlades()
@@ -1049,6 +1168,18 @@ export const runBattle = (opts) => {
     }
     if (turns >= maxTurns) break
   }
+  // share of each team's max HP left (spawned children included, like the
+  // game's playerBlades / npcBlades) — validate.mjs compares it with the engine
+  const hpFrac = (arr) => {
+    let hp = 0, max = 0
+    for (const b of arr) {
+      hp += Math.max(0, b.hp)
+      max += b.maxHp
+    }
+    return max > 0 ? hp / max : 0
+  }
+  m.pHp = hpFrac(player)
+  m.nHp = hpFrac(npc)
   return { result: result ?? 'timeout', turns, ticks: tick, ...m }
 }
 
@@ -1063,7 +1194,29 @@ export const TEAMS = {
   tank: [['cushioned', 'tanky'], ['round', 'tanky']],
   spiky: [['triangle', 'speedy'], ['quadratic', 'balanced']]
 }
+/** Smasher team names: `smashers` (the game's DEFAULT_TEAM_SMASHERS) or ids
+ *  joined by `+` (`grizzle+vixie`). Anything else is a part-only TEAMS key. */
+export const smasherTeamIds = (name) => {
+  if (name === 'smashers') return [...DEFAULT_TEAM_SMASHERS]
+  if (TEAMS[name]) return null
+  const ids = String(name).split('+')
+  return ids.every(isSmasherId) ? ids : null
+}
+export const isSmasherTeam = (name) => smasherTeamIds(name) !== null
+/**
+ * Part-only team: every part at `levelOverride` (default: lockstep level).
+ * Smasher team: smasher level = `levelOverride` (number, or one per blade);
+ * default = the part lockstep level + 1 (a level-L smasher has its parts
+ * upgraded L − 1 times). Callers that model the coin economy pass
+ * econ.mjs smasherEconLevels(stage).
+ */
 export const teamFor = (name, stageId, levelOverride) => {
+  const ids = smasherTeamIds(name)
+  if (ids) {
+    const lv = levelOverride ?? lockstepLevel(stageId) + 1
+    return ids.map((id, i) => smasherConfig(id, Array.isArray(lv) ? lv[i] ?? lv[lv.length - 1] : lv))
+  }
+  if (!TEAMS[name]) throw new Error(`unknown team ${name} (part teams: ${Object.keys(TEAMS).join(', ')}; or smashers / id+id)`)
   const lvl = levelOverride ?? lockstepLevel(stageId)
   return TEAMS[name].map(([t, b]) => ({ topPartId: t, bottomPartId: b, topLevel: lvl, bottomLevel: lvl }))
 }

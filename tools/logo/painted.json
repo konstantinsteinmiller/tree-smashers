@@ -1,0 +1,20 @@
+{
+  "v": "8305f934",
+  "parts": {
+    "emblem": {
+      "file": "painted-emblem_590x468.webp",
+      "w": 590,
+      "h": 468
+    },
+    "tree": {
+      "file": "painted-tree_518x218.webp",
+      "w": 518,
+      "h": 218
+    },
+    "smashers": {
+      "file": "painted-smashers_908x214.webp",
+      "w": 908,
+      "h": 214
+    }
+  }
+}

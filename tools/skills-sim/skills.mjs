@@ -53,17 +53,18 @@ const body = src.slice(skillsStart)
 
 const BLOCK = /(\w+): def\(\{\s*id: '(\w+)', tag: '(\w+)'[\s\S]*?zipLevels<[^>]*>\((\{[^{}]*\})\)/g
 const parsed = {}
-// Smasher-only effects (`smasherOnly: true`) are not team skills: the sim
-// models the ten team skills only, so those blocks are skipped here.
+// Smasher-only effects (`smasherOnly: true`: bank_shot, anchor, tower_breaker,
+// thorns) are not team skills — they stay out of SKILL_IDS / SKILL_PARAMS (the
+// team-skill sweeps and result files are keyed by the ten) and are exported
+// separately as SMASHER_EFFECT_PARAMS for smasher loadouts.
 const SMASHER_ONLY = new Set()
+const parsedSmasher = {}
 for (const m of body.matchAll(BLOCK)) {
   const [, key, id, tag, colsSrc] = m
-  if (/smasherOnly: true/.test(m[0])) {
-    SMASHER_ONLY.add(id)
-    continue
-  }
+  const smasherOnly = /smasherOnly: true/.test(m[0])
+  if (smasherOnly) SMASHER_ONLY.add(id)
   if (key !== id) fail(`block key ${key} != id ${id}`)
-  if (parsed[id]) fail(`duplicate skill ${id}`)
+  if (parsed[id] || parsedSmasher[id]) fail(`duplicate skill ${id}`)
   let cols
   try {
     cols = new Function(`return (${colsSrc})`)()
@@ -80,7 +81,7 @@ for (const m of body.matchAll(BLOCK)) {
     }
     return row
   })
-  parsed[id] = { tag, levels }
+  ;(smasherOnly ? parsedSmasher : parsed)[id] = { tag, levels }
 }
 
 const got = Object.keys(parsed).sort().join(',')
@@ -121,3 +122,15 @@ export const CATALOG_SKILL_COST = Object.freeze(costSrc.split(',').map(s => Numb
 if (CATALOG_SKILL_COST.length !== LEVELS || !CATALOG_SKILL_COST.every(c => Number.isFinite(c) && c > 0)) {
   fail(`SKILL_COST must be ${LEVELS} positive numbers, got [${costSrc}]`)
 }
+
+// ── Smasher-only effects + the full effect table a smasher loadout reads ────
+export const SMASHER_EFFECT_IDS = Object.freeze([...SMASHER_ONLY])
+for (const id of ['bank_shot', 'anchor', 'tower_breaker', 'thorns']) {
+  if (!parsedSmasher[id]) fail(`smasher-only effect ${id} not found (the engine replicates it)`)
+}
+/** Every effect (ten team skills + smasher-only), power scale applied — the
+ *  game's skillParams(id, level). Smasher mods go on top (data.mjs applySkillMods). */
+export const EFFECT_PARAMS = Object.freeze({
+  ...SKILL_PARAMS,
+  ...Object.fromEntries(SMASHER_EFFECT_IDS.map(id => [id, { ...parsedSmasher[id], levels: parsedSmasher[id].levels.map(scaleRow) }]))
+})

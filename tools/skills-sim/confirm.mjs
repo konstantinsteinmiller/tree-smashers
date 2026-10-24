@@ -3,6 +3,10 @@
 // so the confidence interval uses the paired (influence-function) variance
 // instead of the conservative independent one in report.mjs.
 //   node confirm.mjs --pairs a+b;c+d --stages 15,30 --n 2000 --out confirm.json
+// Smasher teams (--team smashers | grizzle+vixie, levels as in run.mjs:
+// --levelMode econ|lock, --smasherLevel 15[,12]): --pairs own = each smasher's
+// own unlocked skills vs the same team without skills.
+// Engine options as run.mjs: --npcTuning off, --streak N, --policy scripted.
 import { Worker, isMainThread, parentPort } from 'node:worker_threads'
 import os from 'node:os'
 import { writeFileSync } from 'node:fs'
@@ -11,7 +15,8 @@ import { fileURLToPath } from 'node:url'
 const __file = fileURLToPath(import.meta.url)
 
 if (isMainThread) {
-  const { econLevel } = await import('./econ.mjs')
+  const { econLevel, smasherEconLevels } = await import('./econ.mjs')
+  const { isSmasherTeam } = await import('./engine.mjs')
   const arg = (k, d) => {
     const i = process.argv.indexOf(`--${k}`)
     return i >= 0 ? process.argv[i + 1] : d
@@ -23,10 +28,21 @@ if (isMainThread) {
   const levelMode = arg('levelMode', 'econ')
   const { lockstepLevel } = await import('./data.mjs')
   const chunk = 200
+  const engineOpts = {
+    npcTuning: arg('npcTuning', 'on') !== 'off',
+    bossLossStreak: Number(arg('streak', 0)),
+    policy: arg('policy', 'typical')
+  }
+  const smasherTeam = isSmasherTeam(teamName)
+  const smasherLevel = arg('smasherLevel', null)?.split(',').map(Number)
+  const lvlFor = (st) => smasherTeam
+    ? (smasherLevel ?? (levelMode === 'lock' ? [lockstepLevel(st) + 1] : smasherEconLevels(st)))
+    : levelMode === 'lock' ? lockstepLevel(st) : econLevel(st)
   const tasks = []
   for (const st of stages) for (const p of pairs) for (let s0 = 0; s0 < N; s0 += chunk) tasks.push({
     st,
-    lvl: levelMode === 'lock' ? lockstepLevel(st) : econLevel(st),
+    engineOpts,
+    lvl: lvlFor(st),
     pair: p,
     s0,
     n: Math.min(chunk, N - s0),
@@ -97,12 +113,15 @@ if (isMainThread) {
   parentPort.on('message', (t) => {
     const team = teamFor(t.teamName ?? 'default', t.st, t.lvl)
     const ids = t.pair.split('+')
-    const lo = team.map(() => ids.map(id => ({ id, level: 10 })))
+    // 'own' = the smashers' own skills (no loadout passed); the control is
+    // always an explicit empty loadout (a smasher would bring its skills)
+    const lo = t.pair === 'own' ? undefined : team.map(() => ids.map(id => ({ id, level: 10 })))
+    const none = team.map(() => [])
     const rows = []
     for (let i = t.s0; i < t.s0 + t.n; i++) {
       const seed = t.st * 7777777 + i * 104729
       const ps = i % 2 === 0
-      const b = { stageId: t.st, team, seed, playerStarts: ps }
+      const b = { stageId: t.st, team, seed, playerStarts: ps, loadouts: none, ...t.engineOpts }
       const k0 = runBattle({ ...b, mode: 'playerImmortal' }).turns
       const ks = runBattle({ ...b, loadouts: lo, mode: 'playerImmortal' }).turns
       const d0 = runBattle({ ...b, mode: 'enemyImmortal' }).turns

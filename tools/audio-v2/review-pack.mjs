@@ -25,7 +25,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { CATALOG, GROUPS, UNUSED } from './catalog.mjs'
-import { decode, measure, readJson, FFMPEG } from './lib/master.mjs'
+import { decode, measure, readJson, writeWav, FFMPEG } from './lib/master.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..', '..')
@@ -65,6 +65,27 @@ for (const e of CATALOG) {
     if (e.old) oldSrc = join(ROOT, 'public', 'audio', e.old)
     newSrc = join(ROOT, 'public', 'audio', e.new)
   }
+  // Variants (round-robin files + layers): one preview that plays them in turn.
+  if (e.montage) {
+    const step = Math.round(e.montage.gapSec * 44100)
+    const parts = e.montage.steps.map((ids) => {
+      const chans = ids.map((id) => decode(join(ROOT, 'public', 'audio', 'v2', 'sfx', `${id}.ogg`), { channels: 1 })[0])
+      const n = Math.max(...chans.map((c) => c.length))
+      const m = new Float32Array(n)
+      for (const c of chans) for (let i = 0; i < c.length; i++) m[i] += c[i]
+      return m
+    })
+    const total = step * (parts.length - 1) + Math.max(...parts.map((p) => p.length))
+    const mixd = new Float32Array(total)
+    parts.forEach((p, k) => { for (let i = 0; i < p.length; i++) mixd[k * step + i] += p[i] })
+    // Layers summed at file level can pass 0 dBFS (in game they mix ~30 dB
+    // lower); scale the whole preview so nothing clips, keeping its balance.
+    let pk = 0
+    for (const v of mixd) pk = Math.max(pk, Math.abs(v))
+    if (pk > 0.75) for (let i = 0; i < mixd.length; i++) mixd[i] *= 0.75 / pk
+    newSrc = join(DIR, `montage-${e.id}.wav`)
+    writeWav(newSrc, [mixd], 44100)
+  }
   for (const p of [oldSrc, newSrc]) if (p && !existsSync(p)) throw new Error(`missing ${p}`)
 
   // Common gain for live-synth pairs (see header).
@@ -90,6 +111,18 @@ for (const e of CATALOG) {
   let metrics = null
   if (e.kind === 'procedural' && r.qa) {
     metrics = { oldMomentary: r.qa.old.momentaryMax, newMomentary: r.qa.new.momentaryMax, diffDb: r.qa.loudnessDiffDb, previewGainDb: gain }
+  } else if (e.montage) {
+    const variants = e.files.map((f) => {
+      const id = f.split('/').pop().replace('.ogg', '')
+      const q = report.items[id]?.qa ?? {}
+      return { id, momentaryMax: q.momentaryMax, truePeak: q.truePeak, durationSec: q.durationSec, bytes: q.bytes, target: report.items[id]?.target?.momentary }
+    })
+    const hit = decode(join(ROOT, 'public', 'audio', 'v2', 'sfx', 'tree-hit-1.ogg'))[0]
+    const heavy = decode(join(ROOT, 'public', 'audio', 'v2', 'sfx', 'tree-hit-heavy.ogg'))[0]
+    const both = new Float32Array(Math.max(hit.length, heavy.length))
+    for (let i = 0; i < hit.length; i++) both[i] += hit[i]
+    for (let i = 0; i < heavy.length; i++) both[i] += heavy[i]
+    metrics = { variants, combined: measure([both]), bytes: variants.reduce((a, v) => a + (v.bytes || 0), 0) }
   } else if (r.qa) {
     const q = r.qa
     let old = null

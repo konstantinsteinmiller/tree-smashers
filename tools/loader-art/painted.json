@@ -1,0 +1,47 @@
+{
+  "v": "6aac67b6",
+  "layers": {
+    "tree": {
+      "l": {
+        "file": "loader-tree-l_636x600.webp",
+        "w": 636,
+        "h": 600,
+        "bytes": 37636
+      },
+      "p": {
+        "file": "loader-tree-p_504x480.webp",
+        "w": 504,
+        "h": 480,
+        "bytes": 28682
+      }
+    },
+    "forest": {
+      "l": {
+        "file": "loader-forest-l_912x336.webp",
+        "w": 912,
+        "h": 336,
+        "bytes": 53754
+      },
+      "p": {
+        "file": "loader-forest-p_1476x540.webp",
+        "w": 1476,
+        "h": 540,
+        "bytes": 100864
+      }
+    },
+    "front": {
+      "l": {
+        "file": "loader-front-l_564x504.webp",
+        "w": 564,
+        "h": 504,
+        "bytes": 38214
+      },
+      "p": {
+        "file": "loader-front-p_336x300.webp",
+        "w": 336,
+        "h": 300,
+        "bytes": 19582
+      }
+    }
+  }
+}

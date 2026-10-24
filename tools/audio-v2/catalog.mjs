@@ -14,6 +14,7 @@ export const GROUPS = [
   { id: 'music', title: 'Music' },
   { id: 'stingers', title: 'Result stingers' },
   { id: 'battle', title: 'Battle SFX' },
+  { id: 'trees', title: 'Tree-tower SFX (new slots)' },
   { id: 'rewards', title: 'Rewards and progression' },
   { id: 'skills', title: 'Skill SFX' },
   { id: 'bosses', title: 'Boss-trait SFX' },
@@ -86,7 +87,7 @@ export const CATALOG = [
     id: 'celebration-1', group: 'battle', kind: 'file', old: 'sfx/celebration-1.ogg', new: 'v2/sfx/celebration-1.ogg',
     plays: 'Match start (random with celebration-2) AND a tree tower destroyed (onTowerDestroyed); also the reward reveal (RewardRevealHost, ratio 0.06).',
     ratio: '0.025 (reveal 0.06)',
-    intent: '"Let\'s go!" start cue: two tom hits, a bright guitar strum and a rising three-note whistle call. (Tower destruction gets its own proposed sound, tower-fall.)'
+    intent: '"Let\'s go!" start cue: two tom hits, a bright guitar strum and a rising three-note whistle call. (Tower destruction gets its own proposed sound, tree-fall.)'
   },
   {
     id: 'celebration-2', group: 'battle', kind: 'file', old: 'sfx/celebration-2.ogg', new: 'v2/sfx/celebration-2.ogg',
@@ -94,10 +95,51 @@ export const CATALOG = [
     intent: 'Second start variant: woodblock triple, marimba "ta-da-daa" and a clap - same energy as celebration-1, different colour.'
   },
   {
-    id: 'tower-fall', group: 'battle', kind: 'proposal', old: null, new: 'v2/sfx/tower-fall.ogg',
-    plays: 'NEW slot (proposal): a tree tower is destroyed. Today that reuses celebration-1 (the match-start cheer).',
+    id: 'balloon-pop', group: 'battle', kind: 'proposal', old: null, new: 'v2/sfx/balloon-pop.ogg',
+    plays: 'NEW slot (#UX3, wired at the owner request): a smasher loses one of its HP balloons (balloon builds, VITE_APP_BALOON_HP_BAR=true) - one per lost share of max HP, all of the rest on a knockout. One sound per 90 ms however many pop at once, playback rate 0.94-1.06x.',
+    ratio: '0.032 (about a clash: the file is -17.8 LUFS-M, a clash -14)',
+    intent: 'Mario-Kart-style balloon burst: a sharp rubber BANG (crack, short low pop body, air snap) and a softer rubber-tear tail - flapping shreds and a fine crinkle thinning out. About 0.3 s audible, never harsh: it can land on top of a clash.'
+  },
+  // ── VS intro (new slots, wired at the owner request: the 3 s face-off) ──
+  {
+    id: 'vs-whoosh', group: 'battle', kind: 'proposal', old: null, new: 'v2/sfx/vs-whoosh.ogg',
+    plays: 'NEW slot, wired: the VS screen before a new matchup - the two team halves slam in from opposite sides (t = 0), and again faster / softer (rate 1.25, ratio 0.016) for the exit wipe at 4.55 s.',
+    ratio: '0.025 (exit 0.016)',
+    intent: 'A wide air swoosh rising into the middle that peaks as the halves meet (~0.19 s), then a short plush-and-wood "fwump". About 0.5 s.'
+  },
+  {
+    id: 'vs-thump', group: 'battle', kind: 'proposal', old: null, new: 'v2/sfx/vs-thump.ogg',
+    plays: 'NEW slot, wired: the VS screen - each side's smasher cards land on their spots (player ~0.4 s, enemy ~0.5 s at rate 0.9).',
+    ratio: '0.022',
+    intent: 'A heavy toy thud - felt body and a low wooden knock, short and round so two in a row never clutter. About 0.3 s.'
+  },
+  {
+    id: 'vs-slam', group: 'battle', kind: 'proposal', old: null, new: 'v2/sfx/vs-slam.ogg',
+    plays: 'NEW slot, wired: the VS screen - the VS emblem lands (0.72 s) with its shockwave ring and screen shake.',
+    ratio: '0.028 (the loudest beat of the screen, about a knockout)',
+    intent: 'Big taiko + kick boom with a dropping sub, a bright wooden crack and splinters, a short crash and a two-note horn stab that says "fight!". Big, still a toy box. About 1.2 s.'
+  },
+  // ── Tree towers (new slots; silent / not wired until approved) ──
+  {
+    id: 'tree-hit', group: 'trees', kind: 'proposal', old: null,
+    new: 'v2/sfx/tree-hit-1.ogg',
+    files: ['v2/sfx/tree-hit-1.ogg', 'v2/sfx/tree-hit-2.ogg', 'v2/sfx/tree-hit-3.ogg', 'v2/sfx/tree-hit-heavy.ogg'],
+    montage: { gapSec: 0.55, steps: [['tree-hit-1'], ['tree-hit-2'], ['tree-hit-3'], ['tree-hit-1'], ['tree-hit-2', 'tree-hit-heavy'], ['tree-hit-3', 'tree-hit-heavy']] },
+    plays: 'NEW slot: every damaging hit of a smasher on a team tree (the plush oak tower), where the wood-splinter burst spawns (5-16 chips scaling with damage). Today tower hits are silent.',
+    ratio: '0.025 (suggested, like a clash)',
+    intent: 'A satisfying wooden thunk with a soft plush body, a small crack and a short splinter crackle. Three round-robin variants (tree-hit-1/2/3) so repeats never sound identical, plus a damage-scaled layer (tree-hit-heavy: deeper trunk boom, sharper crack, longer splinter spray) added on hard hits. The preview plays 1, 2, 3, 1, then 2 and 3 with the heavy layer.'
+  },
+  {
+    id: 'tree-stage', group: 'trees', kind: 'proposal', old: null, new: 'v2/sfx/tree-stage.ogg',
+    plays: 'NEW slot: the tree drops a damage state (healthy -> damaged at 60 %, -> nearly destroyed at 25 %), together with the leaf cascade.',
     ratio: '0.025 (suggested)',
-    intent: 'A tree tower going down: sharp trunk crack, a short creak, a falling swish and a heavy wooden thud with leaves raining down. About 1.3 s.'
+    intent: 'A soft trunk creak and a rustle of leaves letting go - a gentle "it is weakening" cue that sits under the fight. About 1.1 s.'
+  },
+  {
+    id: 'tree-fall', group: 'trees', kind: 'proposal', old: null, new: 'v2/sfx/tree-fall.ogg',
+    plays: 'NEW slot: the tree is felled (onTowerDestroyed). Today that reuses celebration-1, the match-start cheer.',
+    ratio: '0.025 (suggested)',
+    intent: 'The plush oak going down: a big trunk crack, a creak that speeds up as it gives way, a falling swish, a heavy soft landing and leaves raining down. Refines the earlier tower-fall proposal. About 2 s.'
   },
   // ── Rewards ──
   {

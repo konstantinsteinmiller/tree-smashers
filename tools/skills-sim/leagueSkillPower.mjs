@@ -233,7 +233,7 @@ if (isMainThread && isEntry) {
     let next = 0
     let alive = W
     for (let w = 0; w < W; w++) {
-      const worker = new Worker(__file, { workerData: { engineUrl, knobs: DEFAULT_KNOBS } })
+      const worker = new Worker(__file, { workerData: { engineUrl, npcTuning: arg('npcTuning', null), knobs: DEFAULT_KNOBS } })
       const feed = () => {
         if (next >= tasks.length) {
           worker.terminate()
@@ -276,7 +276,7 @@ if (isMainThread && isEntry) {
     let score = 0
     for (let i = t.s0; i < t.s0 + t.n; i++) {
       const seed = ((t.lvl * 7919 + t.olvl * 104729 + i * 15485863) ^ (ARCH.indexOf(t.a) * 31 + ARCH.indexOf(t.b) * 977)) | 0
-      score += scoreOf(runBattle({ stageId: 50, stage, team, loadouts, seed, playerStarts: i % 2 === 0, mode: 'real', knobs }))
+      score += scoreOf(runBattle({ stageId: 50, stage, team, loadouts, seed, playerStarts: i % 2 === 0, mode: 'real', knobs, npcTuning: workerData.npcTuning === 'on' }))
     }
     parentPort.postMessage({
       key: `${t.a}|${t.b}|${t.lvl}|${t.olvl}|${t.A}|${t.B}|${t.pair ?? ''}`,

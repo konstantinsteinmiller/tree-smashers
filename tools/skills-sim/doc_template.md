@@ -149,18 +149,34 @@ it:
 
 - **Replicated 1:1** (with source citations in `engine.mjs`): fixed 60 Hz step,
   acceleration ramp (`ACCEL_FRAMES 28`), decay incl. ice, low-speed brake and no-hit drag,
-  circle walls with wall boost + bounce decay, bouncers, all-pairs collision incl. friendly
+  circle walls with wall boost + bounce decay, all-pairs collision incl. friendly
   fire, elastic bounce, contact re-arm gate, hug-break, back-hit crits + crit cooldown,
   Star lucky crit, Piercer/Star defence rules, speed advantage, anti-draw,
   Spiky chip, lava/forest/thunder-aura hazards, powerups (stage ≥ 2), turn-order
   switching, NPC AI (`launchNpc` incl. ally-blocking lanes), every boss ability (ghost
   twin + damage link, split children + invulnerability, partners/healers groups + healing,
   child-emitter, stat-switch phases, life-leech, thunder aura, teleporter skin).
+- **Smashers** (`smasherCatalog.ts`): a smasher config reads the smasher part tables
+  (`SMASHER_TOP_PARTS` … `SMASHER_*_UPGRADE`) × its stat profile (weight through
+  `SMASHER_TUNING.profileWeightExp`, the square root), its disc size, its front / back
+  armour on the gameplay heading, and its three skills (effect × mods, slots ready at
+  smasher levels 1 / 10 / 20, the smasher-only Bank Shot / Anchor / Thorns included;
+  Tower Breaker is inert — the sim has no team towers). `--team smashers` (the starting
+  pair) or `--team grizzle+vixie`; smasher skills run on the player side only.
+- **Campaign NPC tuning:** part-only NPC blades get `campaignNpcHpMul` (the
+  `CAMPAIGN_NPC_TUNING.hpCurve` on their mean part level) and `dmgMul`, the engine's
+  `isLegacyNpc` gate. The numbers in this document predate it and the smasher pass —
+  part-only player teams, no NPC tuning; `--npcTuning off` reproduces them bit for bit.
 - **Read from source at run time:** `TOP_PARTS`, `BOTTOM_PARTS`, both upgrade-bonus tables,
   `BASE_HP`, the full `BASE_STAGES` table (evaluated with the file's own `e()`/`s()`), the
-  mid-game trim, and 26 physics constants (the sim aborts if any drifted).
-- **Omitted:** rendering, sound, screen shake, boss rubber-banding (measures the
-  *un-softened* fight), difficulty setting (MEDIUM = 1.0), first-game boost.
+  mid-game trim, the smasher part tables, `SMASHER_TUNING`, the 48-smasher catalog (base +
+  `src/data/smashers/batch*.ts`, evaluated with the kit's `p()`/`sk()`), the disc / armour
+  clamps, the skill-mod rules, `CAMPAIGN_NPC_TUNING` and the rubber-band constants; 26 physics
+  constants and the copied smasher / NPC-tuning formulas are asserted against the source
+  (the sim aborts if any drifted).
+- **Omitted:** rendering, sound, screen shake, difficulty setting (MEDIUM = 1.0), first-game
+  boost, terrain and team towers. Boss rubber-banding is off by default (the *un-softened*
+  fight); `--streak N` applies the game's `bossHpRubberBandMul` for a loss streak of N.
 - **Player policy** ("typical player"): half the time launches the auto-selected first
   living blade, otherwise the blade nearest its target; target = lowest-HP or random/nearest
   enemy; ±8° aim error; 85–100 % pull. No deliberate bank shots.
@@ -458,7 +474,8 @@ Income model (`tools/skills-sim/econ.mjs`), all inputs read from the game tables
   stage, 1.5 per boss from stage 15; 0.2/0.8 before);
 - rewarded ad `max(125, round5(3 × rewardLose))`, big chest `max(100, round5(3 ×
   rewardLose))`, daily rewards (coin days only: 1,450 per 7-day cycle), battle-pass coins
-  (`bpCoinReward`, 50 xp/win, 12.5 xp/loss, skin and diamond tiers pay no coins).
+  (`bpCoinReward`, 50 xp/win, 12.5 xp/loss, skin tiers pay no coins; the three
+  3,000-coin jackpot tiers — diamond tiers until 2026-10-21 — are not modelled).
 
 Profiles: **campaign-only** (wins + losses, nothing else), **typical** (1 ad per 3 stages,
 1 big chest per 3 stages, 6 stages/day, battle pass claimed), **engaged** (1 ad per stage).
@@ -948,7 +965,7 @@ export interface BladeSkills {
    `blade.hp = …` with `applyHpLoss(blade, lavaDmg, 'lava')` (the number shown is the
    post-ward, post-shield amount). (No shock branch any more: Hazard Ward's
    `shockKeep` only softens the Frost Lock cold touch, `frostTouchKeep` in bossTraits.ts.)
-7. **`bounceOffBouncers` (≈3092):** after the reflect → `onOwnBounce(blade)`.
+7. **`bounceOffIslands` (terrain islands; mushrooms / logs in `applyTerrainGround`):** after the reflect → `onOwnBounce(blade)`.
 8. **`resolveCollision` (≈3142)** inside `if (contactArmed)`, after `dmgAtoB`/`dmgBtoA` are
    computed and **before** the anti-draw block — the §5 order; the anti-draw survivability
    check becomes `hp + (skills?.shield ?? 0)`. Fast path: skip everything when
@@ -1128,8 +1145,9 @@ Everything lives in `tools/skills-sim/` (plain Node ≥ 20 ESM, no dependencies)
 
 | file                                         | role                                                                                                                                                          |
 |----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `data.mjs`                                   | reads part tables, upgrade bonuses, `BASE_STAGES`, trim, `upgradeCost` straight from the TS sources; asserts 26 physics constants against `useSpinnerGame.ts` |
-| `engine.mjs`                                 | the headless battle replica + skill runtime (§3.2)                                                                                                            |
+| `data.mjs`                                   | reads part tables, upgrade bonuses, `BASE_STAGES`, trim, `upgradeCost`, the smasher tables + catalog and the campaign NPC tuning straight from the TS sources; asserts 26 physics constants and the copied smasher / NPC formulas against the source |
+| `engine.mjs`                                 | the headless battle replica + skill runtime (§3.2), smasher teams, campaign NPC tuning                                                                          |
+| `validate.mjs`                               | sim ↔ real-engine parity on fixed matchups (`validate/engineParity.sim.test.ts` runs the game side)                                                             |
 | `skills.mjs`                                 | the level tables (identical to §4)                                                                                                                            |
 | `econ.mjs`                                   | income model (§6.3)                                                                                                                                           |
 | `skillecon.mjs`                              | "when is everything maxed" projection                                                                                                                         |

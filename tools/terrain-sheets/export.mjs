@@ -10,8 +10,12 @@
  * (booster, leafArrow) point to the RIGHT (angle 0). Logs are variable-length
  * capsules and stay procedural.
  *
- *   node tools/terrain-sheets/export.mjs [--cell 384]
- *   → art-sheets/terrain/features.png
+ *   node tools/terrain-sheets/export.mjs [--cell 384] [--set features|obstacles-a|obstacles-b]
+ *   → art-sheets/terrain/<set>.png
+ *
+ * --set obstacles-a / obstacles-b: the THEMED obstacle looks (an igloo, a
+ * broken column, a toy drum … — arenaThemes.ts OBSTACLE_LOOKS_A / _B, drawn by
+ * arenaObstacleDraw.ts OBSTACLE_DRAW), same lattice and radius fraction.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -27,13 +31,18 @@ export const FEATURE_R_FRAC = 0.36
 const args = process.argv.slice(2)
 const ci = args.indexOf('--cell')
 const cell = ci >= 0 ? Number(args[ci + 1]) : 384
+const si = args.indexOf('--set')
+const SET = si >= 0 ? args[si + 1] : 'features'
+if (!['features', 'obstacles-a', 'obstacles-b'].includes(SET)) { console.error(`unknown --set ${SET}`); process.exit(2) }
 
 const esbuild = (() => {
   try { return require('esbuild') } catch { return createRequire(require.resolve('tsx'))('esbuild') }
 })()
 const bundle = await esbuild.build({
   stdin: {
-    contents: `import { TERRAIN_FEATURE_DRAW } from '@/use/arenaTerrainDraw'; window.__D = TERRAIN_FEATURE_DRAW`,
+    contents: SET === 'features'
+      ? `import { TERRAIN_FEATURE_DRAW } from '@/use/arenaTerrainDraw'; window.__D = TERRAIN_FEATURE_DRAW; window.__K = ${JSON.stringify(KINDS)}`
+      : `import { OBSTACLE_DRAW } from '@/use/arenaObstacleDraw'; import { OBSTACLE_LOOKS_A, OBSTACLE_LOOKS_B } from '@/use/arenaThemes'; window.__D = OBSTACLE_DRAW; window.__K = ${SET === 'obstacles-a' ? 'OBSTACLE_LOOKS_A' : 'OBSTACLE_LOOKS_B'}`,
     resolveDir: ROOT,
     loader: 'ts'
   },
@@ -57,7 +66,8 @@ try {
   page.on('pageerror', e => console.error('[page]', e.message))
   await page.setContent('<!doctype html><html><body></body></html>')
   await page.addScriptTag({ content: bundle.outputFiles[0].text })
-  const url = await page.evaluate(([KINDS, cell, frac]) => {
+  const url = await page.evaluate(([cell, frac]) => {
+    const KINDS = window.__K
     const c = document.createElement('canvas')
     c.width = cell * 3
     c.height = cell * 3
@@ -75,10 +85,10 @@ try {
       x.restore()
     })
     return c.toDataURL('image/png')
-  }, [KINDS, cell, FEATURE_R_FRAC])
+  }, [cell, FEATURE_R_FRAC])
   mkdirSync(OUT, { recursive: true })
-  writeFileSync(join(OUT, 'features.png'), Buffer.from(url.split(',')[1], 'base64'))
-  console.log('wrote', join(OUT, 'features.png'))
+  writeFileSync(join(OUT, `${SET}.png`), Buffer.from(url.split(',')[1], 'base64'))
+  console.log('wrote', join(OUT, `${SET}.png`))
 } finally {
   await ctx.close()
   rmSync(profile, { recursive: true, force: true })

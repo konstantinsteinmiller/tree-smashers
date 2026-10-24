@@ -33,6 +33,9 @@
 //   node "$B" run --want 10 -- node league.mjs floor --fallback --tiers platinum,diamond,champion --n 1000 --span 1 --out out/league-floor-fallback.json
 //   node league.mjs --report out/league-k.json      (or the floor file)
 // Options (floor): --tiers bronze,gold  --span 4 (levels tried around the guess)  --fallback
+// --npcTuning on|off: CAMPAIGN_NPC_TUNING on the NPC side. Default: off for k-mode ghosts
+//   (they stand in for another player's smasher team), on for floor gatekeepers
+//   (part-only bosses, as in the game). off reproduces the pre-smasher fits.
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -274,7 +277,7 @@ if (isMainThread && isEntry) {
     let next = 0
     let alive = W
     for (let w = 0; w < W; w++) {
-      const worker = new Worker(__file, { workerData: { engineUrl, knobs: DEFAULT_KNOBS, encounters, rosters: ABILITY_ROSTERS } })
+      const worker = new Worker(__file, { workerData: { engineUrl, npcTuning: arg('npcTuning', null), knobs: DEFAULT_KNOBS, encounters, rosters: ABILITY_ROSTERS } })
       const feed = () => {
         if (next >= tasks.length) {
           worker.terminate()
@@ -313,11 +316,13 @@ if (isMainThread && isEntry) {
     if (t.mode === 'k') {
       const team = teamFor(t.a, 50, t.lvl)
       const ghost = teamFor(t.b, 50, t.olvl).map(c => ({ ...c }))
-      // stageId 50: power-ups on, default arena, no bouncers (league arena)
+      // stageId 50: power-ups on, default arena, no terrain (league arena)
       const stage = { id: 50, name: 'league', isBoss: false, arenaType: 'default', enemyTeam: ghost }
       for (let i = t.s0; i < t.s0 + t.n; i++) {
         const seed = (t.lvl * 7919 + t.olvl * 104729 + i * 15485863) ^ (t.a.length * 31 + t.b.length)
-        score += scoreOf(runBattle({ stageId: 50, stage, team, seed, playerStarts: i % 2 === 0, mode: 'real', knobs }))
+        // the ghost stands in for another player's (smasher) team: no
+        // CAMPAIGN_NPC_TUNING unless --npcTuning on (game: league ghosts carry smasherIds)
+        score += scoreOf(runBattle({ stageId: 50, stage, team, seed, playerStarts: i % 2 === 0, mode: 'real', knobs, npcTuning: workerData.npcTuning === 'on' }))
       }
       parentPort.postMessage({ key: `${t.a}|${t.b}|${t.lvl}|${t.olvl}`, a: t.a, b: t.b, lvl: t.lvl, own: 4 * t.lvl, opp: 4 * t.olvl, n: t.n, score })
       return
@@ -338,7 +343,8 @@ if (isMainThread && isEntry) {
     }
     for (let i = t.s0; i < t.s0 + t.n; i++) {
       const seed = (t.power * 1000003 + t.glvl * 7919 + i * 15485863) | 0
-      score += scoreOf(runBattle({ stageId: 50, stage, team, seed, playerStarts: i % 2 === 0, mode: 'real', knobs }))
+      // gatekeepers are part-only NPC bosses: CAMPAIGN_NPC_TUNING applies (--npcTuning off = pre-smasher)
+      score += scoreOf(runBattle({ stageId: 50, stage, team, seed, playerStarts: i % 2 === 0, mode: 'real', knobs, npcTuning: workerData.npcTuning !== 'off' }))
     }
     parentPort.postMessage({ key: `${t.tier}|${t.fallback ?? ''}|${t.glvl}|${t.power}`, tier: t.tier, fallback: t.fallback ?? undefined, power: t.power, plvl: t.power / 4, glvl: t.glvl, n: t.n, score })
   })

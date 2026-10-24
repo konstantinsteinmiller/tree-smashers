@@ -140,11 +140,6 @@
     "url": "/_blob/85b7839b2dc26949b6ffc8aaa811cacd",
     "sha1": "7b1f0926346c9bef590b28baee97b940b2bf41bb"
   },
-  "tower-fall.new-r1.mp4": {
-    "id": "84396e9d54df848a925c8149f97604da",
-    "url": "/_blob/84396e9d54df848a925c8149f97604da",
-    "sha1": "defb72f0583050ee951d6ea5c93fd8263901810e"
-  },
   "happy.old.mp4": {
     "id": "f9daf1316e87e50d0fe71a29a76f84f3",
     "url": "/_blob/f9daf1316e87e50d0fe71a29a76f84f3",
@@ -434,5 +429,20 @@
     "id": "1c8f5f7e556c1d431eca4ab6bf481d8e",
     "url": "/_blob/1c8f5f7e556c1d431eca4ab6bf481d8e",
     "sha1": "42b29dd8ed08b025dda187e4e245b856e45660b6"
+  },
+  "tree-hit.new-r1.mp4": {
+    "id": "31608ebdb02f31ed736aa38fcc2d8743",
+    "url": "/_blob/31608ebdb02f31ed736aa38fcc2d8743",
+    "sha1": "3e17048edc4405f1a07f66b64ab79d474c1371a7"
+  },
+  "tree-stage.new-r1.mp4": {
+    "id": "65cb972e575663d63b4502f3fa240b32",
+    "url": "/_blob/65cb972e575663d63b4502f3fa240b32",
+    "sha1": "39857764d94fec83ca796de44e161d7efe06c033"
+  },
+  "tree-fall.new-r1.mp4": {
+    "id": "b829d4151196001c106ef3ac7b49a5f1",
+    "url": "/_blob/b829d4151196001c106ef3ac7b49a5f1",
+    "sha1": "8efe5fa31b47df6582f430dff7cbfd918d1445c3"
   }
 }

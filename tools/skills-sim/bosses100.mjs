@@ -36,7 +36,14 @@
 //          --noold | --oldonly          (new encounter / cycle copy of the slot)
 //          --shift -4,0,4               (enemy level offsets for new fights)
 //          --levelMode econ|lock  --team default|glass|tank|spiky
-//          --set EMBER_PCT=0.03,CHILL_TURNS=2   --rubber 1,0.5 (boss HP multiplier)
+//            | smashers | grizzle+vixie  (smasher team: econ = smasherEconLevels,
+//            lock = lockstep part level + 1, or --smasherLevel 25[,24];
+//            loadout `own` = each smasher's own unlocked skills)
+//          --set EMBER_PCT=0.03,CHILL_TURNS=2
+//          --streak 0,2,4,10   campaign boss loss streak → the game's
+//                              bossHpRubberBandMul (useSpinnerCampaign.ts)
+//          --rubber 1,0.5      raw boss HP multiplier (overrides --streak)
+//          --npcTuning off     no CAMPAIGN_NPC_TUNING (pre-smasher numbers)
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -107,7 +114,7 @@ export const ENCOUNTERS = Object.fromEntries(loadEncounterTable().map(enc => {
 
 // ─── Engine patch ──────────────────────────────────────────────────────────
 const patchEngine = () => {
-  let src = readFileSync(`${HERE}engine.mjs`, 'utf8')
+  let src = readFileSync(`${HERE}engine.mjs`, 'utf8').replace(/\r\n/g, '\n') // anchors are LF; a CRLF checkout must still match
   const rep = (from, to) => {
     const i = src.indexOf(from)
     if (i < 0) throw new Error(`engine.mjs anchor not found:\n${from}`)
@@ -126,8 +133,7 @@ const patchEngine = () => {
   let nextPulse = BX.EMBER_PERIOD_MS`)
   rep(`    let spd = st.speedMultiplier\n`,
     `    let spd = st.speedMultiplier * (1 - BX.CHILL_PER_STACK * (b.chillN ?? 0))\n`)
-  rep(`    const hp = st.maxHp * (isBoss ? 2 : 1)`,
-    `    const hp = st.maxHp * (isBoss ? 2 * (opts.bossHpMul ?? 1) : 1)`)
+  // boss HP rubber band: engine.mjs opts.bossHpMul / opts.bossLossStreak (no patch)
   rep(`      if (kind === 'lava') dmg *= 1 - hp.lava`,
     `      if (kind === 'lava' || kind === 'burn') dmg *= 1 - hp.lava`)
   rep(`      if (kind === 'lava' || kind === 'thunder') m.hazardTaken += dmg`,
@@ -180,7 +186,7 @@ const patchEngine = () => {
       if (now - v.lastShockMs >= 250) {
         v.lastShockMs = now
         const hw = skillOf(v, 'hazard_ward')
-        const keep = BX.FROST_KEEP + (hw ? (1 - BX.FROST_KEEP) * P('hazard_ward', hw.level).shockKeep : 0)
+        const keep = BX.FROST_KEEP + (hw ? (1 - BX.FROST_KEEP) * hw.p.shockKeep : 0)
         v.vx *= keep
         v.vy *= keep
         m.drains++
@@ -306,7 +312,7 @@ const report = (file) => {
   console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
   for (const r of rows) {
     const n = r.n
-    console.log(`| ${r.slot} | ${r.fight} | ${r.shift ?? 0} | ${r.cfg} | ${r.rubber} | ${r.lvl} | ${pct(r.win / n)} | ${f2(r.turns / n)} | ${f2(r.ttk / n)} | ${f2(r.ttd / n)} | ${f2((r.ttk / n) / (r.ttd / n))} | ${pct(r.burnFrac / n)} | ${f2(r.pulses / n)} | ${f2(r.freezes / n)} | ${f2(r.skips / n)} | ${r.launchesP ? f2(r.chillLaunchSum / r.launchesP) : '-'} |`)
+    console.log(`| ${r.slot} | ${r.fight} | ${r.shift ?? 0} | ${r.cfg} | ${r.rubberLabel?.startsWith("streak") ? `${r.rubberLabel} ×${r.rubber}` : r.rubber} | ${r.lvl} | ${pct(r.win / n)} | ${f2(r.turns / n)} | ${f2(r.ttk / n)} | ${f2(r.ttd / n)} | ${f2((r.ttk / n) / (r.ttd / n))} | ${pct(r.burnFrac / n)} | ${f2(r.pulses / n)} | ${f2(r.freezes / n)} | ${f2(r.skips / n)} | ${r.launchesP ? f2(r.chillLaunchSum / r.launchesP) : '-'} |`)
   }
 }
 
@@ -316,7 +322,9 @@ if (isMainThread && isEntry) {
     process.exit(0)
   }
   const engineUrl = patchEngine()
-  const { econLevel } = await import('./econ.mjs')
+  const { econLevel, smasherEconLevels } = await import('./econ.mjs')
+  const { bossHpRubberBandMul } = await import('./data.mjs')
+  const { isSmasherTeam } = await import('./engine.mjs')
   const { lockstepLevel } = await import('./data.mjs')
   const N = Number(arg('n', 300))
   const out = arg('out', 'out/b100.json')
@@ -324,7 +332,12 @@ if (isMainThread && isEntry) {
   const configs = arg('configs', 'none,guard_shell+second_wind').split(',')
   const levelMode = arg('levelMode', 'econ')
   const team = arg('team', 'default')
-  const rubbers = arg('rubber', '1').split(',').map(Number)
+  // [label, multiplier]: --rubber wins; else --streak through the game's formula
+  const rubbers = arg('rubber', null)
+    ? arg('rubber').split(',').map(v => [v, Number(v)])
+    : arg('streak', '0').split(',').map(v => [`streak${v}`, bossHpRubberBandMul(Number(v))])
+  const npcTuning = arg('npcTuning', 'on') !== 'off'
+  const smasherLevel = arg('smasherLevel', null)?.split(',').map(Number)
   const shifts = arg('shift', '0').split(',').map(Number)
   const withOld = !process.argv.includes('--noold')
   const knobs = { ...DEFAULT_KNOBS }
@@ -336,13 +349,15 @@ if (isMainThread && isEntry) {
   const chunk = 50
   const tasks = []
   for (const slot of slots) {
-    const lvl = levelMode === 'lock' ? lockstepLevel(slot) : econLevel(slot)
+    const lvl = isSmasherTeam(team)
+      ? (smasherLevel ?? (levelMode === 'lock' ? [lockstepLevel(slot) + 1] : smasherEconLevels(slot)))
+      : levelMode === 'lock' ? lockstepLevel(slot) : econLevel(slot)
     const fights = ENCOUNTERS[slot] && !process.argv.includes('--oldonly') ? [['new', slot]] : []
     if (withOld || !ENCOUNTERS[slot]) fights.push(['old', slot])
-    for (const [fight] of fights) for (const cfg of configs) for (const rubber of rubbers) {
+    for (const [fight] of fights) for (const cfg of configs) for (const [rubberLabel, rubber] of rubbers) {
       for (const shift of (fight === 'new' ? shifts : [0])) {
         for (let s0 = 0; s0 < N; s0 += chunk) {
-          tasks.push({ slot, fight, cfg, rubber, shift, lvl, team, s0, n: Math.min(chunk, N - s0), knobs, engineUrl })
+          tasks.push({ slot, fight, cfg, rubber, rubberLabel, npcTuning, shift, lvl, team, s0, n: Math.min(chunk, N - s0), knobs, engineUrl })
         }
       }
     }
@@ -365,7 +380,7 @@ if (isMainThread && isEntry) {
         worker.postMessage(tasks[next++])
       }
       worker.on('message', (r) => {
-        const k = `${r.slot}|${r.fight}|${r.cfg}|${r.rubber}|${r.shift}`
+        const k = `${r.slot}|${r.fight}|${r.cfg}|${r.rubberLabel}|${r.shift}`
         const a = agg.get(k)
         if (!a) agg.set(k, r)
         else for (const f of Object.keys(r)) if (typeof r[f] === 'number' && !['slot', 'rubber', 'lvl', 'shift'].includes(f)) a[f] += r[f]
@@ -387,8 +402,9 @@ if (isMainThread && isEntry) {
   parentPort.on('message', (t) => {
     const team = teamFor(t.team, t.slot, t.lvl)
     const cfgIds = t.cfg === 'counter' ? (ENCOUNTERS[t.slot]?.counter ?? 'none') : t.cfg
-    const skills = cfgIds === 'none' ? [] : cfgIds.split('+')
-    const loadouts = team.map(() => skills.map(id => ({ id, level: 10 })))
+    const skills = cfgIds === 'none' || cfgIds === 'own' ? [] : cfgIds.split('+')
+    // 'own' = smasher teams bring their own skills (no loadout passed)
+    const loadouts = cfgIds === 'own' ? undefined : team.map(() => skills.map(id => ({ id, level: 10 })))
     const enc = ENCOUNTERS[t.slot]
     const stage = t.fight === 'new'
       ? {
@@ -397,7 +413,7 @@ if (isMainThread && isEntry) {
       }
       : undefined
     const r = {
-      slot: t.slot, fight: t.fight, cfg: t.cfg, rubber: t.rubber, lvl: t.lvl, shift: t.shift,
+      slot: t.slot, fight: t.fight, cfg: t.cfg, rubber: t.rubber, rubberLabel: t.rubberLabel, lvl: t.lvl, shift: t.shift,
       n: 0, fizzles: 0, win: 0, turns: 0, ttk: 0, ttd: 0, burnFrac: 0, freezes: 0, skips: 0,
       chillLaunchSum: 0, launchesP: 0, combatMs: 0, pulses: 0
     }
@@ -405,7 +421,7 @@ if (isMainThread && isEntry) {
       const seed = t.slot * 1000003 + i * 7919
       const base = {
         stageId: t.slot, stage, team, loadouts, seed, playerStarts: i % 2 === 0,
-        knobs: t.knobs, bossHpMul: t.rubber
+        knobs: t.knobs, bossHpMul: t.rubber, npcTuning: t.npcTuning
       }
       const real = runBattle({ ...base, mode: 'real' })
       const a = runBattle({ ...base, mode: 'playerImmortal' })

@@ -49,7 +49,7 @@ const bundle = await esbuild.build({
   platform: 'browser',
   target: 'es2020',
   alias: { '@': join(ROOT, 'src') },
-  define: { 'import.meta.env': '{}' },
+  define: { 'import.meta.env': '{"BASE_URL":"/"}' }, // src/utils/function.ts slices BASE_URL at load
   logLevel: 'error'
 })
 const code = bundle.outputFiles[0].text

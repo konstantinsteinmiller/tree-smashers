@@ -3,7 +3,12 @@
  * Paint queue for the smasher sheets — runs unattended through the Art Desk's
  * paint.mjs (one Gemini job at a time, its own throttle + daily cap).
  *
- *   node tools/smasher-sheets/paint-queue.mjs [ids…]      default: every bare reference not yet sliced
+ *   node tools/smasher-sheets/paint-queue.mjs [ids…]      default: every RELEASED bare reference not yet sliced
+ *   node tools/smasher-sheets/paint-queue.mjs --all        … including the later release (smashers 25–48)
+ *
+ * Release gate (src/data/smasherCatalog.ts RELEASED_SMASHER_COUNT, smashers
+ * 1–24 by default; VITE_APP_SMASHERS_RELEASED=all|N widens it): the default
+ * queue paints only the released smashers. Explicit ids are painted as given.
  *
  * Per smasher: paint part a (frames 0…15) and part b (frames 16…31) from the
  * 4 × 4 references (parts.mjs) and their prompts (prompts.mjs), then slice
@@ -26,9 +31,13 @@ const log = m => { const line = `${new Date().toISOString()} ${m}`; console.log(
 // done = sliced from a full 32-frame painting (slice-painted.mjs writes <id>.full32);
 // an older 17-frame mirrored sheet keeps shipping until its repaint lands
 const sliced = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+)\.full32$/)?.[1]).filter(Boolean))
-let ids = process.argv.slice(2)
+const all = process.argv.includes('--all')
+let ids = process.argv.slice(2).filter(a => a !== '--all')
 if (!ids.length) {
-  ids = readdirSync(BARE).map(f => f.match(/^([a-z0-9]+)-a\.prompt\.txt$/)?.[1]).filter(Boolean).filter(id => !sliced.has(id))
+  const { RELEASED_SMASHER_IDS, SMASHER_IDS } = await import('./released.mjs')
+  const order = all ? SMASHER_IDS : RELEASED_SMASHER_IDS
+  const bare = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+)-a\.prompt\.txt$/)?.[1]).filter(Boolean))
+  ids = order.filter(id => bare.has(id) && !sliced.has(id))
 }
 
 const paint = (id, part) => {
@@ -39,6 +48,9 @@ const paint = (id, part) => {
   const out = (r.stdout || '').trim()
   log(`${id}-${part}: paint exit ${r.status} ${out}`)
   if (r.status === 10 || r.status === 11) { log('STOP: ' + out); process.exit(r.status) }
+  // the profile's Chrome is open without the automation port (a hand-opened
+  // window): every later job would fail the same way in 0.1 s
+  if (r.status === 14 && /without the automation port/.test(out)) { log('STOP: ' + out); process.exit(14) }
   if (r.status !== 0) return false
   // a part is a SQUARE 4 × 4 sheet; anything else is not our answer (Gemini's
   // page once handed back 1408 × 768 photos from another conversation)
@@ -81,6 +93,8 @@ for (const id of ids) {
         for (const f of readdirSync(pub)) if (f.startsWith(`${id}_`)) unlinkSync(join(pub, f))
         const reg = join(ROOT, 'src/smashers/paintedSmashers.ts')
         writeFileSync(reg, readFileSync(reg, 'utf8').split('\n').filter(l => !l.includes(`"${id}":`)).join('\n'))
+        // …and its hi-res portrait (derived from the sheet registry)
+        spawnSync(process.execPath, [join(ROOT, 'tools/smasher-sheets/portraits.mjs'), '--prune'], { cwd: ROOT, encoding: 'utf8' })
       }
     }
   }

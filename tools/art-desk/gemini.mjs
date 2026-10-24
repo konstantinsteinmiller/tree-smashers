@@ -72,13 +72,28 @@ export const SEL = {
   account: 'a[href*="accounts.google.com/SignOutOptions"], a[aria-label*="Google Account" i], a[aria-label*="Google-Konto" i]',
   // The model picker's label ("Flash", "Pro", …). When the account's allowance
   // is spent the app falls back to "Flash-Lite", which takes no uploads.
-  model: '.logo-pill-label-container .picker-secondary-text'
+  model: '.logo-pill-label-container .picker-secondary-text',
+  // The "+" (uploads & tools) menu and its "Create image" tool — found by the
+  // tool's icon, not its localised label. Without the tool selected some
+  // accounts answer a reference attachment with "I can't edit images yet".
+  toolsMenu: '.simplified-input-menu-container gem-icon-button.menu-button button, button[aria-haspopup="menu"][aria-label*="Tools"]',
+  imageTool: '[role="menuitemcheckbox"]:has(mat-icon[fonticon="image_create"])'
 }
 
 // What a refusal to generate looks like, in the two languages seen so far.
 const QUOTA = /\b(limit|limits|quota|kontingent)\b|too many|zu viele|try again (later|tomorrow)|später (erneut|noch einmal)|morgen (wieder|erneut)|come back tomorrow/i
 const SIGNED_OUT = /signed out|sign in to|are you signed in|melde dich an|abgemeldet|bist du angemeldet/i
 
+// "I can't edit / generate images right now — can I generate an image
+// instead?": answer its offer instead of repeating the request.
+const CANT = /can'?t (edit|generate|create) (images|an image)|kann (keine )?bilder (nicht )?(bearbeiten|erstellen|generieren)|generate an image instead|stattdessen ein bild/i
+const GUIDE_TURN = 'These attached images are guide sketches for an illustration I will ask you to create in my next message. Do not draw anything yet — just describe briefly what you see.'
+const CREATE_TURN = 'Now CREATE A NEW IMAGE from scratch (not an edit of the attachments) with exactly the content of the guide sketches above, as follows:'
+// "…due to interests of third-party content providers. Please edit your
+// prompt": restate that it is an original design and ask again.
+const THIRD_PARTY = /third.party|drittanbieter|edit your prompt|prompt (bearbeiten|ändern)/i
+const ORIGINAL = 'To clarify: this is an ORIGINAL character I designed for my own indie game — not based on any existing brand, franchise, mascot, toy line or copyrighted character. Please create the image as a completely original plush-toy design, exactly as described in my previous message (same layout, poses and colours).'
+const ACCEPT = 'Yes, generate a NEW image instead — do not edit the attachment, just create a new picture with the same content, layout and colours as described in my previous message.'
 const NUDGE = 'Generate the image now: one single image, exactly as described in my previous message, following the attached reference image(s) as described there. Do not answer in words.'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -307,12 +322,27 @@ export class Gemini {
       if (this.model) this.log(`model: ${this.model}`)
 
       if (list.length) {
+        // Two turns: the references go in a message that asks for NO image
+        // (some accounts class "attachment + make an image" as an image EDIT
+        // and refuse: "I can't edit images for you yet"); the image is then
+        // requested in a text-only turn of the same chat.
         onPhase(list.length > 1 ? `attaching ${list.length} images` : 'attaching the reference')
         for (const f of list) await this.attach(page, f)
+        await this.type(page, GUIDE_TURN)
+        const n = await page.locator(SEL.response).count()
+        onPhase('sending the guide images')
+        await this.send(page)
+        await page.waitForFunction(([r, d, k]) => document.querySelectorAll(r).length > k && document.querySelectorAll(d).length > k, [SEL.response, SEL.responseDone, n], { timeout: 120_000 })
+          .catch(() => this.log('no reply to the guide images within 120 s — asking for the image anyway'))
+        await sleep(1500)
       }
 
+      onPhase('choosing the Create image tool')
+      await this.chooseImageTool(page)
+
       onPhase('pasting the prompt')
-      await this.type(page, prompt)
+      await this.type(page, list.length ? `${CREATE_TURN}
+${prompt}` : prompt)
 
       let before = await page.locator(SEL.response).count()
       onPhase('sending')
@@ -332,7 +362,7 @@ export class Gemini {
         onPhase('asking again for the image')
         nudged = true
         before = await page.locator(SEL.response).count()
-        await this.type(page, NUDGE)
+        await this.type(page, THIRD_PARTY.test(e.text) ? ORIGINAL : CANT.test(e.text) ? ACCEPT : NUDGE)
         await this.send(page)
         res = await this.waitForImage(page, before, timeoutMs, onPhase).catch((e2) => {
           if (e2.code === 'NO_IMAGE') e2.code = 'TEXT_ONLY_AFTER_RETRY'
@@ -443,6 +473,40 @@ export class Gemini {
     throw fail('BROWSER', `could not attach ${name} — Gemini accepted neither a paste nor a drop`)
   }
 
+  /** Pick "Create image" from the "+" menu (left alone if already on). Best
+   *  effort: a UI without the menu still gets the plain prompt. */
+  async chooseImageTool(page) {
+    const plus = page.locator(SEL.toolsMenu).first()
+    const item = page.locator(SEL.imageTool).first()
+    let shown = false
+    // the "+" can be present before the page settles: wait, and try twice
+    for (let i = 0; i < 2 && !shown; i++) {
+      const clicked = await plus.click({ timeout: 10_000 }).then(() => true, () => false)
+      if (clicked) shown = await item.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false)
+      if (!shown) await sleep(1500)
+    }
+    if (!shown) {
+      await page.keyboard.press('Escape')
+      this.log('the tools menu has no Create image entry — sending without it')
+      return
+    }
+    if ((await item.getAttribute('aria-checked')) === 'true') {
+      await page.keyboard.press('Escape')
+      return
+    }
+    // a disabled entry (e.g. the image allowance is spent) must not abort the
+    // job: the send below then reports the real reason (QUOTA …)
+    if (!(await item.click({ timeout: 5_000 }).then(() => true, () => false))) {
+      await page.keyboard.press('Escape')
+      this.log('could not select the Create image tool — sending without it')
+      return
+    }
+    await sleep(600)
+    // the menu usually closes itself; make sure it did
+    if (await item.isVisible().catch(() => false)) await page.keyboard.press('Escape')
+    this.log('Create image tool selected')
+  }
+
   /**
    * Gemini's one-time "you must have the rights to what you upload" notice:
    * two buttons, cancel and agree — accepted by its primary button. Any OTHER
@@ -469,11 +533,21 @@ export class Gemini {
   }
 
   async type(page, text) {
-    const editor = page.locator(SEL.editor).first()
-    await editor.click()
-    await page.keyboard.insertText(text)
+    // the VISIBLE box: the image tool re-renders the input area, and a stale
+    // hidden editor can stay first in the DOM
+    const editor = page.locator(SEL.editor).locator('visible=true').first()
     const squash = (s) => s.replace(/\s+/g, '')
-    const got = squash(await editor.innerText())
+    let got = ''
+    for (let i = 0; i < 2; i++) {
+      await page.keyboard.press('Escape') // close any menu / tooltip still open
+      await editor.click()
+      await editor.evaluate((e) => e.focus())
+      if (i) await page.keyboard.press('Control+A')
+      await page.keyboard.insertText(text)
+      got = squash(await editor.innerText())
+      if (got.length >= squash(text).length * 0.98) break
+      await sleep(800)
+    }
     if (got.length < squash(text).length * 0.98) {
       throw fail('BROWSER', `the prompt did not land in the box (${got.length} of ${squash(text).length} characters)`)
     }

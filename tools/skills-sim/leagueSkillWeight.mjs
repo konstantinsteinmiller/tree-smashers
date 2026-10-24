@@ -170,7 +170,7 @@ if (isMainThread && isEntry) {
     let next = 0
     let alive = W
     for (let w = 0; w < W; w++) {
-      const worker = new Worker(__file, { workerData: { engineUrl, knobs: DEFAULT_KNOBS } })
+      const worker = new Worker(__file, { workerData: { engineUrl, npcTuning: arg('npcTuning', null), knobs: DEFAULT_KNOBS } })
       const feed = () => {
         if (next >= tasks.length) {
           worker.terminate()
@@ -213,7 +213,7 @@ if (isMainThread && isEntry) {
     for (let i = t.s0; i < t.s0 + t.n; i++) {
       // common random numbers across skill levels / pairs for one (L, Lo)
       const seed = (t.lvl * 7919 + t.olvl * 104729 + i * 15485863) | 0
-      score += scoreOf(runBattle({ stageId: 50, stage, team, loadouts, seed, playerStarts: i % 2 === 0, mode: 'real', knobs }))
+      score += scoreOf(runBattle({ stageId: 50, stage, team, loadouts, seed, playerStarts: i % 2 === 0, mode: 'real', knobs, npcTuning: workerData.npcTuning === 'on' }))
     }
     parentPort.postMessage({ key: `${t.lvl}|${t.s}|${t.pair ?? ''}|${t.olvl}`, lvl: t.lvl, s: t.s, S: t.S, pair: t.pair, olvl: t.olvl, n: t.n, score })
   })
