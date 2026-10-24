@@ -148,7 +148,7 @@ const flashSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanva
 export const drawPaintedTower = (
   ctx: Ctx,
   side: 'player' | 'npc', x: number, y: number, radius: number,
-  hp: number, maxHp: number, flash = 0
+  hp: number, maxHp: number, flash = 0, variant = 0
 ): boolean => {
   const meta = PAINTED_TOWERS
   if (!meta) return false
@@ -175,9 +175,19 @@ export const drawPaintedTower = (
   }
   // #Consistency-2: the painted felled stump is ~2.5x the healthy tree's trunk; draw it
   // at FELLED_STUMP_SCALE of the tree's scale, still standing on the same ground point.
-  const ks = stage === 3 ? k * FELLED_STUMP_SCALE : k
+  // #Consistency-9: every tree shared one face and silhouette. `variant` (a stable per-tree hash)
+  // mirrors alternate trees and nudges their size ±5 %, still standing on the same ground point.
+  const mirror = (variant & 1) === 1 && stage !== 3
+  const jit = stage === 3 ? 1 : 1 + (((variant >> 1) & 3) - 1.5) * 0.033
+  const ks = (stage === 3 ? k * FELLED_STUMP_SCALE : k) * jit
   const dx = gx - s.gx * ks
   const dy = gy - s.gy * ks
+  if (mirror) {
+    ctx.save()
+    ctx.translate(gx, 0)
+    ctx.scale(-1, 1)
+    ctx.translate(-gx, 0)
+  }
   const tinted = gradedSprite(name)
   if (tinted) ctx.drawImage(tinted as CanvasImageSource, dx, dy, s.w * ks, s.h * ks)
   else ctx.drawImage(atlas, s.x, s.y, s.w, s.h, dx, dy, s.w * ks, s.h * ks)
@@ -190,5 +200,6 @@ export const drawPaintedTower = (
       ctx.globalAlpha = prev
     }
   }
+  if (mirror) ctx.restore()
   return true
 }

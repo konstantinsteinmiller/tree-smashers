@@ -97,6 +97,29 @@ export const preloadBackdropArt = (theme: ArenaTheme): Promise<void> => {
  * (identity transform). (cx, cy) = the arena centre in device px, `unit` =
  * device px per arena unit.
  */
+/** The arena's own radius in units (useSpinnerGame ARENA_RADIUS; duplicated to keep this module leaf). */
+const HAZE_ARENA_R = 200
+
+/**
+ * #Consistency-8: smashers + balloons are ~1.5x the height of the pines behind the wall, so the
+ * backdrop read as a flat tile next to a diorama. A static, baked atmospheric haze (the theme's
+ * own backdrop colour, clear at the wall and deepening toward the screen corners) pushes the
+ * props back so they read as far-away scenery. One gradient in the bake — never per frame.
+ */
+const paintDepthHaze = (b: BufCtx, bw: number, bh: number, cx: number, cy: number, unit: number, theme: ArenaTheme): void => {
+  const inner = unit * HAZE_ARENA_R * 1.25
+  const outer = Math.hypot(Math.max(cx, bw - cx), Math.max(cy, bh - cy))
+  if (outer <= inner) return
+  const g = b.createRadialGradient(cx, cy, inner, cx, cy, outer)
+  const base = THEME_LOOK[theme].backdrop
+  g.addColorStop(0, `${base}00`)
+  g.addColorStop(1, `${base}8c`)
+  b.save()
+  b.fillStyle = g
+  b.fillRect(0, 0, bw, bh)
+  b.restore()
+}
+
 export const paintArenaBackdrop = (
   b: BufCtx, bw: number, bh: number, cx: number, cy: number, unit: number,
   theme: ArenaTheme, layoutId: number | null, shape: ArenaShape
@@ -122,7 +145,7 @@ export const paintArenaBackdrop = (
   // 2. props
   const atlas = PAINTED_PROPS[theme]
   const atlasImg = atlases.get(theme)
-  if (!atlas || !atlasImg) return
+  if (!atlas || !atlasImg) { paintDepthHaze(b, bw, bh, cx, cy, unit, theme); return }
   const sprites = atlas.sprites
   b.imageSmoothingQuality = 'high'
   for (const p of arenaPropLayout(theme, layoutId, shape)) {
@@ -158,4 +181,5 @@ export const paintArenaBackdrop = (
     b.drawImage(atlasImg, sp.x, sp.y, sp.w, sp.h, -(sp.cx - sp.x) * k, -(sp.cy - sp.y) * k, sp.w * k, sp.h * k)
     b.restore()
   }
+  paintDepthHaze(b, bw, bh, cx, cy, unit, theme)
 }

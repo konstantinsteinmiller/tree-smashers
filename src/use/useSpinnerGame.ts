@@ -5998,6 +5998,8 @@ export const useSpinnerGame = () => {
    *  only during a hit flash, redrawn per frame on top (renderTowers): a sturdy
    *  little tree in the team colour, or the stump of a felled one. A painted
    *  tower sprite drops in here. Caller has translated to the tower centre. */
+  /** Stable 0..7 per tree (position hash) — drives the mirror / size variation in towerArt. */
+  const treeVariant = (t: TeamTower): number => Math.abs(Math.round(t.x * 7 + t.y * 13 + t.radius * 3)) % 8
   const drawTowerBody = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TeamTower, flash = 0): boolean => {
     const painted = drawTowerTree(ctx, t, flash)
     // Spiked front cover (boss trees): the thorny garland on the arc that
@@ -6008,7 +6010,7 @@ export const useSpinnerGame = () => {
   const drawTowerTree = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, t: TeamTower, flash = 0): boolean => {
     // Painted team tree (blue / red bow + pennant, damage state by HP —
     // @/use/towerArt); the vector tree below is its fallback.
-    if (drawPaintedTower(ctx, t.side, 0, 0, t.radius, t.hp, t.maxHp, flash)) return true
+    if (drawPaintedTower(ctx, t.side, 0, 0, t.radius, t.hp, t.maxHp, flash, treeVariant(t))) return true
     const c = TOWER_TEAM_COLORS[t.side]
     const r = t.radius
     ctx.strokeStyle = TERRAIN_OUTLINE
