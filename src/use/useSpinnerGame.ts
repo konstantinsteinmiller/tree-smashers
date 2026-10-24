@@ -1,3 +1,4 @@
+import { spawnStuffing, updateStuffing, drawStuffing, type StuffingBurst } from '@/use/stuffingFx'
 import { smasherLoadout } from '@/data/smasherCatalog'
 import { ref, computed, watch, shallowRef, type Ref, type ComputedRef, type ShallowRef } from 'vue'
 import { isGamePaused, registerPauseSyncer } from '@/use/useGamePause'
@@ -1131,14 +1132,11 @@ export const useSpinnerGame = () => {
   const EXPLOSION_FRAME_DURATION = 50 // ms per frame
   const activeExplosions: SpritesheetAnimation[] = []
 
+  // Plush smashers don't blow up: their cotton stuffing billows out (stuffingFx.ts).
+  const activeStuffing: StuffingBurst[] = []
   const spawnExplosion = (x: number, y: number, radius: number) => {
-    const scale = (radius * 2.5) / EXPLOSION_FW
-    const explosionSoundName = 'explosion-1'
-    playSound(explosionSoundName)
-    activeExplosions.push(createSpritesheetAnim(
-      explosionImage, x, y,
-      EXPLOSION_FRAMES, EXPLOSION_FRAME_DURATION, EXPLOSION_FW, EXPLOSION_FH, scale, false
-    ))
+    playSound('explosion-1')
+    spawnStuffing(activeStuffing, x, y, radius, FX.low)
   }
 
   // ── Static Charge lightning bolt VFX ──────────────────────────────────────
@@ -1198,6 +1196,7 @@ export const useSpinnerGame = () => {
     activeShockBolts.length = 0
     activeSparks.length = 0
     activeExplosions.length = 0
+    activeStuffing.length = 0
     resetBorderFx(borderFx)
     // Skill layer: rockets still in flight are dropped with the battle.
     if (SKILLS_BUILD) {
@@ -3443,6 +3442,7 @@ export const useSpinnerGame = () => {
     damageNumbers.length = 0
     activeSparks.length = 0
     activeExplosions.length = 0
+    activeStuffing.length = 0
     activeShockBolts.length = 0
     resetBorderFx(borderFx)
     // Lava is the only arena that draws the flame strip — fetch it now, while
@@ -4210,6 +4210,7 @@ export const useSpinnerGame = () => {
       }
     }
 
+    updateStuffing(activeStuffing, 16)
     // Update death explosions (remove finished ones)
     for (let i = activeExplosions.length - 1; i >= 0; i--) {
       if (updateSpritesheetAnim(activeExplosions[i]!, 16)) {
@@ -5532,6 +5533,7 @@ export const useSpinnerGame = () => {
     for (const explosion of activeExplosions) {
       renderSpritesheetAnim(ctx, explosion)
     }
+    drawStuffing(ctx, activeStuffing)
 
     // Meteors in flight, landing starbursts, spark shards: over the models.
     if (meteorOn) drawMeteorSky(ctx, meteorFx, meteorT, scale * devPx)

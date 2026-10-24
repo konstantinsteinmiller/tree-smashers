@@ -301,7 +301,7 @@ Held back by the release gate (Humphrey, Boxa, Howler, Snapjaw, Leon, Antlo, Gro
 
 - [ ] #Consistency-1 Check all assets and game mechanics and visual style of the game for consistency. Does the game asset assembly makes sense in most of the situations? Are non-seemless texture cuts visible? How likely can this game be identified as an AI slop by human eyes without knowing about weather the games art is done by AI or not.
   write all found inconsistencies as new bullet points #Consistency-3...XXX
-- [ ] #Consistency-2 The tree stump of the cut down/defeated tree model is ~2.5x as big as the tree log of the actual tree model. The explosion vfx doesnt fit well with the smashers, create an "Watte explosion"(german wording) vfx effect instead as the stuffed animals die, their insides are flowing out. On the first stage, show the drag indicator from the beginning until the player does a backwards drag on the first smasher as some are trying to drag from the players smasher to the enemies one.
+- [x] #Consistency-2 (stump 0.4×; smasher deaths now burst cotton stuffing — `stuffingFx.ts`; stage 1 keeps the demo-pull hint until a shot is fired) The tree stump of the cut down/defeated tree model is ~2.5x as big as the tree log of the actual tree model. The explosion vfx doesnt fit well with the smashers, create an "Watte explosion"(german wording) vfx effect instead as the stuffed animals die, their insides are flowing out. On the first stage, show the drag indicator from the beginning until the player does a backwards drag on the first smasher as some are trying to drag from the players smasher to the enemies one.
 
 
 - [ ] #Perf-1 The game showed 13 fps on this tablet device.

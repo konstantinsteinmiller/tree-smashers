@@ -566,9 +566,18 @@ const rankedTeamWithUpgrades = (): SpinnerConfig[] => teamWithUpgrades(RANKED_TE
 
 // ─── Hint Timer ───────────────────────────────────────────────────────────
 
-watch(phase, (p) => {
+// Stage 1 teaches the pull-back: the demo-pull hint shows from the first moment and survives
+// stray taps / wrong-way drags (some players drag from their own smasher TO the enemy) until a
+// shot has actually been fired from it.
+const stage1PullLearned = ref(false)
+const stage1Guide = (): boolean => currentStageId.value === 1 && !stage1PullLearned.value
+watch(phase, (p, prev) => {
+  if (prev === 'player_turn' && p !== 'player_turn' && currentStageId.value === 1) stage1PullLearned.value = true
   if (p === 'player_turn') {
-    startHintTimer()
+    if (stage1Guide()) {
+      clearHint()
+      showHint.value = true
+    } else startHintTimer()
   } else {
     clearHint()
   }
@@ -1162,7 +1171,7 @@ const getGameCoords = (e: PointerEvent) => {
 }
 
 const onPointerDown = (e: PointerEvent) => {
-  clearHint()
+  if (!stage1Guide()) clearHint()
   if (phase.value === 'tap_to_start') {
     // Ignore taps outside the arena circle
     const c = getGameCoords(e)
