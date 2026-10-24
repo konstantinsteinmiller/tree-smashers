@@ -1,0 +1,34 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 12 SEPARATE SMALL GAME SPRITES, 4 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, twelve equal cells: 4 per row, 3 rows, one object per cell.
+· Exactly 12 objects. Not 9, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — the HEALTH BALLOONS of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing. Every fighter carries a little bunch of party balloons on strings, like the balloons on the karts in a kart-racing battle mode; each balloon is one share of its health, and when the fighter is hit a balloon pops. These are those balloons, each one a separate small sprite, drawn WITHOUT its string (the game draws the string).
+
+Row by row:
+1. BLUE BALLOONS — four fully inflated round party balloons in the PLAYER team's blue, each ONE balloon, upright, with its small tied knot (a little pinched triangle) at the bottom centre: (a) a classic round-teardrop balloon, (b) a slightly rounder plumper one, (c) a slightly taller egg-shaped one, (d) a classic one turned a little to one side. Bright saturated blue (like #2F8CFF) with a hard darker blue shade crescent on the lower right (like #1D5FD0), and a flat, hard-edged pale-blue shine on the upper left (like #BFE2FF): one tilted oval highlight plus one tiny round dot.
+2. RED BALLOONS — the same four shapes in the ENEMY team's red: bright tomato red (like #F0413F) with a hard darker red shade crescent on the lower right (like #B8232F) and a flat pale-peach shine on the upper left (like #FFC2B8): one tilted oval highlight plus one tiny dot.
+3. PARTLY DEFLATED BALLOONS — four balloons that have lost most of their air but are still tied: smaller, soft and saggy, slightly squashed and leaning, with two or three wrinkle creases across the lower half, the knot still at the bottom. (a) and (b) in the blue of row 1, (c) and (d) in the red of row 2, same shading style, a smaller dull shine.
+
+VIEW — every balloon seen from the front at a slightly high angle, upright (knot at the bottom), lit from the top-left, all twelve at one consistent cartoon scale (the deflated ones about two thirds the size of the full ones).
+
+STYLE — the same polished, cute cartoon look as a plush toy, painted in one hand: a BOLD, very dark navy outline (like #1B1530) around every balloon's silhouette, THICK — about 5% of the balloon's width — because these sprites are shown only 15 to 60 pixels tall; flat cel shading with three hard-edged tones per colour; simple chunky shapes with clean, readable silhouettes. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO see-through or glossy-transparent rubber, NO photorealism. No text, no letters, no numbers, no faces.
+
+SIZE — each full balloon fills about 70% of its cell's height; each one centred in its cell, always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no strings, no ribbons, no sticks, no hands, no characters, no ground, no cast shadows on the background, no sparkles, no confetti. Each cell holds ONE balloon, not a bunch.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 12 balloons with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No balloon contains magenta, purple or hot pink.
+· The palette above is for the balloons; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 12 separate balloons, 4 per row, 3 rows: row 1 blue, row 2 red, row 3 partly deflated (two blue, two red).
+· Every balloon has a knot, a thick dark outline and flat hard-edged shading, no blur, no string.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not a balloon is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 4 × 3 cells, magenta ground, 12 separate party-balloon sprites.

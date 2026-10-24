@@ -1,0 +1,33 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 9 SEPARATE GAME SPRITES, 3 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, nine equal square cells: 3 per row, 3 rows. Each cell holds ONE object, exactly where, and exactly as big as, the object sits in that cell of the attached reference.
+· Exactly 9 objects. Not 8, not 12, not 16. A wide canvas is wrong.
+
+WHAT THE ATTACHMENT IS — the LAYOUT reference, drawn by the game itself as flat placeholders. It fixes each object's SHAPE, SIZE, POSITION, outline and colours. Keep all of those; repaint each one as a finished, richly hand-painted game sprite. Do not move, resize or redesign an object, and never swap two cells.
+
+WHAT THEY ARE — floor features of a cosy forest arena in "Tree Smashers", seen STRAIGHT FROM ABOVE (top-down, no perspective, no horizon). Row by row:
+1. a tree STUMP top: bark ring, pale cut wood with growth rings, a moss tuft top-left, a tiny red toadstool bottom-right.
+2. a round grey ROCK islet with a little round-crowned tree on it and a patch of moss.
+3. a grassy ring around a small blue POND with a lily pad.
+4. a big red MUSHROOM cap with cream-white spots (a bouncy pad).
+5. a round MUD puddle: wet brown mud, a darker centre, two little glints.
+6. a DEEP HOLE: brown earthen rim falling away into a black pit.
+7. a golden HONEY puddle with a wavy edge and a shine.
+8. a sunny orange SPEED BOOSTER pad with two white chevrons pointing RIGHT.
+9. a green LEAF ARROW: a big leaf pointing RIGHT with a white arrow along its vein.
+
+STYLE — the same chunky TOY-UI look in all 9, painted in one hand: a bold, even, thick dark navy (#161a40) outline around every object (about 2.5% of a cell), flat cel shading with at most three tones per colour (highlight, base, shade), crisp hard edges, saturated clean colours, light from the top-left. The booster is a round ORANGE speed pad: a fat rounded disc with a navy rim and THREE bold white-cream chevrons pointing RIGHT stacked like a speed ramp. The leaf arrow is a big fresh-green leaf pointing RIGHT with a bold cream arrow along its centre vein. NO stitches, NO felt, NO fabric, NO soft airbrush shading, NO bark grain noise, NO glow, NO bloom, NO blur, NO photorealism, NO text, NO numbers, NO letters.
+
+WHAT IT IS NOT — no cast shadows on the magenta (the game draws its own flat shadow), no ground around the objects, no grass or scenery outside each object's own outline, no cell borders, no grid lines, no labels.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 9 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green screen.
+· EXACTLY #FF00FF. NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo or shadow on the magenta.
+· No object contains magenta or hot pink.
+· Keep a clear magenta gap around every object; nothing crosses into the next cell.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· 9 objects, 3 per row, 3 rows, in the reference's order, each the reference's size.
+· Both arrows (booster chevrons, leaf) point to the RIGHT.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 3 × 3 cells, magenta ground, 9 top-down sprites matching the layout reference cell for cell.

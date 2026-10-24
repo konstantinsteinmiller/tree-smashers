@@ -1,0 +1,35 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE WITH ONE SINGLE BIG OBJECT ON FLAT MAGENTA: a giant cartoon tree, seen from the SIDE, at the very moment it gets SMASHED.
+One square image, 1:1. Exactly 1 tree. Not 2, not a forest, not a scene.
+
+WHAT IT IS — the hero tree for the loading screen of "Tree Smashers", a cosy, family-friendly cartoon game where cute-but-angry stuffed-animal fighters ride spinning wooden discs and smash big trees. It is painted like the key art of a popular mobile brawler game. The TREE IS SCENERY, NOT A TOY: a clean, smooth cartoon tree — not plush, not felt, not fabric.
+
+THE TREE — a big, chunky, characterful cartoon oak, seen from the side at eye level (NOT from above):
+· CROWN: a huge, round, puffy crown built from big rounded leaf clumps, in fresh LEAF GREEN with three hard-edged tones — a light lime-green band on the top of each clump (#9BE34F), a fresh green middle (#4FBF2A) and a deeper green underside (#2E8F2A). The clumps are SMOOTH, clean cartoon shapes separated only by thin navy lines.
+· FACE: on the front of the crown, a cute cartoon face that has just been hit: two eyes squeezed shut into little "> <" shapes, thick angry eyebrows, a small round "ouch" mouth, one small pale-pink blush patch.
+· TRUNK: a short, thick, chunky trunk in warm golden HONEY-ORANGE wood (#F2A23A, lighter #FFC86A stripes, darker orange #D9772A shading) — NOT brown. A big zigzag CRACK runs across the trunk, showing pale cream wood inside.
+· THE SMASH: the whole tree leans about 8 degrees to the RIGHT, as if it was just hit hard from the left. Five honey-orange wood chips and six green leaves fly away from the crack to the upper right. A small sticking plaster sits on one leaf clump.
+· The trunk goes straight down and is cut off flat and level just above the bottom edge of the image. No roots, no ground.
+
+NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. So: no dashed lines, no running stitches, no sewn seams, no stitched outlines, no felt or cloth grain anywhere on this tree.
+
+STYLE — one polished cartoon finish: a very THICK, bold dark NAVY outline (#161A40) around the tree's whole silhouette and around every chip and leaf, about 1.5% of the image width; thinner SOLID navy lines inside; flat cel shading with two or three hard-edged tones per colour; light from the top-left. Every edge stays crisp. NO blur, NO soft airbrush, NO glow, NO bloom, NO radial gradients, NO lens flares, NO photorealism, NO muddy brown.
+
+SIZE — the tree fills about 92% of the image height and about 80% of the image width, centred left to right; the flying chips and leaves stay inside the image. Nothing touches the left, right or top edge.
+
+WHAT IT IS NOT — no ground, no grass, no soil, no shadow on the ground, no sky, no clouds, no sun, no other trees, no characters, no text, no letters, no numbers.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the tree, its chips or its leaves with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· The tree contains no magenta, purple or hot pink.
+· The palette above is for the tree; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 1 tree, seen from the side, leaning right, cracked trunk, chips and leaves flying.
+· NO stitches, NO dashed seams, NO felt or fabric texture anywhere — smooth cartoon leaves and wood only.
+· Thick navy outline around everything; no blur, no glow, no brown.
+· Every pixel that is not the tree is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, one cartoon tree, magenta ground. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.

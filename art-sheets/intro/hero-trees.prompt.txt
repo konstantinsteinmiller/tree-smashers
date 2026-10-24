@@ -1,0 +1,23 @@
+WHAT COMES BACK IS ONE LANDSCAPE IMAGE OF 2 SEPARATE GAME SPRITES SIDE BY SIDE, ON FLAT MAGENTA.
+One image, about 16:9, two objects: one on the left half, one on the right half, a clear gap of magenta between them.
+· Exactly 2 objects.
+
+WHAT THEY ARE — the two TEAM TREES of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters on spinning wooden discs smash the other team's tree. These are the big hero versions for the title screen, standing left and right of the game logo, facing each other like two rivals before a match.
+
+THE TREES — two big, chunky, friendly-but-grumpy cartoon oak trees, SEEN FROM THE SIDE (a front three-quarter view, like a character portrait), each with a thick stubby trunk with a simple angry face carved into the bark (two small dark eyes with furrowed brows, a determined little frown — cute, not scary), short root feet, and a huge round fluffy crown of leaves in fresh greens. Each tree wears its team colour on a big fabric bow tied around the trunk under the crown and a small pennant flag stuck in the top of the crown:
+1. LEFT tree: BLUE team — sky-blue bow and flag (like #13A3F2 with a darker #0B6FB3 tone), the face turned slightly to the RIGHT, toward the other tree.
+2. RIGHT tree: RED team — berry-red bow and flag (like #E3364F with a darker #9C2328 tone), the face turned slightly to the LEFT, toward the other tree.
+Same size, same shape language, same light; they mirror each other. Each tree is about twice as tall as its trunk is wide plus the crown; the crown is the widest part.
+
+STYLE — the same polished, cute cartoon look as a plush-toy game, painted in one hand: bold, dark navy outline (like #161A40) around every silhouette and around the main shapes inside (about 1% of the image height thick), flat cel shading with two or three hard-edged tones per colour, simple rounded chunky shapes, light from the top-left. NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. The bark is smooth painted wood, the leaves are smooth painted shapes. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. No text, no letters, no numbers.
+
+SIZE — each tree fills about 90% of the image HEIGHT and sits in its own half, standing on the bottom edge area (its roots about 3% above the bottom edge). Always a clear magenta gap between the two trees.
+
+WHAT IT IS NOT — no ground, no grass patch, no hill, no soil under the roots, no cast shadows on the background, no other plants, no characters, no sky, no scenery.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 2 trees with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink (the red bow is a deep berry red, clearly redder than the magenta).
+· Keep the four corners and the top edge of the canvas plain magenta.

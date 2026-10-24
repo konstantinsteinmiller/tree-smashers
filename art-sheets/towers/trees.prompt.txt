@@ -1,0 +1,42 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 9 SEPARATE GAME SPRITES, 3 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, nine equal square cells: 3 per row, 3 rows, one object per cell.
+· Exactly 9 objects. Not 8, not 12, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — the TEAM TREE of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing. Each team defends its own big tree; smashing the enemy tree wins. It is ONE tree design shown in its damage states, once with BLUE team colours and once with RED team colours — the same tree, the same size, the same pose in every cell.
+
+THE TREE — a sturdy, chunky, characterful little oak, like a stuffed toy made of felt: a big, ROUND, puffy crown of rounded leaf clumps in fresh leaf green, with a few visible stitched seams between the clumps; a short thick brown trunk barely peeking out at the bottom of the crown. On the front of the crown, a cute, grumpy-determined face like on a plush toy: two round black button eyes with thick angry eyebrows and a small frowning mouth. The TEAM COLOUR is on cloth, never on the leaves: a big fabric BOW tied around the bottom of the crown at the front, and a small triangular PENNANT FLAG on a short wooden stick poking up out of the top of the crown. BLUE team = bright royal blue bow and flag (like #2F6FE0). RED team = bright tomato red bow and flag (like #E0432F). The leaves are the SAME green in both rows.
+
+Row by row:
+1. BLUE team tree, HEALTHY: full round crown, blue bow, blue flag standing straight, grumpy-determined face.
+2. BLUE team tree, DAMAGED: the same tree, the same size, with two or three bite-shaped chunks knocked out of the crown edge showing bare brown twigs, a dark crack across one leaf clump, a sticking plaster stuck on a clump, the blue bow a bit loose, the flag leaning; worried face with one eye squinting.
+3. BLUE team tree, NEARLY DESTROYED: most of the crown knocked away — a broken, jagged trunk with three bare stubby branches and only a few small leaf tufts left, the torn blue bow hanging from the trunk, the blue flag bent; dizzy face with spiral eyes on the trunk.
+4. RED team tree, HEALTHY: exactly like 1, but the bow and flag are red.
+5. RED team tree, DAMAGED: exactly like 2, but the bow and flag are red.
+6. RED team tree, NEARLY DESTROYED: exactly like 3, but the bow and flag are red.
+7. BLUE team tree, FELLED: only a short flat-cut tree stump with light wood rings on its top, a few wood splinters around its base, the torn blue flag lying flat across the stump. No face.
+8. RED team tree, FELLED: exactly like 7, but the flag is red.
+9. a small loose scatter of fallen green leaves, twigs and light wood splinters, lying flat (no team colour).
+
+VIEW — every object seen from HIGH ABOVE at a steep three-quarter angle (mostly top-down, with just a little of its front side visible), like a tower on the board of a cosy mobile strategy game. All nine share that one view, one scale and one light from the top-left. The crown of the healthy and damaged trees is a circle seen from above that fills its cell; the trunk is mostly hidden under it.
+
+STYLE — the same polished, cute cartoon look in all nine, painted in one hand: bold, dark brown outline around every object's silhouette (about 2% of a cell thick, clearly visible when the object is shown 60 pixels wide), flat cel shading with two or three hard-edged tones per colour, simple rounded shapes, friendly and toy-like. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. No text, no letters, no numbers.
+
+SIZE — the healthy and damaged trees fill about 85% of their own cell, centred in it; the nearly destroyed trees about 65%; the stumps about 50%; always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no ground around the objects (no grass patch, no soil disc, no plate, no roots spreading on the ground), no cast shadows on the background (the game draws its own), no scenery, no other characters.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 9 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink.
+· The palette above is for the objects; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 9 separate objects, 3 per row, 3 rows, in the order listed. Not 8, not 12, not 16.
+· Row 1 has BLUE cloth, row 2 has RED cloth, the leaves are green everywhere.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 3 × 3 cells, magenta ground, 9 separate tree sprites.

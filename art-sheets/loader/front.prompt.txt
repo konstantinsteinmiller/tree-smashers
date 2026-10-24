@@ -1,0 +1,33 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE: ONE FOREGROUND CORNER CLUSTER of cartoon plants that grows out of the BOTTOM-LEFT CORNER of the image, on flat magenta.
+One square image, 1:1. One connected cluster. Not separate objects floating apart, not a scene.
+
+WHAT IT IS — the foreground frame for the loading screen of "Tree Smashers", a cosy, family-friendly cartoon game where cute-but-angry stuffed-animal fighters smash big trees. It sits in the bottom-left corner of a big panoramic key-art scene, painted like the key art of a popular mobile brawler game. The plants are SCENERY, NOT TOYS: clean, smooth cartoon plants — not plush, not felt, not fabric.
+
+THE CLUSTER — seen from the side at eye level, very close to the viewer:
+· A mound of big, puffy, round cartoon BUSHES made of rounded leaf clumps in fresh LEAF GREEN with three hard-edged tones (#9BE34F tops, #4FBF2A middle, #2E8F2A undersides), separated only by thin solid navy lines.
+· Two chunky cartoon MUSHROOMS poking out of the bushes: bright tomato-red caps (#E8402F) with round white dots and cream stems.
+· Tall, bold, pointed GRASS BLADES in light and dark green fanning out of the bushes, and three small cartoon FLOWERS: two sun-yellow daisies and one white daisy with a yellow centre.
+· SHAPE: the cluster is highest at the LEFT edge (it reaches up to about 35% from the top of the image there) and slopes DOWN to the right, ending at about 85% of the image width at the bottom. It is cut off by the LEFT edge and by the BOTTOM edge of the image (it continues past them), and it fills the bottom-left corner solidly — no magenta in that corner.
+
+NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. So: no dashed lines, no running stitches, no sewn seams, no stitched outlines, no felt or cloth grain anywhere on these plants.
+
+STYLE — one polished cartoon finish: a very THICK, bold dark NAVY outline (#161A40) around the cluster's whole silhouette, about 1.5% of the image width; thinner SOLID navy lines inside; flat cel shading with two or three hard-edged tones per colour; light from the top-left. Every edge stays crisp. NO blur, NO soft airbrush, NO glow, NO bloom, NO radial gradients, NO photorealism, NO muddy brown.
+
+WHAT IT IS NOT — no sky, no clouds, no trees, no characters, no animals, no ground line or soil, no shadow, no text, no letters, no numbers.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the cluster with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· The cluster contains no magenta, purple or hot pink.
+· The palette above is for the plants; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the top-right corner and the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· One connected cluster growing out of the bottom-left corner, highest at the left edge, sloping down to the right.
+· Bushes, two red mushrooms, grass blades, three flowers.
+· NO stitches, NO dashed seams, NO felt or fabric texture anywhere — smooth cartoon leaves only.
+· Thick navy outline around everything; no blur, no glow, no brown.
+· Every pixel that is not the cluster is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, the corner cluster, magenta ground. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.

@@ -1,0 +1,34 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 12 SEPARATE SMALL GAME SPRITES, 4 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, twelve equal cells: 4 per row, 3 rows, one object per cell.
+· Exactly 12 objects. Not 9, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — the HIT EFFECT pieces of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing and ram the enemy team's big plush tree. Every time a fighter smashes into the tree, a little burst of wood bits flies off the trunk: light wood chips and splinters, dark bark flecks, and small puffs of sawdust. These are those flying bits, each one a separate small sprite.
+
+Row by row:
+1. LIGHT WOOD CHIPS — four different fresh wood chips/splinters, each ONE single piece: (a) a long thin pointed splinter, (b) a short chunky wedge-shaped chip, (c) a curled shaving-like chip, (d) a jagged broken splinter with a split end. Fresh pale wood: warm light tan (like #E8C48A) with a hard darker tan shade side (like #C9955A) and one or two short wood-grain lines running along the piece.
+2. DARK BARK FLECKS — four different small pieces of tree bark, each ONE single piece: (a) a flat rough rectangle of bark, (b) a curved bark strip, (c) a small chunky triangle of bark, (d) an irregular bark flake with a ridged top. Dark brown bark (like #6B4226) with a hard darker shade (like #4F2F1A) and two or three short ridge lines along the piece.
+3. SAWDUST PUFFS — four different small, chunky cartoon dust puffs, each ONE solid rounded cloud made of three to five round bumps, a little wider than tall, pale creamy sawdust colour (like #F1E2C0) with a hard flat darker cream shade (like #D8C397) along its bottom bumps, and three or four tiny tan wood specks on it. Solid and opaque like a cotton-ball cartoon cloud — NOT a soft see-through haze.
+
+VIEW — every object seen from HIGH ABOVE at a steep three-quarter angle (mostly top-down), lit from the top-left, all twelve at one consistent cartoon scale within their row.
+
+STYLE — the same polished, cute cartoon look as a plush toy, painted in one hand: a BOLD, dark brown outline (like #2B1A10) around every object's silhouette, THICK — about 5% of the object's length — because these sprites are shown only 15 to 50 pixels wide; flat cel shading with two or three hard-edged tones per colour; simple chunky shapes with clean, readable silhouettes. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO motion streaks, NO photorealism. No text, no letters, no numbers.
+
+SIZE — each chip and bark piece is long and slim (two to four times as long as it is wide) and fills about 80% of its cell's width; each sawdust puff fills about 80% of its cell's width; each object centred in its cell, always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no tree, no trunk, no characters, no ground under the objects (no grass, no soil, no plate), no cast shadows on the background (the game draws its own), no speed lines, no sparkles, no impact stars. Each cell holds ONE piece, not a pile of several.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 12 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink.
+· The palette above is for the objects; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 12 separate objects, 4 per row, 3 rows: row 1 light wood chips, row 2 dark bark flecks, row 3 sawdust puffs.
+· Every object has a thick dark outline and flat hard-edged shading, no blur.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 4 × 3 cells, magenta ground, 12 separate wood-chip, bark and sawdust sprites.

@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, seamlessly tileable ground texture, 1:1, filling the whole canvas edge to edge. Not a scene, not a framed picture, no border, no vignette.
+
+WHAT IT IS: a wide, cold, long-dead VOLCANIC PLAIN around the arena: grey-brown ash ground with broad drifts of darker cooled lava rock, a few fine dark cracks and tiny charcoal pebble specks, each detail no bigger than 1% of the canvas. Base warm ash grey-brown (#5e5149), lighter ash drifts (#6b5d53), darker basalt drifts (#4c423c). Everything is cold: no glow, no embers, no orange or red light. Seen STRAIGHT FROM ABOVE like a map — no horizon, no sky, no perspective. It is the ground of "Tree Smashers", a cosy cartoon game.
+
+WHAT IT IS NOT: no objects — no trees, no bushes, no boulders, no logs, no toys, no furniture, no paths, no water, no fences, no buildings, no characters, no animals, no text, no letters, no logo, no UI. Bigger things are placed ON TOP of this ground later by the game; the ground must stay EMPTY, quiet and low in detail so they read.
+
+COLOUR: muted, darkish and low in contrast — it sits BEHIND a bright arena and must never compete with it. No bright highlights, no white, no orange.
+
+SEAMLESS: the texture is repeated in a grid. Anything that touches the left edge continues on the right edge, top continues on bottom. Keep the drifts broad and evenly spread so no visible grid repeat stands out.
+
+STYLE: stylised cartoon with flat cel-shaded colour areas and clean rounded shapes, hard edges between tones. NO blur, NO airbrush, NO radial gradient, NO glow, NO photorealism, NO noise grain.
+
+BEFORE YOU CALL IT FINISHED: one square texture, edge to edge, seen from straight above, calm muted colour, no objects, no text, tileable.
+
+OUTPUT: one square image, 1:1, the whole canvas is the texture.

@@ -1,0 +1,36 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 9 SEPARATE GAME SPRITES, 3 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, nine equal square cells: 3 per row, 3 rows. Each cell holds ONE object, exactly where, and exactly as big as, the object sits in that cell of the attached reference.
+· Exactly 9 objects. Not 8, not 12, not 16. A wide canvas is wrong.
+
+WHAT THE ATTACHMENT IS — the LAYOUT reference, drawn by the game itself as flat placeholders. It fixes each object's SHAPE, SIZE, POSITION, outline and colours. Keep all of those; repaint each one as a finished, richly hand-painted game sprite. Do not move, resize or redesign an object, and never swap two cells.
+
+WHAT THEY ARE — solid obstacles on themed arenas in "Tree Smashers" (ancient ruins, a child's bedroom floor, stony ground), seen STRAIGHT FROM ABOVE (top-down, no perspective, no horizon). Row by row:
+1. a BROKEN stone COLUMN seen from above: a round fluted column shaft, its top snapped off into a jagged pale broken face.
+2. a square carved STONE BLOCK with a crack line and a small carved rune, worn weathered edges.
+3. an old round stone WELL: a ring of fitted stones around dark teal water with a soft highlight.
+4. a round RUNE STONE dome: weathered sandstone with a carved red-brown circle and a triangle rune in it.
+5. a pile of three wooden TOY BLOCKS (red, blue, yellow), slightly turned against each other, each with a small painted stripe.
+6. a square purple floor CUSHION with puffy sides, a button in the middle and four golden tassels at the corners.
+7. a small inflatable PADDLING POOL: a red-and-white striped round tube ring around blue water with a little yellow rubber duck seen from above.
+8. a toy DRUM seen from above: a red drum with a yellow zig-zag cord around the rim and a cream drum skin.
+9. a MOSSY DOME: a round grey rock almost fully covered by a soft green moss cushion with three tiny pale flowers.
+
+STYLE — the same polished mobile-game look in all 9, painted in one hand:
+· Soft painted shading and texture inside each shape (snow, ice, bark, stone, fabric, painted wood, water), light from the top-left.
+· A bold dark brown outline around every object's silhouette (about 2% of a cell), so it reads at 40 pixels.
+· No glow, no bloom, no blur, no photorealism, no text, no numbers, no letters.
+
+WHAT IT IS NOT — no cast shadows on the magenta (the game draws its own flat shadow), no ground around the objects, no grass or scenery outside each object's own outline, no cell borders, no grid lines, no labels, no stitches, no dashed or sewn seams, no stitched outlines.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 9 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green screen.
+· EXACTLY #FF00FF. NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo or shadow on the magenta.
+· No object contains magenta or hot pink.
+· Keep a clear magenta gap around every object; nothing crosses into the next cell.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· 9 objects, 3 per row, 3 rows, in the reference's order, each the reference's size.
+· Nothing is lettered: the toy blocks carry stripes, never letters.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 3 × 3 cells, magenta ground, 9 top-down sprites matching the layout reference cell for cell.

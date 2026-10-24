@@ -1,0 +1,36 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 12 SEPARATE SMALL GAME SPRITES, 4 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, twelve equal cells: 4 per row, 3 rows, one object per cell.
+· Exactly 12 objects. Not 9, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — FALLING LEAVES for "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing and ram the enemy team's big plush tree. When the tree takes a beating, single leaves shake loose from its puffy round crown and flutter down to the ground. These are those leaves, each one a separate small sprite: ONE single leaf per cell, lying flat, seen from straight above.
+
+THE LEAF — a simple, chunky cartoon leaf like one cut from felt for a plush toy: a smooth leaf blade with a short stalk at one end and one clear midrib line down its middle (plus two or three short side veins), drawn in flat colour with ONE hard-edged darker tone on one half of the blade. Four leaf SHAPES, the same four in every row, in this order: (a) a plump oval leaf with a pointed tip, (b) a slim willow-like pointed leaf, (c) a rounded oak leaf with three soft lobes on each side, (d) a broad teardrop leaf with a slightly wavy edge.
+
+Row by row (all four shapes in each row):
+1. FRESH GREEN — bright leaf green (like #7CC35E) with a hard darker green tone (like #4E9A40).
+2. DEEP GREEN — the darker green of the tree's crown (like #3F8A3C) with a hard deeper tone (like #2C6A2C), each leaf turned at a different angle from row 1.
+3. YELLOWING — autumn-turning leaves: (a) yellow-green, (b) golden yellow (like #D9C24A), (c) ochre-orange (like #C99A3A), (d) yellow with a small brown dry patch at the tip.
+
+VIEW — seen from straight above, lying flat; every leaf at a slightly different angle; all twelve at ONE scale; lit from the top-left.
+
+STYLE — the same polished, cute cartoon look as a plush toy, painted in one hand: a BOLD, dark brown outline (like #2B1A10) around every leaf's silhouette, THICK — about 5% of the leaf's length — because these sprites are shown only 15 to 30 pixels long; the midrib drawn as a clear darker line; flat cel shading with two hard-edged tones per leaf; clean readable silhouettes. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO motion streaks, NO photorealism. No text, no letters, no numbers.
+
+SIZE — each leaf fills about 80% of its cell's width, centred in its cell, always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no branch, no twig with several leaves, no tree, no characters, no ground under the leaves (no grass, no soil, no plate), no cast shadows on the background (the game draws its own), no water drops, no sparkles. Each cell holds ONE leaf, not a cluster.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 12 leaves with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No leaf contains magenta, purple, red-violet or hot pink.
+· The palette above is for the leaves; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 12 separate leaves, 4 per row, 3 rows: row 1 fresh green, row 2 deep green, row 3 yellowing.
+· Every leaf has a thick dark outline, a midrib line and flat hard-edged shading, no blur.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not a leaf is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 4 × 3 cells, magenta ground, 12 separate leaf sprites.

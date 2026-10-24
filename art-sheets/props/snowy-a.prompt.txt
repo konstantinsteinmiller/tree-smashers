@@ -1,0 +1,37 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 9 SEPARATE GAME DECORATION SPRITES, 3 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, nine equal square cells: 3 per row, 3 rows, one object per cell.
+· Exactly 9 objects. Not 8, not 12, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — scenery that stands in deep snow AROUND the arena of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs. Clean white snow with pale-blue shadows, dark-green firs, pale ice. Row by row:
+1. a tall FIR tree laden with SNOW: dark-green layered branch tiers, thick white snow caps resting on every tier, a bit of trunk at the bottom.
+2. a PAIR of small snowy FIR trees side by side, dark green under white snow caps.
+3. one big rounded BOULDER under a thick white snow cap, the rock blue-grey with a pale icy glaze on its side.
+4. a cluster of pale-blue ICE CRYSTALS: five chunky, angular ice shards of different heights sticking up out of a little snow mound.
+5. a soft rounded SNOW DRIFT seen from high above: a low, wind-shaped white mound with pale-blue shading on one side. Low and flat, a ground decal.
+6. a cute little SNOWMAN of two snowballs with a carrot nose, coal-dot eyes and smile, two twig arms and a red knitted scarf.
+7. a small group of three STONES wearing little white SNOW caps.
+8. a small round FROZEN POND seen from straight above: smooth pale-blue ice with a few thin white crack lines and a soft white snow rim. Completely flat, a ground decal.
+9. a round winter HOLLY BUSH: dark-green spiky leaves dusted with snow and a few bright red berries.
+
+VIEW — every object seen from HIGH ABOVE at a steep three-quarter angle (mostly top-down, with just a little of its front side visible), like the decoration around a board in a cosy mobile game; the objects described as ground decals are seen from straight above and lie flat. All nine share that one view and one light from the top-left.
+
+STYLE — the same polished, cute cartoon look in all nine, painted in one hand: bold, dark brown outline around every object's silhouette (about 2% of a cell thick, clearly visible when the object is shown 40 pixels wide), flat cel shading with two or three hard-edged tones per colour, simple rounded shapes, friendly and toy-like. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. No text, no letters, no numbers.
+
+SIZE — each object fills about 85% of its own cell, centred in it, with a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no ground around the objects (no grass patch, no soil disc, no plate) unless it is part of the object as described, no cast shadows on the background (the game draws its own), no scenery, no characters.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 9 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink (anything pink is a soft salmon-peach pink, never magenta).
+· The palette above is for the objects; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 9 separate objects, 3 per row, 3 rows, in the order listed. Not 8, not 12, not 16.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 3 × 3 cells, magenta ground, 9 separate decoration sprites.

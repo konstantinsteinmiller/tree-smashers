@@ -1,0 +1,39 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 4 SEPARATE GAME SPRITES, 2 ACROSS AND 2 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, four equal square cells: 2 per row, 2 rows, one object per cell.
+· Exactly 4 objects. Not 3, not 6, not 9. A wide canvas is wrong.
+
+WHAT THEY ARE — the SPIKED FRONT COVER of the team tree in "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing. Each team defends its own big plush tree; on boss stages the tree is guarded by a thorny bramble garland around its front, and a smasher that rams the tree gets pricked. The game lays several of these garland pieces side by side along the front edge of the tree, so every piece is ONE SHORT SEGMENT of the same bramble.
+
+THE PIECE — a short, chunky, slightly arched segment of a thick twisted bramble vine, like a stuffed toy made of felt: the vine body runs LEFT TO RIGHT across the cell, lying almost FLAT and HORIZONTAL like a short log on its side — at most a very slight bow; its two ends sit at the same height at the far left and far right of the cell; it is THREE times as wide as it is tall (thorns included). NOT a tall arch, NOT a horseshoe, NOT a ring, the ends never point down, made of two dark woody stems twisted around each other. Out of the TOP edge of the vine grow four or five big, sharp, cone-shaped THORNS, all pointing UP and slightly outward like a fan, in pale bone-cream with a darker brown base; two or three small dark-green leaves tucked between them. Nothing grows out of the bottom edge — the bottom edge is the side that sits against the tree. Same width, same height, same vine thickness in all four; only the exact thorn and leaf placement differs between them.
+
+Cells:
+1. the bramble segment, four thorns.
+2. the bramble segment, five thorns, one leaf on the left.
+3. the bramble segment, four thorns, two leaves.
+4. the bramble segment, five thorns, a small red berry between two thorns.
+
+VIEW — seen from HIGH ABOVE at a steep three-quarter angle (mostly top-down, with just a little of its front side visible), like a decoration on the board of a cosy mobile strategy game. All four share that one view, one scale and one light from the top-left.
+
+STYLE — the same polished, cute cartoon look as the team tree, painted in one hand: bold, dark brown outline around every object's silhouette and around every thorn (about 2% of a cell thick, clearly visible when the piece is shown 40 pixels wide), flat cel shading with two or three hard-edged tones per colour, simple rounded chunky shapes, friendly and toy-like even though the thorns are sharp. Vine: dark woody brown (like #5E3B22) with a lighter brown top tone; thorns: cream (like #F2E6C8) with a hard darker tone on their shadow side. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. NO stitches, NO seams, NO sewn lines, NO fabric or plush texture — smooth twisted wood. No text, no letters, no numbers.
+
+SIZE — each piece fills about 85% of its cell's width and is centred in its cell; always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no tree, no trunk, no ground around the objects (no grass patch, no soil, no plate), no cast shadows on the background (the game draws its own), no scenery, no characters, no full ring or wreath — each piece is a short open arc.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 4 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink (the berry is a deep red, not pink).
+· The palette above is for the objects; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 4 separate objects, 2 per row, 2 rows.
+· Every piece runs left to right, thorns pointing UP, nothing on the bottom edge.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 2 × 2 cells, magenta ground, 4 separate bramble segment sprites.
+
+· No grid lines, no cell borders, no dividing lines between the four pieces — only flat magenta between them.

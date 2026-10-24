@@ -1,0 +1,8 @@
+Paint ONE game UI icon for "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs.
+The icon: a DIFFICULTY GAUGE: a half-round dial standing on a small light-blue wooden base plate, the dial split into three equal smooth painted wedges — fresh green on the left, sunny yellow at the top, raspberry red on the right — with a dark navy pointer needle leaning into the red wedge and a white button hub at its pivot.
+Style: a bright, chunky, toy-like game icon — smooth painted surfaces like a well-made wooden/plastic toy. NO stitches, NO seams, NO felt or fabric texture (stitches belong only to the plush characters, not to UI objects). It must still read as a crisp UI ICON at 32 px: a bold, even, dark navy (#161a40) outline around the whole silhouette and its main parts, flat cel shading with at most two tones per colour, a simple chunky readable silhouette, no tiny details.
+Colours: clean bright royal blue, sky blue, white, leaf green, sun yellow and raspberry red only where named. NO brown or muddy tones, NO gold, NO metal, NO yellow-gold cast.
+NO glow, NO blur, NO soft drop shadow, NO radial gradients, NO lens effects, NO text, NO letters, NO numbers, NO frame or button behind the icon.
+Composition: a SQUARE 1:1 image. The icon is centred, upright, seen straight-on, filling about 80% of the image with an even margin on every side.
+Background: one perfectly flat, uniform pure magenta (#FF00FF) everywhere around the icon — no gradient, no texture, no shadow on it, no magenta anywhere inside the icon. It will be keyed to transparency.
+Generate the image now.

@@ -1,0 +1,28 @@
+WHAT COMES BACK IS ONE WIDE IMAGE OF 5 SEPARATE GAME SPRITES IN ONE ROW, ON FLAT MAGENTA.
+One landscape image, about 3:1, five objects side by side from left to right with a clear gap between each, one object per slot.
+· Exactly 5 objects. Not 4, not 6.
+
+WHAT THEY ARE — the STAGE TRAIL of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing to smash the other team's tree. On the title screen a short trail of stepping stones shows the player's climb through the stages: four stepping stones, then a boss stump at the end.
+
+THE OBJECTS, left to right:
+1. a round, flat stepping stone, seen from above at a steep three-quarter angle: a chunky smooth river pebble, flat sunny-yellow top (like #FFD21A) with a lighter facet in the top-left, a darker yellow rim band, a few tiny green moss tufts at its edge. The top face is plain and EMPTY in the middle (the game prints a big number on it).
+2. the same stepping stone in cool pale blue-grey (top like #CFE0F5, rim like #6C7899), one small clover leaf at its edge, the top face empty in the middle.
+3. the same pale blue-grey stone, a tiny daisy at its edge, the top face empty.
+4. the same pale blue-grey stone, a little pebble beside it, the top face empty.
+5. a short, wide, flat-topped TREE STUMP with a berry-red rim (like #F2306B) around its cut top and a small golden crown resting on the cut surface — the boss waiting at the end of the trail.
+All five have the same height and roughly the same width (the stump may be 15% wider).
+
+VIEW — seen from HIGH ABOVE at a steep three-quarter angle (mostly top-down, a little of the front side visible). One view, one scale, one light from the top-left for all five.
+
+STYLE — polished cute cartoon, like the board pieces of a cosy mobile game: bold, dark navy outline (like #161A40) around every object's silhouette (about 2% of the image height thick — clearly visible when one stone is shown 60 pixels wide), flat cel shading with two or three hard-edged tones per colour, simple rounded chunky shapes. NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. These are stones and wood: hard, smooth, toy-like. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. No text, no letters, no numbers anywhere.
+
+SIZE — each object fills about 85% of its slot's height; always a clear gap of magenta between neighbours. Do NOT draw slots, boxes, borders, grid lines or a path between the objects.
+
+WHAT IT IS NOT — no ground patch, no grass carpet, no soil plate under the objects, no cast shadows on the background (the game draws its own), no characters, no scenery around them.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 5 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink (the stump's rim is a red-pink berry, clearly redder than the magenta).
+· Keep all four corners of the canvas plain magenta.

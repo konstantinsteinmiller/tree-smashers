@@ -1,0 +1,33 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE: a LONG, CONTINUOUS BAND OF CARTOON FOREST seen from the side, running across the FULL WIDTH of the image, filling the LOWER 70% of it. The upper 30% is flat magenta.
+One square image, 1:1. One continuous band, edge to edge. Not separate trees floating apart, not a framed picture.
+
+WHAT IT IS — a background layer for the loading screen of "Tree Smashers", a cosy, family-friendly cartoon game where cute-but-angry stuffed-animal fighters smash big trees. It is the middle-distance forest of a big panoramic key-art scene, painted like the key art of a popular mobile brawler game. The forest is SCENERY, NOT TOYS: clean, smooth cartoon trees — not plush, not felt, not fabric.
+
+THE FOREST — seen from the side at eye level (NOT from above):
+· A skyline of cartoon treetops of different heights: mostly big, round, puffy crowns made of rounded leaf clumps, mixed with a few taller, chunky, cone-shaped pines with rounded tips. The skyline goes up and down in a lively rhythm; the tallest treetops reach about 30% from the top of the image, the lowest dips about 45% from the top.
+· TWO ROWS of depth: a BACK row in a cooler, lighter teal-green (#6CC07A, with #8ED492 tops), slightly taller, peeking out behind a FRONT row in fresh leaf green (#4FBF2A, with #8EDC4A tops and #2E8F2A undersides).
+· Below the crowns, the band is SOLID: crowns overlap all the way down and fill the bottom of the image completely, edge to edge — no gaps, no sky showing through, no ground line. A few short honey-orange trunks (#F2A23A, not brown) peek out between the lower crowns.
+· No faces.
+· LEFT and RIGHT edges: the forest continues past both side edges of the image (it is cut by the image edge), and the skyline meets the left edge and the right edge at about the SAME height, so the band can be repeated side by side.
+
+NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. So: no dashed lines, no running stitches, no sewn seams, no stitched outlines, no felt or cloth grain anywhere in this forest.
+
+STYLE — one polished cartoon finish: a bold dark NAVY outline (#161A40) along the top skyline silhouette, about 1% of the image width, thinner SOLID navy lines between clumps; flat cel shading with two or three hard-edged tones per colour; light from the top-left. Every edge stays crisp. NO blur, NO soft airbrush, NO glow, NO bloom, NO fog, NO radial gradients, NO photorealism, NO muddy brown.
+
+WHAT IT IS NOT — no sky, no clouds, no sun, no hills behind the trees, no characters, no animals, no buildings, no text, no letters, no numbers.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel above the forest skyline with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, haze or shadow on the magenta.
+· The forest contains no magenta, purple or hot pink.
+· The palette above is for the forest; the ground stays a vivid, eye-hurting #FF00FF.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· One continuous forest band across the full width, filling the lower 70%, solid down to the bottom edge.
+· The skyline touches the left and the right edge at about the same height.
+· NO stitches, NO dashed seams, NO felt or fabric texture anywhere — smooth cartoon leaves only.
+· Navy outline on the skyline; no blur, no fog, no brown.
+· Every pixel above the skyline is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, the forest band in the lower 70%, magenta above. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.

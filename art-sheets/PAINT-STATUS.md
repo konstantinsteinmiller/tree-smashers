@@ -12,12 +12,54 @@
 
 Marks: ✓ sliced and current · ! repaint (reference changed / old painting parked) · ? painted, no receipt · · not painted yet.
 
-## Arena art (floors, backdrop, props)
+## Smasher sheets — this release: smashers 1–24
+
+Release gate: the paint queue runs only the 24 released smashers by default (`node tools/smasher-sheets/paint-queue.mjs`; explicit ids `… paint-queue.mjs <ids>`, or `--all` for the later release too).
+
+- Released, full 32-frame painting sliced: 13/24 — still to paint: thumper, ramsey, vixie, shellby, zippy, tuskar, slinky, snooze, pongo, rolly, prickles
+- Later release (24, not queued by default): 17/24 sliced
+
+## Arena art per theme (floors, backdrop, props)
 
 > **Gemini account limitation (since the Oct 2026 account switch):** this account REFUSES reference-based edits
 > ("Sorry, I can't edit images for you yet. Can I generate an image instead") — paint with TEXT-ONLY prompts
 > (`paint.mjs` without `--ref`) and describe the subject precisely; a job that needs a reference falls back to text.
 
-- Arena floors painted: layout 0, layout 1, layout 2 of 50 — `arena-floors/floor-<id>.prompt.txt` → `painted/arena-floor-<id>.png` → `node tools/arena-floors/make-floors.mjs`
-- Backdrop: highland plain painted — `bg/highland.prompt.txt` → `node tools/bg-tile/make-tile.mjs <png> public/images/bg/highland-tile_768x768.webp --size 768 --hard`
-- Prop sheets painted: bedroom-a, forest-a, forest-b — `props/<sheet>.prompt.txt` → `painted/props-<sheet>.png` → `node tools/arena-props/pack.mjs`
+| Theme | Floor variants painted | Backdrop tile | Prop sheets |
+|---|---|---|---|
+| meadow | 4/4 (0, 1, 2, 3) | painted | 2/2 |
+| woodland | 3/3 (0, 1, 2) | painted | 1/1 |
+| rocky | 3/3 (0, 1, 2) | painted | 1/1 |
+| snowy | 3/3 (0, 1, 2) | painted | 1/1 |
+| volcanic | 3/3 (0, 1, 2) | painted | 1/1 |
+| ruins | 3/3 (0, 1, 2) | painted | 1/1 |
+| bedroom | 3/3 (0, 1, 2) | painted | 2/2 |
+
+- Prompts: `node tools/arena-themes/prompts.mjs` → `art-sheets/{arena-floors,bg,props}/*.prompt.txt`; unattended painting: `node tools/arena-themes/paint-queue.mjs` (stops on QUOTA / SIGNED_OUT, a re-run continues)
+- Then: `node tools/arena-floors/make-floors.mjs` · `node tools/arena-themes/make-backdrops.mjs` · `node tools/arena-props/pack.mjs`
+- An unpainted floor variant falls back to the procedural floor tinted to the theme; an unpainted backdrop to the theme's flat ground colour
+
+## Arena borders (painted wall along every clearing outline) — PRIORITY
+
+| | Border | Painting | In game |
+|---|---|---|---|
+| ✓ | lava arena wall — HURTS on contact (`lava`) | painted | shipped, 2 tileable variants |
+| · | forest arena wall — HEALS on contact (`heal`) | **not painted** | its theme border (volcanic / woodland) |
+| ✓ | meadow (`meadow`) | painted | shipped, 3 tileable variants |
+| ✓ | ruins (boss) (`ruins`) | painted | shipped, 2 tileable variants |
+| ✓ | woodland (`woodland`) | painted | shipped, 3 tileable variants |
+| ✓ | bedroom (`bedroom`) | painted | shipped, 3 tileable variants |
+| ✓ | volcanic (`volcanic`) | painted | shipped, 2 tileable variants |
+| ✓ | snowy (`snowy`) | painted | shipped, 3 tileable variants |
+| ✓ | rocky (`rocky`) | painted | shipped, 3 tileable variants |
+
+- Queue (TEXT-ONLY, one Gemini job at a time through paint.mjs and its lock, stops on QUOTA / SIGNED_OUT, a re-run continues, packs at the end): `node tools/arena-borders/paint-queue.mjs` (`--dry` lists the jobs, `--redo <key>` parks a painting for a repaint, max 2)
+- Prompts: `node tools/arena-borders/prompts.mjs` → `art-sheets/arena-borders/<key>.prompt.txt`; pack only: `node tools/arena-borders/pack.mjs` → `public/images/arena-borders/<key>_WxH.webp` + `src/use/paintedBorders.ts`; review the seams in `art-sheets/arena-borders/<key>.preview.png`
+- An unpainted (or refused) border falls back to the procedural wooden log rim; the lava / heal wall falls back to its theme border (volcanic / woodland)
+
+## UI icons (Options tabs + HUD settings button)
+
+Painted: settings painted, difficulty painted, sound painted — an unpainted icon ships as the drawn SVG (src/components/icons/UiIcon.vue)
+
+- Queue (TEXT-ONLY, one Gemini job at a time through paint.mjs and its lock, stops on QUOTA / SIGNED_OUT, a re-run continues, packs at the end): `node tools/ui-icons/paint-queue.mjs` (`--dry` lists the jobs)
+- Prompts: `node tools/ui-icons/prompts.mjs` → `art-sheets/ui-icons/*.prompt.txt`; pack only: `node tools/ui-icons/pack.mjs` → `public/images/ui-icons/<name>_{128,256}.webp` + `src/use/paintedUiIcons.ts`

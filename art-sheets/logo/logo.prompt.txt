@@ -1,0 +1,37 @@
+WHAT COMES BACK IS ONE SQUARE SHEET WITH THE 3 SEPARATE PARTS OF A GAME LOGO, STACKED TOP TO BOTTOM, ON FLAT MAGENTA.
+One square image, 1:1. Three separate objects, one above the other, centred left-to-right, with a clear band of plain magenta between them:
+1. TOP — the EMBLEM (a round badge, no letters).
+2. MIDDLE — the word "TREE".
+3. BOTTOM — the word "SMASHERS", the widest part.
+· Exactly 3 objects. They do not touch or overlap each other.
+
+WHAT IT IS — the logo of "Tree Smashers", a cosy, family-friendly cartoon game where cute-but-angry stuffed-animal fighters ride spinning wooden discs and smash the other team's plush tree. The logo must feel like a toy: soft felt, stitched fabric, polished wood, bright and punchy, full of fun action — like the title logo of a popular mobile brawler game, but made of plush and wood.
+
+1. THE EMBLEM — a round wooden disc seen from the front: a slice of a tree trunk in warm golden HONEY-ORANGE wood (not brown) with a few darker orange growth rings, set in a thick rim of bright ROYAL-BLUE felt with a row of white running stitches around it. In the middle of the wood, a big chunky dark NAVY plush paw print (one big pad and four round toe beans, each with a small light shine). A zigzag CRACK runs into the wood from the upper-right edge of the disc, with three small honey-wood chips flying off it. Two fresh green leaves sprout from the top-left of the rim. Two short white motion swooshes curve along the lower-left of the disc, as if it is spinning. Behind the whole disc, a spiky sun-YELLOW comic impact burst (about 14 points, alternating long and short) peeks out all around it.
+2. THE WORD "TREE" — exactly these 4 capital letters: T R E E. Fat, rounded, chunky display letters, each letter slightly tilted and bouncing (not on a straight line), filled with fresh LEAF GREEN — a lighter green band across the top of each letter and a darker green band across the bottom — like stitched green felt.
+3. THE WORD "SMASHERS" — exactly these 8 capital letters: S M A S H E R S. The same fat, rounded, bouncing letters, bigger and wider than "TREE", filled with bright SUN YELLOW — a pale cream-yellow band across the top and a deep golden-orange band across the bottom of each letter — like a shiny plastic toy, with the word gently arched.
+
+SPELLING — the only words in the image are "TREE" and "SMASHERS", spelled exactly like that, in capitals. No other letters, numbers, slogans or signatures anywhere.
+
+STYLE — one polished cartoon finish for all three parts: a very THICK, bold dark NAVY outline (#161A40) around every letter and every shape, about 3% of the image width, so it still reads when the logo is shown small; flat cel shading with two or three hard-edged tones per colour; a hard navy drop shadow straight below each part (offset, not blurred). Soft-toy details are allowed (felt texture, stitches), but every edge stays crisp. NO blur, NO soft airbrush, NO glow, NO bloom, NO radial gradients, NO lens flares, NO photorealism, NO metal, NO muddy brown.
+
+SIZE — the emblem is about 45% of the image wide; "TREE" about 40% wide; "SMASHERS" about 90% wide. Together they fill the image from top to bottom with small magenta gaps between them; nothing touches the image edge.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 3 parts with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No part contains magenta, purple or hot pink.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 3 separate parts, top to bottom: the emblem, "TREE", "SMASHERS".
+· "TREE" has 4 letters, "SMASHERS" has 8 letters, spelled correctly.
+· Thick navy outline around everything; no blur, no glow.
+· Every pixel that is not a part is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, the 3 logo parts stacked, magenta ground. If your tool has an aspect-ratio control, set it to 1:1. No labels, captions, numbers or watermarks.
+
+· NO stitches, NO dashed seam lines, NO felt or fabric texture on the letters (stitches belong only to the plush characters). The disc rim may be felt.
+· Leave a WIDE band of plain magenta (at least 6% of the image height) between the emblem and "TREE" and between "TREE" and "SMASHERS" — they must not touch or overlap anywhere, including outlines and shadows.
+· Leave a wide band of flat magenta (at least 6% of the image height) between "TREE" and "SMASHERS" and between the emblem and "TREE" — no shadow, letter or spark may bridge the gaps.

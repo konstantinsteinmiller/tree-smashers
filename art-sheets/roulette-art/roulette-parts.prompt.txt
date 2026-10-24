@@ -1,0 +1,12 @@
+Paint a 2 × 2 SPRITE SHEET of four separate game UI parts for "Tree Smashers", a bright cartoon toy game where cute-but-angry plush creatures battle on spinning discs's prize ROULETTE WHEEL, seen straight from the FRONT, no perspective. Each part sits alone in the middle of its own quarter of the image, about 65% of the quarter's size, with wide empty magenta space around it — the parts never touch each other or the image edges. No grid lines.
+TOP-LEFT — the POINTER: a chunky toy pointer pointing straight DOWN: a round sun-yellow cap disc at the TOP (with a small ice-white centre dot) and below it a fat, short, berry-red triangular arrow tip pointing down, the tip rounded off. Mirror-symmetric left/right. Taller than wide (about 2 : 3).
+TOP-RIGHT — the HUB: a round chunky toy button cap seen from the front: a royal-blue outer disc, a sky-blue inner ring, and a raised sun-yellow centre dome with a small white highlight on its upper-left.
+BOTTOM-LEFT — a STUD (off): one small round ice-white toy stud / button with a light steel-blue shade on its lower-right. Simple, round, centred.
+BOTTOM-RIGHT — the same STUD lit (on): the same round stud, exactly the same size and shape, but bright sun yellow with a white highlight dot on its upper-left. Flat colour, NOT glowing.
+Style: bright, chunky, toy-like cartoon game art. A bold, even, thick dark navy (#161a40) outline around every shape and its main parts; flat cel shading with at most three tones per colour (highlight, base, shade); crisp hard edges; clean saturated colours, NO muddy tones.
+Colours: royal blue (#2f4fd6), sky blue, ice white (#eef5ff), sun yellow (#ffd21a) and a little berry red (#f2306b) only where named. NO brown, NO wood, NO gold metal, NO chrome, NO metallic sheen or reflections — every surface is smooth painted toy plastic.
+NO stitches, NO stitching lines, NO dashed lines, NO seams, NO felt or fabric texture (stitches belong only to the plush characters, never to UI objects).
+NO glow, NO blur, NO soft drop shadow, NO shadow on the ground, NO radial gradients, NO light rays, NO lens effects, NO text, NO letters, NO numbers, NO watermark.
+Composition: a SQUARE image (1:1), four equal quarters.
+Background: one perfectly flat, uniform pure magenta (#FF00FF) everywhere around the art — no gradient, no texture, no floor, no shadow on it. It will be keyed to transparency, so never use magenta, pink-purple or hot pink inside the art itself.
+Generate the image now.

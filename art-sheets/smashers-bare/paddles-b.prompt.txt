@@ -1,17 +1,36 @@
+CREATE A NEW IMAGE from scratch (do not edit the attached picture — it is only a guide to copy the content from).
 WHAT COMES BACK IS ONE SQUARE SHEET: THE SAME CHARACTER FROM 16 ANGLES, 4 ACROSS AND 4 DOWN, ON FLAT MAGENTA.
 One square image, 1:1, sixteen equal square cells: 4 per row, 4 rows. Each cell holds the SAME character, exactly where the drawing sits in that cell of the layout reference.
 · 16 drawings of ONE character. Not 9, not 12, not 15, not 20. Not 16 different characters, not a scene.
 
 WHAT THE ATTACHMENTS ARE — read this before anything else.
-· ONE image is attached: the LAYOUT reference.
-· The LAYOUT reference is drawn by the game's own 3D rig. It fixes each cell's ANGLE, POSE, PROPORTIONS, POSITION and SIZE, and the character's colours. Keep all of those. Repaint its flat fills as a finished illustration — but never move, resize, re-pose, add or drop a limb.
+· ONE image is attached: the LAYOUT reference — a rough guide sketch, NOT a picture to edit. Draw a brand-new image with the same content.
+· The LAYOUT reference is drawn by the game's own 3D rig. It fixes each cell's ANGLE, POSE, PROPORTIONS, POSITION and SIZE, and the character's colours. Copy all of those into your NEW drawing, drawn as a finished illustration — never move, resize, re-pose, add or drop a limb.
 · Frame order, row by row: cell 1 (top-left) is the BACK view — NO face at all (no eyes, no nose, no mouth), only the back of the head, the back and the tail side. Every next cell is the character turned a further 11.25 degrees on the spot: the face comes back from the OTHER side — cell 9 (third row, first cell) is the other SIDE view, and cell 16 (bottom-right) is almost facing the viewer again. Cells 1 to 4 show no face; follow each reference cell for how much of the face shows. The face turns towards the SAME side as in the reference in every cell — never mirror a cell; check the nose direction of each reference cell and keep it. Follow the layout reference cell by cell.
+· Cell by cell, exactly:
+  cell 1: BACK view — NO face at all, only the back of the head, the back and the tail
+  cell 2: turned 169° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 3: turned 158° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 4: turned 146° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 5: turned 135° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 6: turned 124° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 7: turned 113° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 8: turned 101° away, seen mostly from BEHIND — NO eyes, no mouth, no face; at most the tip of the snout or an ear at the edge
+  cell 9: exact SIDE view, the face seen in PROFILE only (one eye), its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 10: turned 79° away, the face seen in PROFILE only (one eye), its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 11: turned 68° away, the face seen in PROFILE only (one eye), its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 12: turned 56° away, face clearly visible, its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 13: turned 45° away, face clearly visible, its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 14: turned 34° away, face clearly visible, its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 15: turned 23° away, face clearly visible, its left side toward the viewer (nose pointing to the image RIGHT)
+  cell 16: turned 11° away, face clearly visible, its left side toward the viewer (nose pointing to the image RIGHT)
 
 WHAT IT IS NOT.
 · NO DISC, NO BASE, NO GROUND, NO SHADOW under the character. The game draws a spinning disc itself, underneath your painting. The character floats on the magenta exactly as in the layout reference.
 · No text, no numbers, no labels, no cell borders, no grid lines, no gutters.
 
 WHAT IT IS — "Paddles", a otter from "Tree Smashers", a cosy forest arena battler. A otter plush. Its fighting style: floats on its back: a small, quick pebble-thrower whose rear is the tough side and whose cheeky face is the soft one. Keep EXACTLY the reference's colours, markings, ears, tail and accessories — only the finish changes.
+· It is an ORIGINAL character designed for this game — not based on any existing brand, franchise, mascot or toy line.
 · It is a STUFFED ANIMAL — a plush toy: soft rounded felt and fleece, a button-like shine in the eyes, slightly squashy shapes.
 · STITCHES: paint dashed stitch lines ONLY where the layout reference draws a dashed line, following that line's exact path. Invent NO other seams — no seam down the middle of the face, head, back or body unless the reference has one there. A stitch line is fixed to the plush: it turns with the character and keeps its place in every cell.
 · CUTE BUT ANGRY: big round cute eyes with a glossy highlight, heavy slanted angry eyebrows, a grumpy frown with tiny white fangs (or the teeth the note asks for). Chunky head, small body, stubby limbs.
@@ -20,11 +39,13 @@ COLOUR — keep the layout reference's palette for every part. Pink parts are so
 
 THE VIEW — the camera looks down at the character from about 55 degrees (3/4 top-down), the same in every cell.
 
+ONE HEAD — every cell shows exactly ONE head with ONE face (or no face, seen from behind). Never a second face, a second pair of eyes or a second snout on the back, side or rump of the body.
+
 FACE — eyes, pupils and brows exist ONLY where the layout reference cell shows them, always looking the way the character faces in that cell. A reference cell without a visible eye gets no painted eye.
 
 CONSISTENCY — ONE character turning on the spot: identical proportions, colours, markings, stitch lines, accessories, expression and line weight in all 16 cells.
 
-STYLE — a richly hand-painted plush toy, clearly MORE finished than the flat reference:
+STYLE — a richly hand-painted plush toy, clearly MORE finished than the flat guide sketch:
 · Soft painted shading that shows the felt and fleece: rounded volume, gentle fabric texture, visible stitched seams, a warm light from the top-left and a soft darker underside on every shape.
 · A bold dark brown contour around the whole silhouette (about 2% of a cell's width) so it still reads when shown at 50 pixels; thinner inner lines.
 · No glow, no bloom, no blur, no photorealism, no shiny 3D plastic, no realistic fur strands, nothing scary or gory.

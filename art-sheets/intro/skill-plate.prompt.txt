@@ -1,0 +1,19 @@
+WHAT COMES BACK IS ONE WIDE IMAGE OF ONE GAME UI PLATE, ON FLAT MAGENTA.
+One landscape image, about 4:1, one object centred.
+
+WHAT IT IS — the SKILL CARD PLATE of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs. During the intro a small card slides in at the bottom of the screen naming each fighter's special skill; the game puts a round skill medallion on its left end and two lines of text on it. This is the empty plate behind them. The game stretches its middle, so the plate must work when stretched sideways.
+
+THE OBJECT — a chunky, rounded-rectangle toy plate, about four times as wide as tall, like a glossy plastic toy-box nameplate: a royal-blue frame (like #2F4FD6, a lighter #4A6BF0 top lip and a darker #1E3399 bottom band about 15% of the plate height) around a flat, pale ice-white face (like #EEF5FF) with a very faint two-tone diagonal facet (the upper-left half one step lighter). Two small flat four-point sparkles on the frame, one at the top-left corner and one at the bottom-right corner. A solid sun-yellow (like #FFD21A) dog-ear notch at the top-right corner of the frame. The four corners hold all the decoration; the long top and bottom edges and the middle of the face are PLAIN and uniform (so the middle can be stretched). The left end of the face is plain too (the medallion goes there).
+
+STYLE — the game's toy-box UI style: bold, dark navy outline (like #161A40) around the plate and around the face (about 3% of the plate height thick), flat fills, hard-edged facets and bevels, a hard drop band in navy under the plate (no soft shadow). NO stitches, NO seams, NO felt or fabric texture — this is a smooth plastic toy part. NO wood, NO brown. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism. No text, no letters, no numbers, no icons on the face.
+
+SIZE — the plate fills about 90% of the image width and is centred; a clear magenta margin all around.
+
+WHAT IT IS NOT — no medallion, no characters, no scenery, no ground, no cast shadow on the background.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the plate with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink.
+· Keep all four corners of the canvas plain magenta.

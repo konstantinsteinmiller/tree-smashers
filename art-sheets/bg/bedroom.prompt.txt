@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, seamlessly tileable ground texture, 1:1, filling the whole canvas edge to edge. Not a scene, not a framed picture, no border, no vignette.
+
+WHAT IT IS: the WOODEN FLOOR of a cosy child's bedroom around a play rug: warm honey-oak FLOORBOARDS seen from straight above, long planks running left to right in EXACTLY SIX perfectly straight, perfectly parallel rows of IDENTICAL height (every plank the same width, no wide / narrow planks, no rows that drift or bend), every plank about the same length with the end joints staggered row to row in a regular brick-like pattern, plank seams as thin darker lines of one constant thickness; planks vary only by a SLIGHT warm tone shift (no dark rows next to light rows, no bold stripes, no two-tone banding, no mismatched tiling), a few soft wood-grain streaks and tiny knots, each detail small. Base warm honey oak (#a8774c), lighter planks (#b4835a), darker planks and seams (#93663f). Seen STRAIGHT FROM ABOVE like a map — no horizon, no sky, no perspective. It is the ground of "Tree Smashers", a cosy cartoon game.
+
+WHAT IT IS NOT: no objects — no trees, no bushes, no boulders, no logs, no toys, no furniture, no paths, no water, no fences, no buildings, no characters, no animals, no text, no letters, no logo, no UI. Bigger things are placed ON TOP of this ground later by the game; the ground must stay EMPTY, quiet and low in detail so they read.
+
+COLOUR: muted, warm and a little darker than the play rug in the middle, low contrast overall — it sits BEHIND a bright arena and must never compete with it. No bright highlights, no white, no shine, no reflections.
+
+SEAMLESS: the texture is repeated in a grid. Anything that touches the left edge continues on the right edge, top continues on bottom. Keep the drifts broad and evenly spread so no visible grid repeat stands out.
+
+STYLE: stylised cartoon with flat cel-shaded colour areas and clean rounded shapes, hard edges between tones. NO blur, NO airbrush, NO radial gradient, NO glow, NO photorealism, NO noise grain.
+
+BEFORE YOU CALL IT FINISHED: one square texture, edge to edge, seen from straight above, calm muted colour, no objects, no text, tileable.
+
+OUTPUT: one square image, 1:1, the whole canvas is the texture.

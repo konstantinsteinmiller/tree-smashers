@@ -1,0 +1,17 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE OF ONE GAME SPRITE IN THE TOP-LEFT CORNER, ON FLAT MAGENTA.
+One square image, 1:1.
+
+WHAT IT IS — a LEAFY CANOPY CORNER for "Tree Smashers", a cosy cartoon game seen from above: a forest clearing where cute-but-angry stuffed-animal fighters battle on spinning wooden discs. When the game's intro starts, the camera sinks down through the treetops, and four of these canopy corners (this one, mirrored three times) part outward from the corners of the screen.
+
+THE OBJECT — a big cluster of overlapping broad cartoon leaves and a few short twigs, SEEN FROM DIRECTLY ABOVE, growing out of the TOP-LEFT CORNER of the image: it is anchored on the top edge and the left edge (the leaves are cut off by those two edges, as if the branch continues off-image) and spreads diagonally toward the centre, its ragged leafy edge ending in a rough quarter-circle about 75% of the way to the opposite corner. Three greens: dark (like #2F7D43), mid (like #3F9A4C), fresh (like #5FC36A), each leaf with a simple central vein line; a few leaves turn their lighter underside; two or three small round berries (deep red) and one tiny white blossom tucked in. Layered: big leaves at the back near the corner, smaller leaves at the front edge. The leaves near the bottom-right edge of the cluster are separate and clearly outlined, so the cluster has a lively, scalloped edge.
+
+STYLE — polished cute cartoon, like the scenery of a cosy mobile game: bold, dark navy outline (like #161A40) around every leaf (about 0.6% of the image width thick), flat cel shading with two hard-edged tones per leaf, simple rounded chunky shapes. NO stitches, NO seams, NO felt or fabric texture on trees, bushes, hills or any scenery — only the plush characters may have stitches. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism, NO depth-of-field. No text, no letters, no numbers.
+
+WHAT IT IS NOT — no trunk, no ground, no sky, no shadow on the background, no characters, no frame.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the leaf cluster with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink.
+· The bottom-right corner and the whole right and bottom edges of the canvas stay plain magenta.

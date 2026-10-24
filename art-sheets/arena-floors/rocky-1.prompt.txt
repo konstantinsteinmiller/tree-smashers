@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, full-bleed ground texture, 1:1, filling the whole canvas edge to edge — the floor that a game arena of "Tree Smashers" (cute stuffed-animal fighters on spinning wooden discs) sits on. Not a scene, not a framed picture, no border.
+
+WHAT IT IS — the floor of a stony upland clearing: short, dry, sun-bleached olive grass (#a9a66e as the base, lighter patches #b6b37c, darker strokes #8f8c5a) worn through to pale sandy earth in a few broad patches (#c8b48a), with tiny gravel dots, each no bigger than a fingernail on the canvas.
+
+WHAT IT IS NOT — no stones bigger than a fingernail, no slabs, no outlined stones of any size (stones would read as obstacles), no boulders, no standing rocks, no cracks, no rifts, no holes; no objects of any kind: no paths, no fences, no walls, no border, no frame, no vignette, no cast shadows, no light rays, no characters, no animals, no text, no letters, no logo, no UI. Game pieces are drawn ON TOP of this ground later; the ground itself must stay empty and calm so they read at a glance.
+
+VIEW — seen STRAIGHT FROM ABOVE, like a map. No horizon, no sky, no perspective, no tilt.
+
+STYLE — a cosy, polished mobile-game ground in a stylised cartoon hand: flat cel-shaded colour areas with clean, rounded shapes, two or three tones per area, hard edges between the tones. NO blur, NO soft airbrush, NO radial gradient, NO glow, NO bloom, NO photorealism, NO noise grain. Light from the top-left.
+
+CONTRAST — low. The whole ground stays within a narrow band of mid tones; nothing is very bright, nothing is very dark. Small details are tiny (each about 2–3% of the canvas wide), evenly spread over the whole canvas, so no single spot draws the eye. The middle of the canvas is as calm as the rest.
+
+BEFORE YOU CALL IT FINISHED: one square image, the ground fills it edge to edge, seen from straight above, flat cartoon colour areas, low contrast, no objects, no border, no text.
+
+OUTPUT: one square 1:1 image, the whole canvas is the ground texture.

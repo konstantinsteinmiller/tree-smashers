@@ -1,0 +1,34 @@
+WHAT COMES BACK IS ONE SQUARE SHEET OF 12 SEPARATE SMALL GAME SPRITES, 4 ACROSS AND 3 DOWN, ON FLAT MAGENTA.
+One square image, 1:1, twelve equal cells: 4 per row, 3 rows, one object per cell.
+· Exactly 12 objects. Not 9, not 16. A wide canvas is wrong.
+
+WHAT THEY ARE — the BALLOON-POP effect pieces of "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs and carry party balloons as their health, like the balloons on the karts in a kart-racing battle mode. When a fighter is hit, a balloon bursts with a BANG: a flat comic burst star flashes, and shredded scraps of balloon rubber fly out and flutter down. These are those pieces, each one a separate small sprite.
+
+Row by row:
+1. BLUE RUBBER SCRAPS — four different torn shreds of a burst blue balloon, each ONE single piece: (a) a long ragged strip with a torn zig-zag edge, (b) a small curled shred, (c) a jagged triangular tatter, (d) a crinkled scrap with a frayed end. Bright saturated blue (like #2F8CFF) with a hard darker blue shade (like #1D5FD0) on the curled-over side and a thin pale-blue edge highlight (like #BFE2FF).
+2. RED RUBBER SCRAPS — four different torn shreds of a burst red balloon, same four kinds of shapes as row 1 but each a little different: bright tomato red (like #F0413F) with a hard darker red shade (like #B8232F) and a thin pale-peach edge highlight (like #FFC2B8).
+3. POP BURST STARS — four different flat comic-book "BANG" burst shapes, each ONE solid shape: (a) an eight-point spiky star burst, (b) a jagged ten-point explosion burst with uneven spikes, (c) a rounder six-point burst, (d) a starburst with a few short spikes around a spiky centre, all spikes attached. Each one is pale butter cream (like #FFF1B8) with a solid white core shape inside it, flat colours only, every spike sharp.
+
+VIEW — every object seen flat from the front, lit from the top-left, the scraps all at one consistent cartoon scale, the burst stars bigger (filling more of their cells).
+
+STYLE — the same polished, cute cartoon look as a plush toy, painted in one hand: a BOLD, very dark navy outline (like #1B1530) around every object's silhouette, THICK — about 5% of the object's length — because these sprites are shown only 15 to 60 pixels wide; flat cel shading with two or three hard-edged tones per colour; simple chunky shapes with clean, readable silhouettes. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO motion streaks, NO speed lines, NO sparkles, NO photorealism. No text, no letters, no "POP" or "BANG" words, no numbers.
+
+SIZE — each rubber scrap fills about 70% of its cell's width; each burst star fills about 85% of its cell; each object centred in its cell, always a clear gap to the next cell. Do NOT draw the cells: no boxes, borders, gutters, grid lines, labels or numbers.
+
+WHAT IT IS NOT — no whole balloons, no strings, no characters, no ground, no cast shadows on the background, no smoke clouds, no confetti piles. Each cell holds ONE piece, not a pile of several.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not one of the 12 objects with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· No object contains magenta, purple or hot pink.
+· The palette above is for the objects; the ground stays a vivid, eye-hurting #FF00FF.
+· Keep the bottom-right corner of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED, count and check:
+· Exactly 12 separate objects, 4 per row, 3 rows: row 1 blue rubber scraps, row 2 red rubber scraps, row 3 cream pop burst stars.
+· Every object has a thick dark outline and flat hard-edged shading, no blur.
+· Each one stands alone with magenta all around it; nothing touches the next cell or the canvas edge.
+· Every pixel that is not an object is flat, vivid #FF00FF.
+
+OUTPUT: one square 1:1 image, 4 × 3 cells, magenta ground, 12 separate rubber-scrap and burst-star sprites.

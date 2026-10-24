@@ -1,0 +1,15 @@
+WHAT COMES BACK: ONE square, full-bleed ground texture, 1:1, filling the whole canvas edge to edge — the floor that a game arena of "Tree Smashers" (cute stuffed-animal fighters on spinning wooden discs) sits on. Not a scene, not a framed picture, no border.
+
+WHAT IT IS — a soft PLAY MAT made of big interlocking foam puzzle tiles on a cosy playroom floor, seen straight from above and filling the canvas: large square tiles in soft pastel mint (#c4e2cc), butter yellow (#f0e3aa), sky blue (#c0d8ec) and peach (#efcdb4) with gently wavy puzzle-edge seams between them, slightly darker seam lines.
+
+WHAT IT IS NOT — no toys, no furniture, no letters, no numbers, no pictures, no animals, no border, no frame; no objects of any kind: no paths, no fences, no walls, no border, no frame, no vignette, no cast shadows, no light rays, no characters, no animals, no text, no letters, no logo, no UI. Game pieces are drawn ON TOP of this ground later; the ground itself must stay empty and calm so they read at a glance.
+
+VIEW — seen STRAIGHT FROM ABOVE, like a map. No horizon, no sky, no perspective, no tilt.
+
+STYLE — a cosy, polished mobile-game ground in a stylised cartoon hand: flat cel-shaded colour areas with clean, rounded shapes, two or three tones per area, hard edges between the tones. NO blur, NO soft airbrush, NO radial gradient, NO glow, NO bloom, NO photorealism, NO noise grain. Light from the top-left.
+
+CONTRAST — low. The whole ground stays within a narrow band of mid tones; nothing is very bright, nothing is very dark. Small details are tiny (each about 2–3% of the canvas wide), evenly spread over the whole canvas, so no single spot draws the eye. The middle of the canvas is as calm as the rest.
+
+BEFORE YOU CALL IT FINISHED: one square image, the ground fills it edge to edge, seen from straight above, flat cartoon colour areas, low contrast, no objects, no border, no text.
+
+OUTPUT: one square 1:1 image, the whole canvas is the ground texture.
