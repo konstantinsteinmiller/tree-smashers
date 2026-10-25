@@ -114,10 +114,10 @@ const aria = computed(() =>
   align-items: center
   justify-content: center
   gap: 0.05rem
-  // FIconButton md: 1.75rem image + 2 × 0.5rem padding + 2 × 3px border.
+  // Twin of the PvP / trophy squares: 1.75rem image + 2 × 0.375rem padding + 2 × 3px border.
   box-sizing: border-box
-  width: calc(2.75rem + 6px)
-  height: calc(2.75rem + 6px)
+  width: calc(2.5rem + 6px)
+  height: calc(2.5rem + 6px)
   padding: 0
   border-radius: var(--radius-ui)
   border: 3px solid var(--color-ink)
@@ -138,12 +138,12 @@ const aria = computed(() =>
 
 .lhb__icon
   display: block
-  width: 2rem
-  height: 2rem
+  width: 1.75rem
+  height: 1.75rem
   &--tagged
-    width: 1.75rem
-    height: 1.75rem
-    margin-top: -0.35rem
+    width: 1.45rem
+    height: 1.45rem
+    margin-top: -0.4rem
 
 // The division / position on a chip in the tier colour, overlapping the
 // emblem's foot so the icon keeps its size.
