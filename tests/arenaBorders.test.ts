@@ -64,7 +64,9 @@ describe('arena border registry', () => {
       // bedroom (2026-10-23) is a strictly periodic row of identical cubes: the quilt metric reads
       // a clean cut between two cubes as a big change, so it was packed with BORDER_MAX_INTERNAL=3 after
       // its seam preview (art-sheets/arena-borders/bedroom.preview.png) was checked by eye.
-      const maxQuilt = theme === 'bedroom' ? 3 : strip.MAX_INTERNAL
+      // heal (2026-10-25) is a regular hedge with a heart / plus badge every sixth of its width: packed with
+      // BORDER_MAX_INTERNAL=1.7 (measured 1.61) after its seam preview was checked by eye.
+      const maxQuilt = theme === 'bedroom' ? 3 : theme === 'heal' ? 1.7 : strip.MAX_INTERNAL
       expect(b!.quilt, `${theme} quilt`).toBeLessThanOrEqual(maxQuilt)
       // never upscaled on a 3× phone (≈ 2.9 device px per unit)
       expect(b!.ppu).toBeGreaterThanOrEqual(3)

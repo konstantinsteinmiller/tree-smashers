@@ -14,7 +14,7 @@ export interface PaintedBorder {
 }
 export const PAINTED_BORDERS: Readonly<Partial<Record<BorderKey, PaintedBorder>>> = {
   "bedroom": {"file":"bedroom_837x696.webp","w":837,"h":696,"v":"63fd489f","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":709},{"y":234,"w":809},{"y":466,"w":821}],"seam":0.018,"quilt":2.482},
-  "heal": {"file":"heal_806x696.webp","w":806,"h":696,"v":"d3abe0d4","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":720},{"y":234,"w":790},{"y":466,"w":619}],"seam":0.803,"quilt":1.245},
+  "heal": {"file":"heal_717x1856.webp","w":717,"h":1856,"v":"554168f0","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":81,"tiles":[{"y":2,"w":451},{"y":234,"w":449},{"y":466,"w":621},{"y":698,"w":592},{"y":930,"w":624},{"y":1162,"w":640},{"y":1394,"w":701},{"y":1626,"w":677}],"seam":0.795,"quilt":1.609},
   "lava": {"file":"lava_640x464.webp","w":640,"h":464,"v":"cfff7529","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":615},{"y":234,"w":624}],"seam":0.661,"quilt":1.163},
   "meadow": {"file":"meadow_590x696.webp","w":590,"h":696,"v":"e9904149","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":80,"tiles":[{"y":2,"w":544},{"y":234,"w":505},{"y":466,"w":574}],"seam":0.586,"quilt":1.032},
   "rocky": {"file":"rocky_767x696.webp","w":767,"h":696,"v":"926df66f","ppu":6,"rowH":228,"inner":204,"pad":8,"cut":60,"tiles":[{"y":2,"w":641},{"y":234,"w":589},{"y":466,"w":751}],"seam":0.87,"quilt":1.231},

@@ -13,6 +13,7 @@ export interface PaintedRoulette {
   bulbOn?: PaintedRoulettePart
 }
 export const PAINTED_ROULETTE: PaintedRoulette = {
+  rim: { file: 'painted-rim_895x900.webp', w: 895, h: 900, v: '3dd5db38', open: 0.3277 },
   pointer: { file: 'painted-pointer_117x206.webp', w: 117, h: 206, v: '29f7e41c', pivotY: 0.2816 },
   hub: { file: 'painted-hub_189x189.webp', w: 189, h: 189, v: '8f72608b' },
   bulbOff: { file: 'painted-bolt-off_48x48.webp', w: 48, h: 48, v: '3e258d89' },

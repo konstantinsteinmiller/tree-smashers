@@ -14,12 +14,12 @@ export interface PaintedBossFrame {
   v: string
 }
 export const PAINTED_BOSS_FRAME: PaintedBossFrame | null = {
-  file: 'frame_663x753.webp',
+  file: 'frame_663x708.webp',
   w: 663,
-  h: 753,
-  aspect: 0.8805,
-  holeX: 0.4976,
-  holeY: 0.5642,
-  holeD: 0.5084,
-  v: '768a1e04'
+  h: 708,
+  aspect: 0.9364,
+  holeX: 0.5,
+  holeY: 0.5621,
+  holeD: 0.5225,
+  v: 'baaafa2f'
 }

@@ -22,8 +22,10 @@
 //  - when the sprite would be drawn ABOVE its own resolution (render-sharpness
 //    rule — the device scale is read from the context transform);
 //  - with `?art=procedural` (A/B), in jsdom / node.
-import { PAINTED_TOWERS, type PaintedTowerName } from '@/use/paintedTowers'
+import { PAINTED_TOWERS, type PaintedTowerName, type PaintedTowerSprite } from '@/use/paintedTowers'
 import { prependBaseUrl } from '@/utils/function'
+import { activeSeason, type Season } from '@/use/season'
+import SEASON_TOWER_REGISTRY from '@/use/paintedSeasonTowers.json'
 
 /** Healthy tree's painted half width over the tower collision radius. */
 export const TOWER_ART_HALF_W = 1.2
@@ -51,6 +53,17 @@ export const towerDamageStage = (hp: number, maxHp: number): 0 | 1 | 2 | 3 => {
 /** The painted stump is ~2.5x as wide as the tree's trunk: 1 / 2.5. */
 export const FELLED_STUMP_SCALE = 0.4
 
+// ─── Seasonal trees (#Paint5) ───────────────────────────────────────────────
+// Halloween / Christmas dress-ups of the same eight team states (the debris scatter
+// is shared), packed by `pack-single.mjs --season`, registered to the everyday atlas'
+// silhouettes — so they drop in at the same scale and ground point. Worn only inside the
+// season's window (season.ts); until the season atlas has loaded the everyday tree draws.
+type SeasonTowerName = Exclude<PaintedTowerName, 'debris'>
+interface SeasonTowers { file: string, v: string, sprites: Readonly<Record<SeasonTowerName, PaintedTowerSprite>> }
+const SEASON_TOWERS = SEASON_TOWER_REGISTRY as Partial<Record<Season, SeasonTowers>>
+let seasonImg: { season: Season, img: HTMLImageElement } | null = null
+let seasonRequested: Season | null = null
+
 const SPRITE_OF: Readonly<Record<'player' | 'npc', readonly PaintedTowerName[]>> = {
   player: ['blue0', 'blue1', 'blue2', 'blueFelled'],
   npc: ['red0', 'red1', 'red2', 'redFelled']
@@ -68,21 +81,24 @@ export const towerArtRevision = (): number => revision
 // team bows stay readable (blue vs red). No `ctx.filter` support (Safari) = untinted, as before.
 const TREE_GRADE: Readonly<Record<string, string>> = {
   volcanic: 'saturate(0.5) brightness(0.78) sepia(0.3) contrast(1.05)',
-  snowy: 'saturate(0.7) brightness(1.1) hue-rotate(16deg)',
-  ruins: 'saturate(0.68) brightness(0.92)',
+  // #Consistency-12: the lush green oak stood unchanged on snow / ruins (stage 58) — frost: cool teal, pale,
+  // desaturated; ruins: dusk, drained. NO big hue shift: it turned the blue / red bows purple / brown.
+  snowy: 'saturate(0.5) brightness(1.14) hue-rotate(6deg) contrast(0.96)',
+  ruins: 'saturate(0.5) brightness(0.84) sepia(0.12)',
   rocky: 'saturate(0.82) brightness(0.93)'
 }
 let treeTheme = ''
 /** Set the arena theme the trees are graded for (the static bake key already includes it). */
 export const setTowerTheme = (theme: string): void => { treeTheme = theme }
 const graded = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
-const gradedSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanvas | null => {
+const gradedSprite = (name: PaintedTowerName, src: Source): HTMLCanvasElement | OffscreenCanvas | null => {
   const grade = TREE_GRADE[treeTheme]
-  if (!grade || name.endsWith('Felled') || !atlas) return null
+  // A seasonal tree keeps its own colours (orange autumn / snowy pine) on every floor.
+  if (!grade || src.season || name.endsWith('Felled') || !atlas) return null
   const key = `${name}|${treeTheme}`
   const hit = graded.get(key)
   if (hit) return hit
-  const s = PAINTED_TOWERS?.sprites[name]
+  const s = src.sprites[name]
   if (!s) return null
   let c: HTMLCanvasElement | OffscreenCanvas
   if (typeof OffscreenCanvas !== 'undefined') c = new OffscreenCanvas(s.w, s.h)
@@ -90,13 +106,16 @@ const gradedSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanv
   const g = c.getContext('2d') as CanvasRenderingContext2D | null
   if (!g || !('filter' in g)) return null
   g.filter = grade
-  g.drawImage(atlas, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h)
+  g.drawImage(src.img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h)
   graded.set(key, c)
   return c
 }
 
 /** White silhouettes for the hit flash, baked lazily once per sprite. */
-const flashSprites = new Map<PaintedTowerName, HTMLCanvasElement | OffscreenCanvas>()
+const flashSprites = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+
+/** Where a tree is cut from: the everyday atlas, or the active season's. */
+interface Source { season: Season | null, img: HTMLImageElement, sprites: Readonly<Record<PaintedTowerName, PaintedTowerSprite>> }
 
 const artAllowed = (): boolean => {
   if (typeof Image === 'undefined' || typeof location === 'undefined') return false
@@ -117,11 +136,31 @@ export const preloadTowerArt = (): void => {
   img.src = prependBaseUrl(`images/towers/${PAINTED_TOWERS.file}?v=${PAINTED_TOWERS.v}`)
 }
 
-const flashSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanvas | null => {
-  const hit = flashSprites.get(name)
+/** The active season's atlas, requested once; null outside the window / until packed + loaded. */
+const seasonSource = (): { season: Season, img: HTMLImageElement, meta: SeasonTowers } | null => {
+  const season = activeSeason()
+  const meta = season ? SEASON_TOWERS[season] : undefined
+  if (!season || !meta || !artAllowed()) return null
+  if (seasonImg?.season === season) return { season, img: seasonImg.img, meta }
+  if (seasonRequested !== season) {
+    seasonRequested = season
+    const img = new Image()
+    img.decoding = 'async'
+    img.onload = () => {
+      seasonImg = { season, img }
+      revision++
+    }
+    img.src = prependBaseUrl(`images/towers/${meta.file}?v=${meta.v}`)
+  }
+  return null
+}
+
+const flashSprite = (name: PaintedTowerName, src: Source): HTMLCanvasElement | OffscreenCanvas | null => {
+  const key = `${src.season ?? ''}|${name}`
+  const hit = flashSprites.get(key)
   if (hit) return hit
-  const s = PAINTED_TOWERS?.sprites[name]
-  if (!s || !atlas) return null
+  const s = src.sprites[name]
+  if (!s) return null
   let c: HTMLCanvasElement | OffscreenCanvas
   if (typeof OffscreenCanvas !== 'undefined') c = new OffscreenCanvas(s.w, s.h)
   else {
@@ -131,11 +170,11 @@ const flashSprite = (name: PaintedTowerName): HTMLCanvasElement | OffscreenCanva
   }
   const g = c.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null
   if (!g) return null
-  g.drawImage(atlas, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h)
+  g.drawImage(src.img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h)
   g.globalCompositeOperation = 'source-in'
   g.fillStyle = '#ffffff'
   g.fillRect(0, 0, s.w, s.h)
-  flashSprites.set(name, c)
+  flashSprites.set(key, c)
   return c
 }
 
@@ -160,7 +199,11 @@ export const drawPaintedTower = (
   if (k * deviceScale > MAX_UPSCALE) return false
   const stage = towerDamageStage(hp, maxHp)
   const name = SPRITE_OF[side][stage]!
-  const s = meta.sprites[name]
+  const seasonal = seasonSource()
+  const src: Source = seasonal
+    ? { season: seasonal.season, img: seasonal.img, sprites: { ...meta.sprites, ...seasonal.meta.sprites } }
+    : { season: null, img: atlas, sprites: meta.sprites }
+  const s = src.sprites[name]
   // Ground point: where the healthy tree's silhouette centre lands on (x, y).
   const gx = x - meta.ref.dx * k
   const gy = y - meta.ref.dy * k
@@ -188,11 +231,11 @@ export const drawPaintedTower = (
     ctx.scale(-1, 1)
     ctx.translate(-gx, 0)
   }
-  const tinted = gradedSprite(name)
+  const tinted = gradedSprite(name, src)
   if (tinted) ctx.drawImage(tinted as CanvasImageSource, dx, dy, s.w * ks, s.h * ks)
-  else ctx.drawImage(atlas, s.x, s.y, s.w, s.h, dx, dy, s.w * ks, s.h * ks)
+  else ctx.drawImage(src.img, s.x, s.y, s.w, s.h, dx, dy, s.w * ks, s.h * ks)
   if (flash > 0.05) {
-    const f = flashSprite(name)
+    const f = flashSprite(name, src)
     if (f) {
       const prev = ctx.globalAlpha
       ctx.globalAlpha = prev * flash * 0.55

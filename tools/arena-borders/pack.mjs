@@ -116,21 +116,27 @@ const reg = { ...previous }
 let failed = 0
 try {
   for (const theme of themes) {
-    const sheet = await decode(join(paintedDir, `border-${theme}.png`))
-    keyMagenta(sheet)
-    const bands = findBands(sheet)
     const strips = []
     const notes = []
-    for (const [i, b] of bands.entries()) {
-      const h = b.bottom - b.top
-      if (h > sheet.h * 0.4) { notes.push(`band ${i}: ${h} px tall — strips merged?`); continue }
-      const full = crop(sheet, 0, b.top, sheet.w, h)
-      const [x0, x1] = trimEnds(full)
-      const s = crop(full, x0, 0, x1 - x0, h)
-      const m = measureStrip(s)
-      if (m.painted < 0.9) { notes.push(`band ${i}: only ${(m.painted * 100).toFixed(0)} % of columns painted`); continue }
-      if (m.baseline - m.top < 20) { notes.push(`band ${i}: too thin`); continue }
-      strips.push({ img: s, m, band: i, trim: [x0, sheet.w - x1] })
+    // The main painting, plus any extra sheet border-<theme>.2.png, .3.png … painted from the same
+    // prompt (#Consistency-13): more strips = more distinct tiles = a longer repeat round the arena.
+    const sources = [`border-${theme}.png`, ...readdirSync(paintedDir).filter(f => new RegExp(`^border-${theme}\\.\\d+\\.png$`).test(f)).sort()]
+    for (const [si, file] of sources.entries()) {
+      const sheet = await decode(join(paintedDir, file))
+      keyMagenta(sheet)
+      const bands = findBands(sheet)
+      for (const [i, b] of bands.entries()) {
+        const tag = si === 0 ? `band ${i}` : `${file} band ${i}`
+        const h = b.bottom - b.top
+        if (h > sheet.h * 0.4) { notes.push(`${tag}: ${h} px tall — strips merged?`); continue }
+        const full = crop(sheet, 0, b.top, sheet.w, h)
+        const [x0, x1] = trimEnds(full)
+        const s = crop(full, x0, 0, x1 - x0, h)
+        const m = measureStrip(s)
+        if (m.painted < 0.9) { notes.push(`${tag}: only ${(m.painted * 100).toFixed(0)} % of columns painted`); continue }
+        if (m.baseline - m.top < 20) { notes.push(`${tag}: too thin`); continue }
+        strips.push({ img: s, m, band: i, trim: [x0, sheet.w - x1] })
+      }
     }
     if (strips.length < 2) { console.log(`${theme}: REFUSED — ${strips.length} usable strip(s); ${notes.join('; ')}`); failed++; continue }
     const ppu = Math.min(PPU, ...strips.map(s => (s.m.baseline - s.m.top) / THICK_UNITS))
@@ -211,7 +217,11 @@ try {
     // preview: every ordered pair once, then each tile twice, on the theme's ground
     // one row per ordered pair i → j: [tile i][tile j][tile i] (both joins visible)
     const pairRows = []
-    for (let i = 0; i < tiles.length; i++) for (let j = 0; j < tiles.length; j++) pairRows.push(hcat(tiles[i], tiles[j], tiles[i]))
+    // (with more than 4 tiles — extra painted sheets — only each tile's cyclic neighbour: n² rows blow the page)
+    for (let i = 0; i < tiles.length; i++) {
+      if (tiles.length > 4) pairRows.push(hcat(tiles[i], tiles[(i + 1) % tiles.length], tiles[i]))
+      else for (let j = 0; j < tiles.length; j++) pairRows.push(hcat(tiles[i], tiles[j], tiles[i]))
+    }
     const pw = Math.max(...pairRows.map(r => r.w))
     const prevImg = makeImg(pw, pairRows.length * (rowH + 6))
     pairRows.forEach((r, k) => {

@@ -182,5 +182,9 @@
       "Bash(npx biome *)"
     ]
   },
-  "defaultMode": "auto"
+  "defaultMode": "auto",
+  "enabledMcpjsonServers": [
+    "chrome-devtools",
+    "firefox"
+  ]
 }

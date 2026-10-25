@@ -1,0 +1,28 @@
+WHAT COMES BACK IS ONE SQUARE IMAGE OF ONE SINGLE GAME SPRITE, CENTRED, ON FLAT MAGENTA.
+One square image, 1:1, exactly one object in the middle. No grid, no sheet, no second copy, no variations.
+
+WHAT IT IS — the RED team's CHRISTMAS tree, HEALTHY, for "Tree Smashers", a cosy cartoon game where cute-but-angry stuffed-animal fighters battle on spinning wooden discs in a forest clearing. Each team defends its own big tree; smashing the enemy tree wins. The TEAM COLOUR is only on cloth, never on the leaves.
+
+THE TREE — a sturdy, chunky, characterful cartoon oak, like a cute plush toy: a big, round, puffy CROWN of rounded leaf clumps in deep pine green (two or three flat tones, a few small leaf-shaped highlight marks) topped with thick fluffy white snow caps on the clumps sitting on top of a short, thick, slightly tapered brown TRUNK that flares into three or four rounded root bumps at the bottom. The FACE is on the front of the trunk, just under the crown: two round black BUTTON eyes with four little thread holes and thick angry brown eyebrows, and a small frowning mouth. The leaves are smooth cartoon clumps — NO stitches, NO stitched seams, NO dashed lines, NO felt texture anywhere on the tree.
+TEAM COLOUR RED: the bow and the pennant are bright tomato red (like #E0432F). A big fabric BOW tied around the bottom of the crown at the front (a band around the crown with a large bow knot in the middle, just above the face), and a small triangular PENNANT FLAG on a short straight wooden stick standing straight up out of the top of the crown.
+THIS STATE — healthy: full round crown, bow neat, flag standing straight, grumpy-determined face (angry eyebrows, frown).
+
+SEASON — CHRISTMAS: the tree wears a cosy winter-holiday dress-up. Chunky white snow caps sit on the crown clumps and a small snow drift hugs the root bumps; a string of warm yellow fairy lights loops round the crown; a handful of round gold and silver baubles hang on the crown (NO red or blue baubles, so the team colour stays only on the bow and pennant); the face keeps its angry button eyes, with a little snowflake on one cheek. Colours: pine green, snow white, gold, silver, warm yellow — NO purple, NO magenta, NO pink anywhere.
+
+VIEW — a cosy mobile strategy game sprite seen from slightly above and in front (a gentle three-quarter view: the crown reads as a big round ball, the trunk and face are clearly visible under it), light from the top-left.
+
+STYLE — polished, cute cartoon game art: bold, dark brown outline around the whole silhouette and around every shape (about 1% of the image wide, crisp), flat cel shading with two or three hard-edged tones per colour, simple rounded shapes, friendly and toy-like. NO blur, NO soft airbrush, NO radial gradients, NO glow, NO bloom, NO photorealism, NO stitches. No text, no letters, no numbers.
+
+SIZE — The tree fills about 85% of the image width and 90% of its height, centred, with a clear magenta margin on every side; nothing touches the edge.
+
+BACKGROUND — this matters more than the style.
+Fill every pixel that is not the object with solid, flat, pure magenta #FF00FF, edge to edge — a green-screen.
+· EXACTLY #FF00FF — red 255, green 0, blue 255. Not pink, not rose, not mauve, not a tinted version of it.
+· NOT transparent, NOT a checkerboard, NOT white, NOT a gradient. No glow, halo, vignette or shadow on the magenta.
+· The object contains no magenta, purple or hot pink.
+· No ground around the object (no grass patch, no soil disc, no plate, no roots spreading on the ground), no cast shadow on the background, no scenery, no other characters.
+· Keep all four corners of the canvas plain magenta.
+
+BEFORE YOU CALL IT FINISHED: exactly ONE object, centred, magenta all around it, every pixel that is not the object flat vivid #FF00FF, no stitches anywhere.
+
+OUTPUT: one square 1:1 image, one RED team's tree, HEALTHY sprite on a magenta ground.
