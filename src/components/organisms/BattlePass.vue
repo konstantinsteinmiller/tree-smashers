@@ -14,6 +14,7 @@ import useBattlePass, {
 } from '@/use/useBattlePass'
 import {
   modelImgPath,
+  skinNameKey,
   SKINS_PER_TOP,
   buySkin,
   getOfferableSkinPool,
@@ -569,7 +570,7 @@ const onStripPointerUp = (e: PointerEvent) => {
             div.font-black.text-plum-700.leading-tight(
               v-if="card.isSkin && bpSkinForStage(card.stage)"
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
-            ) {{ t('skins.' + bpSkinForStage(card.stage)) }}
+            ) {{ t(skinNameKey(bpSkinForStage(card.stage) ?? '')) }}
 
             //- Coin amount (coin + jackpot stages, skin stages with an empty pool)
             div.text-sun-600.font-black.leading-tight(
@@ -661,7 +662,7 @@ const onStripPointerUp = (e: PointerEvent) => {
             div.font-black.text-plum-700.leading-tight(
               v-if="honorSkinForStage(card.stage)"
               class="text-[0.55rem] sm:text-[0.7rem] truncate max-w-full"
-            ) {{ t('skins.' + honorSkinForStage(card.stage)) }}
+            ) {{ t(skinNameKey(honorSkinForStage(card.stage) ?? '')) }}
 
             //- Status
             div(class="mt-0.5 text-[0.6rem] sm:text-[0.75rem] font-bold")
@@ -683,7 +684,7 @@ const onStripPointerUp = (e: PointerEvent) => {
         id="bp-skin-peek"
         :anchor="skinPeekState"
         :src="modelImgPath(skinPeekState.key)"
-        :name="t('skins.' + skinPeekState.key)"
+        :name="t(skinNameKey(skinPeekState.key))"
         :rarity="skinRarity(skinPeekState.key)"
       )
       //- Season reset countdown

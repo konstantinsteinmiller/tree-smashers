@@ -184,6 +184,7 @@ describe('trophy skins — excluded from every pool', () => {
   }
   const NOT_POOLS: Record<string, string> = {
     'src/use/useAssets.ts': 'preloads every skin image',
+    'src/use/useSpinnerCampaign.ts': 'maps a campaign enemy to the standard painted skin',
     'src/use/loadoutSanitizer.ts': 'validates a PvP peer\'s model ids',
     'src/components/organisms/PvpVsPreview.vue': 'falls back to a class default skin',
     'src/keys.ts': 'comment only',

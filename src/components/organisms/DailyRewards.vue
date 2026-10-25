@@ -12,6 +12,7 @@ import {
   buySkin,
   getOfferableSkinPool,
   modelImgPath,
+  skinNameKey,
   type SpinnerModelId
 } from '@/use/useModels'
 import type { TopPartId } from '@/types/spinner'
@@ -352,7 +353,7 @@ const collect = (dayIndex: number) => {
           div.skin-label.font-black.text-plum-700.leading-tight(
             v-if="isSkinDay(i) && dailySkinForDay(i)"
             class="text-[0.6rem] sm:text-[0.75rem]"
-          ) {{ t('skins.' + dailySkinForDay(i)) }}
+          ) {{ t(skinNameKey(dailySkinForDay(i) ?? '')) }}
 
           //- Coin reward amount — shown on every day (additive on skin days)
           div.day-amount.font-black.leading-tight(class="text-[0.7rem] sm:text-xs") +{{ reward }}

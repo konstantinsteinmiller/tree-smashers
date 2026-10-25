@@ -7,7 +7,7 @@ import FCountUp from '@/components/atoms/FCountUp.vue'
 import IconCoin from '@/components/icons/IconCoin.vue'
 import IconDiamond from '@/components/icons/IconDiamond.vue'
 import IconSpeed from '@/components/icons/IconSpeed.vue'
-import { modelImgPath } from '@/use/useModels'
+import { modelImgPath, skinNameKey } from '@/use/useModels'
 import { currentReveal, finishReveal, revealItemRarity, revealRarityHex, setLastRevealOrigin, type ShownRevealItem } from '@/use/useRewardReveal'
 import { RARITY_HEX, type RarityTier } from '@/data/smasherRarity'
 import type { SmasherId } from '@/data/smasherCatalog'
@@ -106,7 +106,7 @@ const onContinue = () => {
   finishReveal()
 }
 
-const skinName = (id: string) => t(`skins.${id}`)
+const skinName = (id: string) => t(skinNameKey(id))
 
 // ─── Rarity ─────────────────────────────────────────────────────────────────
 const rarityOf = (it: ShownRevealItem): RarityTier | null => revealItemRarity(it)

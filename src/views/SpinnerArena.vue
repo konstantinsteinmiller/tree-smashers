@@ -173,7 +173,7 @@ import {
 } from '@/use/speedBoostPurchase'
 import useBottomSafe from '@/use/useBottomSafe'
 import { useArenaHudFit } from '@/use/useArenaHudFit'
-import { getSelectedSkin, grantTrophySkins, modelImgPath, type SpinnerModelId } from '@/use/useModels'
+import { getSelectedSkin, grantTrophySkins, modelImgPath, skinNameKey, type SpinnerModelId } from '@/use/useModels'
 import useAssets from '@/use/useAssets'
 import { spawnCoinExplosion, type CurrencyBadgeTargets } from '@/use/useCoinExplosion'
 import { revealRewards, whenRevealIdle, lastRevealOrigin } from '@/use/useRewardReveal'
@@ -517,6 +517,21 @@ const coinsAwarded: Ref<boolean> = ref(false)
 const CONFIG_OPENED_KEY = 'smashers_config_opened'
 const hasOpenedConfig: Ref<boolean> = ref(localStorage.getItem(CONFIG_OPENED_KEY) === '1')
 
+// Swap-your-lead tutorial: players miss that the team can be reordered and
+// that any owned smasher can lead. Early on (best stage ≤ 12) the Team modal
+// walks them through putting Thumper in slot 1 with lightboxes, ending on the
+// close button. Skipped when Thumper already leads; done once, stored.
+const SWAP_TUTORIAL_KEY = 'smashers_swap_tutorial_done'
+const SWAP_TUTORIAL_MAX_STAGE = 12
+const swapTutorialDone: Ref<boolean> = ref((() => {
+  try { return localStorage.getItem(SWAP_TUTORIAL_KEY) === '1' } catch { return true }
+})())
+const onSwapTutorialDone = () => {
+  swapTutorialDone.value = true
+  swapTutorialActive.value = false
+  try { localStorage.setItem(SWAP_TUTORIAL_KEY, '1') } catch { /* private mode */ }
+}
+
 // ─── Ghost Fight (Leaderboard 1v1) ────────────────────────────────────────
 // While true, the current match is a ghost battle launched from the
 // leaderboard: rewards are custom, campaign progress does not advance,
@@ -776,6 +791,14 @@ const rewardAmount = computed(() => {
 const showConfigButton = computed(() =>
   phase.value === 'game_over' || phase.value === 'idle' || phase.value === 'tap_to_start'
 )
+
+// Latched when the Team modal opens, so putting Thumper in slot 1 does not end it before the close click.
+const swapTutorialActive: Ref<boolean> = ref(false)
+const startSwapTutorialIfDue = () => {
+  swapTutorialActive.value = !swapTutorialDone.value && !pvpMode.value
+    && bestStage.value >= 2 && bestStage.value <= SWAP_TUTORIAL_MAX_STAGE
+    && playerTeam.value[0]?.smasherId !== 'thumper'
+}
 
 const showConfigSpotlight = computed(() =>
   !hasOpenedConfig.value && currentStageId.value === 2 && showConfigButton.value && !showReward.value
@@ -1821,6 +1844,7 @@ const onOpenConfig = () => {
     hasOpenedConfig.value = true
     localStorage.setItem(CONFIG_OPENED_KEY, '1')
   }
+  startSwapTutorialIfDue()
   configModalOpen.value = true
   // The modal shows the team-size picker with every open slot: seen.
   markTeamSlotsSeen(bestStage.value)
@@ -3476,9 +3500,9 @@ onUnmounted(() => {
               div.roulette-reward-glow.flex.flex-col.items-center.gap-3
                 img.roulette-grant-icon.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
                   :src="modelImgPath(g.skin.modelId)"
-                  :alt="t(`skins.${g.skin.modelId}`)"
+                  :alt="t(skinNameKey(g.skin.modelId))"
                 )
-                span.roulette-grant-skin.text-plum-300.font-black.game-text.uppercase {{ t(`skins.${g.skin.modelId}`) }}
+                span.roulette-grant-skin.text-plum-300.font-black.game-text.uppercase {{ t(skinNameKey(g.skin.modelId)) }}
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
                 IconCoin(class="w-6 h-6 text-sun-400")
                 span.text-sun-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ g.coins }}
@@ -3551,12 +3575,12 @@ onUnmounted(() => {
         )
           img.object-contain(class="drop-shadow-[0_3px_0_var(--color-ink)]"
             :src="modelImgPath(w.modelId)"
-            :alt="t(`skins.${w.modelId}`)"
+            :alt="t(skinNameKey(w.modelId))"
             :class="w.isSpecial ? 'w-32 h-32 sm:w-40 sm:h-40' : 'w-24 h-24 sm:w-32 sm:h-32'"
           )
           span.font-black.game-text.uppercase(
             :class="w.isSpecial ? 'text-sun-400 text-2xl sm:text-4xl' : 'text-plum-300 text-xl sm:text-3xl'"
-          ) {{ t('skinChest.acquired', { name: t(`skins.${w.modelId}`) }) }}
+          ) {{ t('skinChest.acquired', { name: t(skinNameKey(w.modelId)) }) }}
 
     //- Options Modal
     //- Fetches on OPEN, not on mount — most sessions never open it, and
@@ -3578,7 +3602,9 @@ onUnmounted(() => {
       :initial-team="playerTeam"
       :best-stage="bestStage"
       :ads-allowed="!pvpMode"
+      :tutorial="swapTutorialActive"
       @save="onConfigSave"
+      @tutorial-done="onSwapTutorialDone"
     )
 
     //- PvP Lobby Modal

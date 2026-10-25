@@ -33,6 +33,12 @@ import {
  *  smasher defaults to one of the skin's top part (`smasherForSkin`); pass
  *  `smasherId` when the caller knows it. The spinner artwork files are gone —
  *  every portrait is drawn by the smasher rig (src/smashers). */
+/** i18n key of the name a skin shows in rewards / tracks: the smasher whose
+ *  portrait the skin draws (`smasher_<id>`), never the old spinner-skin name;
+ *  earn-only trophy skins keep their own `skins.<id>` name. */
+export const skinNameKey = (modelId: string): string =>
+  isEarnOnlySkin(modelId) ? `skins.${modelId}` : `smasher_${smasherForSkin(modelId)}`
+
 export const modelImgPath = (id: string, smasherId?: SmasherId, boss = false): string =>
   smasherPortraitUrl(smasherId, id, boss)
 
