@@ -76,7 +76,7 @@ const expectConst = (name, value) => {
   if (Math.abs(v - value) > 1e-9) throw new Error(`${name}: source=${raw} sim=${value}`)
 }
 for (const [k, v] of Object.entries({
-  ARENA_RADIUS: 200, BASE_MAX_FORCE: 14, STOP_THRESHOLD: 0.25, DAMAGE_SCALE: 1.4,
+  ARENA_RADIUS: 200, BASE_MAX_FORCE: 14, STOP_THRESHOLD: 0.25, DAMAGE_SCALE: 0.91,
   BOUNCE_DAMPENING: 0.75, WALL_BOOST_FACTOR: 1.08, WALL_BOUNCE_DECAY_PER_HIT: 0.12,
   WALL_BOUNCE_MIN_EFFECTIVENESS: 0.30, ACCEL_FRAMES: 28,
   POWERUP_BUFF_MULTIPLIER: 1.25, CONTACT_REARM_MS: 50, HUG_BREAK_MS: 1000,

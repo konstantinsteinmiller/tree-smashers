@@ -519,7 +519,7 @@ describe('applyHpLoss (Ward → Shield → HP → Second Wind)', () => {
 describe('refHit', () => {
   const att: SkillRefStats = { damageMultiplier: 1.3, defenseMultiplier: 1, speedMultiplier: 1.2, totalWeight: 20 }
   const def: SkillRefStats = { damageMultiplier: 1, defenseMultiplier: 2, speedMultiplier: 1, totalWeight: 25 }
-  const base = (spd: number, defMul: number) => 0.5 * 14 * spd * 1.3 * 20 / (25 * defMul) * 1.4
+  const base = (spd: number, defMul: number) => 0.5 * 14 * spd * 1.3 * 20 / (25 * defMul) * 0.91
 
   it('collision formula at 50 % max speed, target weight + defence', () => {
     expect(refHit(att, 'round', def)).toBeCloseTo(base(1.2, 2))
@@ -891,7 +891,7 @@ describe('engine constant mirrors', () => {
     const src = readFileSync(resolve(__dirname, '../src/use/useSpinnerGame.ts'), 'utf8')
     expect(Number(/const BASE_MAX_FORCE = ([\d.]+)/.exec(src)?.[1])).toBe(ENGINE_BASE_MAX_FORCE)
     expect(Number(/const STOP_THRESHOLD = ([\d.]+)/.exec(src)?.[1])).toBe(ENGINE_STOP_THRESHOLD)
-    const ds = /const DAMAGE_SCALE = isDebug\.value \? ([\d.]+) : ([\d.]+)/.exec(src)
-    expect(Number(ds?.[2])).toBe(ENGINE_DAMAGE_SCALE)
+    const ds = /const DAMAGE_SCALE = ([\d.]+)/.exec(src)
+    expect(Number(ds?.[1])).toBe(ENGINE_DAMAGE_SCALE)
   })
 })

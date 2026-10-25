@@ -61,7 +61,7 @@ export * from '@/use/skills/skillCore'
 /** = useSpinnerGame BASE_MAX_FORCE */
 export const ENGINE_BASE_MAX_FORCE = 14
 /** = useSpinnerGame DAMAGE_SCALE */
-export const ENGINE_DAMAGE_SCALE = 1.4
+export const ENGINE_DAMAGE_SCALE = 0.91
 /** = useSpinnerGame STOP_THRESHOLD */
 export const ENGINE_STOP_THRESHOLD = 0.25
 

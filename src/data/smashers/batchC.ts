@@ -21,7 +21,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // that builds fast per launch; an exposed back.
   waddles: {
     id: 'waddles', archetype: { top: 'quadratic', bottom: 'speedy' },
-    profile: p(0.96, 1.01, 1.0, 1.12, 0.95), unlockStage: 180,
+    profile: p(1, 1.05, 1.0, 1.12, 0.95), unlockStage: 180,
     disc: 0.9, armor: { front: 0.85, back: 1.15 },
     skills: [
       sk('belly_slide', 'bank_shot', { pct: 1.15 }),
@@ -33,7 +33,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // and lands giant but rare crits; folds if anyone catches it from behind.
   flamenca: {
     id: 'flamenca', archetype: { top: 'star', bottom: 'speedy' },
-    profile: p(0.87, 1.25, 0.88, 1.12, 0.85), unlockStage: 184,
+    profile: p(0.9, 1.29, 0.88, 1.12, 0.85), unlockStage: 184,
     disc: 0.8, armor: { front: 0.95, back: 1.2 },
     skills: [
       sk('pink_kick', 'lucky_edge', { chance: 0.85, mult: 1.3 }),
@@ -45,7 +45,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // front and spits them back; slowish and soft around the tail.
   gulpy: {
     id: 'gulpy', archetype: { top: 'round', bottom: 'balanced' },
-    profile: p(1.08, 0.93, 1.05, 0.95, 1.05), unlockStage: 188,
+    profile: p(1.14, 0.98, 1.05, 0.95, 1.05), unlockStage: 188,
     disc: 1.15, armor: { front: 0.8, back: 1.1 },
     skills: [
       sk('pouch_gulp', 'mirror_plate', { share: 1.3, chance: 0.85 }),
@@ -57,7 +57,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // tough side and whose cheeky face is the soft one.
   paddles: {
     id: 'paddles', archetype: { top: 'triangle', bottom: 'speedy' },
-    profile: p(0.97, 1.07, 1, 1.15, 0.9), unlockStage: 192,
+    profile: p(0.96, 1.06, 1, 1.15, 0.9), unlockStage: 192,
     disc: 0.88, armor: { front: 1.15, back: 0.85 },
     skills: [
       sk('pebble_toss', 'homing_rockets', { everyN: 0.75, frac: 0.8 }),
@@ -69,7 +69,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // small crits, vanishes in ink and grips attackers in place.
   inky: {
     id: 'inky', archetype: { top: 'cushioned', bottom: 'balanced' },
-    profile: p(1.08, 0.98, 1.05, 0.95, 1.0), unlockStage: 196,
+    profile: p(1.05, 0.95, 1.05, 0.95, 1.0), unlockStage: 196,
     disc: 1.1, armor: { front: 0.92, back: 0.92 },
     skills: [
       sk('ink_cloud', 'phase_step', { chance: 1.15, cooldownMs: 0.9 }),
@@ -81,7 +81,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // turn your back on the enemy.
   pinchy: {
     id: 'pinchy', archetype: { top: 'piercer', bottom: 'tanky' },
-    profile: p(1.06, 1.06, 1.1, 0.85, 1.15), unlockStage: 200,
+    profile: p(1.09, 1.09, 1.1, 0.85, 1.15), unlockStage: 200,
     disc: 1.0, armor: { front: 0.7, back: 1.3 },
     skills: [
       sk('claw_snap', 'lucky_edge', { mult: 1.3, chance: 0.8 }),
@@ -93,7 +93,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // side, but heavy, slow and a poor hitter itself.
   puffton: {
     id: 'puffton', archetype: { top: 'triangle', bottom: 'tanky' },
-    profile: p(1.07, 0.81, 1.1, 0.8, 1.1), unlockStage: 204,
+    profile: p(1.06, 0.81, 1.1, 0.8, 1.1), unlockStage: 204,
     disc: 1.3, armor: { front: 0.95, back: 0.95 },
     skills: [
       sk('spike_puff', 'thorns', { share: 1.2 }),
@@ -105,7 +105,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // opens with a lance strike; its back is paper-thin.
   nardo: {
     id: 'nardo', archetype: { top: 'piercer', bottom: 'speedy' },
-    profile: p(0.84, 1.23, 0.9, 1.15, 0.9), unlockStage: 208,
+    profile: p(0.8, 1.18, 0.9, 1.15, 0.9), unlockStage: 208,
     disc: 0.78, armor: { front: 0.75, back: 1.35 },
     skills: [
       sk('horn_lance', 'opening_salvo', { pct: 1.4 }),
@@ -117,7 +117,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // a stun and pings echo bolts; a light, small body.
   fangsy: {
     id: 'fangsy', archetype: { top: 'star', bottom: 'balanced' },
-    profile: p(1.04, 1.24, 1, 1.08, 0.85), unlockStage: 212,
+    profile: p(0.97, 1.15, 1, 1.08, 0.85), unlockStage: 212,
     disc: 0.82, armor: { front: 1.05, back: 0.85 },
     skills: [
       sk('sonic_screech', 'static_charge', { chance: 1.25 }),
@@ -129,7 +129,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // of the next hit; armoured snout, weak tail.
   camo: {
     id: 'camo', archetype: { top: 'quadratic', bottom: 'balanced' },
-    profile: p(1.08, 1.25, 1.0, 1.0, 0.95), unlockStage: 218,
+    profile: p(1.08, 1.24, 1.0, 1.0, 0.95), unlockStage: 218,
     disc: 0.92, armor: { front: 0.9, back: 1.1 },
     skills: [
       sk('sticky_lash', 'opening_salvo', { pct: 1.25 }),
@@ -141,7 +141,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // heals late and fires slow, strong bubble jets.
   curly: {
     id: 'curly', archetype: { top: 'round', bottom: 'tanky' },
-    profile: p(1.31, 1.14, 1.1, 0.85, 1.15), unlockStage: 224,
+    profile: p(1.28, 1.11, 1.1, 0.85, 1.15), unlockStage: 224,
     disc: 0.95, armor: { front: 1.0, back: 0.85 },
     skills: [
       sk('tail_anchor', 'anchor', { resist: 1.15 }),
@@ -153,7 +153,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // front, almost impossible to push, and painfully slow.
   blubbo: {
     id: 'blubbo', archetype: { top: 'cushioned', bottom: 'tanky' },
-    profile: p(1.45, 0.97, 1.15, 0.75, 1.3), unlockStage: 235,
+    profile: p(1.37, 0.92, 1.15, 0.75, 1.3), unlockStage: 235,
     disc: 1.35, armor: { front: 0.75, back: 0.75, look: 'bulwark' },
     skills: [
       sk('blubber_wall', 'anchor', { resist: 1.2 }),

@@ -21,7 +21,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Badger — head-first digger: big heavy disc, armoured snout, soft rump.
   brock: {
     id: 'brock', archetype: { top: 'quadratic', bottom: 'tanky' },
-    profile: p(1.17, 1.03, 1.1, 0.85, 1.2), unlockStage: 56,
+    profile: p(1.12, 0.99, 1.1, 0.85, 1.2), unlockStage: 56,
     disc: 1.2, armor: { front: 0.7, back: 0.7, look: 'bulwark' },
     skills: [
       sk('burrow_guard', 'guard_shell', { shield: 1.3 }),
@@ -32,7 +32,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Raccoon — masked thief: frequent small crits, slips hits, guarded back.
   bandit: {
     id: 'bandit', archetype: { top: 'star', bottom: 'balanced' },
-    profile: p(0.95, 1.1, 0.95, 1.05), unlockStage: 60,
+    profile: p(0.98, 1.13, 0.95, 1.05), unlockStage: 60,
     disc: 0.95, armor: { front: 1.1, back: 0.85 },
     skills: [
       sk('pickpocket', 'lucky_edge', { chance: 1.25, mult: 0.9 }),
@@ -54,7 +54,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Koala — tiny glass-front striker: smallest disc, hits hard, bruises in front.
   slinky: {
     id: 'slinky', archetype: { top: 'star', bottom: 'speedy' },
-    profile: p(0.95, 1.34, 0.9, 1.2, 0.8), unlockStage: 68,
+    profile: p(0.92, 1.3, 0.9, 1.2, 0.8), unlockStage: 68,
     disc: 0.78, armor: { front: 1.3, back: 1.0 },
     skills: [
       sk('war_dance', 'static_charge', { chance: 1.15 }),
@@ -65,7 +65,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Mole — small armoured drill: claws in front, blind and soft behind.
   digger: {
     id: 'digger', archetype: { top: 'piercer', bottom: 'tanky' },
-    profile: p(1.05, 1.15, 1.0, 0.85, 1.15), unlockStage: 72,
+    profile: p(1.02, 1.12, 1.0, 0.85, 1.15), unlockStage: 72,
     disc: 0.85, armor: { front: 0.65, back: 1.35 },
     skills: [
       sk('claw_drill', 'tower_breaker', { pct: 1.1 }),
@@ -76,7 +76,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Dormouse — small sleepy ball that curls its back up and wakes up healed.
   snooze: {
     id: 'snooze', archetype: { top: 'round', bottom: 'balanced' },
-    profile: p(1.08, 1.08, 1.0, 1.1, 0.9), unlockStage: 77,
+    profile: p(1.04, 1.04, 1.0, 1.1, 0.9), unlockStage: 77,
     disc: 0.85, armor: { front: 1.0, back: 0.75 },
     skills: [
       sk('hibernate', 'second_wind', { heal: 1.5, threshold: 0.7 }),
@@ -87,7 +87,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Skunk — fights rump-first: back armoured, face soft, rammers get stunned.
   pongo: {
     id: 'pongo', archetype: { top: 'cushioned', bottom: 'balanced' },
-    profile: p(1.1, 0.95, 1.05, 0.95, 1.0), unlockStage: 82,
+    profile: p(1.11, 0.97, 1.05, 0.95, 1.0), unlockStage: 82,
     disc: 1.1, armor: { front: 1.2, back: 0.65 },
     skills: [
       sk('stink_cloud', 'static_charge', { chance: 1.25 }),
@@ -98,7 +98,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Stag beetle — jousting mandibles: hard plated front, big rare crits.
   pincer: {
     id: 'pincer', archetype: { top: 'piercer', bottom: 'balanced' },
-    profile: p(0.91, 1.05, 1.15, 0.9, 1.05), unlockStage: 87,
+    profile: p(0.93, 1.07, 1.15, 0.9, 1.05), unlockStage: 87,
     disc: 1.05, armor: { front: 0.6, back: 1.15 },
     skills: [
       sk('mandible_clamp', 'lucky_edge', { mult: 1.3, chance: 0.75 }),
@@ -109,7 +109,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Pill bug — rolling ball: armoured all round, light punch, many bounces.
   rolly: {
     id: 'rolly', archetype: { top: 'quadratic', bottom: 'speedy' },
-    profile: p(0.98, 0.88, 1.2, 1.1, 0.95), unlockStage: 92,
+    profile: p(0.95, 0.85, 1.2, 1.1, 0.95), unlockStage: 92,
     disc: 0.95, armor: { front: 0.8, back: 0.8 },
     skills: [
       sk('roll_up', 'guard_shell', { shield: 1.2 }),
@@ -120,7 +120,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Porcupine — turns its back: quill-armoured rear, soft face, big volleys.
   prickles: {
     id: 'prickles', archetype: { top: 'triangle', bottom: 'tanky' },
-    profile: p(1.1, 0.91, 1.1, 0.85, 1.1), unlockStage: 98,
+    profile: p(1, 0.83, 1.1, 0.85, 1.1), unlockStage: 98,
     disc: 1.15, armor: { front: 1.2, back: 0.55 },
     skills: [
       sk('quill_storm', 'homing_rockets', { everyN: 1.15, frac: 1.3 }),
@@ -131,7 +131,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Red eft newt — slippery regrower: dodges and heals, fragile tail behind.
   newtie: {
     id: 'newtie', archetype: { top: 'triangle', bottom: 'speedy' },
-    profile: p(0.99, 1.16, 0.9, 1.15, 0.85), unlockStage: 105,
+    profile: p(0.95, 1.12, 0.9, 1.15, 0.85), unlockStage: 105,
     disc: 0.9, armor: { front: 1.0, back: 1.25 },
     skills: [
       sk('tail_regrow', 'second_wind', { heal: 1.35, threshold: 0.75 }),

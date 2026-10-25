@@ -95,7 +95,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Bear cub — heavy tank that refuses to go down.
   grizzle: {
     id: 'grizzle', archetype: { top: 'round', bottom: 'tanky' },
-    profile: p(1.24, 0.95, 1.1, 0.85, 1.15), unlockStage: 3, disc: 1.2, armor: { front: 0.85, back: 1 },
+    profile: p(1.22, 0.93, 1.1, 0.85, 1.15), unlockStage: 3, disc: 1.2, armor: { front: 0.85, back: 1 },
     skills: [
       sk('honey_snack', 'second_wind', { heal: 1.3, threshold: 0.85 }),
       sk('bear_hug', 'guard_shell', { shield: 1.4 }),
@@ -105,7 +105,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Beaver — the tree smasher: big crits, a hard-hitting opener.
   chomper: {
     id: 'chomper', archetype: { top: 'piercer', bottom: 'balanced' },
-    profile: p(0.98, 1.2, 0.95, 1.0), unlockStage: 5, armor: { front: 0.8, back: 1.2 },
+    profile: p(1.04, 1.27, 0.95, 1.0), unlockStage: 5, armor: { front: 0.8, back: 1.2 },
     skills: [
       sk('timber_bite', 'lucky_edge', { mult: 1.15, chance: 0.85 }),
       sk('log_slam', 'tower_breaker', { pct: 1.2 }),
@@ -115,7 +115,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Ram — head-first bruiser, explosive but short-lived momentum.
   ramsey: {
     id: 'ramsey', archetype: { top: 'quadratic', bottom: 'tanky' },
-    profile: p(1.11, 1.07, 1.05, 0.9, 1.2), unlockStage: 8, disc: 1.1, armor: { front: 0.6, back: 1.3 },
+    profile: p(1.12, 1.08, 1.05, 0.9, 1.2), unlockStage: 8, disc: 1.1, armor: { front: 0.6, back: 1.3 },
     skills: [
       sk('headbutt', 'opening_salvo', { pct: 1.35 }),
       sk('horn_charge', 'momentum', { perStack: 1.3, maxStacks: 0.67 }),
@@ -125,7 +125,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Fox — tricky striker, frequent small crits and slippery dodges.
   vixie: {
     id: 'vixie', archetype: { top: 'star', bottom: 'balanced' },
-    profile: p(0.92, 1.12, 0.95, 1.05), unlockStage: 11, disc: 0.85, armor: { front: 1.1, back: 0.9 },
+    profile: p(1.01, 1.21, 0.95, 1.05), unlockStage: 11, disc: 0.85, armor: { front: 1.1, back: 0.9 },
     skills: [
       sk('trick_step', 'phase_step', { chance: 1.15 }),
       sk('sly_strike', 'lucky_edge', { chance: 1.35, mult: 0.85 }),
@@ -135,7 +135,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Turtle — the slowest, toughest wall in the forest.
   shellby: {
     id: 'shellby', archetype: { top: 'cushioned', bottom: 'tanky' },
-    profile: p(1.3, 0.84, 1.15, 0.8, 1.25), unlockStage: 15, disc: 1.25, armor: { front: 1.15, back: 0.6 },
+    profile: p(1.38, 0.89, 1.15, 0.8, 1.25), unlockStage: 15, disc: 1.25, armor: { front: 1.15, back: 0.6 },
     skills: [
       sk('shell_block', 'guard_shell', { shield: 1.5 }),
       sk('slow_heal', 'second_wind', { threshold: 1.15, heal: 0.9 }),
@@ -145,7 +145,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Woodpecker — rapid pecks that stack up, fragile body.
   pecks: {
     id: 'pecks', archetype: { top: 'piercer', bottom: 'speedy' },
-    profile: p(0.98, 1.31, 0.9, 1.1, 0.85), unlockStage: 20, disc: 0.8, armor: { front: 0.8, back: 1.25 },
+    profile: p(1.05, 1.39, 0.9, 1.1, 0.85), unlockStage: 20, disc: 0.8, armor: { front: 0.8, back: 1.25 },
     skills: [
       sk('peck_peck', 'momentum', { maxStacks: 1.34, perStack: 0.85 }),
       sk('drill_beak', 'lucky_edge', { mult: 1.25, chance: 0.8 }),
@@ -155,7 +155,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Sloth — sleepy cushion that lulls enemies into skipping turns.
   mossy: {
     id: 'mossy', archetype: { top: 'cushioned', bottom: 'balanced' },
-    profile: p(1.15, 0.85, 1.1, 0.9, 1.05), unlockStage: 25, disc: 1.15, armor: { front: 1, back: 0.85 },
+    profile: p(1.08, 0.8, 1.1, 0.9, 1.05), unlockStage: 25, disc: 1.15, armor: { front: 1, back: 0.85 },
     skills: [
       sk('lazy_shield', 'guard_shell', { shield: 1.25 }),
       sk('nap_time', 'static_charge', { chance: 1.2 }),
@@ -165,7 +165,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Squirrel — hyperactive nut thrower, dodges on a short fuse.
   zippy: {
     id: 'zippy', archetype: { top: 'triangle', bottom: 'speedy' },
-    profile: p(0.99, 1.15, 0.95, 1.15, 0.9), unlockStage: 30, disc: 0.78, armor: { front: 1.15, back: 1 },
+    profile: p(0.96, 1.12, 0.95, 1.15, 0.9), unlockStage: 30, disc: 0.78, armor: { front: 1.15, back: 1 },
     skills: [
       sk('nut_toss', 'homing_rockets', { everyN: 0.85, frac: 0.9 }),
       sk('acorn_armor', 'mirror_plate', { chance: 1.15 }),
@@ -175,7 +175,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Owl — balanced thinker whose feathers crackle with static.
   hootsie: {
     id: 'hootsie', archetype: { top: 'quadratic', bottom: 'balanced' },
-    profile: p(1.2, 1.2, 1.0, 1.0), unlockStage: 40,
+    profile: p(1.23, 1.23, 1.0, 1.0), unlockStage: 40,
     skills: [
       sk('night_eye', 'lucky_edge'),
       sk('wing_ward', 'hazard_ward', { lava: 1.1, thunder: 1.1, chip: 1.1, shockKeep: 1.1 }),
