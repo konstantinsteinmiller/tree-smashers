@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Vi povos spekti la reklamon post la matĉo.',
       'adNoReward': 'La reklamo ne finiĝis, nenio malŝlosiĝis. Reprovu!',
       'benched': 'Ripozas',
-      'secondSmasherJoined': 'Nova loko: dua frakasulo aliĝis al via teamo!'
+      'secondSmasherJoined': 'Nova loko: dua frakasulo aliĝis al via teamo!',
+      'tutorialPick': 'Tuŝu {name} por elekti ĝin.',
+      'tutorialPut': 'Nun metu {name} en lokon 1.',
+      'tutorialClose': 'Preta! Fermu ĉi tiun fenestron por batali kun via nova gvidanto.'
     }
   }
 }

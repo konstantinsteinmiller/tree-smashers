@@ -1295,7 +1295,10 @@ export default {
       'adAfterMatch': '広告は試合のあとで見られます。',
       'adNoReward': '広告が最後まで再生されなかったので、アンロックされませんでした。もう一度試してね!',
       'benched': '休憩中',
-      'secondSmasherJoined': '新しい枠：2体目のスマッシャーがチームに加わった！'
+      'secondSmasherJoined': '新しい枠：2体目のスマッシャーがチームに加わった！',
+      'tutorialPick': '{name}をタップして選ぼう。',
+      'tutorialPut': '{name}をスロット1に入れよう。',
+      'tutorialClose': '完了！このウィンドウを閉じて、新しいリーダーで戦おう。'
     }
   }
 }

@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Potrai guardare l’annuncio dopo la partita.',
       'adNoReward': 'L’annuncio non è finito, quindi non è stato sbloccato nulla. Riprova!',
       'benched': 'A riposo',
-      'secondSmasherJoined': 'Nuovo slot: un 2° smasher si è unito alla tua squadra!'
+      'secondSmasherJoined': 'Nuovo slot: un 2° smasher si è unito alla tua squadra!',
+      'tutorialPick': 'Tocca {name} per sceglierlo.',
+      'tutorialPut': 'Ora metti {name} nello slot 1.',
+      'tutorialClose': 'Fatto! Chiudi questa finestra per combattere con il tuo nuovo capofila.'
     }
   }
 }

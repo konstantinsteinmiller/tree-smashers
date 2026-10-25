@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'A hirdetést a meccs után nézheted meg.',
       'adNoReward': 'A hirdetés nem ért véget, így semmi sem oldódott fel. Próbáld újra!',
       'benched': 'Pihen',
-      'secondSmasherJoined': 'Új hely: egy 2. smasher csatlakozott a csapatodhoz!'
+      'secondSmasherJoined': 'Új hely: egy 2. smasher csatlakozott a csapatodhoz!',
+      'tutorialPick': 'Koppints {name} karakterre a kiválasztáshoz.',
+      'tutorialPut': 'Most tedd {name} karaktert az 1. helyre.',
+      'tutorialClose': 'Kész! Zárd be az ablakot, és harcolj az új vezéreddel.'
     }
   }
 }

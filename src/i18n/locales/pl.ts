@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklamę obejrzysz po meczu.',
       'adNoReward': 'Reklama się nie skończyła, więc nic nie odblokowano. Spróbuj ponownie!',
       'benched': 'Odpoczywa',
-      'secondSmasherJoined': 'Nowy slot: do drużyny dołączył 2. smasher!'
+      'secondSmasherJoined': 'Nowy slot: do drużyny dołączył 2. smasher!',
+      'tutorialPick': 'Dotknij {name}, aby wybrać.',
+      'tutorialPut': 'Teraz wstaw {name} na miejsce 1.',
+      'tutorialClose': 'Gotowe! Zamknij to okno, aby walczyć z nowym liderem.'
     }
   }
 }

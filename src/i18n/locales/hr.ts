@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Oglas možeš pogledati nakon meča.',
       'adNoReward': 'Oglas nije završio pa ništa nije otključano. Pokušaj ponovno!',
       'benched': 'Odmara',
-      'secondSmasherJoined': 'Novo mjesto: 2. smasher pridružio se tvom timu!'
+      'secondSmasherJoined': 'Novo mjesto: 2. smasher pridružio se tvom timu!',
+      'tutorialPick': 'Dodirni {name} da ga odabereš.',
+      'tutorialPut': 'Sada stavi {name} na mjesto 1.',
+      'tutorialClose': 'Gotovo! Zatvori prozor i bori se s novim vođom.'
     }
   }
 }

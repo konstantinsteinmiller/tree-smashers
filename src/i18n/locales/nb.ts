@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Du kan se reklamen etter kampen.',
       'adNoReward': 'Reklamen ble ikke ferdig, så ingenting ble låst opp. Prøv igjen!',
       'benched': 'Hviler',
-      'secondSmasherJoined': 'Ny plass: en 2. smasher ble med på laget ditt!'
+      'secondSmasherJoined': 'Ny plass: en 2. smasher ble med på laget ditt!',
+      'tutorialPick': 'Trykk på {name} for å velge.',
+      'tutorialPut': 'Sett nå {name} på plass 1.',
+      'tutorialClose': 'Ferdig! Lukk vinduet og kjemp med din nye leder.'
     }
   }
 }

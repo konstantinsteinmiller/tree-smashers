@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { movieIconSrc } from '@/use/badgeIconArt'
-import { ref, computed, watch, shallowRef, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, shallowRef, onBeforeUnmount, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { useSfcI18n } from '@/i18n/sfc'
 import FModal from '@/components/molecules/FModal.vue'
 import FButton from '@/components/atoms/FButton.vue'
+import TutorialLightbox from '@/components/atoms/TutorialLightbox.vue'
 import CardRuneFrame from '@/components/atoms/CardRuneFrame.vue'
 import { smasherRarity, skinRarity, type SmasherRarity } from '@/data/smasherRarity'
 import { playUiSfx } from '@/use/uiSfx'
@@ -76,6 +77,8 @@ interface Props {
    *  match (a pause on one peer desyncs the other): the ad-unlock buttons stay
    *  disabled with a "after the match" hint. */
   adsAllowed?: boolean
+  /** Guided "swap your lead" tutorial: lightboxes force Thumper into slot 1, then the close button. */
+  tutorial?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -87,6 +90,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'save', team: SpinnerConfig[]): void
+  (e: 'tutorial-done'): void
 }>()
 
 const { t, locale } = useSfcI18n('SmasherTeamModal')
@@ -201,7 +205,42 @@ const putInSlot = (slot: number) => {
 
 const selectSmasher = (id: SmasherId) => {
   selectedId.value = id
+  if (id === TUTORIAL_LEAD) tutorialPicked.value = true
 }
+
+// ─── Swap-your-lead tutorial ───────────────────────────────────────────────
+// Three forced clicks, each lit by a lightbox: the lead's roster card, its
+// "put in slot 1" button, then the modal's close button.
+const TUTORIAL_LEAD: SmasherId = 'thumper'
+const tutorialPicked = ref(false)
+const tutorialStep = computed<'pick' | 'put' | 'close' | null>(() => {
+  if (!props.tutorial || !props.modelValue) return null
+  if (!tutorialPicked.value) return 'pick'
+  if (teamIds.value[0] !== TUTORIAL_LEAD) return 'put'
+  return 'close'
+})
+const TUTORIAL_TARGETS = {
+  pick: `[data-testid="roster-${TUTORIAL_LEAD}"]`,
+  put: '[data-testid="put-in-slot-0"]',
+  close: '.modal-close'
+} as const
+const tutorialTarget = computed(() => (tutorialStep.value ? TUTORIAL_TARGETS[tutorialStep.value] : ''))
+const tutorialText = computed(() =>
+  tutorialStep.value
+    ? t(
+      tutorialStep.value === 'pick' ? 'tutorialPick' : tutorialStep.value === 'put' ? 'tutorialPut' : 'tutorialClose',
+      { name: t('smasher_' + TUTORIAL_LEAD) }
+    )
+    : '')
+watch(tutorialStep, async (step, prev) => {
+  if (step === 'pick' && prev !== 'pick') {
+    await nextTick()
+    document.querySelector(TUTORIAL_TARGETS.pick)?.scrollIntoView({ block: 'nearest' })
+  }
+})
+watch(() => props.modelValue, open => {
+  if (!open && props.tutorial && tutorialPicked.value && teamIds.value[0] === TUTORIAL_LEAD) emit('tutorial-done')
+})
 
 // ─── Levels, stats ─────────────────────────────────────────────────────────
 
@@ -663,6 +702,22 @@ const onCardKey = (id: SmasherId, e: KeyboardEvent) => {
   }
 }
 watch(() => props.modelValue, (open) => { if (!open) closePeek() })
+
+// #Consistency-11: the filter chip row scrolls sideways where it cannot wrap (phones); it paints
+// a soft edge fade on the sides that still hide chips so a clipped chip reads as "more".
+const chipRow = ref<HTMLElement | null>(null)
+const chipMore = ref({ left: false, right: false })
+const syncChipRow = () => {
+  const el = chipRow.value
+  if (!el) return
+  chipMore.value = { left: el.scrollLeft > 1, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1 }
+}
+watch(chipRow, el => {
+  if (!el) return
+  nextTick(syncChipRow)
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncChipRow).observe(el)
+})
+watch(() => rosterFilters.value.length, () => nextTick(syncChipRow))
 onBeforeUnmount(() => window.clearTimeout(peekTimer))
 </script>
 
@@ -672,7 +727,15 @@ onBeforeUnmount(() => window.clearTimeout(peekTimer))
     @update:model-value="emit('update:modelValue', $event)"
     :is-closable="true"
     :title="t('team')"
+    class="team-modal"
   )
+    Teleport(to="body")
+      TutorialLightbox(
+        v-if="tutorialStep"
+        :key="tutorialStep"
+        :target="tutorialTarget"
+        :text="tutorialText"
+      )
     div.team-layout(data-testid="smasher-team-modal")
       //- ── Left: team slots + roster ──────────────────────────────────────
       div.team-col
@@ -759,7 +822,13 @@ onBeforeUnmount(() => window.clearTimeout(peekTimer))
 
         h3.label-section.roster-title {{ t('roster') }}
         //- Filter chips (#UX1c): All · Owned · per rarity, with counts.
-        div.roster-filters(role="group" :aria-label="t('filterAria')")
+        div.roster-filters(
+          ref="chipRow"
+          role="group"
+          :aria-label="t('filterAria')"
+          :class="{ 'is-more-left': chipMore.left, 'is-more-right': chipMore.right }"
+          @scroll.passive="syncChipRow"
+        )
           button.roster-filter(
             v-for="f in rosterFilters"
             :key="f"
@@ -1537,6 +1606,14 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   scrollbar-width: none
   &::-webkit-scrollbar
     display: none
+  // The row stays ONE line (a wrapped row pushed the grid out of view on desktop too); a seamless
+  // mask fade (no overlay element, so no seam) marks the clipped side(s).
+  &.is-more-right
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.6rem), transparent)
+  &.is-more-left
+    mask-image: linear-gradient(to left, #000 calc(100% - 1.6rem), transparent)
+  &.is-more-left.is-more-right
+    mask-image: linear-gradient(to right, transparent, #000 1.6rem, #000 calc(100% - 1.6rem), transparent)
 
 .roster-filter
   --dot: transparent
@@ -2468,4 +2545,17 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   .team-slot, .roster-card, .slot-portrait, .roster-portrait, .skin-plus-btn
     transition-duration: 0.08s
     transition-timing-function: ease-out
+</style>
+
+<style lang="sass">
+// #Consistency-11: the modal body scrolls (FModal paints no edge overlay since #UX1c — a sticky
+// fade cut a seam across the cards). A MASK has no element to seam: the last ~2 rem of the visible
+// body dissolves while there is more below, so a cut grid row reads as "scroll for more".
+// Unscoped: FModal teleports to <body>, outside this component's scope id.
+.team-modal .modal-content-slot.scroll-fade-bottom
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)
+.team-modal .modal-content-slot.scroll-fade-top.scroll-fade-bottom
+  mask-image: linear-gradient(to bottom, transparent, #000 1.2rem, #000 calc(100% - 2rem), transparent)
+.team-modal .modal-content-slot.scroll-fade-top:not(.scroll-fade-bottom)
+  mask-image: linear-gradient(to bottom, transparent, #000 1.2rem)
 </style>

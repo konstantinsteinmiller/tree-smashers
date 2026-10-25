@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': '比賽結束後才能觀看廣告。',
       'adNoReward': '廣告沒有看完，所以沒有解鎖。請再試一次！',
       'benched': '休息中',
-      'secondSmasherJoined': '新欄位：第 2 位粉碎者加入了你的隊伍！'
+      'secondSmasherJoined': '新欄位：第 2 位粉碎者加入了你的隊伍！',
+      'tutorialPick': '點按 {name} 來選取它。',
+      'tutorialPut': '現在把 {name} 放進欄位 1。',
+      'tutorialClose': '完成！關閉視窗，帶著新隊長去戰鬥。'
     }
   }
 }

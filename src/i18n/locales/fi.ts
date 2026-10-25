@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Voit katsoa mainoksen ottelun jälkeen.',
       'adNoReward': 'Mainos ei päättynyt, joten mitään ei avattu. Yritä uudelleen!',
       'benched': 'Lepää',
-      'secondSmasherJoined': 'Uusi paikka: 2. smasher liittyi tiimiisi!'
+      'secondSmasherJoined': 'Uusi paikka: 2. smasher liittyi tiimiisi!',
+      'tutorialPick': 'Napauta {name} valitaksesi sen.',
+      'tutorialPut': 'Aseta nyt {name} paikalle 1.',
+      'tutorialClose': 'Valmis! Sulje ikkuna ja taistele uudella johtajallasi.'
     }
   }
 }

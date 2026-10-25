@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Você poderá assistir ao anúncio depois da partida.',
       'adNoReward': 'O anúncio não terminou, então nada foi desbloqueado. Tente de novo!',
       'benched': 'Descansando',
-      'secondSmasherJoined': 'Novo espaço: um 2º smasher entrou no seu time!'
+      'secondSmasherJoined': 'Novo espaço: um 2º smasher entrou no seu time!',
+      'tutorialPick': 'Toque em {name} para escolher.',
+      'tutorialPut': 'Agora coloque {name} na vaga 1.',
+      'tutorialClose': 'Pronto! Feche esta janela para lutar com seu novo líder.'
     }
   }
 }

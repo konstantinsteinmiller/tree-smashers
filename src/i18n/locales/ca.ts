@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Podràs veure l’anunci després de la partida.',
       'adNoReward': 'L’anunci no ha acabat i no s’ha desbloquejat res. Torna-ho a provar!',
       'benched': 'Descansa',
-      'secondSmasherJoined': 'Nova casella: un 2n smasher s’ha unit al teu equip!'
+      'secondSmasherJoined': 'Nova casella: un 2n smasher s’ha unit al teu equip!',
+      'tutorialPick': 'Toca {name} per triar-lo.',
+      'tutorialPut': 'Ara posa {name} a la ranura 1.',
+      'tutorialClose': 'Fet! Tanca aquesta finestra per lluitar amb el teu nou líder.'
     }
   }
 }

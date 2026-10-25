@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklamı maçtan sonra izleyebilirsin.',
       'adNoReward': 'Reklam bitmedi, hiçbir şey açılmadı. Tekrar dene!',
       'benched': 'Dinleniyor',
-      'secondSmasherJoined': 'Yeni yuva: takımına 2. smasher katıldı!'
+      'secondSmasherJoined': 'Yeni yuva: takımına 2. smasher katıldı!',
+      'tutorialPick': 'Seçmek için {name} öğesine dokun.',
+      'tutorialPut': 'Şimdi {name} öğesini 1. yuvaya koy.',
+      'tutorialClose': 'Tamam! Yeni liderinle savaşmak için bu pencereyi kapat.'
     }
   }
 }

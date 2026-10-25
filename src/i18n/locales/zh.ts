@@ -1295,7 +1295,10 @@ export default {
       'adAfterMatch': '比赛结束后才能观看广告。',
       'adNoReward': '广告没有看完，所以没有解锁。请再试一次！',
       'benched': '休息中',
-      'secondSmasherJoined': '新栏位：第 2 位粉碎者加入了你的队伍！'
+      'secondSmasherJoined': '新栏位：第 2 位粉碎者加入了你的队伍！',
+      'tutorialPick': '点按 {name} 来选中它。',
+      'tutorialPut': '现在把 {name} 放进栏位 1。',
+      'tutorialClose': '完成！关闭窗口，带着新队长去战斗。'
     }
   }
 }

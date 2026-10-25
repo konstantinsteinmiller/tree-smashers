@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Kamu bisa menonton iklan setelah pertandingan.',
       'adNoReward': 'Iklan tidak selesai, jadi tidak ada yang terbuka. Coba lagi!',
       'benched': 'Istirahat',
-      'secondSmasherJoined': 'Slot baru: smasher ke-2 bergabung dengan timmu!'
+      'secondSmasherJoined': 'Slot baru: smasher ke-2 bergabung dengan timmu!',
+      'tutorialPick': 'Ketuk {name} untuk memilihnya.',
+      'tutorialPut': 'Sekarang taruh {name} di slot 1.',
+      'tutorialClose': 'Selesai! Tutup jendela ini untuk bertarung dengan pemimpin barumu.'
     }
   }
 }

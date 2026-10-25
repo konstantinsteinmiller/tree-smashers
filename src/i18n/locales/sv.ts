@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Du kan titta på reklamen efter matchen.',
       'adNoReward': 'Reklamen spelades inte klart, så inget låstes upp. Försök igen!',
       'benched': 'Vilar',
-      'secondSmasherJoined': 'Ny plats: en 2:a smasher har gått med i ditt lag!'
+      'secondSmasherJoined': 'Ny plats: en 2:a smasher har gått med i ditt lag!',
+      'tutorialPick': 'Tryck på {name} för att välja.',
+      'tutorialPut': 'Sätt nu {name} på plats 1.',
+      'tutorialClose': 'Klart! Stäng fönstret och kämpa med din nya ledare.'
     }
   }
 }

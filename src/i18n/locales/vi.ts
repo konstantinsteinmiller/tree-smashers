@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Bạn có thể xem quảng cáo sau trận đấu.',
       'adNoReward': 'Quảng cáo chưa xem hết nên chưa mở khóa gì. Thử lại nhé!',
       'benched': 'Nghỉ ngơi',
-      'secondSmasherJoined': 'Ô mới: smasher thứ 2 đã gia nhập đội của bạn!'
+      'secondSmasherJoined': 'Ô mới: smasher thứ 2 đã gia nhập đội của bạn!',
+      'tutorialPick': 'Chạm vào {name} để chọn.',
+      'tutorialPut': 'Giờ hãy đặt {name} vào ô 1.',
+      'tutorialClose': 'Xong! Đóng cửa sổ này để chiến đấu cùng thủ lĩnh mới.'
     }
   }
 }

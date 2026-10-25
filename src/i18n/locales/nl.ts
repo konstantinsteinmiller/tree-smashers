@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Je kunt de advertentie na de wedstrijd bekijken.',
       'adNoReward': 'De advertentie is niet afgemaakt, dus er is niets ontgrendeld. Probeer het opnieuw!',
       'benched': 'Rust',
-      'secondSmasherJoined': 'Nieuw slot: een 2e smasher is bij je team gekomen!'
+      'secondSmasherJoined': 'Nieuw slot: een 2e smasher is bij je team gekomen!',
+      'tutorialPick': 'Tik op {name} om te kiezen.',
+      'tutorialPut': 'Zet {name} nu op plek 1.',
+      'tutorialClose': 'Klaar! Sluit dit venster om met je nieuwe leider te vechten.'
     }
   }
 }

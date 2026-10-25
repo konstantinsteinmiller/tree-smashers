@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Die Werbung kannst du nach dem Match ansehen.',
       'adNoReward': 'Die Werbung lief nicht bis zum Ende, nichts freigeschaltet. Versuch es noch mal!',
       'benched': 'Pause',
-      'secondSmasherJoined': 'Neuer Platz: Ein 2. Smasher ist deinem Team beigetreten!'
+      'secondSmasherJoined': 'Neuer Platz: Ein 2. Smasher ist deinem Team beigetreten!',
+      'tutorialPick': 'Tippe auf {name}, um es zu wählen.',
+      'tutorialPut': 'Setze {name} jetzt auf Platz 1.',
+      'tutorialClose': 'Geschafft! Schließe das Fenster und kämpfe mit deinem neuen Anführer.'
     }
   }
 }

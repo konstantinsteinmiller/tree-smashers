@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklamu můžeš sledovat po zápase.',
       'adNoReward': 'Reklama nedoběhla, nic se neodemklo. Zkus to znovu!',
       'benched': 'Odpočívá',
-      'secondSmasherJoined': 'Nový slot: do týmu se přidal 2. smasher!'
+      'secondSmasherJoined': 'Nový slot: do týmu se přidal 2. smasher!',
+      'tutorialPick': 'Klepni na {name} pro výběr.',
+      'tutorialPut': 'Teď dej {name} na místo 1.',
+      'tutorialClose': 'Hotovo! Zavři okno a bojuj s novým vůdcem.'
     }
   }
 }

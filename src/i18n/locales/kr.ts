@@ -1295,7 +1295,10 @@ export default {
       'adAfterMatch': '광고는 경기가 끝난 뒤에 볼 수 있어요.',
       'adNoReward': '광고가 끝까지 재생되지 않아 잠금 해제되지 않았어요. 다시 시도하세요!',
       'benched': '휴식 중',
-      'secondSmasherJoined': '새 슬롯: 두 번째 스매셔가 팀에 합류했어요!'
+      'secondSmasherJoined': '새 슬롯: 두 번째 스매셔가 팀에 합류했어요!',
+      'tutorialPick': '{name}을(를) 탭해서 선택하세요.',
+      'tutorialPut': '이제 {name}을(를) 슬롯 1에 넣으세요.',
+      'tutorialClose': '완료! 창을 닫고 새 리더와 싸우세요.'
     }
   }
 }

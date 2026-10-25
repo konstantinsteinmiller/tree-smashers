@@ -1295,7 +1295,10 @@ export default {
       'adAfterMatch': 'Podrás ver el anuncio después de la partida.',
       'adNoReward': 'El anuncio no terminó, así que no se desbloqueó nada. ¡Inténtalo de nuevo!',
       'benched': 'Descansa',
-      'secondSmasherJoined': 'Nueva ranura: ¡un 2.º smasher se unió a tu equipo!'
+      'secondSmasherJoined': 'Nueva ranura: ¡un 2.º smasher se unió a tu equipo!',
+      'tutorialPick': 'Toca a {name} para elegirlo.',
+      'tutorialPut': 'Ahora pon a {name} en el hueco 1.',
+      'tutorialClose': '¡Listo! Cierra esta ventana para luchar con tu nuevo líder.'
     }
   }
 }

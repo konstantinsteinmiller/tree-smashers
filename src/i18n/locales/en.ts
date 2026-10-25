@@ -1300,7 +1300,10 @@ export default {
       'adAfterMatch': 'You can watch the ad after the match.',
       'adNoReward': 'The ad didn’t finish, so nothing was unlocked. Try again!',
       'benched': 'Resting',
-      'secondSmasherJoined': 'New slot: a 2nd smasher joined your team!'
+      'secondSmasherJoined': 'New slot: a 2nd smasher joined your team!',
+      'tutorialPick': 'Tap {name} to pick it.',
+      'tutorialPut': 'Now put {name} in slot 1.',
+      'tutorialClose': 'Done! Close this window to fight with your new lead.'
     }
   }
 }

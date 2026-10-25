@@ -1295,7 +1295,10 @@ export default {
       'adAfterMatch': 'Tu pourras regarder la pub après le match.',
       'adNoReward': 'La pub ne s’est pas terminée, rien n’a été débloqué. Réessaie !',
       'benched': 'Au repos',
-      'secondSmasherJoined': 'Nouvel emplacement : un 2e smasher rejoint ton équipe !'
+      'secondSmasherJoined': 'Nouvel emplacement : un 2e smasher rejoint ton équipe !',
+      'tutorialPick': 'Touche {name} pour le choisir.',
+      'tutorialPut': 'Place maintenant {name} à l’emplacement 1.',
+      'tutorialClose': 'Fini ! Ferme cette fenêtre pour combattre avec ton nouveau chef de file.'
     }
   }
 }

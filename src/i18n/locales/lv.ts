@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklāmu varēsi skatīties pēc mača.',
       'adNoReward': 'Reklāma netika noskatīta līdz galam, nekas netika atbloķēts. Mēģini vēlreiz!',
       'benched': 'Atpūšas',
-      'secondSmasherJoined': 'Jauna vieta: komandai pievienojās 2. smasheris!'
+      'secondSmasherJoined': 'Jauna vieta: komandai pievienojās 2. smasheris!',
+      'tutorialPick': 'Pieskaries {name}, lai izvēlētos.',
+      'tutorialPut': 'Tagad ievieto {name} 1. vietā.',
+      'tutorialClose': 'Gatavs! Aizver logu un cīnies ar jauno līderi.'
     }
   }
 }

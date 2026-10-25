@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Poți urmări reclama după meci.',
       'adNoReward': 'Reclama nu s-a terminat, așa că nu s-a deblocat nimic. Încearcă din nou!',
       'benched': 'Se odihnește',
-      'secondSmasherJoined': 'Slot nou: un al 2-lea smasher s-a alăturat echipei!'
+      'secondSmasherJoined': 'Slot nou: un al 2-lea smasher s-a alăturat echipei!',
+      'tutorialPick': 'Atinge {name} pentru a-l alege.',
+      'tutorialPut': 'Acum pune {name} în slotul 1.',
+      'tutorialClose': 'Gata! Închide fereastra pentru a lupta cu noul tău lider.'
     }
   }
 }

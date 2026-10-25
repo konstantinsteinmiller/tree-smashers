@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklamą galėsi žiūrėti po rungtynių.',
       'adNoReward': 'Reklama nebaigta, todėl niekas neatrakinta. Bandyk dar kartą!',
       'benched': 'Ilsisi',
-      'secondSmasherJoined': 'Nauja vieta: prie komandos prisijungė 2-asis smasheris!'
+      'secondSmasherJoined': 'Nauja vieta: prie komandos prisijungė 2-asis smasheris!',
+      'tutorialPick': 'Palieskite {name}, kad pasirinktumėte.',
+      'tutorialPut': 'Dabar įdėkite {name} į 1 vietą.',
+      'tutorialClose': 'Baigta! Uždarykite langą ir kovokite su nauju lyderiu.'
     }
   }
 }

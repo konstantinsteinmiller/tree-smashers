@@ -1294,7 +1294,10 @@ export default {
       'adAfterMatch': 'Reklamani oʻyindan keyin koʻrishingiz mumkin.',
       'adNoReward': 'Reklama oxirigacha koʻrilmadi, hech narsa ochilmadi. Qayta urinib koʻring!',
       'benched': 'Dam olmoqda',
-      'secondSmasherJoined': 'Yangi joy: jamoangizga 2-smasher qo‘shildi!'
+      'secondSmasherJoined': 'Yangi joy: jamoangizga 2-smasher qo‘shildi!',
+      'tutorialPick': 'Tanlash uchun {name} ni bosing.',
+      'tutorialPut': 'Endi {name} ni 1-o‘ringa qo‘ying.',
+      'tutorialClose': 'Tayyor! Yangi yetakchi bilan jang qilish uchun oynani yoping.'
     }
   }
 }
