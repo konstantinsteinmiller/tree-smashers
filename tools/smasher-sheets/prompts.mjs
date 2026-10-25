@@ -21,7 +21,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const DIR = join(ROOT, 'art-sheets', 'smashers-bare')
 const md = readFileSync(join(ROOT, 'art-sheets', 'PROMPTS-smashers.md'), 'utf8')
 
-const rows = []
+export const rows = []
 for (const line of md.split(/\r?\n/)) {
   const m = line.match(/^\| `smashers\/([a-z0-9-]+)\.png` \| ([^|]+) \| ([^|]+) \| (.+) \|\s*$/)
   if (m) rows.push({ id: m[1], name: m[2].trim(), species: m[3].trim(), note: m[4].trim() })
@@ -146,6 +146,27 @@ BEFORE YOU CALL IT FINISHED, count and check:
 
 OUTPUT: one square 1:1 image, 4 × 4 cells, magenta ground, 16 characters, matching the layout reference cell for cell.
 `
+}
+
+/**
+ * The SKIN variant of a smasher's part prompt (tools/smasher-sheets/skins.mjs): the same sheet — same cell
+ * poses, silhouette and proportions as the base smasher's layout reference — painted as the smasher's
+ * cocky / funny / elemental costume from src/data/smasherSkinCatalog.ts. The base prompt's "keep the
+ * reference palette" rules are swapped for the skin brief; everything that keeps the 32 frames one
+ * consistent character (angles, one head, no disc, magenta ground) is untouched.
+ */
+const KIND_BRIEF = {
+  cocky: 'COCKY: the smasher is showing off — a smug, confident look; swagger props (crown, chain, shades, cape, medals, gold) painted as part of the plush costume.',
+  funny: 'FUNNY: a silly costume gag — the joke reads at a glance at 50 px; props are soft felt / fleece / foam, comical and cute rather than scary.',
+  elemental: 'ELEMENTAL: the smasher is infused with an element — its fur, quills, horns or tail take the element colours and shape. Effects (flames, sparks, ice, water, crystals, dust, clouds) are SOLID flat cel-painted shapes attached to the body with a dark outline — never glow, bloom, blur, smoke or transparency.'
+}
+export const skinPrompt = (row, skin, part) => {
+  const brief = `SKIN VARIANT — "${skin.concept}". ${KIND_BRIEF[skin.kind] ?? ''} It is the SAME smasher in a new costume: the same body shape, silhouette, proportions, pose and size in every cell as the layout reference; the colours and costume change. Every prop and effect sits on the body in a fixed place and turns with it: it is visible from the angles where it would be (sunglasses and a crown on the face side only, a cape, tail effect or shell prop from behind) and IDENTICAL in every cell. Do not add a second head or face. Keep the face's angry-cute eyes and brows readable.`
+  let p = smasherPrompt({ ...row, note: `${row.note} ${brief}` }, part)
+  p = p.replace("and the character's colours.", "and the BASE smasher's colours (the skin recolours it, see the skin variant below).")
+  const OLD_COLOUR = "COLOUR — keep the layout reference's palette for every part. Pink parts are soft salmon / rose, never hot pink."
+  p = p.replace(OLD_COLOUR, 'COLOUR — the skin variant sets the palette: a bold, clean palette of 3-5 colours that reads at 50 px and stays IDENTICAL in every cell. Pink parts are soft salmon / rose, never hot pink or magenta; the character contains NO magenta anywhere.')
+  return p
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

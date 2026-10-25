@@ -19,6 +19,7 @@ import type { SmasherId } from '@/data/smasherCatalog'
 import {
   DISC_SQUASH, DISC_THICKNESS, FRAME_BOX, FRAME_H, FRAME_W, YAW_COLS, YAW_FRAMES, drawSmasher, frameYaw, mixHex
 } from '@/smashers/smasherRig'
+import { smasherOfSkinId } from '@/data/smasherSkinCatalog'
 import { lookKey, smasherForSkin, smasherPalette } from '@/smashers/smasherSkins'
 import { PAINTED_SMASHERS, type PaintedSmasherSheet } from '@/smashers/paintedSmashers'
 import { PAINTED_PORTRAITS, type PaintedPortrait } from '@/smashers/paintedPortraits'
@@ -195,7 +196,8 @@ const loadPainted = (
     img.decoding = 'async'
     img.onload = () => {
       sheet.ready = true
-      for (const k of [...portraits.keys()]) if (k.startsWith(`${id}|`)) portraits.delete(k)
+      const owner = id.replace(/-skin$/, '') // a skin sheet refreshes its smasher's portraits (`<id>|<skin>|…`)
+      for (const k of [...portraits.keys()]) if (k.startsWith(`${owner}|`)) portraits.delete(k)
       for (const cb of [...artListeners]) cb()
     }
     img.onerror = () => cache.set(id, null)
@@ -209,9 +211,21 @@ const loadPainted = (
 const paintedLook = (id: SmasherId, modelId: string | undefined, boss: boolean) =>
   !PAINTED_OFF && !boss && lookKey(id, modelId, false) === `${id}||`
 
+/**
+ * The painted sheet key of a smasher wearing ITS OWN skin ("<id>-skin", tools/smasher-sheets/skins.mjs): a skin
+ * sheet is registered under the skin id and fetched only once someone wears that skin. Null for any other look.
+ */
+export const paintedSkinKey = (
+  id: string, modelId: string | undefined, sheets: Readonly<Record<string, PaintedSmasherSheet>> = PAINTED_SMASHERS
+): string | null => (modelId && smasherOfSkinId(modelId) === id && sheets[modelId] ? modelId : null)
+
 // A boss wears its smasher's painted sheet too (plus a drawn crown, see `drawBossCrown`).
-const paintedSheet = (id: SmasherId, modelId: string | undefined, _boss: boolean): PaintedSheet | null =>
-  paintedLook(id, modelId, false) ? loadPainted(painted, id, PAINTED_SMASHERS[id], '', null) : null
+const paintedSheet = (id: SmasherId, modelId: string | undefined, _boss: boolean): PaintedSheet | null => {
+  if (PAINTED_OFF) return null
+  const skin = paintedSkinKey(id, modelId)
+  if (skin) return loadPainted(painted, skin as SmasherId, PAINTED_SMASHERS[skin], '', null)
+  return paintedLook(id, modelId, false) ? loadPainted(painted, id, PAINTED_SMASHERS[id], '', null) : null
+}
 
 /** The hi-res portrait frames (VS screen, DOM portraits), when loaded and still matching the shipped sheet. */
 const paintedPortrait = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null => {

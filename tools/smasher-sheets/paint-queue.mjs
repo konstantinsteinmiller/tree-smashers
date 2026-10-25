@@ -5,6 +5,8 @@
  *
  *   node tools/smasher-sheets/paint-queue.mjs [ids…]      default: every RELEASED bare reference not yet sliced
  *   node tools/smasher-sheets/paint-queue.mjs --all        … including the later release (smashers 25–48)
+ *   node tools/smasher-sheets/paint-queue.mjs --skins [ids…]  the smasher SKINS (`<id>-skin`, prepared by skins.mjs): same jobs,
+ *                                                          slicer colour check relaxed, no turn audit (a skin recolours)
  *
  * Release gate (src/data/smasherCatalog.ts RELEASED_SMASHER_COUNT, smashers
  * 1–24 by default; VITE_APP_SMASHERS_RELEASED=all|N widens it): the default
@@ -30,13 +32,14 @@ const log = m => { const line = `${new Date().toISOString()} ${m}`; console.log(
 
 // done = sliced from a full 32-frame painting (slice-painted.mjs writes <id>.full32);
 // an older 17-frame mirrored sheet keeps shipping until its repaint lands
-const sliced = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+)\.full32$/)?.[1]).filter(Boolean))
+const skins = process.argv.includes('--skins')
+const sliced = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+(?:-skin)?).full32$/)?.[1]).filter(Boolean))
 const all = process.argv.includes('--all')
-let ids = process.argv.slice(2).filter(a => a !== '--all')
+let ids = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => (skins && !a.endsWith('-skin') ? `${a}-skin` : a))
 if (!ids.length) {
   const { RELEASED_SMASHER_IDS, SMASHER_IDS } = await import('./released.mjs')
-  const order = all ? SMASHER_IDS : RELEASED_SMASHER_IDS
-  const bare = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+)-a\.prompt\.txt$/)?.[1]).filter(Boolean))
+  const order = (all ? SMASHER_IDS : RELEASED_SMASHER_IDS).map(id => (skins ? `${id}-skin` : id))
+  const bare = new Set(readdirSync(BARE).map(f => f.match(/^([a-z0-9]+(?:-skin)?)-a.prompt.txt$/)?.[1]).filter(Boolean))
   ids = order.filter(id => bare.has(id) && !sliced.has(id))
 }
 
@@ -44,7 +47,7 @@ const paint = (id, part) => {
   const r = spawnSync(process.execPath, [join(ROOT, 'tools/art-desk/paint.mjs'),
     '--prompt-file', join(BARE, `${id}-${part}.prompt.txt`),
     '--out', join(PAINTED, `smasher-${id}-${part}.png`),
-    '--ref', join(BARE, `${id}-${part}.png`)], { cwd: ROOT, encoding: 'utf8' })
+    '--ref', join(BARE, `${id.replace(/-skin$/, '')}-${part}.png`)], { cwd: ROOT, encoding: 'utf8' })
   const out = (r.stdout || '').trim()
   log(`${id}-${part}: paint exit ${r.status} ${out}`)
   if (r.status === 10 || r.status === 11) { log('STOP: ' + out); process.exit(r.status) }
@@ -75,10 +78,10 @@ for (const id of ids) {
       if (!paint(id, part) && !paint(id, part)) break
     }
     if (!['a', 'b'].every(p => existsSync(join(PAINTED, `smasher-${id}-${p}.png`)))) continue
-    const s = spawnSync(process.execPath, [join(ROOT, 'tools/smasher-sheets/slice-painted.mjs'), id, '--q', '0.78'], { cwd: ROOT, encoding: 'utf8' })
+    const s = spawnSync(process.execPath, [join(ROOT, 'tools/smasher-sheets/slice-painted.mjs'), id, '--q', '0.78', '--cell', '256', ...(id.endsWith('-skin') ? ['--like-max', '70'] : [])], { cwd: ROOT, encoding: 'utf8' })
     log(`${id}: slice exit ${s.status} ${(s.stdout || '').trim()} ${(s.stderr || '').trim().split('\n').filter(l => !l.startsWith('ground')).join(' | ')}`)
     ok = s.status === 0
-    if (ok) {
+    if (ok && !id.endsWith('-skin')) {
       // turn audit (audit-painted.mjs): a frame that flips to another view fails
       const au = spawnSync(process.execPath, [join(ROOT, 'tools/smasher-sheets/audit-painted.mjs'), id], { cwd: ROOT, encoding: 'utf8' })
       log(`${id}: audit exit ${au.status} ${(au.stdout || '').trim()}`)

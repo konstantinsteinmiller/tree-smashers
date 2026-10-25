@@ -762,6 +762,11 @@ export default defineConfig(({ mode, command }) => {
         // whatever still imports it. Verify with:
         //   pnpm build:crazy-web && grep -rl "game-cdn.poki.com" dist/
         // which must print nothing. MUST come before the '@' catch-alls.
+        // Poki release: no dev cheats in the bundle (the deploy gate refuses "[CHEAT]"). A QA twin built with
+        // VITE_POKI_QA_TOOLS=true keeps them and is refused by the gate, by design.
+        ...(env.VITE_APP_POKI === 'true' && env.VITE_POKI_QA_TOOLS !== 'true' ? {
+          '@/use/useCheats': fileURLToPath(new URL('./src/use/useCheats.stub.ts', import.meta.url))
+        } : {}),
         ...(env.VITE_APP_POKI === 'true' ? {} : {
           '@/use/ads/PokiProvider': fileURLToPath(new URL('./src/use/ads/PokiProvider.stub.ts', import.meta.url)),
           '@/utils/pokiPlugin': fileURLToPath(new URL('./src/utils/pokiPlugin.stub.ts', import.meta.url))

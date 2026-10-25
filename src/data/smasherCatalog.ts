@@ -223,7 +223,7 @@ export const isSmasherId = (v: unknown): v is SmasherId =>
 // `VITE_APP_SMASHERS_RELEASED` ("all" or 1–48, validated in vite.config.ts)
 // overrides the count for dev / testing the later release.
 
-export const DEFAULT_RELEASED_SMASHER_COUNT = 24
+export const DEFAULT_RELEASED_SMASHER_COUNT = 48
 
 /** The flag value → released count (unset / invalid → the default). */
 export const parseReleasedSmasherCount = (raw: unknown): number => {

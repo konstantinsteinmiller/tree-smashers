@@ -14,6 +14,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   DEFAULT_RELEASED_SMASHER_COUNT,
   RELEASED_SMASHER_IDS,
@@ -57,8 +58,8 @@ afterEach(() => {
 })
 
 describe('release gate — the list and the flag', () => {
-  it('releases the first 24 smashers in unlock order by default', () => {
-    expect(DEFAULT_RELEASED_SMASHER_COUNT).toBe(24)
+  it('ships all 48 by default; with the flag at 24 it releases the first 24 in unlock order', () => {
+    expect(DEFAULT_RELEASED_SMASHER_COUNT).toBe(48)
     expect([...RELEASED_SMASHER_IDS]).toEqual(FIRST_24)
     expect(UNRELEASED_SMASHER_IDS.length).toBe(SMASHER_IDS.length - 24)
     expect(UNRELEASED_SMASHER_IDS[0]).toBe('humphrey')
@@ -67,11 +68,11 @@ describe('release gate — the list and the flag', () => {
     expect(isReleasedSmasher('humphrey')).toBe(false)
   })
 
-  it('parses the flag: unset / invalid → 24, "all" → 48, N → N (clamped)', () => {
-    expect(parseReleasedSmasherCount(undefined)).toBe(24)
-    expect(parseReleasedSmasherCount('')).toBe(24)
-    expect(parseReleasedSmasherCount('yes')).toBe(24)
-    expect(parseReleasedSmasherCount('0')).toBe(24)
+  it('parses the flag: unset / invalid → 48, "all" → 48, N → N (clamped)', () => {
+    expect(parseReleasedSmasherCount(undefined)).toBe(48)
+    expect(parseReleasedSmasherCount('')).toBe(48)
+    expect(parseReleasedSmasherCount('yes')).toBe(48)
+    expect(parseReleasedSmasherCount('0')).toBe(48)
     expect(parseReleasedSmasherCount('all')).toBe(SMASHER_IDS.length)
     expect(parseReleasedSmasherCount('30')).toBe(30)
     expect(parseReleasedSmasherCount('999')).toBe(SMASHER_IDS.length)

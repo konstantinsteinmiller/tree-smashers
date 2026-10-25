@@ -35,7 +35,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const PORTRAIT_FRAMES = [1, 3, 29]
 const Q = 0.82
 const args = process.argv.slice(2)
-const prune = args.includes('--prune')
+const prune = args.includes('--prune') || !args.includes('--force')
+if (!args.includes('--force') && !args.includes('--prune')) console.log('portraits.mjs: retired (sheet cells are native resolution) — pass --force to cut separate portraits again; pruning only')
 const ids = args.filter(x => !x.startsWith('--'))
 const SHEET_REG = join(ROOT, 'src', 'smashers', 'paintedSmashers.ts')
 const REG = join(ROOT, 'src', 'smashers', 'paintedPortraits.ts')

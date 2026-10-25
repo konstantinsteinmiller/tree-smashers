@@ -45,7 +45,8 @@ const G = 4
 const paintedDir = join(ROOT, 'art-sheets', 'painted')
 const partPath = k => join(paintedDir, `smasher-${id}-${k}.png`)
 for (const k of Object.keys(PARTS)) if (!existsSync(partPath(k))) { console.error(`missing ${partPath(k)}`); process.exit(2) }
-const refPath = join(ROOT, 'art-sheets', 'smashers-bare', `${id}.png`)
+// a skin ('<id>-skin') is registered against its base smasher's rig reference (same poses + cell positions)
+const refPath = join(ROOT, 'art-sheets', 'smashers-bare', `${id.replace(/-skin$/, '')}.png`)
 const OUT_DIR = join(ROOT, 'public', 'images', 'smashers')
 const dataUrl = p => `data:image/png;base64,${readFileSync(p).toString('base64')}`
 
@@ -206,10 +207,5 @@ ${entries.join('\n')}
 }
 `)
 
-// the hi-res VS portraits follow the sheet: re-cut this id's (the sheet's
-// hash changed) and drop any whose sheet no longer ships
-{
-  const { spawnSync } = await import('node:child_process')
-  const pr = spawnSync(process.execPath, [join(ROOT, 'tools', 'smasher-sheets', 'portraits.mjs'), id], { cwd: ROOT, stdio: 'inherit' })
-  if (pr.status !== 0) console.error(`portraits.mjs ${id} exit ${pr.status} (the VS screen keeps the sheet / rig)`)
-}
+// No separate hi-res portraits any more: the 256 px sheet cells equal the paintings' native resolution,
+// so the VS screen and DOM portraits draw frame 1 / 3 / 29 straight from the sheet (smasherAtlas.ts).

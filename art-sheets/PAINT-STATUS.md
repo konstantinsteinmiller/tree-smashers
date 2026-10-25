@@ -12,12 +12,12 @@
 
 Marks: ✓ sliced and current · ! repaint (reference changed / old painting parked) · ? painted, no receipt · · not painted yet.
 
-## Smasher sheets — this release: smashers 1–24
+## Smasher sheets — this release: smashers 1–48
 
-Release gate: the paint queue runs only the 24 released smashers by default (`node tools/smasher-sheets/paint-queue.mjs`; explicit ids `… paint-queue.mjs <ids>`, or `--all` for the later release too).
+Release gate: the paint queue runs only the 48 released smashers by default (`node tools/smasher-sheets/paint-queue.mjs`; explicit ids `… paint-queue.mjs <ids>`, or `--all` for the later release too).
 
-- Released, full 32-frame painting sliced: 13/24 — still to paint: thumper, ramsey, vixie, shellby, zippy, tuskar, slinky, snooze, pongo, rolly, prickles
-- Later release (24, not queued by default): 17/24 sliced
+- Released, full 32-frame painting sliced: 48/48
+- Later release (0, not queued by default): 0/0 sliced
 
 ## Arena art per theme (floors, backdrop, props)
 
@@ -44,7 +44,7 @@ Release gate: the paint queue runs only the 24 released smashers by default (`no
 | | Border | Painting | In game |
 |---|---|---|---|
 | ✓ | lava arena wall — HURTS on contact (`lava`) | painted | shipped, 2 tileable variants |
-| · | forest arena wall — HEALS on contact (`heal`) | **not painted** | its theme border (volcanic / woodland) |
+| ✓ | forest arena wall — HEALS on contact (`heal`) | painted | shipped, 8 tileable variants |
 | ✓ | meadow (`meadow`) | painted | shipped, 3 tileable variants |
 | ✓ | ruins (boss) (`ruins`) | painted | shipped, 2 tileable variants |
 | ✓ | woodland (`woodland`) | painted | shipped, 3 tileable variants |

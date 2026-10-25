@@ -27,19 +27,18 @@ describe('painted portrait registry — derived from the shipped sheets', () => 
     expect(files).toEqual(Object.values(PAINTED_PORTRAITS).map(p => p.file).sort())
   })
 
-  it('holds the frames the VS screen and DOM portraits draw, with more px than the sheet', () => {
+  it('holds the frames the VS screen and DOM portraits draw, at least as many px as the sheet (within 16)', () => {
     for (const [id, p] of Object.entries(PAINTED_PORTRAITS)) {
       for (const f of [1, VS_PORTRAIT_FRAME.me, VS_PORTRAIT_FRAME.them]) expect(p.frames, id).toContain(f)
-      expect(p.cell, id).toBeGreaterThan(PAINTED_SMASHERS[id]!.cell)
+      expect(p.cell, id).toBeGreaterThanOrEqual(PAINTED_SMASHERS[id]!.cell - 16)
       expect(p.file).toBe(`${id}_${p.cell}.webp`)
     }
   })
 
-  it('every shipped sheet whose paintings are on hand has a portrait', () => {
-    for (const id of Object.keys(PAINTED_SMASHERS)) {
-      const parts = ['a', 'b'].every(k => existsSync(join(ROOT, 'art-sheets', 'painted', `smasher-${id}-${k}.png`)))
-      if (parts) expect(PAINTED_PORTRAITS[id], `${id}: run node tools/smasher-sheets/portraits.mjs ${id}`).toBeTruthy()
-    }
+  it('portraits are retired: the 256 px sheet cells are the paintings native resolution, so none ship', () => {
+    expect(Object.keys(PAINTED_PORTRAITS)).toEqual([])
+    expect(existsSync(DIR)).toBe(false)
+    for (const p of Object.values(PAINTED_SMASHERS)) expect(p.cell).toBeGreaterThanOrEqual(256)
   })
 
   it('an unshipped or re-cut sheet drops its portrait at runtime', () => {
