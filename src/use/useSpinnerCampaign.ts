@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import type { TopPartId, BottomPartId, BossAbility, BossTrait } from '@/types/spinner'
 import { STAGE_KEY, UPGRADES_KEY } from '@/keys'
 import { saveDataVersion } from '@/use/useSaveStatus'
+import { SKINS_PER_TOP } from '@/data/skinCatalog'
 import { BOSSES100_BUILD } from '@/bosses/bosses100Gate'
 // Pure, unobfuscated boundary data (bosses gate header): every runtime use
 // below sits behind BOSSES100_BUILD, so an off build drops the whole table.
@@ -23,6 +24,8 @@ export interface StageBladeConfig {
   topLevel: number
   bottomLevel: number
   modelId?: string
+  /** Gameplay-effect skin (dark / boulder / diamond / sandstorm / teleporter) kept when `modelId` is remapped to the painted standard skin. */
+  fxSkin?: string
   isBoss?: boolean
   bossAbility?: BossAbility
   /** Stage-101+ boss mechanic (bosses-100-feature.md §4); encounters only. */
@@ -101,6 +104,16 @@ const e = (
     if (ability !== 'plain') cfg.bossAbility = ability
   }
   return cfg
+}
+
+/** Campaign enemies wear their top's standard skin (the painted smasher look);
+ *  the extra skins are not painted. The original id moves to `fxSkin`: it seeds
+ *  the smasher pick and keeps the dark / boulder / diamond / sandstorm /
+ *  teleporter mechanics firing. */
+export const standardLook = (b: StageBladeConfig): StageBladeConfig => {
+  const std = SKINS_PER_TOP[b.topPartId]?.[0]
+  if (!std || !b.modelId || b.modelId === std) return b
+  return { ...b, modelId: std, fxSkin: b.modelId }
 }
 
 /** `s(id, name, enemyTeam, rewardWin, rewardLose, opts?)` — build a stage. */
@@ -804,7 +817,7 @@ export const CAMPAIGN_NPC_TUNING: {
    *  easy route, so the knock-out route gives a little back. */
   bossHpMul: number
 } = {
-  hpCurve: [[0, 0.8], [3, 0.92], [5, 1.1], [8, 1.25], [11, 0.92], [14, 0.97], [17, 1.0], [20, 1.15], [27, 1.15], [33, 1.07]],
+  hpCurve: [[0, 0.8], [3, 0.95], [5, 1.18], [8, 1.35], [11, 1.0], [14, 1.05], [17, 1.08], [20, 1.22], [27, 1.15], [33, 1.1]],
   dmgMul: 1,
   soloHpMul: 1 / 1.2,
   soloDmgMul: 1 / 1.2,

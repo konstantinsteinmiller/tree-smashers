@@ -47,12 +47,12 @@ import { getSelectedSkin } from '@/use/useModels'
 import { isSmasherId, smasherForParts, type SmasherId } from '@/data/smasherCatalog'
 import { drawSmasherDisc, drawSmasherFrame } from '@/smashers/smasherAtlas'
 import { DISC_SQUASH as DISC_SQUASH_RENDER, YAW_FRAMES, YAW_STEP } from '@/smashers/smasherRig'
-import { isDebug } from '@/use/useMatch.ts'
 import { isMobileLandscape, isMobilePortrait, userDifficulty } from '@/use/useUser.ts'
 import { DIFFICULTY } from '@/utils/enums'
 import { CLEAN_FEED, CLEAN_HP_RINGS } from '@/utils/cleanFeed'
 import { useScreenshake } from '@/use/useScreenshake'
 import useSounds from '@/use/useSound'
+import { playUiSfx } from '@/use/uiSfx'
 import { prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
@@ -186,7 +186,10 @@ const STOP_THRESHOLD = 0.25
 // damage to one roll per contact entry (Option C). Clean head-on slams
 // read very close to the old numbers; sliding/chase "grind" that used
 // to rack up damage now deals near-zero, which is the intended fix.
-const DAMAGE_SCALE = isDebug.value ? 1.4 : 1.4
+// Owner request 2026-10-25: −35 % contact damage so fights last longer (no one/two-shots).
+const DAMAGE_SCALE = 0.91 // was 1.4
+/** Draw only the standard (painted) look; flip back once the extra skins are painted. */
+const STANDARD_LOOKS_ONLY = true
 const HIT_FLASH_FRAMES = 50
 const NPC_THINK_MS = 500
 const BOUNCE_DAMPENING = 0.75
@@ -522,6 +525,9 @@ export const installBossTraitEngine = (port: BossTraitEnginePort | null): void =
 }
 /** Is a boss-trait port installed? */
 export const hasBossTraitEngine = (): boolean => bossPort !== null
+
+/** The skin id the engine's skin mechanics key on (a campaign enemy shows the standard look). */
+const fxOf = (blade: SpinnerState): string | undefined => blade.config.fxSkin ?? blade.config.modelId
 
 export const useSpinnerGame = () => {
   // ── Game Phase ───────────────────────────────────────────────────────────
@@ -1344,10 +1350,11 @@ export const useSpinnerGame = () => {
     if (!look) {
       if (bladeYawState.size > 256) bladeYawState.clear()
       const cfg = blade.config
-      const modelId = cfg.modelId ?? (blade.owner === 'player' ? getSelectedSkin(cfg.topPartId) : undefined)
+      // Extra skins are not painted yet: every blade draws its smasher's painted standard look.
+      const modelId = STANDARD_LOOKS_ONLY ? undefined : cfg.modelId ?? (blade.owner === 'player' ? getSelectedSkin(cfg.topPartId) : undefined)
       const smasherId = isSmasherId(cfg.smasherId)
         ? cfg.smasherId
-        : smasherForParts(cfg.topPartId, cfg.bottomPartId, modelId ?? `${cfg.topPartId}_${blade.owner}`)
+        : smasherForParts(cfg.topPartId, cfg.bottomPartId, cfg.fxSkin ?? cfg.modelId ?? `${cfg.topPartId}_${blade.owner}`)
       look = {
         smasherId,
         modelId,
@@ -1483,7 +1490,7 @@ export const useSpinnerGame = () => {
     for (const blade of blades) {
       if (blade.hp <= 0) continue
       const spd = speed(blade)
-      if (blade.config.modelId !== 'dark' || spd < 0.5) continue
+      if (fxOf(blade) !== 'dark' || spd < 0.5) continue
       // Emit 1-2 cloud particles per frame when moving
       const count = spd > 3 ? 2 : 1
       for (let i = 0; i < count; i++) {
@@ -1527,7 +1534,7 @@ export const useSpinnerGame = () => {
     for (const blade of blades) {
       if (blade.hp <= 0) continue
       const spd = speed(blade)
-      if ((blade.config.modelId !== 'boulder' && blade.config.modelId !== 'diamond') || spd < 1.0) continue
+      if ((fxOf(blade) !== 'boulder' && fxOf(blade) !== 'diamond') || spd < 1.0) continue
       if (groundDecals.length >= (FX.low ? 25 : 80)) break
       groundDecals.push({
         x: blade.x, y: blade.y,
@@ -1545,7 +1552,7 @@ export const useSpinnerGame = () => {
 
     // Sandstorm trail particles — small grains scattered behind the blade
     for (const blade of blades) {
-      if (blade.hp <= 0 || blade.config.modelId !== 'sandstorm') continue
+      if (blade.hp <= 0 || fxOf(blade) !== 'sandstorm') continue
       const spd = speed(blade)
       if (spd < 0.5) continue
       const count = spd > 3 ? 3 : spd > 1.5 ? 2 : 1
@@ -2082,7 +2089,7 @@ export const useSpinnerGame = () => {
       def = Math.max(dmg, def)
     }
     // Diamond skin: hidden 1.2x defense bonus
-    if (blade.config.modelId === 'diamond') def *= 1.2
+    if (fxOf(blade) === 'diamond') def *= 1.2
     // Powerup buffs collected during this match. Each pickup multiplies the
     // matching axis (e.g. two attack pickups stack to 1.25 * 1.25).
     const buffs = blade.buffs
@@ -3395,7 +3402,7 @@ export const useSpinnerGame = () => {
 
     // Teleporter skin: set on any blade using the 'teleporter' model (boss only)
     for (const blade of [...npcBlades.value, ...playerBlades.value]) {
-      if (blade.config.modelId === 'teleporter') {
+      if (fxOf(blade) === 'teleporter') {
         blade.isTeleporter = true
       }
     }
@@ -3854,14 +3861,33 @@ export const useSpinnerGame = () => {
     // Pick a random living player target
     const targets = livingBlades(playerBlades.value)
     if (targets.length === 0) return
-    let target: { x: number; y: number } = targets[Math.floor(gameplayRand() * targets.length)]!
+    const picked = targets[Math.floor(gameplayRand() * targets.length)]!
+    let target: { x: number; y: number } = picked
+    // Directional armour: a pick whose plate faces us (damage < 1) is swapped for the
+    // target we would hit hardest (a weak back / unarmoured). No extra RNG draws.
+    if (armorActive && picked.armor !== undefined) {
+      const hitMul = (t: SpinnerState): number => {
+        if (t.armor === undefined) return 1
+        const d = Math.hypot(blade.x - t.x, blade.y - t.y) || 1
+        return armorMul(t.armor, zoneOf(t, (blade.x - t.x) / d, (blade.y - t.y) / d))
+      }
+      let best = picked
+      let bestMul = hitMul(picked)
+      if (bestMul < 1) {
+        for (const t of targets) {
+          const m = hitMul(t)
+          if (m > bestMul) { best = t; bestMul = m }
+        }
+        target = best
+      }
+    }
 
     // Tree Smashers terrain AI (cheap): go for the player's tower when it is
     // low or on a 20% whim, and don't fire straight into an island when
-    // another target has a clear line. No extra draws without towers. With
+    // another target has a clear line. Tower Breaker carriers rush trees on a 50% whim. No extra draws without towers. With
     // several trees: the weakest STANDING one (ties → nearest), never a stump.
     const enemyTower = pickTargetTree(towers, 'player', blade.x, blade.y)
-    if (enemyTower && (enemyTower.hp / enemyTower.maxHp < 0.35 || gameplayRand() < 0.2)) target = enemyTower
+    if (enemyTower && (enemyTower.hp / enemyTower.maxHp < 0.35 || gameplayRand() < (SKILLS_BUILD && blade.skills !== undefined && towerDamageMul(blade) > 1 ? 0.5 : 0.2))) target = enemyTower
     const islands: { x: number; y: number; radius: number }[] = terrain !== null ? terrainSolidCircles(terrain) : []
     if (islands.length > 0) {
       const blockedTo = (p: { x: number; y: number }): boolean => {
@@ -7167,7 +7193,11 @@ export const useSpinnerGame = () => {
   /** Track the full-power moment (snap burst + pulse clock). */
   const noteAimPower = (ratio: number, now: number) => {
     if (ratio >= 0.999) {
-      if (aimMaxSince < 0) aimMaxSince = now
+      if (aimMaxSince < 0) {
+        aimMaxSince = now
+        // Snap tick: the pull just locked at full power.
+        try { playUiSfx('tick', { pitch: 1.5 }) } catch { /* audio optional */ }
+      }
     } else aimMaxSince = -1
   }
 

@@ -72,6 +72,12 @@ export const smasherForSkin = (modelId: string): SmasherId => {
   return pool[hash(modelId) % pool.length]!.id
 }
 
+/** The standard (painted) skin of the top `modelId` belongs to; `modelId` itself when unknown. */
+export const standardSkinOf = (modelId: string): string => {
+  const top = topPartOfSkin(modelId as SpinnerModelId)
+  return (top && SKINS_PER_TOP[top]?.[0]) || modelId
+}
+
 /** True when `modelId` is the default (signature) skin of the smasher. */
 const isSignature = (id: SmasherId, modelId: string | undefined): boolean => {
   // Another smasher's own skin (the owned-skin / selection keys are per top

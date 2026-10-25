@@ -314,14 +314,14 @@ export const vsLevelOf = (c: Pick<SpinnerConfig, 'smasherId' | 'level' | 'topLev
 
 /** The smasher a blade LOOKS like — the engine's rule (`getBladeLook`). */
 export const vsLookOf = (
-  c: Pick<SpinnerConfig, 'smasherId' | 'topPartId' | 'bottomPartId' | 'modelId'>,
+  c: Pick<SpinnerConfig, 'smasherId' | 'topPartId' | 'bottomPartId' | 'modelId' | 'fxSkin'>,
   owner: 'player' | 'npc',
   modelFallback?: string
 ): { smasherId: SmasherId; modelId?: string } => {
   const modelId = c.modelId ?? modelFallback
   const smasherId = isSmasherId(c.smasherId)
     ? c.smasherId
-    : smasherForParts(c.topPartId, c.bottomPartId, modelId ?? `${c.topPartId}_${owner}`)
+    : smasherForParts(c.topPartId, c.bottomPartId, c.fxSkin ?? modelId ?? `${c.topPartId}_${owner}`)
   return modelId ? { smasherId, modelId } : { smasherId }
 }
 

@@ -86,6 +86,8 @@ export interface SpinnerConfig {
   topLevel?: number
   bottomLevel?: number
   modelId?: string
+  /** Campaign enemy effect skin (dark / boulder / diamond / sandstorm / teleporter) when `modelId` shows the standard look. */
+  fxSkin?: string
   isBoss?: boolean
   bossAbility?: BossAbility
   /** Stage-101+ boss mechanic this blade carries (NPC bosses only). */

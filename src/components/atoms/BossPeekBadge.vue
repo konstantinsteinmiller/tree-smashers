@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VsPortrait from '@/components/atoms/VsPortrait.vue'
-import { smasherForSkin } from '@/smashers/smasherSkins'
+import { smasherForSkin, standardSkinOf } from '@/smashers/smasherSkins'
 import { isLowQuality } from '@/use/useQuality'
 import type { BossPeek } from '@/use/bossPeek'
 // Bosses 100+ (bosses gate): the trait glyph is a lazy handle, null on a
@@ -112,7 +112,7 @@ const traits = computed(() => (BOSSES100_BUILD && props.peek.encounterId ? props
         VsPortrait.boss-peek__skin-img(
           v-if="smasherId && peek.modelId && skinPx > 0"
           :smasher-id="smasherId"
-          :model-id="peek.modelId"
+          :model-id="standardSkinOf(peek.modelId)"
           :frame="1"
           :width="skinPx"
           :height="skinPx"

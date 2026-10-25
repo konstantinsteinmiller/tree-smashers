@@ -133,6 +133,20 @@ interface PaintedSheet {
   ppu: number
   /** Yaw frames this image holds, in cell order (null = all 32 on the 8 × 4 sheet). */
   frames: readonly number[] | null
+  /** Which half of the 32 yaw frames to trust: the other half is drawn as its mirror image. */
+  keep?: 'early' | 'late'
+}
+
+/**
+ * Sheets whose two halves were painted in different styles (tools/smasher-sheets/
+ * audit-painted.mjs: HALVES-DIFFER / FACES-WRONG): the half named here is the
+ * consistent one and the other half is its mirror image, so the character does not
+ * change colour or style as it turns. Drop a row when the sheet is repainted.
+ */
+const PAINTED_KEEP: Partial<Record<string, 'early' | 'late'>> = {
+  thumper: 'late',
+  flamenca: 'late',
+  snapjaw: 'late'
 }
 const painted = new Map<SmasherId, PaintedSheet | null>()
 const paintedHi = new Map<SmasherId, PaintedSheet | null>()
@@ -177,7 +191,7 @@ const loadPainted = (
       return null
     }
     const img = new Image()
-    const sheet: PaintedSheet = { img, ready: false, cell: meta.cell, ppu: paintedLatticePpu(meta.cell), frames }
+    const sheet: PaintedSheet = { img, ready: false, cell: meta.cell, ppu: paintedLatticePpu(meta.cell), frames, keep: dir === '' ? PAINTED_KEEP[id] : undefined }
     img.decoding = 'async'
     img.onload = () => {
       sheet.ready = true
@@ -195,8 +209,9 @@ const loadPainted = (
 const paintedLook = (id: SmasherId, modelId: string | undefined, boss: boolean) =>
   !PAINTED_OFF && !boss && lookKey(id, modelId, false) === `${id}||`
 
-const paintedSheet = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null =>
-  paintedLook(id, modelId, boss) ? loadPainted(painted, id, PAINTED_SMASHERS[id], '', null) : null
+// A boss wears its smasher's painted sheet too (plus a drawn crown, see `drawBossCrown`).
+const paintedSheet = (id: SmasherId, modelId: string | undefined, _boss: boolean): PaintedSheet | null =>
+  paintedLook(id, modelId, false) ? loadPainted(painted, id, PAINTED_SMASHERS[id], '', null) : null
 
 /** The hi-res portrait frames (VS screen, DOM portraits), when loaded and still matching the shipped sheet. */
 const paintedPortrait = (id: SmasherId, modelId: string | undefined, boss: boolean): PaintedSheet | null => {
@@ -220,14 +235,27 @@ const hasFrame = (p: PaintedSheet, frame: number) => {
 
 /** Draw the painted frame with the disc centre at (x, y); `scale` css px per model unit. */
 const drawPainted = (ctx: CanvasRenderingContext2D, p: PaintedSheet, frame: number, x: number, y: number, scale: number) => {
-  const f = ((frame % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
+  let f = ((frame % YAW_FRAMES) + YAW_FRAMES) % YAW_FRAMES
+  let flip = false
+  const half = YAW_FRAMES / 2
+  if (p.keep === 'late' && f < half) { f = f === 0 ? YAW_FRAMES - 1 : YAW_FRAMES - f; flip = true }
+  else if (p.keep === 'early' && f > half) { f = YAW_FRAMES - f; flip = true }
   const c = p.cell
   const idx = p.frames ? Math.max(0, p.frames.indexOf(f)) : f
   const cols = p.frames ? p.frames.length : COLS
   const k = scale / p.ppu
   const mid = (FRAME_BOX.top + FRAME_BOX.bottom) / 2
-  ctx.drawImage(p.img, (idx % cols) * c, Math.floor(idx / cols) * c, c, c,
-    x - (c / 2) * k, y - (c / 2 - mid * p.ppu) * k, c * k, c * k)
+  const dx = x - (c / 2) * k
+  const dy = y - (c / 2 - mid * p.ppu) * k
+  if (flip) {
+    ctx.save()
+    ctx.translate(x, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(p.img, (idx % cols) * c, Math.floor(idx / cols) * c, c, c, dx - x, dy, c * k, c * k)
+    ctx.restore()
+    return
+  }
+  ctx.drawImage(p.img, (idx % cols) * c, Math.floor(idx / cols) * c, c, c, dx, dy, c * k, c * k)
 }
 
 /** Source rect of one yaw frame, rendered on demand. Null without a canvas. */
@@ -241,6 +269,54 @@ export const smasherFrame = (
   return { image: s.canvas, sx: (f % COLS) * s.cellW, sy: Math.floor(f / COLS) * s.cellH, sw: s.cellW, sh: s.cellH, ppu: s.ppu }
 }
 
+let crownImg: HTMLImageElement | null = null
+/** The painted crown sprite once decoded (starts loading on first use). */
+const paintedCrown = (): HTMLImageElement | null => {
+  if (!crownImg && !noImages()) {
+    crownImg = new Image()
+    crownImg.decoding = 'async'
+    crownImg.onload = () => { for (const cb of [...artListeners]) cb() }
+    crownImg.src = prependBaseUrl('images/smashers/boss-crown.webp')
+  }
+  return crownImg && crownImg.complete && crownImg.naturalWidth > 0 ? crownImg : null
+}
+
+/** Gold crown over a painted boss's head: the painted sprite, a drawn one until it loads. */
+const drawBossCrown = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
+  const w = radius * 0.95
+  const h = radius * 0.5
+  const cx = x
+  const base = y - radius * 1.35
+  const img = paintedCrown()
+  if (img) {
+    const dw = radius * 0.95
+    const dh = dw * (img.naturalHeight / img.naturalWidth)
+    ctx.drawImage(img, cx - dw / 2, base - dh + radius * 0.08, dw, dh)
+    return
+  }
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(1, radius * 0.07)
+  ctx.strokeStyle = '#2a1a10'
+  ctx.fillStyle = '#ffcf3f'
+  ctx.beginPath()
+  ctx.moveTo(cx - w / 2, base)
+  ctx.lineTo(cx - w / 2, base - h * 0.7)
+  ctx.lineTo(cx - w / 4, base - h * 0.35)
+  ctx.lineTo(cx, base - h)
+  ctx.lineTo(cx + w / 4, base - h * 0.35)
+  ctx.lineTo(cx + w / 2, base - h * 0.7)
+  ctx.lineTo(cx + w / 2, base)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+  ctx.fillStyle = '#d8433f'
+  ctx.beginPath()
+  ctx.arc(cx, base - h * 0.32, radius * 0.07, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
 /**
  * Draw a smasher frame with the disc centre at (x, y) and `radius` css px per
  * model unit. `devicePxPerUnit` = radius × the context's device scale.
@@ -252,6 +328,7 @@ export const drawSmasherFrame = (
   const p = paintedSheet(id, modelId, boss)
   if (p && p.ppu >= radius * deviceScale) {
     drawPainted(ctx, p, frame, x, y, radius)
+    if (boss) drawBossCrown(ctx, x, y, radius)
     return true
   }
   const ref = smasherFrame(id, modelId, boss, frame, radius * deviceScale)

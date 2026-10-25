@@ -126,7 +126,7 @@ describe('bosses100 ON build', () => {
     expect(traits('champion')).toEqual(['ember', 'frost', 'chill'])
     expect(gk.gatekeeperEnemyConfigs(gk.gatekeeperStageFor('champion')).map(c => c.bossAbility)).toEqual(['partners', 'partners', 'partners'])
     expect(gk.gatekeeperEnemyConfigs(gk.gatekeeperStageFor('bronze'))).toEqual([
-      { topPartId: 'round', bottomPartId: 'tanky', topLevel: 2, bottomLevel: 2, modelId: 'piranha', isBoss: true, bossAbility: 'split' }
+      { topPartId: 'round', bottomPartId: 'tanky', topLevel: 2, bottomLevel: 2, modelId: 'nature', fxSkin: 'piranha', isBoss: true, bossAbility: 'split' }
     ])
     // Same function the arena uses for campaign stages.
     const { stageEnemyConfigs } = await import('@/use/stageBladeConfig')
