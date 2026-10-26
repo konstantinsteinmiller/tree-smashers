@@ -712,25 +712,32 @@ const clampTreeCount = (n: number): number => Math.max(1, Math.min(MAX_TREES_PER
 export const treeRadiusFor = (bladeRadius: number, count = 1): number =>
   Math.round(bladeRadius * TOWER_RADIUS_MUL * TREE_COUNT_RADIUS_MUL[clampTreeCount(count) - 1]!)
 
-/** Largest outline SDF of a disc (> 0: part of it is outside the wall). */
-const outlineMaxSdf = (shape: ArenaShape, R: number, x: number, y: number, r: number): number => {
+// The two outline tests below run inside 36-step bisections, 18 tree layouts per
+// arena shape (arenaProps towerKeepOut) — ~1 s of main thread per new stage on a
+// desktop, several on a weak phone (#Perf-1). Both stop sampling as soon as the
+// answer is decided; the samples, their order and the result are unchanged.
+
+/** Every outline sample of a disc has SDF <= `limit` (= the largest is). */
+const outlineWithin = (shape: ArenaShape, R: number, x: number, y: number, r: number, limit: number): boolean => {
   const N = 48
-  let m = -Infinity
   for (let i = 0; i < N; i++) {
     const a = (i / N) * Math.PI * 2
-    m = Math.max(m, sdf(shape, x + Math.cos(a) * r, y + Math.sin(a) * r, R))
+    if (sdf(shape, x + Math.cos(a) * r, y + Math.sin(a) * r, R) > limit) return false
   }
-  return m
+  return true
 }
 
-const insideShare = (shape: ArenaShape, R: number, x: number, y: number, r: number): number => {
+/** More than `share` of a disc's outline samples lie inside the wall. */
+const insideShareAbove = (shape: ArenaShape, R: number, x: number, y: number, r: number, share: number): boolean => {
   const N = 96
   let n = 0
   for (let i = 0; i < N; i++) {
     const a = (i / N) * Math.PI * 2
     if (sdf(shape, x + Math.cos(a) * r, y + Math.sin(a) * r, R) < 0) n++
+    if (n / N > share) return true
+    if ((n + N - 1 - i) / N <= share) return false
   }
-  return n / N
+  return n / N > share
 }
 
 /** The row a team launches from (initGame: y = ±0.4 R, 1–4 smashers spread
@@ -746,12 +753,29 @@ const SPAWN_CLEAR_GAP = 2
  *  inside the wall — unless the team's spawn row (regular disc `disc`) needs
  *  the room; never further out than the legacy set-into-the-wall spot
  *  (TOWER_INSIDE_SHARE of the outline inside). */
+/** Bisection steps per boundary search: the bracket is 1.5 R = 300 units, so
+ *  24 halvings land within 2e-5 units (36 used to, at 4e-9 — half again the
+ *  outline sampling for no visible or physical difference). */
+const BISECT_STEPS = 24
+
 const treeOnRay = (dir: number, theta: number, R: number, r: number, shape: ArenaShape, disc: number): { x: number; y: number } => {
+  // The spread search re-asks the same rays (the axis tree, the final spread).
+  const key = `${dir}:${theta}:${R}:${r}:${shape}:${disc}`
+  const hit = rayCache.get(key)
+  if (hit) return { ...hit }
+  const p = computeTreeOnRay(dir, theta, R, r, shape, disc)
+  if (rayCache.size > 65536) rayCache.clear()
+  rayCache.set(key, p)
+  return { ...p }
+}
+const rayCache = new Map<string, { x: number; y: number }>()
+
+const computeTreeOnRay = (dir: number, theta: number, R: number, r: number, shape: ArenaShape, disc: number): { x: number; y: number } => {
   const ux = Math.sin(theta)
   const uy = dir * Math.cos(theta)
   const bis = (ok: (m: number) => boolean, lo: number, hi: number): number => {
     // ok(lo) true, ok(hi) false → the boundary.
-    for (let i = 0; i < 36; i++) {
+    for (let i = 0; i < BISECT_STEPS; i++) {
       const m = (lo + hi) / 2
       if (ok(m)) lo = m
       else hi = m
@@ -759,8 +783,8 @@ const treeOnRay = (dir: number, theta: number, R: number, r: number, shape: Aren
     return lo
   }
   const top = R * 1.5
-  const mIn = bis(m => outlineMaxSdf(shape, R, ux * m, uy * m, r) <= -TOWER_WALL_GAP, 0, top)
-  const mLegacy = bis(m => insideShare(shape, R, ux * m, uy * m, r) > TOWER_INSIDE_SHARE, mIn, top)
+  const mIn = bis(m => outlineWithin(shape, R, ux * m, uy * m, r, -TOWER_WALL_GAP), 0, top)
+  const mLegacy = bis(m => insideShareAbove(shape, R, ux * m, uy * m, r, TOWER_INSIDE_SHARE), mIn, top)
   const need = r + disc + SPAWN_CLEAR_GAP
   const clear = (m: number): boolean => {
     for (const sx of SPAWN_ROW_XS) if (Math.hypot(ux * m - sx * R, uy * m - dir * SPAWN_ROW_Y * R) < need) return false
@@ -807,11 +831,29 @@ const computeTowerPositions = (
     for (let i = 0; i + 1 < p.length; i++) if (Math.hypot(p[i]!.x - p[i + 1]!.x, p[i]!.y - p[i + 1]!.y) < need) return false
     return true
   }
-  // Coarse steps, then back off in fine steps to the smallest spread.
+  // Coarse steps, then back off in fine steps to the smallest spread. The
+  // neighbours only move apart as the spread grows, so each grid is searched
+  // by bisection — same grid values (same float accumulation), same answer
+  // as the linear scan, a third of the rays.
+  const coarse: number[] = []
   let d = 0.02
-  while (d < 1.2 && !apart(spread(d))) d += 0.05
-  for (let f = Math.max(0.02, d - 0.05); f < d; f += 0.005) if (apart(spread(f))) return spread(f)
-  return spread(d)
+  for (; d < 1.2; d += 0.05) coarse.push(d)
+  d = firstOk(coarse, c => apart(spread(c))) ?? d
+  const fine: number[] = []
+  for (let f = Math.max(0.02, d - 0.05); f < d; f += 0.005) fine.push(f)
+  return spread(firstOk(fine, f => apart(spread(f))) ?? d)
+}
+
+/** First value of a sorted grid where a monotone predicate turns true. */
+const firstOk = (grid: readonly number[], ok: (v: number) => boolean): number | undefined => {
+  let lo = 0
+  let hi = grid.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (ok(grid[mid]!)) hi = mid
+    else lo = mid + 1
+  }
+  return grid[lo]
 }
 
 /** The single tree's centre: on the y axis just inside the team's own wall

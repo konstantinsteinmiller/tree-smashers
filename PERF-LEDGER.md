@@ -407,3 +407,28 @@ in time); the old shower re-assigned a Vue ref with `slice()` every tick.
 - CPU throttle is a blunt stand-in for a slow device: it does not model memory
   bandwidth, thermal throttling or a weak GPU independently.
 - No 3-minute thermal soak has been run yet.
+
+## 2026-10-26 — #Perf-1: the stage-start stall and the HP badges
+
+Method: production build, headless system Chrome, 412×915 @ DPR 2.75 with touch,
+CDP CPU throttle 4×, skip the intro, 15 s sampling (long tasks, rAF gaps, CPU
+profile; a dev-server rerun for function names). Micro A/Bs in a plain page.
+
+**Found:** an 8.1 s main-thread task right after the intro — arena prop layout →
+`towerKeepOut` → 18 tree layouts per shape → 2 × 36-step bisections × 48/96
+outline SDF samples per ray, up to ~100 rays per layout. 1116 ms per arena shape
+on this desktop, unthrottled (55 shapes measured).
+
+| change | result | kept |
+|---|---|---|
+| outline tests stop sampling once decided (`outlineWithin`, `insideShareAbove`) + memoised `treeOnRay` | 1116 → 570 ms/shape, output **bit-identical** (1980 discs, 55 shapes) | yes |
+| bisection 36 → 24 steps | 570 → 418 ms/shape, max tree shift 1.8e-5 units | yes |
+| spread search: bisection over the same coarse/fine grids | 418 → 249 ms/shape, **bit-identical** to the linear scan | yes |
+| next stage's prop layout computed in idle time during the current stage (`warmNextStageArt`) | moves the remaining ~250 ms (≈1 s on a weak phone) off the next stage start | yes |
+| HP badge baked per (number, team, flash, device scale) and blitted 1:1 on whole device pixels | 70 → 20 µs per badge; blur probe SHARP on both (0.230 sprite / 0.213 vector) | yes |
+| `ctx.font` re-assignment as the badge cost | 0.6 µs of the 70 — **null**, left alone | no |
+
+In game (4× throttle, after the intro skip): worst long task 8.1 s → 1.8–2.3 s,
+worst rAF gap 8.1 s → 1.9–2.4 s; the HP badge share of CPU 10 % → ~6 %. Not
+measured: a real Mali device (none here) — the steady-state fill cost at
+css × DPR is unchanged (no DPR cap, by the sharpness rule).

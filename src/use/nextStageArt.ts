@@ -10,6 +10,8 @@ import { preloadFloorArt } from '@/use/arenaFloorArt'
 import { borderKeyFor, preloadBorderArt } from '@/use/arenaBorderArt'
 import { floorKeyFor, themeFor } from '@/use/arenaThemes'
 import { layoutForStage } from '@/use/arenaTerrain'
+import { arenaPropLayout } from '@/use/arenaProps'
+import { TERRAIN_SHAPES } from '@/use/arenaShapes'
 
 /** No resource finished downloading within this window = the network is quiet. */
 export const QUIET_MS = 1200
@@ -46,6 +48,16 @@ const jobsFor = (stageId: number): Promise<void>[] => {
   const arenaType = stage.arenaType ?? 'default'
   const layout = layoutForStage(stage.id)
   const theme = themeFor(arenaType, layout)
+  // The prop layout is pure but costly (tree keep-out search, #Perf-1): fill its
+  // cache now, while the player is busy, so the next stage's first bake skips it.
+  // Same shape rule as useSpinnerGame's campaign start.
+  const shape = TERRAIN_SHAPES[((layout % TERRAIN_SHAPES.length) + TERRAIN_SHAPES.length) % TERRAIN_SHAPES.length]!
+  const idle = (cb: () => void): void => {
+    const ric = (window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+    if (ric) ric(cb, { timeout: 4000 })
+    else window.setTimeout(cb, 0)
+  }
+  idle(() => { try { void arenaPropLayout(theme, layout, shape) } catch { /* decorative */ } })
   return [
     preloadBackdropArt(theme),
     preloadFloorArt(floorKeyFor(theme, layout)),
