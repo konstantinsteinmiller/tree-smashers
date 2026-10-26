@@ -40,6 +40,7 @@
     "art:desk": "node tools/art-desk/server.mjs",
     "art:smashers": "node tools/smasher-sheets/export.mjs",
     "art:portraits": "node tools/smasher-sheets/portraits.mjs",
+    "art:skins": "node tools/smasher-sheets/paint-queue.mjs --skins",
     "leaderboard:snapshot": "node scripts/leaderboard-snapshot.mjs",
     "league:pool": "node scripts/league-pool-snapshot.mjs",
     "leaderboard:seed": "node scripts/generate-leaderboard-seed.mjs",

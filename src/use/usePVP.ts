@@ -1319,7 +1319,7 @@ if (CG_MULTIPLAYER) {
 
 const usePVP = () => {
   const canShowPvP = computed(() =>
-    isPvpEnabled && ((isSdkActive.value && isCrazyGamesFullRelease) || isDebug.value || window?.location.host === 'konstantinsteinmiller.github.io')
+    isPvpEnabled && ((isSdkActive.value && isCrazyGamesFullRelease) || isDebug.value || (window?.location.host === (import.meta.env.VITE_APP_WEB_HOST ?? 'konstantinsteinmiller.github.io') && !!window?.location.host))
   )
 
   const bothReady = computed(() => hostReady.value && guestReady.value)
