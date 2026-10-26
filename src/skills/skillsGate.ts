@@ -85,6 +85,16 @@ export const loadSmasherSkillText = (): Promise<SmasherSkillTextModule | null> =
 export const loadSkillSfx = (): Promise<SkillSfxModule | null> =>
   SKILLS_BUILD ? import('@/use/skills/skillSfx') : Promise.resolve(null)
 
+export type SmasherSkillArtModule = typeof import('@/use/skills/smasherSkillArt')
+
+/** The painted skill-icon table + url helper (menu pre-warm fetches the 128 px icons). */
+export const loadSmasherSkillArt = (): Promise<SmasherSkillArtModule | null> =>
+  SKILLS_BUILD ? import('@/use/skills/smasherSkillArt') : Promise.resolve(null)
+
+/** The skill medallion component itself, for warming its chunk (the handle `SkillIconUi` is lazy). */
+export const loadSkillIconChunk = (): Promise<unknown> =>
+  SKILLS_BUILD ? import('@/components/atoms/SkillIcon.vue') : Promise.resolve(null)
+
 export type IntroSkillsModule = typeof import('@/use/skills/introSkills')
 
 /** The first-launch intro's skill showcase (battle skill VFX, callouts, SFX).

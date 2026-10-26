@@ -258,10 +258,10 @@ describe('build config', () => {
   })
 
   // The .env files are git-ignored, so this only runs where they exist.
-  it('the base .env ships the league off at stage 13 and not kids; dev unlocks at 13 too; Tauri + GD are kids', () => {
+  it('the base .env sets the league flag to an exact true/false, unlocks at stage 13 and is not kids; dev unlocks at 13 too; Tauri + GD are kids', () => {
     const env = (f: string) => { try { return read(path.join(ROOT, f)) } catch { return null } }
     const expected: [string, string, string][] = [
-      ['.env', 'VITE_APP_FEATURE_LEAGUE', 'false'],
+      ['.env', 'VITE_APP_FEATURE_LEAGUE', '(?:true|false)'],
       ['.env', 'VITE_APP_LEAGUE_UNLOCK_STAGE', '13'],
       ['.env', 'VITE_APP_KIDS', 'false'],
       ['.env.development', 'VITE_APP_FEATURE_LEAGUE', 'true'],

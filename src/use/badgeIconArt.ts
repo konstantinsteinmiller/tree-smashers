@@ -13,8 +13,12 @@ const artAllowed = (): boolean =>
   typeof location === 'undefined' || !/[?&]art=procedural(?:&|$)/.test(location.search)
 
 /** Path under public/ of the icon: the listed repaint (cache-keyed), else `fallback`. */
-export const badgeIconPath = (name: BadgeIconName, fallback: string): string => {
-  const p = PAINTED_BADGE_ICONS[name]
+export const badgeIconPath = (
+  name: BadgeIconName,
+  fallback: string,
+  table: Readonly<Partial<Record<BadgeIconName, { file: string, v: string }>>> = PAINTED_BADGE_ICONS
+): string => {
+  const p = table[name]
   return p && artAllowed() ? `${p.file}?v=${p.v}` : fallback
 }
 

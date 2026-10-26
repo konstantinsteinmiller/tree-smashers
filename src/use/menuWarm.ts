@@ -5,17 +5,18 @@
 // every batch waits for a quiet network — and gives up silently on save-data / 2g / hidden tabs.
 import { RELEASED_SMASHER_IDS } from '@/data/smasherCatalog'
 import { preloadPaintedSmashers } from '@/smashers/smasherAtlas'
-import { paintedSkillIconUrl, SMASHER_SKILL_ART } from '@/use/skills/smasherSkillArt'
-import { SKILLS_BUILD } from '@/skills/skillsGate'
+import { loadSkillIconChunk, loadSmasherSkillArt } from '@/skills/skillsGate'
 import { whenNetworkQuiet } from '@/use/nextStageArt'
 
 const BATCH = 4
 let started = false
 
 /** The 128 px skill icons (a few KB each) — all of them in one go before the sheets. */
-const warmSkillIcons = (): void => {
-  for (const key of Object.keys(SMASHER_SKILL_ART)) {
-    const url = paintedSkillIconUrl(key)
+const warmSkillIcons = async (): Promise<void> => {
+  const art = await loadSmasherSkillArt()
+  if (!art) return
+  for (const key of Object.keys(art.SMASHER_SKILL_ART)) {
+    const url = art.paintedSkillIconUrl(key)
     if (url) new Image().src = url
   }
 }
@@ -27,8 +28,8 @@ export const warmMenusWhenIdle = (first: readonly string[] = []): void => {
   const order = [...new Set([...first, ...RELEASED_SMASHER_IDS])] as typeof RELEASED_SMASHER_IDS[number][]
   void (async () => {
     if (!(await whenNetworkQuiet())) { started = false; return }
-    if (SKILLS_BUILD) void import('@/components/atoms/SkillIcon.vue').catch(() => { /* decorative */ })
-    if (SKILLS_BUILD) warmSkillIcons()
+    void loadSkillIconChunk().catch(() => { /* decorative */ })
+    void warmSkillIcons().catch(() => { /* decorative */ })
     for (let i = 0; i < order.length; i += BATCH) {
       const batch = order.slice(i, i + BATCH)
       preloadPaintedSmashers(batch)

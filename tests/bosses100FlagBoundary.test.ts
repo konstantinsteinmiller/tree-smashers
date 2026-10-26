@@ -143,7 +143,7 @@ describe('rule 3 — the boundary modules pull in nothing obfuscated', () => {
     for (const file of BOUNDARY_DATA) {
       for (const imp of importsOf(src(file))) {
         if (imp.typeOnly) continue
-        if (file === 'src/data/bossArt.ts' && (imp.spec === '@/utils/function' || imp.spec === '@/use/badgeIconArt')) continue // the shared URL helper + the painted-badge path helper
+        if (file === 'src/data/bossArt.ts' && (imp.spec === '@/utils/function' || imp.spec === '@/use/badgeIconArt' || imp.spec === '@/use/paintedBossBadges')) continue // the shared URL helper + the painted-badge path helpers
         bad.push(`${file} → ${imp.spec}`)
       }
     }
@@ -277,7 +277,7 @@ describe('build config', () => {
     expect(config).toMatch(/if \(!bosses100Build\) \{\n\s+plugins\.push\(\{\n\s+name: 'strip-boss-trait-sfx'/)
   })
 
-  it('the base .env ships the feature off; dev and CrazyGames opt in', () => {
+  it('the base .env sets the flag to an exact true/false (the rollout value is not pinned here); dev and CrazyGames opt in', () => {
     const env = (f: string) => {
       try {
         return read(path.join(ROOT, f))
@@ -285,9 +285,12 @@ describe('build config', () => {
         return null
       }
     }
-    for (const [file, value] of [['.env', 'false'], ['.env.development', 'true'], ['.env.crazy-web.local', 'true']]) {
+    for (const [file, value] of [['.env', '(?:true|false)'], ['.env.development', 'true']]) {
       const text = env(file!)
       if (text !== null) expect(text, file).toMatch(new RegExp(`^VITE_APP_FEATURE_BOSSES100=${value}$`, 'm'))
     }
+    // CrazyGames inherits the base value; it may only ever override it to "true".
+    const crazy = env('.env.crazy-web.local')
+    if (crazy !== null) expect(crazy).not.toMatch(/^VITE_APP_FEATURE_BOSSES100=false$/m)
   })
 })

@@ -103,7 +103,10 @@ export const FLAGS = {
       /^Boss(IntroCard|TraitGlyph|TrophyCard|LabModal)$/,
       /^boss(TraitEngine|Traits|TraitVfx|TraitSfx|ArenaUi|Lab|Encounters|Art)$/
     ],
-    publicFiles: [/(^|\/)audio\/sfx\/boss-[^/]+$/, /(^|\/)images\/boss-badges\//]
+    publicFiles: [/(^|\/)audio\/sfx\/boss-[^/]+$/, /(^|\/)images\/boss-badges\//],
+    // The league gatekeepers wear the boss crests, so the crest PATH legitimately lives in the
+    // league's chunks (the league flag is independent). Marker → chunk stems it may appear in.
+    allowIn: { 'boss-badges/': [/^league/] }
   },
   league: {
     env: 'VITE_APP_FEATURE_LEAGUE',
@@ -246,7 +249,9 @@ export function scanBuild(dir, def) {
       if (def.chunks.some(re => re.test(stem))) featureChunks.push({ file: rel, bytes })
     }
     if (isJs && isLocaleChunk(base)) continue // allowed residue
+    const stemOf = base.replace(/-[A-Za-z0-9_-]{6,}\.js$/, '')
     for (const m of def.markers) {
+      if (isJs && def.allowIn?.[String(m)]?.some(re => re.test(stemOf))) continue
       const n = countMatches(text, m)
       if (n > 0) hits.push({ file: rel, marker: String(m), count: n })
     }

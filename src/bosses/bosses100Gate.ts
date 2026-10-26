@@ -42,6 +42,10 @@ export const BOSSES100_BUILD: boolean = import.meta.env.VITE_APP_FEATURE_BOSSES1
 export const BossIntroCardUi = BOSSES100_BUILD
   ? defineAsyncComponent(() => import('@/components/atoms/BossIntroCard.vue'))
   : null
+/** "Next boss" peek on the win screen (badge + trait glyphs). */
+export const BossPeekBadgeUi = BOSSES100_BUILD
+  ? defineAsyncComponent(() => import('@/components/atoms/BossPeekBadge.vue'))
+  : null
 /** Trait glyph (ember / frost / chill) — stat-card chips, peek glyph row. */
 export const BossTraitGlyphUi = BOSSES100_BUILD
   ? defineAsyncComponent(() => import('@/components/atoms/BossTraitGlyph.vue'))

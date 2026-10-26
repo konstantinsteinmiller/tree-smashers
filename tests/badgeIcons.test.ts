@@ -5,6 +5,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PAINTED_BADGE_ICONS, type BadgeIconName } from '@/use/paintedBadgeIcons'
+import { PAINTED_BOSS_BADGES } from '@/use/paintedBossBadges'
 import { MOVIE_ICON_FALLBACK, badgeIconPath, movieIconPath } from '@/use/badgeIconArt'
 import { BOSS_ART, bossBadgeFile, type BadgedBossId } from '@/data/bossArt'
 // @ts-expect-error — plain .mjs tool module, no types
@@ -13,6 +14,7 @@ import { ICONS, promptFor } from '../tools/badge-icons/prompts.mjs'
 const ROOT = path.resolve(__dirname, '..')
 const read = (p: string) => readFileSync(path.join(ROOT, p), 'utf8')
 const NAMES = Object.keys(ICONS) as BadgeIconName[]
+const ALL_PAINTED = { ...PAINTED_BADGE_ICONS, ...PAINTED_BOSS_BADGES }
 
 describe('badge icon registry (tools/badge-icons/pack.mjs output)', () => {
   it('names exactly the icons the prompts define, one per boss badge', () => {
@@ -22,7 +24,7 @@ describe('badge icon registry (tools/badge-icons/pack.mjs output)', () => {
   })
 
   it('points every painted entry at a webp of the shipped box size, with a hash', () => {
-    for (const [name, p] of Object.entries(PAINTED_BADGE_ICONS)) {
+    for (const [name, p] of Object.entries(ALL_PAINTED)) {
       const [w, h] = ICONS[name].size
       expect(p!.file, name).toBe(`images/${ICONS[name].file}/painted-${name}_${w}x${h}.webp`)
       expect(p!.v, name).toMatch(/^[0-9a-f]{8}$/)
@@ -36,8 +38,8 @@ describe('badge icon registry (tools/badge-icons/pack.mjs output)', () => {
 describe('fallback to the old files', () => {
   it('an unpainted icon resolves to its old file; a painted one to the repaint, cache-keyed', () => {
     for (const name of NAMES) {
-      const p = PAINTED_BADGE_ICONS[name]
-      expect(badgeIconPath(name, 'old.webp')).toBe(p ? `${p.file}?v=${p.v}` : 'old.webp')
+      const p = ALL_PAINTED[name]
+      expect(badgeIconPath(name, 'old.webp', ALL_PAINTED)).toBe(p ? `${p.file}?v=${p.v}` : 'old.webp')
     }
   })
 

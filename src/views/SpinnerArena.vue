@@ -37,6 +37,7 @@ import { SkillHudChipUi as SkillHudChip } from '@/skills/skillsGate'
 // The Boss Lab is additionally DEV-only (the cheat gate sits on top).
 import {
   BossIntroCardUi,
+  BossPeekBadgeUi,
   BossTraitGlyphUi,
   BossTrophyCardUi,
   BossLabUi
@@ -137,7 +138,6 @@ import usePvpStats, { calcHonorPoints } from '@/use/usePvpStats'
 import useLeaderboard, { playerMaxStage, type LeaderboardEntry } from '@/use/useLeaderboard'
 import LeaderboardModal from '@/components/organisms/LeaderboardModal.vue'
 import RankBadge from '@/components/atoms/RankBadge.vue'
-import BossPeekBadge from '@/components/atoms/BossPeekBadge.vue'
 import { getBossPeek, battleModeOf, type BattleMode, type BossPeek } from '@/use/bossPeek'
 import { shouldShowBossDefeated } from '@/use/bossDefeated'
 import BossDefeatedBanner from '@/components/atoms/BossDefeatedBanner.vue'
@@ -3403,7 +3403,7 @@ onUnmounted(() => {
             //- stages after each boss (and stages 1-2). `bossPeek` is null for
             //- every other result, so this never shows on a lose screen, a
             //- ghost fight or a boss's own win (that one is the roulette).
-            BossPeekBadge.reward-peek(v-if="bossPeek && gameResult === 'win'" :peek="bossPeek")
+            component.reward-peek(:is="BossPeekBadgeUi" v-if="BossPeekBadgeUi && bossPeek && gameResult === 'win'" :peek="bossPeek")
         //- "[movie] 3x [coin]" — non-boss win screens, ad builds only. Pays
         //- the base twice more so the label above ends on 3x of it.
         component(
