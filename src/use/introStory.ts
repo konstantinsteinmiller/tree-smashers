@@ -55,8 +55,9 @@ export const BEAT = {
   end: 16.1
 } as const
 
-/** When Skip appears (and Esc works). */
-export const SKIP_APPEARS_T = 1.0
+/** When Skip appears (and Esc works): at once, so it is never unavailable (not even while the
+ *  stage art is still loading and the story clock has not started). */
+export const SKIP_APPEARS_T = 0
 /** A skip fades the whole intro out over this long. */
 export const SKIP_FADE_S = 0.35
 /** The live arena starts drawing again under the (opaque) title card this

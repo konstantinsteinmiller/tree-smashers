@@ -239,7 +239,8 @@ const frame = (now: number): void => {
   const dt = lastNow ? Math.min(0.25, Math.max(0, (now - lastNow) / 1000)) : 0
   lastNow = now
   const prev = T.value
-  if (started && !holding && !isGamePaused.value) T.value = prev + dt
+  // A skip fades out on the clock even if the story never started (art still loading).
+  if ((started || skipping.value) && !holding && !isGamePaused.value) T.value = prev + dt
   const t = T.value
   ov.value = overlayAt(t, ov.value)
   if (!introRevealArena.value && t >= REVEAL_ARENA_T) introRevealArena.value = true
