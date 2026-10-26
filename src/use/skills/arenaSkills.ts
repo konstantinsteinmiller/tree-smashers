@@ -22,6 +22,8 @@ import type { InitGameOptions, SkillHudRows } from '@/use/useSpinnerGame'
 import type { BattleMode } from '@/use/bossPeek'
 import type { LeaderboardEntry } from '@/use/useLeaderboard'
 import { skillLevelSum } from '@/use/loadoutSanitizer'
+import { smasherLoadout } from '@/data/smasherCatalog'
+import type { SpinnerConfig } from '@/types/spinner'
 import { ghostSkillLoadout } from '@/use/skills/ghostSkills'
 import { requestSkillBattleSfx } from '@/use/skills/skillSfx'
 
@@ -63,10 +65,12 @@ export function useArenaSkills(ctx: ArenaSkillsContext) {
     }
   }
 
-  /** Σ skill levels of both PvP side loadouts — honour counts 0.8 per level. */
-  const pvpHonorSkillLevels = (): { mine: number; theirs: number } => {
+  /** Σ skill levels per side — honour counts 0.8 per level. The smashers' own
+   *  skills (`smasherLoadout` per blade) plus any side loadout (legacy peers). */
+  const pvpHonorSkillLevels = (myTeam: readonly SpinnerConfig[], enemyTeam: readonly SpinnerConfig[]): { mine: number; theirs: number } => {
     const { mine, theirs } = pvpLoadouts()
-    return { mine: skillLevelSum(mine), theirs: skillLevelSum(theirs) }
+    const teamSum = (team: readonly SpinnerConfig[]) => team.reduce((s, c) => s + skillLevelSum(smasherLoadout(c)), 0)
+    return { mine: skillLevelSum(mine) + teamSum(myTeam), theirs: skillLevelSum(theirs) + teamSum(enemyTeam) }
   }
 
   /** PvP start: both side loadouts for initGame. */

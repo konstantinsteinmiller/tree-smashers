@@ -1429,7 +1429,7 @@ watch(isGameOver, (over) => {
           team.reduce((s, c) => s + (c.topLevel ?? 1) + (c.bottomLevel ?? 1), 0)
         // Skill levels count toward honour (§9.1): 0.8 part level per skill
         // level — both 0 on a skills-off build.
-        const honorSkills = sk.value?.pvpHonorSkillLevels() ?? { mine: 0, theirs: 0 }
+        const honorSkills = sk.value?.pvpHonorSkillLevels(myTeam, enemyTeam) ?? { mine: 0, theirs: 0 }
         if (gameResult.value === 'win') {
           const hp = calcHonorPoints(
             sumLevels(myTeam),
