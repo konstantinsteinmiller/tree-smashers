@@ -1,4 +1,5 @@
 import { smasherPortraitUrl } from '@/smashers/smasherAtlas'
+import { smasherForSkin } from '@/smashers/smasherSkins'
 import type { SmasherId } from '@/data/smasherCatalog'
 import { isSmasherSkin } from '@/data/smasherSkinCatalog'
 import { type Element, ELEMENTS } from '@/utils/enums'

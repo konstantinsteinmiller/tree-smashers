@@ -322,7 +322,7 @@ Were held back by the release gate until 2026-10-25 (Humphrey, Boxa, Howler, Sna
 - [x] #Consistency-10 Remaining stages (41/58/77) and menus (upgrade modal, skins, league) still to be audited.
 
 
-- [ ] #Perf-1 (2026-10-25 partial: no Mali device here; headless-Chrome phone emulation at DPR 2.75, 4× CPU throttle, stage 6, 15 s: high tier 5.9–6.8 fps (p95 370–400 ms), low tier 8.1–8.8 fps (p95 250 ms) — the existing low tier buys ~35 %, the canvas is fill-bound at css × DPR (≈3 M px at 3×) and the scene stalls (max 1.5–2 s) at start; levers NOT taken because they trade sharpness: a DPR cap for weak GPUs, a lower-res animated layer split. Needs a decision + a real-device trace)
+- [~] #Perf-1 (2026-10-26: the 8 s stage-start freeze was the tree keep-out search for the prop layout — 4.5× faster, bit-identical trees, and the next stage computes it in idle time; HP badges baked to sprites, 3.5× cheaper, still SHARP. Worst stall at 4× throttle 8.1 s → ~2 s; see PERF-LEDGER 2026-10-26. Still open: a real Mali trace for the steady-state fill cost. Earlier: 2026-10-25 partial: no Mali device here; headless-Chrome phone emulation at DPR 2.75, 4× CPU throttle, stage 6, 15 s: high tier 5.9–6.8 fps (p95 370–400 ms), low tier 8.1–8.8 fps (p95 250 ms) — the existing low tier buys ~35 %, the canvas is fill-bound at css × DPR (≈3 M px at 3×) and the scene stalls (max 1.5–2 s) at start; levers NOT taken because they trade sharpness: a DPR cap for weak GPUs, a lower-res animated layer split. Needs a decision + a real-device trace)
   1.) The game showed 13 fps on this tablet device:
   WebGL Renderer:  Mali-G68
   navigator.hardwareConcurrency:  8
@@ -356,7 +356,6 @@ Were held back by the release gate until 2026-10-25 (Humphrey, Boxa, Howler, Sna
 - [x] Terrain features repainted in the flat toy style (booster speed pad + leaf arrow, stump, rock, pond, mushroom, mud, hole, honey) — old sheet in `art-sheets/painted/stale/terrain-features.v1-*.png`; `slice-painted.mjs --max-aspect 1.6` accepted the squat leaf
 - [ ] Wavedash leaderboard: the SDK init now finds `window.Wavedash` and failed SDK calls warn in the console (`[Wavedash leaderboard]`); NOT yet confirmed on a live `wavedash dev` — rebuild `wavedash-dist` first (`dev:wavedash` serves the last build)
 
-
   - 2026-10-25: #3 trees graded per theme (towerArt.ts TREE_GRADE, ctx.filter — Safari stays ungraded); #4/#5 arrows + honey hue-graded per theme (arenaTerrainDraw.ts); #6 pumice dome repainted brown (only cell 8 taken from a new Gemini sheet — a text-only repaint of the full sheet comes back side-on, so the old v1 sheet is kept in painted/terrain-obstacles-a.v1-cratered.png); #7 tree HP gauges drawn above smashers/balloons.
 
   - 2026-10-25: #8 baked depth haze over the backdrop (arenaBackdrop.ts paintDepthHaze); #9 trees mirror / ±5 % size by position hash (towerArt variant param), smasher outline weight checked on the 48-portrait contact sheet (consistent); wall flower tiles still repeat visibly — needs more painted tile variants; #10 stages 58 / 77 + Team modal viewed.
@@ -369,5 +368,43 @@ Were held back by the release gate until 2026-10-25 (Humphrey, Boxa, Howler, Sna
 - [ ] Poki gate WARNs: external hosts `scripts.sil.org` / `openfontlicense.org` (only text inside the bundled OFL font licences, never requested) and total size 28 MB vs the 8 MB guideline (initial download is 0.63 MB; smasher + skin sheets load lazily)
 
 - [ ] Battle sharpness (probe 2026-10-26, battle scene after the intro): SHARP 0.204 at DPR 1, SOFT 0.174 / 0.164 / 0.178 at DPR 1.5 / 2 / 3 (canvas ratio 1.00 everywhere, so nothing is stretched — the soft share is the 256 px smasher cells and 512-class art drawn above native). Only a repaint at a higher native size fixes it; revisit if players report soft smashers on phones
+
 - [ ] Base smasher sheet QA (audit-painted.mjs 2026-10-26; 0 broken frames, but 18 of 48 sheets carry a warning) — repaint after the skin queue, worst first, BEFORE the trailer: thumper (part b is a different look: darker outline, paler blue; faces wrong in frames 0-5), snapjaw, flamenca, zippy, bambam, inky (frame 15 faces wrong), tuskar (frame 8), digger (frame 5), grizzle (frame 4); milder halves-differ: bandit, boxa, howler, leon, pecks, snooze, vixie, waddles, wallow
 - [ ] Poki payload (2026-10-26): smasher sheets are the biggest group (11 MB of 22 MB images in the build, +~7 MB when all 48 skins ship), backgrounds 4 MB, audio 4 MB; all lazy, initial download 0.63 MB. Only worth cutting if Poki enforces the 8 MB guideline — options: drop the skin sheets of skins that cannot be earned on Poki, or a q 0.70 re-encode (~20 % smaller, visible on the soft painterly sheets)
+- [ ] #147 The game needs a full level consistency check with headed browser, use 3 Sonnet agents in parallel playing each story and side mission level map once. So not every agent plays the game, I just need every level covered by exactly one agent. One desktop, one mobile portrait, one mobile landscape player. Mute sounds.
+  The Playtesters are not blind and know how to control the player well on desktop and mobile.
+  How hard is the game? is it fun? What is hindering the fun from developing? Are there structural inconsistencies in the game? Is the tree as a seperate defeatable unit a bad game design choice or is it making it more interesting and more versatile?
+  Have the playtesters found and used the options to upgrade and change team compositions? The playtesters should play at least past level 11 and then submit their report.
+  Collect all findings in a structured browser report and add the findings here in the roadmap.md as new bullet points to fix 
+  later as #playtest-2-1...XXX bullet points.
+  In the end I want the subagents to find all issues in the game that would deminish its polished value to a gaming audience and help make the game flow better to reduce player drop-offs.
+  Run 1 done 2026-10-26 (A desktop 1-34: 31/34 won; B portrait 35-67 + 8 league: 30/33; C landscape 68-100: 26/33). Bot-aimed real input, German UI. Findings below; raw data in the session scratchpad playtest/{A,B,C}/findings.json.
+
+#### Playtest run 1 findings (2026-10-26)
+- [ ] #playtest-1-1 BLOCKER Battle Pass and daily-gift buttons do nothing: `ReferenceError: smasherForSkin is not defined` at `skinNameKey` (src/use/useModels.ts:40, missing import). Both show a red "!" (A, C)
+- [ ] #playtest-1-2 Boss walls with no curve: 13, 20, 25 (A), 40, 50, 55 (B), 75, 80, 85, 87, 88, 95, 100 (C) unwon in 3-6 tries, while 45, 60, 65, 90 fall in a few turns. Needs one difficulty curve for boss tree HP / boss HP vs expected team level — batch into the balance-sim list, not a per-change sim
+- [ ] #playtest-1-3 Boss 90 (Midnight Bat King) is trivial: 96 HP, 59 HP trees, dies in 3 turns between walls 88 and 95 — likely a tuning slip (C)
+- [ ] #playtest-1-4 Upgrade economy flat: Lv 11 level-up (531 coins) gives ~+4 %; Lv 33 costs 5416 while wins pay 400-600; 30k coins ≈ 33 levels, 80k ≈ +25. Upgrades stop mattering after ~stage 75 (A, B, C)
+- [ ] #playtest-1-5 Fights drag: 40-turn / 3+ min stalemates (A st.18), 117-152 launches / 9-12 min (B st.37, 50), 35-55 turns late game (C). Consider a turn cap / sudden death / tree decay
+- [ ] #playtest-1-6 Win condition vs tree is unclear: stages 35/36 declare BOSS BESIEGT with the enemy tree at 108 HP, stage 1 shows no tree at all; the tree rule is never taught (A, B)
+- [ ] #playtest-1-7 Multi-tree stages (2-3 trees, 500-1400 HP) become slogs and clutter the arena; tree HP imbalance decides trio boss fights (A, C)
+- [ ] #playtest-1-8 Stuck state after boss 5: a click during the reward "Dreht..." step left a dead game_over on stage 6 (arena + Escape unresponsive, reload fixes). Seen once (A)
+- [ ] #playtest-1-9 Stage 2 tutorial dims the whole arena without explanation, forces a Bramble→Thumper swap and asks for a 192-coin level-up while the player holds 100 (A)
+- [ ] #playtest-1-10 Phone: Team modal's LEVEL UP sits ~2000 css px below the grid (after all 48 cards incl. locked), the how-to hint is at the very bottom; landscape shows ~2 rows and LEVEL UP scrolls away; rarity chips clipped at the right (B, C)
+- [ ] #playtest-1-11 Free 2× gift buff silently doubles stats in the first fight (HP 460/ATK 6.7 → 230/3.4 next stage) with no UI saying why (C)
+- [ ] #playtest-1-12 Landscape battle HUD: three stat cards + "Tap a smasher, then drag" hint cover much of the 390 px arena; skill ring overlaps the Smasher 3 card title (C)
+- [ ] #playtest-1-13 Tree HP and smasher HP badges overlap ("28" over "37") on trio and boss stages; swarm bosses 55/85 (~40 minions) make all numbers unreadable and boss 85 hides its tree behind the boss (A, B, C)
+- [ ] #playtest-1-14 Boss win shows "3x +3825" with no ad choice while the coins are already in the HUD (C)
+- [ ] #playtest-1-15 No help after repeated losses (same loss tip every time); new legendaries unlocked at 72/77/82/87/92/98 start at Lv 1 and are useless to a late team (A, C)
+- [ ] #playtest-1-16 Reward ribbon text clipped by the +coins chip ("BELOHNUN") on win and lose screens (B)
+- [ ] #playtest-1-17 Phone HUD touch targets 37-38 px; 1×/2× speed toggle 38×29 px — raise to ≥44 px (B)
+- [ ] #playtest-1-18 Virtual joystick is drawn on desktop mouse drags over the stat card; desktop copy mixes "Tippen" and "Klicke" (A)
+- [ ] #playtest-1-19 Solo/Duo/Trio choice persists silently into the campaign while league always uses 2 smashers — unexplained (B)
+- [ ] #playtest-1-20 League: opponent cards empty ~3 s after opening, extra tap-to-start per fight; anonymous opponents and 0 LP loss at Holz III give low stakes; League button visible at 35 but unlock popup at 37 (A, B)
+- [ ] #playtest-1-21 Stage 3 can be won with zero input (the opening meteor shower kills the lone enemy) (A)
+- [ ] #playtest-1-22 Thin dark ~7 px strip at the right edge during portrait battles (B)
+- [ ] #playtest-1-23 Boss 40 "Das Geisterhörnchen" (ghost squirrel) art reads as a bear (B)
+- [ ] #playtest-1-24 Mixed German/English labels in a German UI (B)
+- [ ] #playtest-1-25 Arena frames rate SOFT/BLURRY at DPR 1.5 (stage 1 arena 0.083, reward overlay mid-animation); UI modals SHARP — overlaps the open battle-sharpness bullet above; recheck with blur-probe live (A, C)
+- [ ] #playtest-1-26 First minutes: ~40 s intro plus unexplained stage 2 dim are the weakest stretch for drop-off (A)
+
