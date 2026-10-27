@@ -53,6 +53,7 @@ import { trophySkinFirstStage } from '@/data/bossEncounters'
 import { useLongPressPeek } from '@/use/useLongPressPeek'
 import FSkinPeek from '@/components/molecules/FSkinPeek.vue'
 import { SMASHER_SKINS, smasherOfSkinId, smasherSkinIdOf } from '@/data/smasherSkinCatalog'
+import { LEAGUE_BUILD } from '@/league/leagueGate'
 
 // ─── Team modal: the smasher roster + the 1–3 slot team ────────────────────
 //
@@ -765,6 +766,8 @@ onBeforeUnmount(() => window.clearTimeout(peekTimer))
               span.size-num.game-text(aria-hidden="true") {{ n }}
               span.size-lock.game-text(v-if="n > openSlots" aria-hidden="true") 🔒 {{ t('teamSizeLocked', { n: teamSlotWinStage(n) }) }}
           p.team-size-rule(data-testid="team-size-rule") {{ t(sizeRuleKey(teamSize)) }}
+          //- #playtest-1-19: the pick is saved for the campaign; league fights stay 2 v 2.
+          p.team-size-note(v-if="LEAGUE_BUILD" data-testid="team-size-note") {{ t('teamSizeLeagueNote') }}
 
         div.team-slots(:style="{ '--slots': MAX_TEAM_SIZE }")
           div.team-slot-cell(v-for="i in MAX_TEAM_SIZE" :key="'slot-' + (i - 1)")
@@ -955,6 +958,34 @@ onBeforeUnmount(() => window.clearTimeout(peekTimer))
             span.stat-row-value.game-text {{ r.value }}
             span.stat-row-next.game-text(v-if="r.next") ▸ {{ r.next }}
 
+        //- The three unique skills
+        h3.label-section(v-if="SKILLS_BUILD") {{ t('skillsLabel') }}
+        div.skill-list(v-if="SKILLS_BUILD" data-testid="smasher-skills")
+          div.skill-row.ui-pop-in(
+            v-for="row in skillRows"
+            :key="row.skill.id"
+            :style="{ '--i': row.slot + 3 }"
+            :class="{ 'is-locked': row.locked }"
+            :data-testid="'skill-' + row.skill.id"
+          )
+            component(v-if="SkillIconUi" :is="SkillIconUi" :id="row.skill.effect" :skill-key="row.skill.id" :size="36" decorative)
+            div.skill-text
+              div.skill-head
+                span.skill-name.game-text {{ row.name }}
+                span.skill-lv.game-text(v-if="!row.locked") {{ t('skillLevel', { n: row.level }) }}
+                span.skill-lock.game-text(v-else) 🔒 {{ t('unlocksAtLevel', { n: row.unlockAt }) }}
+              div.skill-desc(v-if="row.desc") {{ row.desc }}
+
+        p.hint-text {{ t('hintTeam') }}
+
+      //- #playtest-1-10: the action dock is a sibling of both columns and sticks to the bottom of the
+      //- modal's scroller, so LEVEL UP stays next to the pick however far down the roster it was made.
+      div.action-dock(data-testid="smasher-action-dock")
+        div.dock-who(aria-hidden="true")
+          img.dock-portrait(:src="portraitOf(selectedId)" alt="" draggable="false")
+          span.dock-name.game-text {{ t('smasher_' + selectedId) }}
+          span.lv-badge.game-text(v-if="unlocked(selectedId)")
+            span {{ t('levelShort', { n: selectedLevel }) }}
         //- Level up / recruit state / team placement
         div.action-row
           template(v-if="unlocked(selectedId)")
@@ -1025,26 +1056,6 @@ onBeforeUnmount(() => window.clearTimeout(peekTimer))
               data-testid="smasher-unlock-hint"
             ) {{ adBlockedHint ?? t('adNoReward') }}
           div.lock-banner.game-text(v-else) 🔒 {{ t('lockedUntilStage', { n: SMASHERS[selectedId].unlockStage }) }}
-
-        //- The three unique skills
-        h3.label-section(v-if="SKILLS_BUILD") {{ t('skillsLabel') }}
-        div.skill-list(v-if="SKILLS_BUILD" data-testid="smasher-skills")
-          div.skill-row.ui-pop-in(
-            v-for="row in skillRows"
-            :key="row.skill.id"
-            :style="{ '--i': row.slot + 3 }"
-            :class="{ 'is-locked': row.locked }"
-            :data-testid="'skill-' + row.skill.id"
-          )
-            component(v-if="SkillIconUi" :is="SkillIconUi" :id="row.skill.effect" :skill-key="row.skill.id" :size="36" decorative)
-            div.skill-text
-              div.skill-head
-                span.skill-name.game-text {{ row.name }}
-                span.skill-lv.game-text(v-if="!row.locked") {{ t('skillLevel', { n: row.level }) }}
-                span.skill-lock.game-text(v-else) 🔒 {{ t('unlocksAtLevel', { n: row.unlockAt }) }}
-              div.skill-desc(v-if="row.desc") {{ row.desc }}
-
-        p.hint-text {{ t('hintTeam') }}
 
   //- ── Skin Picker Modal ───────────────────────────────────────────────────
   FModal(
@@ -1347,6 +1358,15 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   text-align: center
   color: var(--color-berry-700)
 
+.team-size-note
+  margin: 0
+  font-size: 0.68rem
+  font-weight: 700
+  line-height: 1.2
+  text-align: center
+  color: var(--ui-text)
+  opacity: 0.8
+
 .team-size-rule
   margin: 0
   font-size: 0.78rem
@@ -1597,8 +1617,11 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 // a small navy counter.
 .roster-filters
   display: flex
+  // #playtest-1-10: wrap to a second row instead of clipping the rarity chips at the right edge
+  // (7 chips ≈ 730 px never fit one row on a phone, and the cut-off chips read as broken).
+  flex-wrap: wrap
   justify-content: safe center
-  gap: 0.35rem
+  gap: 0.55rem 0.35rem
   margin: 0.2rem -0.25rem 0.6rem
   padding: 0.45rem 0.45rem 0.55rem
   overflow-x: auto
@@ -2062,6 +2085,58 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   min-width: 3rem
 
 // ── Actions ────────────────────────────────────────────────────────────────
+// #playtest-1-10: sticky dock at the bottom of the modal scroller (its containing block is the whole
+// .team-layout, so it stays in view while the roster scrolls) naming the pick it acts on.
+.action-dock
+  position: sticky
+  bottom: 0
+  // Above the roster cards' level chips (z 20) and pop-in transforms.
+  z-index: 30
+  display: flex
+  align-items: center
+  gap: 0.45rem
+  min-width: 0
+  padding: 0.4rem 0.45rem
+  background-color: var(--color-ice-50)
+  border: 2px solid $ink
+  border-radius: var(--radius-ui-lg)
+  box-shadow: 0 -3px 0 rgba(35, 56, 168, 0.16)
+  .action-row
+    flex: 1 1 auto
+    min-width: 0
+    gap: 0.3rem
+  // Compact but still a 44 px tap target.
+  .slot-btn
+    min-height: 2.75rem
+    padding: 0.2rem 0.3rem 0.3rem
+    font-size: 0.72rem
+    line-height: 1.05
+
+.dock-who
+  flex: 0 0 3.6rem
+  width: 3.6rem
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 0.1rem
+  .lv-badge
+    position: static
+    margin-top: 0
+
+.dock-portrait
+  width: 2.2rem
+  height: 2.2rem
+  object-fit: contain
+
+.dock-name
+  max-width: 100%
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  font-size: 0.7rem
+  font-weight: 900
+  line-height: 1.1
+
 .action-row
   display: flex
   flex-wrap: wrap
@@ -2231,28 +2306,47 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
   text-align: center
 
 // ── Desktop / tablet: roster beside the detail panel ───────────────────────
+// Two columns as a grid: the roster spans both rows, the detail panel and the sticky action dock
+// share the right column (#playtest-1-10).
 @media (min-width: 760px)
   .team-layout
-    flex-direction: row
-    align-items: flex-start
+    display: grid
+    grid-template-columns: minmax(0, 52fr) minmax(0, 48fr)
+    grid-template-rows: auto 1fr
+    align-items: start
   .team-col
-    flex: 1 1 52%
+    grid-column: 1
+    grid-row: 1 / span 2
   .detail-col
-    flex: 1 1 48%
+    grid-column: 2
+    grid-row: 1
+  .action-dock
+    grid-column: 2
+    grid-row: 2
+    align-self: end
   .label-section
     font-size: 1.15rem
 
 // ── Landscape phones: the same two columns, tighter ────────────────────────
 @media (orientation: landscape) and (max-height: 500px)
   .team-layout
-    flex-direction: row
-    align-items: flex-start
+    display: grid
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr)
+    grid-template-rows: auto 1fr
+    align-items: start
     gap: 0.4rem
   .team-col
-    flex: 1 1 55%
+    grid-column: 1
+    grid-row: 1 / span 2
   .detail-col
-    flex: 1 1 45%
+    grid-column: 2
+    grid-row: 1
     padding: 0.4rem
+  .action-dock
+    grid-column: 2
+    grid-row: 2
+    align-self: end
+    padding: 0.3rem 0.4rem
   .roster-grid
     grid-template-columns: repeat(6, minmax(0, 1fr))
     gap: 0.3rem
@@ -2552,10 +2646,8 @@ $ink-outline: 0 1px 0 $ink, 1px 0 0 $ink, -1px 0 0 $ink, 0 -1px 0 $ink, 1px 1px 
 // fade cut a seam across the cards). A MASK has no element to seam: the last ~2 rem of the visible
 // body dissolves while there is more below, so a cut grid row reads as "scroll for more".
 // Unscoped: FModal teleports to <body>, outside this component's scope id.
-.team-modal .modal-content-slot.scroll-fade-bottom
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)
-.team-modal .modal-content-slot.scroll-fade-top.scroll-fade-bottom
-  mask-image: linear-gradient(to bottom, transparent, #000 1.2rem, #000 calc(100% - 2rem), transparent)
-.team-modal .modal-content-slot.scroll-fade-top:not(.scroll-fade-bottom)
+// #playtest-1-10: no bottom fade any more — the sticky action dock covers the bottom edge (a fade
+// there would dissolve LEVEL UP); only the top edge fades.
+.team-modal .modal-content-slot.scroll-fade-top
   mask-image: linear-gradient(to bottom, transparent, #000 1.2rem)
 </style>

@@ -339,6 +339,10 @@ const onGranted = () => emit('fights-granted')
           template(v-else)
             h3.lh__heading
               span.lh__headingText {{ t('league.opponents') }}
+            //- #playtest-1-20 / -19: league fights are always 2 v 2 whatever the campaign team size,
+            //- and Wood's no-loss rule is said up front so a free loss reads as protection.
+            p.lh__note(data-league="team-note") {{ t('league.teamNote') }}
+            p.lh__note.lh__note--wood(v-if="standing.tier === 'wood'" data-league="wood-safe") {{ t('league.woodSafe') }}
             div.lh__cards
               template(v-if="cards.length")
                 //- The entrance lives on a slot wrapper: a finished `both`
@@ -607,6 +611,18 @@ const onGranted = () => emit('fights-granted')
 
 .lh__cardSlot
   min-width: 0
+
+.lh__note
+  margin: 0 0 0.35rem
+  font-size: 0.72rem
+  font-weight: 800
+  line-height: 1.2
+  text-align: center
+  color: var(--color-ice-50)
+  text-shadow: var(--ui-stroke-sm)
+
+.lh__note--wood
+  color: var(--color-sun-400)
 
 // Loading placeholder: a flat ice card that gently fades (no shimmer gradient).
 .lh__skeleton

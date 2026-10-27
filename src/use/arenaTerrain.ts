@@ -667,20 +667,23 @@ export const TOWER_INSIDE_SHARE = 0.45
  *  sides alike, every clearing shape. */
 export const TOWER_WALL_GAP = 1
 
-/** Trees per side, campaign only (owner 2026-10-22): about 64 % of stages
- *  one tree, 28 % two, 8 % three — all of a side's trees must fall to win by
- *  trees. */
+/** Trees per side, campaign only (owner 2026-10-22): about 72 % of stages
+ *  one tree, 23 % two, 5 % three — all of a side's trees must fall to win by
+ *  trees. (#playtest-1-7: was 64 / 28 / 8 %, and multi-tree stages became
+ *  slogs; boss stages now always keep one tree.) */
 export const MAX_TREES_PER_SIDE = 3
 /** Cumulative thresholds of the seeded tree count (one, two; else three). */
-export const TREE_COUNT_ODDS: readonly [number, number] = [0.64, 0.92]
+export const TREE_COUNT_ODDS: readonly [number, number] = [0.72, 0.95]
 /** The tutorial arc (stages 1–5, the first boss at 5) keeps one tree. */
 export const MULTI_TREES_FROM_STAGE = 6
 /** Tree radius × this per tree count (several trees share the wall). */
 export const TREE_COUNT_RADIUS_MUL: readonly number[] = [1, 0.85, 0.75]
-/** Each tree's HP share of the single-tree HP per tree count (in total 1,
- *  1.1, 1.2 × — the extra trees are smaller targets too). Balance-sim
- *  pending (roadmap "Batched balance simulations"). */
-export const TREE_COUNT_HP_SHARE: readonly number[] = [1, 0.55, 0.4]
+/** Each tree's HP share of the single-tree HP per tree count — in total the
+ *  SAME tree HP as one tree (was 1.1 / 1.2 ×; #playtest-1-7: 2–3 trees of
+ *  500–1400 HP turned stages into slogs). The extra trees are smaller
+ *  targets, which is cost enough. Balance-sim pending (roadmap "balance sims
+ *  to run"). */
+export const TREE_COUNT_HP_SHARE: readonly number[] = [1, 0.5, 1 / 3]
 /** Minimum centre distance between two neighbouring trees of a side, × tree
  *  radius (painted sprite half width 1.2 r: the crowns do not overlap). */
 export const TREE_SPACING = 2.5
@@ -699,9 +702,11 @@ const stageUnit = (stageId: number): number => {
 /** Trees per side on a campaign stage, seeded by the stage id (a stage always
  *  gives the same count; both sides get the same count). PvP, league and
  *  ghost matches stay at one tree (their seeds are shared across peers and
- *  replays; see the roadmap). */
-export const treeCountForStage = (stageId: number): number => {
-  if (!Number.isFinite(stageId) || stageId < MULTI_TREES_FROM_STAGE) return 1
+ *  replays; see the roadmap). A BOSS stage always has one tree per side
+ *  (#playtest-1-7: split boss trees decided trio boss fights by tree HP
+ *  instead of by the fight; the spiked boss tree is the one objective). */
+export const treeCountForStage = (stageId: number, isBoss = false): number => {
+  if (isBoss || !Number.isFinite(stageId) || stageId < MULTI_TREES_FROM_STAGE) return 1
   const u = stageUnit(stageId)
   return u < TREE_COUNT_ODDS[0] ? 1 : u < TREE_COUNT_ODDS[1] ? 2 : 3
 }
@@ -971,6 +976,28 @@ export const onTowerFront = (t: Pick<TeamTower, 'x' | 'y'>, nx: number, ny: numb
  */
 export const towerSpikeRecoil = (t: Pick<TeamTower, 'x' | 'y' | 'spiked'>, nx: number, ny: number, impactDmg: number): number =>
   t.spiked && impactDmg > 0 && onTowerFront(t, nx, ny) ? impactDmg * TOWER_TUNING.spikeRecoil : 0
+
+// ── Sudden death: tree decay (#playtest-1-5) ─────────────────────────────
+// Fights could drag on for 40–150 launches (healer bosses out-healing the
+// damage, two tanks bumping). From turn hand-off SUDDEN_DEATH_FROM_TURN on
+// (both sides' launches counted: 24 = 12 rounds) EVERY standing tree loses a
+// growing share of its own max HP at each hand-off: step k (1, 2, …) takes
+// k × SUDDEN_DEATH_STEP. Same share for both sides, so the side that has
+// damaged the other tree more still wins; cumulative 100 % is reached after
+// ~14 more hand-offs at most — no fight passes ~38 launches. Balance-sim
+// pending (roadmap "balance sims to run").
+
+/** Turn hand-off (1-based, both sides counted) the decay starts at. */
+export const SUDDEN_DEATH_FROM_TURN = 24
+/** Share of a tree's max HP the k-th decay step takes, × k. */
+export const SUDDEN_DEATH_STEP = 0.01
+
+/** Share of max HP every tree loses at turn hand-off `handoff` (0 before
+ *  sudden death). Pure — deterministic in the hand-off count only. */
+export const suddenDeathDecayShare = (handoff: number): number => {
+  if (!Number.isFinite(handoff) || handoff < SUDDEN_DEATH_FROM_TURN) return 0
+  return (Math.floor(handoff) - SUDDEN_DEATH_FROM_TURN + 1) * SUDDEN_DEATH_STEP
+}
 
 /** Game result with towers: a side loses when all its smashers are dead OR
  *  ALL its trees have fallen (allTreesDown). The player wins ties (matches the legacy all-dead rule). */

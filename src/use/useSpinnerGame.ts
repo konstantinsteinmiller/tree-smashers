@@ -14,9 +14,9 @@ import type {
   BossTrait
 } from '@/types/spinner'
 import type { ArenaType } from '@/use/useSpinnerCampaign'
-import { bossHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcCountHpMul, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
+import { campaignBossCountHpMul, campaignHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcCountHpMul, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
 import {
-  allTreesDown, applyGround, buildTerrainLayout, collideSolids, createTowers, decideResult, pickTargetTree, inDeepCore, newGroundState, newSolidEffect,
+  allTreesDown, suddenDeathDecayShare, applyGround, buildTerrainLayout, collideSolids, createTowers, decideResult, pickTargetTree, inDeepCore, newGroundState, newSolidEffect,
   terrainCircles, terrainSolidCircles, towerHitDamage, towerSpecFor, towerSpikeRecoil, towerFrontAngle, TOWER_FRONT_HALF_ARC,
   type GroundEffect, type GroundState, type TeamTower, type TerrainLayout
 } from '@/use/arenaTerrain'
@@ -53,10 +53,10 @@ import { CLEAN_FEED, CLEAN_HP_RINGS } from '@/utils/cleanFeed'
 import { useScreenshake } from '@/use/useScreenshake'
 import useSounds from '@/use/useSound'
 import { playUiSfx } from '@/use/uiSfx'
-import { prependBaseUrl } from '@/utils/function.ts'
+import { mobileCheck, prependBaseUrl } from '@/utils/function.ts'
 import { getCachedImage, resourceCache } from '@/use/useAssets'
 import { drawLightningBolt } from '@/utils/lightning'
-import { discGaugeFrame, drawHpGauge, newHpGaugeState, type HpGaugeState } from '@/use/hpGauge'
+import { BADGE_PRIO, beginBadgeLayer, discGaugeFrame, drawHpGauge, flushBadgeLayer, newHpGaugeState, setBadgePriority, type HpGaugeState } from '@/use/hpGauge'
 import { BALLOON_HP_BUILD } from '@/use/balloonHpFlag'
 import { BALLOON_HP, balloonCount, drawBalloonHp, drawBalloonHpNumber, newBalloonState, updateBalloonHp, type BalloonState } from '@/use/balloonHp'
 import { preloadBalloonArt } from '@/use/balloonArt'
@@ -901,12 +901,16 @@ export const useSpinnerGame = () => {
   // player can aim + launch without fighting the screen boundary.
   const JOYSTICK_EDGE_THRESHOLD = 0.55 // blade dist from center / ARENA_RADIUS
   const JOYSTICK_RADIUS = 32           // base circle radius in game-space
+  const JOYSTICK_TOUCH_UI = mobileCheck() || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)
   const JOYSTICK_KNOB_RADIUS = 10
   const JOYSTICK_CANCEL_RADIUS = 8     // smaller cancel zone than blade drag
   const JOYSTICK_MAX_PULL = 28         // max knob displacement = full force
 
   const isJoystickVisible = computed(() => {
     if (phase.value !== 'player_turn') return false
+    // #playtest-1-18: the virtual stick is a touch aid (a finger cannot drag past the screen edge);
+    // a mouse can, so desktop never draws it over the stat cards.
+    if (!JOYSTICK_TOUCH_UI) return false
     const blade = selectedBlade.value
     if (!blade) return false
     const dist = Math.sqrt(blade.x * blade.x + blade.y * blade.y)
@@ -2033,6 +2037,10 @@ export const useSpinnerGame = () => {
     blade.invulnerableUntil !== undefined && skillClock() < blade.invulnerableUntil
 
   let firstGameBoost = false
+  /** Reactive mirror of `firstGameBoost` (×2 damage and HP for the player
+   *  until the first win) so the HUD can say why the team is that strong
+   *  (#playtest-1-11). */
+  const firstGameBoostActive = ref(false)
 
   // ── Team size (src/data/teamSize.ts) ──────────────────────────────────────
   // Set by initGame from each side's team length, BEFORE any blade is built:
@@ -2046,6 +2054,8 @@ export const useSpinnerGame = () => {
   let teamSizeHash = 'ts:1,1'
   /** The NPC team's length at initGame (campaign count compensation). */
   let npcTeamCount = 1
+  /** Boss blades on the NPC team at spawn (campaignBossCountHpMul). */
+  let npcBossCount = 1
   /** #UX3: each side's team size (balloon count per smasher). Visual only. */
   const balloonTeamSize = { player: 1, npc: 1 }
 
@@ -2868,9 +2878,11 @@ export const useSpinnerGame = () => {
     // back-to-back campaign losses. Only campaign play qualifies — PvP
     // and ghost matches are out of scope (see useSpinnerCampaign.ts for
     // the formula and SpinnerArena.vue for where the streak is updated).
+    // Since #playtest-1-15 every campaign NPC takes it (regular stages capped
+    // lower — campaignHpRubberBandMul).
     const rubberBandHpMultiplier =
-      isBoss && owner === 'npc' && !pvpMode.value && !ghostMode.value
-        ? bossHpRubberBandMul()
+      owner === 'npc' && !pvpMode.value && !ghostMode.value
+        ? campaignHpRubberBandMul(isBoss)
         : 1
     // Keep the live-rescale watcher's baseline in sync with what we
     // actually baked into this spawn so a later difficulty change scales
@@ -2893,7 +2905,18 @@ export const useSpinnerGame = () => {
     // part-only campaign NPCs get the team-size refit of their count (countHpMul).
     const teamHpMultiplier = teamStatMul[owner] * (teamStatMul[owner] !== 1 && isLegacyNpc(owner, config) ? CAMPAIGN_NPC_TUNING.soloHpMul : 1)
       * (isLegacyNpc(owner, config) ? campaignNpcCountHpMul(npcTeamCount) : 1)
-    const finalHp = stats.maxHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier
+    // Campaign boss curve (#playtest-1-2/-3, CAMPAIGN_NPC_TUNING): a
+    // part-only boss never has less HP than a neutral blade at its levels,
+    // and boss trios / quartets share one HP budget.
+    let baseHp = stats.maxHp
+    if (isBoss && isLegacyNpc(owner, config)) {
+      if (CAMPAIGN_NPC_TUNING.bossHpFloor) {
+        const ref = computeStats({ ...config, topPartId: 'quadratic', bottomPartId: 'balanced' }, config.topLevel ?? 0, config.bottomLevel ?? 0)
+        baseHp = Math.max(baseHp, ref.maxHp)
+      }
+      baseHp *= campaignBossCountHpMul(npcBossCount)
+    }
+    const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier
     return {
       id: nextBladeId++,
       // Placeholder — every spawn site assigns the real peer-independent key.
@@ -3174,6 +3197,7 @@ export const useSpinnerGame = () => {
     // contact of the match would otherwise read as "still in contact".
     pvpTickCount = 3600
     firstGameBoost = boost
+    firstGameBoostActive.value = boost
     // In PvP the host already seeded + broadcast a shared seed via the
     // game-start message; single-player reseeds locally per match.
     if (opts.seed !== undefined) seedMatchRng(opts.seed)
@@ -3199,6 +3223,7 @@ export const useSpinnerGame = () => {
     teamStatMul.player = sideStatMul(pTeam.length)
     teamStatMul.npc = sideStatMul(nTeam.length)
     npcTeamCount = nTeam.length
+    npcBossCount = Math.max(1, nTeam.filter(c => c.isBoss).length)
     balloonTeamSize.player = clampTeamSize(pTeam.length)
     balloonTeamSize.npc = clampTeamSize(nTeam.length)
     teamSizeHash = `ts:${clampTeamSize(pvpLocalIsGuest ? nTeam.length : pTeam.length)},${clampTeamSize(pvpLocalIsGuest ? pTeam.length : nTeam.length)}`
@@ -3507,6 +3532,7 @@ export const useSpinnerGame = () => {
     }
     towerFallResult = null
     towerFallFrames = 0
+    turnHandoffs = 0
     publishTowerHud()
     // Big / small smasher discs: no spawn inside a tower, an island or a
     // neighbour (no-op when every disc is 1×).
@@ -4323,6 +4349,7 @@ export const useSpinnerGame = () => {
       && rocketsInFlight === 0
 
     if (phase.value === 'player_launched' && launchedStopped) {
+      suddenDeathTick()
       traitTurnEnd('player')
       phase.value = 'npc_turn'
       npcThinkingElapsed = 0
@@ -4349,6 +4376,7 @@ export const useSpinnerGame = () => {
     }
 
     if (phase.value === 'npc_launched' && launchedStopped) {
+      suddenDeathTick()
       traitTurnEnd('npc')
       phase.value = 'player_turn'
       launchedBladeId.value = null
@@ -4698,6 +4726,34 @@ export const useSpinnerGame = () => {
   const TOWER_TEAM_COLORS: Record<'player' | 'npc', { leaf: string; leafDark: string }> = {
     player: { leaf: '#5fc36a', leafDark: '#2f7d43' },
     npc: { leaf: '#e3664f', leafDark: '#9c3328' }
+  }
+
+  // ─── Sudden death: tree decay (#playtest-1-5, arenaTerrain) ──────────────
+  // Counts resolved launches (both sides). From SUDDEN_DEATH_FROM_TURN on every
+  // standing tree withers by suddenDeathDecayShare × its max HP at each
+  // hand-off, so no fight stalls forever. Not in PvP: the lockstep hash and
+  // both peers' clocks stay exactly as they were.
+  let turnHandoffs = 0
+  const suddenDeathTick = () => {
+    turnHandoffs++
+    if (pvpMode.value || towers.length === 0) return
+    const share = suddenDeathDecayShare(turnHandoffs)
+    if (share <= 0) return
+    for (const tower of towers) {
+      if (tower.hp <= 0) continue
+      tower.hp = Math.max(0, tower.hp - tower.maxHp * share)
+      tower.flash = Math.max(tower.flash, 0.5)
+      if (tower.hp <= 0) onTowerDestroyed(tower)
+    }
+    publishTowerHud()
+    if (suddenDeathDecayShare(turnHandoffs - 1) === 0) {
+      // First decay step: one centred callout so the drop is explained.
+      damageNumbers.push({
+        x: 0, y: 0, value: 0,
+        vx: 0, vy: -0.04, color: '#f2e6c8', life: DAMAGE_NUMBER_LIFE * 1.6, maxLife: DAMAGE_NUMBER_LIFE * 1.6,
+        isCrit: false, comboText: translate('terrain.suddenDeath'), centered: true
+      })
+    }
   }
 
   const onTowerDestroyed = (tower: TeamTower) => {
@@ -5516,10 +5572,16 @@ export const useSpinnerGame = () => {
     // under the models. A teaching aid (interface), so not in a clean feed.
     if (!CLEAN_FEED) renderHintAnimation(ctx, showHintAnim, centerX, centerY, scale, devPx)
 
-    // Render all models
+    // Render all models. Their HP badges (and the trees') are queued and drawn in one
+    // collision-free pass after the tree gauges (#playtest-1-13, flushBadgeLayer).
     const shakeLeft = tapShakeId >= 0 ? tapShakeUntil - performance.now() : 0
+    beginBadgeLayer()
+    // A swarm (more than 8 enemy bodies) ranks its plain enemies as minions: their badges give way.
+    const swarm = npcBlades.value.length > 8
     for (const blade of allBlades.value) {
       if (blade.hp <= 0) continue
+      setBadgePriority(blade.config.isBoss ? BADGE_PRIO.BOSS
+        : (blade.isEmittedChild || blade.isSplitChild || (swarm && blade.owner === 'npc')) ? BADGE_PRIO.MINION : BADGE_PRIO.SMASHER)
       if (shakeLeft > 0 && blade.id === tapShakeId) {
         // Refused tap on a frozen blade: a short damped side-to-side shake.
         ctx.save()
@@ -5596,7 +5658,9 @@ export const useSpinnerGame = () => {
     // #Consistency-7: tree HP gauges ride ABOVE the smashers and their balloons (a spawn row sits
     // right at each tree, and the plate used to vanish under the balloons / overlap the disc).
     // The SAME gauge a smasher shows, on the side of the tree that bulges into the arena.
+    setBadgePriority(BADGE_PRIO.TREE)
     if (!CLEAN_FEED || CLEAN_HP_RINGS) for (const t of towers) if (t.hp > 0) renderTowerGauge(ctx, t)
+    flushBadgeLayer(ctx)
 
     // Floating damage numbers.
     //
@@ -5673,7 +5737,9 @@ export const useSpinnerGame = () => {
     } else if (isMobileLandscape.value) {
       // Left of the arena — landscape viewports have horizontal slack.
       jcX = -halfVisibleX + JOYSTICK_RADIUS + mobileEdgeMargin
-      jcY = 0
+      // #playtest-1-12: at 40 % of the screen height, not the middle — a trio's third stat card
+      // stacks above the first one bottom-left and the ring sat on its title.
+      jcY = (canvasHeight * 0.4 - view.cy) / scale
     } else {
       // Desktop / tablet: bottom-left corner of the visible canvas,
       // clamped outside the arena.
@@ -7882,6 +7948,7 @@ export const useSpinnerGame = () => {
   return {
     phase,
     gameResult,
+    firstGameBoostActive,
     turnAnnouncement,
     playerBlades,
     npcBlades,

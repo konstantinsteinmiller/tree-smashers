@@ -187,7 +187,8 @@ describe('league fights in the arena (league build, offline)', () => {
       // ── Fight 1: a card, played to a WIN ──
       await openHub(arena, '[data-league="opponent-card"]')
       ;(document.querySelector('[data-league="opponent-card"]') as HTMLElement).click()
-      expect(await until(arena, () => vm.leagueSession !== null && vm.phase === 'tap_to_start')).toBe(true)
+      // #playtest-1-20: the card tap starts the fight itself (no second tap_to_start).
+      expect(await until(arena, () => vm.leagueSession !== null && vm.phase !== 'tap_to_start')).toBe(true)
       const session = vm.leagueSession
       expect(vm.ghostMode).toBe(true)
       expect(vm.leagueHubOpen).toBe(false)
@@ -249,7 +250,8 @@ describe('league fights in the arena (league build, offline)', () => {
       // ── Fight 2: surrender = a ranked LOSS ──
       expect(await arena.waitFor('[data-league="opponent-card"]')).toBe(true)
       ;(document.querySelector('[data-league="opponent-card"]') as HTMLElement).click()
-      expect(await until(arena, () => vm.leagueSession !== null && vm.phase === 'tap_to_start')).toBe(true)
+      // #playtest-1-20: the card tap starts the fight itself (no second tap_to_start).
+      expect(await until(arena, () => vm.leagueSession !== null && vm.phase !== 'tap_to_start')).toBe(true)
       const honor1 = pvp.honor.value
       const bp1 = await bpTotal()
       await beginAndFirstTurn(arena, seam)
@@ -278,7 +280,8 @@ describe('league fights in the arena (league build, offline)', () => {
       expect(vm.league.standing.value.atGate).toBe(true)
       await openHub(arena, '[data-league="gate-card"] button')
       ;(document.querySelector('[data-league="gate-card"] button') as HTMLElement).click()
-      expect(await until(arena, () => vm.leagueSession !== null && vm.phase === 'tap_to_start')).toBe(true)
+      // #playtest-1-20: the card tap starts the fight itself (no second tap_to_start).
+      expect(await until(arena, () => vm.leagueSession !== null && vm.phase !== 'tap_to_start')).toBe(true)
       expect(vm.leagueSession.isGate).toBe(true)
       expect(vm.leagueSession.gateTier).toBe('platinum')
       expect(game.hasBossTraitEngine()).toBe(true)

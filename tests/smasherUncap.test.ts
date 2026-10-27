@@ -1,8 +1,9 @@
 // ─── Smasher levels have no gameplay cap ────────────────────────────────────
 //
 // Pinned here (src/data/smasherCatalog.ts header):
-//   • costs for levels 1 … 30 are the original quadratic prices, bit for bit;
-//   • past 30 every level costs more than the last, steeper than before
+//   • costs for levels 1 … 30 follow the quadratic curve (SMASHER_COST_QUAD,
+//     flattened in #playtest-1-4; levels up to 10 unchanged since launch);
+//   • past 30 every level costs more than the last
 //     (×SMASHER_COST_GROWTH per level on top of the quadratic), always finite;
 //   • levelUpSmasher keeps going past 30 — only the technical sanity ceiling
 //     (SMASHER_LEVEL_SANITY_MAX, not a gameplay cap) stops it;
@@ -14,6 +15,8 @@
 import './helpers/skillsBuild'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  SMASHER_COST_GROWTH,
+  SMASHER_COST_QUAD,
   SMASHER_LEVEL_SANITY_MAX,
   SMASHER_TAPER_LEVEL,
   clampSmasherLevel,
@@ -32,10 +35,10 @@ beforeEach(() => {
   vi.resetModules()
 })
 
-/** The pre-uncap formula, verbatim. */
+/** The quadratic curve up to 30 (SMASHER_COST_QUAD; was 3 before #playtest-1-4). */
 const legacyCost = (level: number): number => {
   const to = level + 1
-  const extra = to > 10 ? 3 * (to - 10) * (to - 10) : 0
+  const extra = to > 10 ? SMASHER_COST_QUAD * (to - 10) * (to - 10) : 0
   return Math.round((100 + (to - 1) * 20 + extra) * 1.6)
 }
 
@@ -45,9 +48,15 @@ const statsOf = (id: 'bramble' | 'thumper' | 'grizzle', level: number) => {
 }
 
 describe('level cost curve', () => {
-  it('levels 1 … 30 keep their original prices exactly', () => {
+  it('levels 1 … 30 follow the quadratic curve; 1 … 9 never changed', () => {
     for (let lv = 1; lv < SMASHER_TAPER_LEVEL; lv++) expect(smasherLevelCost(lv)).toBe(legacyCost(lv))
-    expect(smasherLevelCost(29)).toBe(3008)
+    expect(smasherLevelCost(1)).toBe(192)
+    expect(smasherLevelCost(9)).toBe(448)
+    expect(smasherLevelCost(29)).toBe(2048)
+  })
+
+  it('#playtest-1-4: the late curve stays payable — Lv 50 costs < 25 average late wins (~600)', () => {
+    expect(smasherLevelCost(50)!).toBeLessThan(25 * 600)
   })
 
   it('is continuous at 30 and grows monotonically, steeper than the old curve', () => {
@@ -60,7 +69,7 @@ describe('level cost curve', () => {
       if (lv >= SMASHER_TAPER_LEVEL) {
         expect(c).toBeGreaterThan(legacyCost(lv))
         const ratio = c / prev
-        if (lv > SMASHER_TAPER_LEVEL) expect(ratio).toBeGreaterThan(1.08) // ≥ growth factor every step
+        if (lv > SMASHER_TAPER_LEVEL) expect(ratio).toBeGreaterThan(SMASHER_COST_GROWTH) // ≥ growth factor every step
         prevRatio = ratio
       }
       prev = c
@@ -68,7 +77,7 @@ describe('level cost curve', () => {
     expect(prevRatio).toBeGreaterThan(1)
     // The first step past the old cap: noticeably dearer, not a cliff.
     const step30 = smasherLevelCost(30)! / smasherLevelCost(29)!
-    expect(step30).toBeGreaterThan(1.1)
+    expect(step30).toBeGreaterThan(1.05)
     expect(step30).toBeLessThan(1.3)
   })
 

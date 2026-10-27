@@ -98,3 +98,40 @@ describe('Team tower art — damage states + atlas registry', () => {
     expect(PAINTED_TOWERS!.ref.halfW).toBeGreaterThan(50)
   })
 })
+
+describe('HP badge layer — no overlapping numbers (#playtest-1-13)', () => {
+  const textCtx = () => {
+    const texts: { t: string, x: number, y: number }[] = []
+    const base = recCtx()
+    return Object.assign(base, { texts, fillText: (t: string, x: number, y: number) => { texts.push({ t, x, y }) } })
+  }
+  it('a smasher badge on a tree badge slides clear; the tree keeps its spot', async () => {
+    const { beginBadgeLayer, flushBadgeLayer, setBadgePriority, drawHpBadge, BADGE_PRIO } = await import('@/use/hpGauge')
+    const ctx = textCtx() as unknown as CanvasRenderingContext2D & { texts: { t: string, x: number, y: number }[] }
+    beginBadgeLayer()
+    setBadgePriority(BADGE_PRIO.SMASHER)
+    drawHpBadge(ctx, 0, 2, 37, true, false)
+    setBadgePriority(BADGE_PRIO.TREE)
+    drawHpBadge(ctx, 0, 0, 28, true, false)
+    expect(ctx.texts).toEqual([]) // queued, not drawn
+    flushBadgeLayer(ctx)
+    const tree = ctx.texts.find(e => e.t === '28')!
+    const smasher = ctx.texts.find(e => e.t === '37')!
+    expect(tree.x).toBe(0)
+    expect(Math.abs(smasher.y - tree.y)).toBeGreaterThanOrEqual(HP_GAUGE.BADGE_H)
+  })
+  it('a colliding minion badge is dropped, a free one is drawn; outside the layer badges draw at once', async () => {
+    const { beginBadgeLayer, flushBadgeLayer, setBadgePriority, drawHpBadge, BADGE_PRIO } = await import('@/use/hpGauge')
+    const ctx = textCtx() as unknown as CanvasRenderingContext2D & { texts: { t: string }[] }
+    beginBadgeLayer()
+    setBadgePriority(BADGE_PRIO.BOSS)
+    drawHpBadge(ctx, 0, 0, 85, false, false)
+    setBadgePriority(BADGE_PRIO.MINION)
+    drawHpBadge(ctx, 3, 1, 5, false, false)
+    drawHpBadge(ctx, 200, 0, 6, false, false)
+    flushBadgeLayer(ctx)
+    expect(ctx.texts.map(e => e.t).sort()).toEqual(['6', '85'])
+    drawHpBadge(ctx, 0, 0, 9, false, false)
+    expect(ctx.texts.map(e => e.t)).toContain('9')
+  })
+})

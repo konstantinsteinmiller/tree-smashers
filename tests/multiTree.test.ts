@@ -55,17 +55,21 @@ describe('tree count per campaign stage', () => {
     for (let s = 1; s <= 500; s++) expect(treeCountForStage(s)).toBe(treeCountForStage(s))
   })
 
-  it('splits ≈ 64 / 28 / 8 % over many stage seeds', () => {
+  it('splits ≈ 72 / 23 / 5 % over many stage seeds (#playtest-1-7)', () => {
     const n = [0, 0, 0, 0]
     const N = 20000
     for (let s = MULTI_TREES_FROM_STAGE; s < MULTI_TREES_FROM_STAGE + N; s++) n[treeCountForStage(s)]!++
     expect(n[0]).toBe(0)
-    expect(n[1]! / N).toBeGreaterThan(0.61)
-    expect(n[1]! / N).toBeLessThan(0.67)
-    expect(n[2]! / N).toBeGreaterThan(0.25)
-    expect(n[2]! / N).toBeLessThan(0.31)
-    expect(n[3]! / N).toBeGreaterThan(0.06)
-    expect(n[3]! / N).toBeLessThan(0.1)
+    expect(n[1]! / N).toBeGreaterThan(0.69)
+    expect(n[1]! / N).toBeLessThan(0.75)
+    expect(n[2]! / N).toBeGreaterThan(0.2)
+    expect(n[2]! / N).toBeLessThan(0.26)
+    expect(n[3]! / N).toBeGreaterThan(0.035)
+    expect(n[3]! / N).toBeLessThan(0.065)
+  })
+
+  it('boss stages always keep one tree per side (#playtest-1-7)', () => {
+    for (let s = 1; s <= 500; s++) expect(treeCountForStage(s, true)).toBe(1)
   })
 
   it('the first campaign stages actually show both 2 and 3 trees', () => {

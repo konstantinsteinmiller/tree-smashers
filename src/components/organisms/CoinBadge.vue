@@ -80,16 +80,20 @@ const reducedMotion = (): boolean => {
 // grant reads even when the count itself is short. Teleported like the
 // diamond pop (it may start while a reward overlay is still fading out);
 // gains that start while a pop is up are summed into it.
-const coinPop = ref<{ id: number, amount: number, left: string, top: string } | null>(null)
+const coinPop = ref<{ id: number, amount: number, left: string, top: string, below?: boolean } | null>(null)
 const popCoins = (amount: number) => {
   const el = rootEl.value
   if (!el || amount <= 0) return
   const r = el.getBoundingClientRect()
+  // #playtest-1-16: over a result screen the pop drops BELOW the badge — beside it, it sat on the
+  // reward ribbon's text ("BELOHNUN|G") on a phone.
+  const below = typeof document !== 'undefined' && document.querySelector('.reward-root') !== null
   coinPop.value = {
     id: ++popSeq,
     amount: (coinPop.value?.amount ?? 0) + amount,
-    left: `${r.left}px`,
-    top: `${r.top + r.height / 2}px`
+    left: below ? `${r.right}px` : `${r.left}px`,
+    top: below ? `${r.bottom + 6}px` : `${r.top + r.height / 2}px`,
+    below
   }
 }
 
@@ -268,6 +272,7 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
       div.coin-badge-pop.coin-badge-pop--coin.flex.items-center(
         v-if="coinPop"
         :key="coinPop.id"
+        :class="{ 'is-below': coinPop.below }"
         :style="{ left: coinPop.left, top: coinPop.top }"
         aria-hidden="true"
         data-coin-pop
@@ -327,6 +332,26 @@ defineExpose({ rootEl, diamondRowEl, celebrateDiamonds })
   100%
     opacity: 0
     transform: translate(-100%, -110%) scale(1)
+
+// Under the badge (a result screen is up): right-aligned to it, drifting DOWN, away from the ribbon.
+.coin-badge-pop.is-below
+  animation-name: coin-badge-pop-below
+
+@keyframes coin-badge-pop-below
+  0%
+    opacity: 0
+    transform: translate(-100%, -30%) scale(0.5)
+  18%
+    opacity: 1
+    transform: translate(-100%, 0) scale(1.2)
+  32%
+    transform: translate(-100%, 0) scale(1)
+  75%
+    opacity: 1
+    transform: translate(-100%, 30%) scale(1)
+  100%
+    opacity: 0
+    transform: translate(-100%, 60%) scale(1)
 
 // The coin pop: a small skewed sun plate (navy outline, lip, drop), the coin
 // overlapping its left end, the amount in navy 900 tabular digits.

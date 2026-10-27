@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { Stage } from '@/use/useSpinnerCampaign'
+import { rubberBandActive } from '@/use/useSpinnerCampaign'
 import { saveDataVersion } from '@/use/useSaveStatus'
 
 // Player tips shown on the lose/win reward screens to nudge struggling
@@ -111,6 +112,7 @@ export const noteCampaignResult = (stage: Stage, result: 'win' | 'lose') => {
 }
 
 export type TipId =
+  | 'rubberBand'
   | 'levelUp'
   | 'tankBreaker'
   | 'teamMix'
@@ -131,6 +133,7 @@ const GENERAL_TIP_CHANCE = 0.40
  * stage and pick the first one to show.
  *
  * Priority order inside the pool:
+ *   0. Loss-streak rubber band active → "the enemies got weaker" tip
  *   1. Shock arena → teleporter skin tip
  *   2. ≥2 consecutive losses against tanky setups → hard-hitting smashers tip
  *   3. ≥2 losses on the same stage → level-up-your-smashers tip
@@ -147,6 +150,9 @@ const GENERAL_TIP_CHANCE = 0.40
  */
 export const pickLoseScreenTip = (stage: Stage): TipPickResult => {
   const pool: TipId[] = []
+  // #playtest-1-15: once the loss-streak rubber band is weakening the
+  // enemies, say so first — a losing player learns that retrying helps.
+  if (rubberBandActive()) pool.push('rubberBand')
   if (tankLossStreak.value >= 2) pool.push('tankBreaker')
   if (lossesOnStage.value >= 2) pool.push('levelUp')
   if (Math.random() < GENERAL_TIP_CHANCE) pool.push('arenaWall')

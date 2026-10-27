@@ -186,7 +186,112 @@ export const drawHpBadge = (
   ctx: CanvasRenderingContext2D, bx: number, by: number, hp: number,
   isPlayer: boolean, flashing: boolean, sc = 1
 ): void => {
+  if (layerOpen) {
+    queueBadge(ctx, bx, by, hp, isPlayer, flashing, sc)
+    return
+  }
+  blitBadge(ctx, bx, by, hp, isPlayer, flashing, sc)
+}
+
+const blitBadge = (
+  ctx: CanvasRenderingContext2D, bx: number, by: number, hp: number,
+  isPlayer: boolean, flashing: boolean, sc: number
+): void => {
   if (!drawBadgeSprite(ctx, bx, by, hp, isPlayer, flashing, sc)) paintHpBadge(ctx, bx, by, hp, isPlayer, flashing, sc)
+}
+
+// ─── Badge layer: collision-free HP numbers (#playtest-1-13) ───────────────
+// Between beginBadgeLayer() and flushBadgeLayer(ctx) every badge is queued
+// instead of drawn, then drawn in one pass ABOVE all models: trees first, then
+// bosses, smashers, minions. A badge that would overlap one already placed
+// slides below / above / beside it; a MINION badge that still collides is
+// dropped (a ~40-minion swarm otherwise buries every number on the field).
+// Arena units, same transform for the whole layer; pooled, no allocation.
+
+/** Badge priority: higher is placed first and never moves for a lower one. */
+export const BADGE_PRIO = { MINION: 0, SMASHER: 1, BOSS: 2, TREE: 3 } as const
+let layerOpen = false
+let badgePrio: number = BADGE_PRIO.SMASHER
+/** Priority stamped on the next queued badges (set before each entity draws). */
+export const setBadgePriority = (p: number): void => { badgePrio = p }
+
+interface QueuedBadge { x: number, y: number, hp: number, p: boolean, f: boolean, sc: number, prio: number, a: number, hw: number, hh: number, seq: number }
+const queue: QueuedBadge[] = []
+let queued = 0
+const order: QueuedBadge[] = []
+const placed: QueuedBadge[] = []
+let placedN = 0
+
+export const beginBadgeLayer = (): void => {
+  layerOpen = true
+  queued = 0
+  badgePrio = BADGE_PRIO.SMASHER
+}
+
+/** Half extents of a badge (arena units) — the vector pill's own box. */
+const badgeHalf = (hp: number, sc: number, out: QueuedBadge): void => {
+  const text = textOf(Math.max(0, Math.ceil(hp)))
+  const tw = widthOf.get(text) ?? text.length * HP_GAUGE.FONT_PX * 0.62
+  const bh = HP_GAUGE.BADGE_H * sc
+  out.hw = Math.max(bh * 1.25, tw * sc + 7) / 2 + HP_GAUGE.OUTLINE * 0.7
+  out.hh = bh / 2 + HP_GAUGE.OUTLINE * 0.7
+}
+
+const queueBadge = (
+  ctx: CanvasRenderingContext2D, bx: number, by: number, hp: number,
+  isPlayer: boolean, flashing: boolean, sc: number
+): void => {
+  let q = queue[queued]
+  if (q === undefined) {
+    q = { x: 0, y: 0, hp: 0, p: false, f: false, sc: 1, prio: 0, a: 1, hw: 0, hh: 0, seq: 0 }
+    queue[queued] = q
+  }
+  q.x = bx; q.y = by; q.hp = hp; q.p = isPlayer; q.f = flashing; q.sc = sc
+  q.prio = badgePrio; q.a = ctx.globalAlpha; q.seq = queued
+  badgeHalf(hp, sc, q)
+  queued++
+}
+
+const GAP = 1
+const hits = (x: number, y: number, b: QueuedBadge): boolean => {
+  for (let i = 0; i < placedN; i++) {
+    const o = placed[i]!
+    if (Math.abs(x - o.x) < b.hw + o.hw + GAP && Math.abs(y - o.y) < b.hh + o.hh + GAP) return true
+  }
+  return false
+}
+
+const byPrio = (a: QueuedBadge, b: QueuedBadge): number => (b.prio - a.prio) || (a.seq - b.seq)
+
+/** Places and draws every queued badge (see beginBadgeLayer). */
+export const flushBadgeLayer = (ctx: CanvasRenderingContext2D): void => {
+  layerOpen = false
+  order.length = 0
+  for (let i = 0; i < queued; i++) order.push(queue[i]!)
+  order.sort(byPrio)
+  placedN = 0
+  const alpha = ctx.globalAlpha
+  for (const b of order) {
+    let x = b.x
+    let y = b.y
+    if (hits(x, y, b)) {
+      if (b.prio === BADGE_PRIO.MINION) continue
+      // Slide: below, above, then right / left — the first free spot wins.
+      const dy = b.hh * 2 + GAP
+      const dx = b.hw * 2 + GAP
+      if (!hits(x, y + dy, b)) y += dy
+      else if (!hits(x, y - dy, b)) y -= dy
+      else if (!hits(x + dx, y, b)) x += dx
+      else if (!hits(x - dx, y, b)) x -= dx
+    }
+    b.x = x
+    b.y = y
+    placed[placedN++] = b
+    ctx.globalAlpha = b.a
+    blitBadge(ctx, x, y, b.hp, b.p, b.f, b.sc)
+  }
+  ctx.globalAlpha = alpha
+  queued = 0
 }
 
 // ─── Baked badges (#Perf-1) ─────────────────────────────────────────────────

@@ -54,6 +54,8 @@ const status = computed<Status | null>(() => {
   if (move.value === 'down') return { key: 'league.result.down', tone: 'down' }
   if (o.shielded) return { key: 'league.result.shielded', tone: 'calm' }
   if (o.isGate && o.result === 'loss') return { key: 'league.result.gateHeld', tone: 'down' }
+  // #playtest-1-20: a Wood loss costs 0 LP by design (LM3) — say so, so it reads as protection.
+  if (o.result === 'loss' && o.delta === 0 && tierOf(o.lpBefore).tier === 'wood') return { key: 'league.result.woodSafe', tone: 'calm' }
   if (o.capped) return { key: 'league.result.capped', tone: 'calm' }
   return null
 })

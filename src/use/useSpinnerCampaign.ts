@@ -155,9 +155,12 @@ const BASE_STAGES: Stage[] = [
   // too (deterministic). A lone NPC's solo boost is cancelled
   // (CAMPAIGN_NPC_TUNING soloHpMul / soloDmgMul); the player's lone smasher
   // keeps its ×1.2. Levels fitted with `balance-sim.mjs camp` (~70–85 % wins).
+  // Win pays 200 (was 100): the stage-2 Team lesson's first level-up costs
+  // smasherLevelCost(1) = 192, and a first-timer holding 100 was asked for
+  // it (#playtest-1-9; guarded in tests/battleOnboarding.test.ts).
   s(1, 'stage_1', [
     e('round', 'balanced', 1, 1, 'turtle')
-  ], 100, 30),
+  ], 200, 30),
   s(2, 'stage_2', [
     e('quadratic', 'balanced', 2, 3, 'mysticaleye')
   ], 100, 30),
@@ -816,13 +819,32 @@ export const CAMPAIGN_NPC_TUNING: {
    *  spiked boss tree (arenaTerrain TOWER_TUNING): the tree is no longer the
    *  easy route, so the knock-out route gives a little back. */
   bossHpMul: number
+  /** #playtest-1-2/-3 boss curve, ONE rule for every campaign boss: a boss
+   *  blade's max HP never falls below the HP a neutral (quadratic + balanced)
+   *  blade has at the same part levels — a glass-cannon archetype must not
+   *  make a paper boss (stage 90's star/speedy Bat King had 96 HP between
+   *  walls 88 and 95) … */
+  bossHpFloor: boolean
+  /** … and the boss HP budget is shared by the boss blades: × this per
+   *  number of boss blades on the NPC team (1, 2, 3, 4+). Partner / healer
+   *  trios and quartets (stages 20, 25, 50, 75, 88, 95, 100) were the walls,
+   *  lone bosses fell in a few turns. The tree follows (0.75 × team HP). */
+  bossCountHpMul: [number, number, number, number]
 } = {
   hpCurve: [[0, 0.8], [3, 0.95], [5, 1.18], [8, 1.35], [11, 1.0], [14, 1.05], [17, 1.08], [20, 1.22], [27, 1.15], [33, 1.1]],
   dmgMul: 1,
   soloHpMul: 1 / 1.2,
   soloDmgMul: 1 / 1.2,
   countHpMul: [0.88, 1, 0.9, 0.85],
-  bossHpMul: 1.75
+  bossHpMul: 1.75,
+  bossHpFloor: true,
+  bossCountHpMul: [1, 0.9, 0.8, 0.7]
+}
+
+/** Boss-team HP share per boss-blade count (#playtest-1-2). */
+export const campaignBossCountHpMul = (bossCount: number): number => {
+  const c = CAMPAIGN_NPC_TUNING.bossCountHpMul
+  return c[Math.min(4, Math.max(1, Math.floor(bossCount))) - 1] ?? 1
 }
 
 /** HP multiplier of a part-only NPC on a campaign team of `count` blades. */
@@ -848,9 +870,10 @@ export const campaignNpcHpMul = (level: number): number => {
 
 // ─── Boss Rubber-Banding ────────────────────────────────────────────────────
 //
-// Frustrated-player nudge: each consecutive *campaign* boss loss shaves a
-// chunk off the next boss's max HP, capped so the fight is never trivially
-// won. Resets to 0 on a campaign boss win. Does NOT apply to PvP, ghost,
+// Frustrated-player nudge: each consecutive *campaign* loss (any stage since
+// #playtest-1-15; bosses only before) shaves a chunk off the next fight's NPC
+// max HP, capped so the fight is never trivially won (bosses 50 %, regular
+// stages 30 %). Resets to 0 on a campaign boss win. Does NOT apply to PvP, ghost,
 // or cheat stages — gating happens at the call sites in SpinnerArena's
 // game-over watcher (increment) and useSpinnerGame.createBladeState
 // (consume).
@@ -915,12 +938,37 @@ export const noteCampaignBossWin = () => {
   persistBossLossStreak()
 }
 
-/** Multiplier (0..1] applied to a campaign boss's max HP. 1 = full HP. */
-export const bossHpRubberBandMul = (): number => {
-  const tiers = Math.floor(bossLossStreak.value / BOSS_HP_REDUCTION_STEP)
-  const reduction = Math.min(BOSS_HP_REDUCTION_CAP, tiers * BOSS_HP_REDUCTION_PER_STEP)
-  return 1 - reduction
+/** Cap of the rubber band on a NON-boss stage (#playtest-1-15: the band used
+ *  to help on boss stages only, so a regular-stage wall like 13 or 87 gave a
+ *  losing player nothing but the same tip). Lower than the boss cap: regular
+ *  stages are shorter and the band should nudge, not hand out wins. */
+const STAGE_HP_REDUCTION_CAP = 0.3
+
+/** Rubber-band reduction (0 … cap) for a loss streak — pure. */
+export const rubberBandReduction = (streak: number, isBoss: boolean): number => {
+  const tiers = Math.floor(Math.max(0, streak) / BOSS_HP_REDUCTION_STEP)
+  return Math.min(isBoss ? BOSS_HP_REDUCTION_CAP : STAGE_HP_REDUCTION_CAP, tiers * BOSS_HP_REDUCTION_PER_STEP)
 }
+
+/** Multiplier (0..1] applied to a campaign boss's max HP. 1 = full HP. */
+export const bossHpRubberBandMul = (): number => 1 - rubberBandReduction(bossLossStreak.value, true)
+
+/** Multiplier (0..1] applied to EVERY campaign NPC's max HP (boss or not):
+ *  the streak counts consecutive campaign losses on any stage. */
+export const campaignHpRubberBandMul = (isBoss: boolean): number => 1 - rubberBandReduction(bossLossStreak.value, isBoss)
+
+/** Is the loss-streak assist active right now (the lose-screen tip says so)? */
+export const rubberBandActive = (): boolean => rubberBandReduction(bossLossStreak.value, false) > 0
+
+/** Last campaign stage of the 1-vs-1 tutorial arc on which the PLAYER always
+ *  launches first (#playtest-1-21: stage 3 was won with zero input — the
+ *  lone enemy opened, rammed the player's smasher and died on the exchange).
+ *  The tutorial must be won by the player's own launches. */
+export const PLAYER_FIRST_UNTIL_STAGE = 3
+
+/** Forced first turn of a campaign stage (undefined = the usual bias). */
+export const campaignFirstTurn = (stageId: number): 'player' | undefined =>
+  stageId >= 1 && stageId <= PLAYER_FIRST_UNTIL_STAGE ? 'player' : undefined
 
 /** Cost for upgrading to a given level. Linear base of 100 + (level-1)*20
  *  plus a quadratic "mid/late game" term that kicks in past level 10 so

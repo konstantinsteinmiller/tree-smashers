@@ -311,6 +311,12 @@ describe('LeagueResultPanel', () => {
     expect(status({ result: 'loss', lpBefore: 1199, lpAfter: 1179, delta: -20, isGate: true })).toBe('The gatekeeper holds. Try again!')
   })
 
+  it('#playtest-1-20: a free Wood loss says it is protected', async () => {
+    const { ResultPanel } = await load()
+    const status = (o: object) => mount(ResultPanel, { props: { outcome: { ...base, ...o } }, global: global() }).find('.lrp__status').text()
+    expect(status({ result: 'loss', lpBefore: 40, lpAfter: 40, delta: 0 })).toBe('Safe in Wood: no LP lost')
+  })
+
   it('a stale outcome renders nothing', async () => {
     const { ResultPanel } = await load()
     const w = mount(ResultPanel, { props: { outcome: { ...base, stale: true } }, global: global() })

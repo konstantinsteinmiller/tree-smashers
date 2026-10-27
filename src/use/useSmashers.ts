@@ -70,7 +70,29 @@ const persist = () => {
   }
 }
 
-export const smasherLevel = (id: SmasherId): number => clampSmasherLevel(levels.value[id] ?? 1)
+/** Catch-up share (#playtest-1-15): a smasher the player has never levelled
+ *  joins at this share of the mean of the roster's three highest levels, so a
+ *  legendary recruited at stage 72+ is not a useless Lv 1 next to a Lv 30
+ *  team. Levelling it once stores the level (it stops floating). */
+export const SMASHER_CATCH_UP_SHARE = 0.75
+
+/** Only smashers recruited past this stage catch up (the early cast is levelled
+ *  from Lv 1 on purpose — the tutorial's level-up lessons use it). */
+export const SMASHER_CATCH_UP_FROM_STAGE = 30
+
+/** Level an unlevelled smasher starts at for a stored roster (pure). */
+export const catchUpLevel = (roster: RosterLevels): number => {
+  const top = Object.values(roster)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+  if (top.length === 0) return 1
+  const mean = top.reduce((s, v) => s + v, 0) / top.length
+  return clampSmasherLevel(Math.floor(mean * SMASHER_CATCH_UP_SHARE))
+}
+
+export const smasherLevel = (id: SmasherId): number =>
+  clampSmasherLevel(levels.value[id] ?? (SMASHERS[id].unlockStage > SMASHER_CATCH_UP_FROM_STAGE ? catchUpLevel(levels.value) : 1))
 
 /** Recruited at this best-ever stage? Released smashers only (release gate,
  *  src/data/smasherCatalog.ts): a held-back smasher's stage recruits nothing. */

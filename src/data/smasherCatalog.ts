@@ -16,9 +16,11 @@
 // one upgrade of BOTH archetype parts in the old system, so a level-L smasher
 // has the stats a spinner had with its top and bottom upgraded L − 1 times —
 // up to SMASHER_TAPER_LEVEL (30); past it the per-level stat gain tapers
-// (`smasherUpgradeLevel`) and every level costs ~8 % more on top of the
+// (`smasherUpgradeLevel`) and every level costs ~4 % more on top of the
 // quadratic curve (`smasherLevelCost`), so going deep gets ever harder without
-// ever being walled off. Skill slot 1 is ready at level 1, slot 2 unlocks at
+// ever being walled off. (Playtest 1, #playtest-1-4: the old 3·(L−10)² term,
+// ×1.08 per level past 30 and a taper scale of 5 made upgrades stop mattering
+// after ~stage 75 — 30k coins ≈ 33 levels; the curve was flattened.) Skill slot 1 is ready at level 1, slot 2 unlocks at
 // level 10, slot 3 at 20; skill levels stop at 10 (the skill engine's table).
 
 import type { BottomPartId, SpinnerConfig, TopPartId } from '@/types/spinner'
@@ -57,12 +59,17 @@ export const SMASHER_LEVEL_SANITY_MAX = 9999
  *  are unchanged; past it costs grow exponentially and stat gains taper. */
 export const SMASHER_TAPER_LEVEL = 30
 
-/** Per-level cost growth past SMASHER_TAPER_LEVEL (on top of the quadratic). */
-export const SMASHER_COST_GROWTH = 1.08
+/** Per-level cost growth past SMASHER_TAPER_LEVEL (on top of the quadratic).
+ *  Was 1.08 (#playtest-1-4). */
+export const SMASHER_COST_GROWTH = 1.04
+
+/** Coefficient of the quadratic (to − 10)² cost term past level 10. Was 3
+ *  (#playtest-1-4: wins paying 400–600 could not keep up). */
+export const SMASHER_COST_QUAD = 1.5
 
 /** Taper scale (upgrades) of the stat gain past SMASHER_TAPER_LEVEL: the
  *  marginal gain of a level is 1 / √(1 + x / S) of a pre-30 level. */
-export const SMASHER_TAPER_SCALE = 5
+export const SMASHER_TAPER_SCALE = 8
 
 /** Smasher level at which skill slot i (0-based) becomes ready. */
 export const SKILL_SLOT_LEVELS = [1, 10, 20] as const
@@ -276,12 +283,13 @@ export const clampSmasherLevel = (level: unknown): number => {
 
 /** Coins to go from `level` to `level + 1`; null only at the technical
  *  sanity ceiling. One smasher level is one upgrade of both archetype parts,
- *  so it costs about two part upgrades. Levels 2 … 30 keep the original
- *  quadratic prices; every level past 30 multiplies by SMASHER_COST_GROWTH. */
+ *  so it costs about two part upgrades. Levels 2 … 10 keep the original
+ *  linear prices, then a quadratic term (SMASHER_COST_QUAD); every level past
+ *  30 multiplies by SMASHER_COST_GROWTH. */
 export const smasherLevelCost = (level: number): number | null => {
   if (!Number.isInteger(level) || level < 1 || level >= SMASHER_LEVEL_SANITY_MAX) return null
   const to = level + 1
-  const extra = to > 10 ? 3 * (to - 10) * (to - 10) : 0
+  const extra = to > 10 ? SMASHER_COST_QUAD * (to - 10) * (to - 10) : 0
   const base = (100 + (to - 1) * 20 + extra) * 1.6
   const steep = to > SMASHER_TAPER_LEVEL ? SMASHER_COST_GROWTH ** (to - SMASHER_TAPER_LEVEL) : 1
   return Math.min(Number.MAX_SAFE_INTEGER, Math.round(base * steep))

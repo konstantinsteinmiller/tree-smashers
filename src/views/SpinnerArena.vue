@@ -100,6 +100,7 @@ import useSpinnerConfig from '@/use/useSpinnerConfig'
 import useSpinnerCampaign, {
   noteCampaignBossLoss,
   noteCampaignBossWin,
+  campaignFirstTurn,
   getStageById,
   loadCheatStage,
   type Stage
@@ -184,6 +185,8 @@ import type { RouletteResult } from '@/components/organisms/RouletteWheel.vue'
 import { preloadRouletteArt } from '@/use/useRouletteArt'
 import { HAS_REWARDED_ADS } from '@/platforms/rewardedAdsBuild'
 import { showsWinCoinsAd } from '@/use/winCoinsAd'
+import { firstFightBoostFor, showWinRuleHint } from '@/use/battleOnboarding'
+import { createStuckWatch } from '@/use/resultSurfaceWatchdog'
 import { settleLabBattle } from '@/use/labBattle'
 import { rouletteGrantFor, type RouletteGrant } from '@/use/rouletteGrants'
 import {
@@ -218,7 +221,7 @@ import { pokiMeasure } from '@/utils/pokiPlugin'
 import { LEAGUE_BUILD, loadLeague, loadLeagueBridge, leagueMountAllowed, type LeagueApi, type LeagueBridge } from '@/league/leagueGate'
 import type { LeagueBattleFinish, LeagueBattleStart, LeaguePlayerSide } from '@/league/leagueArenaBridge'
 import type { LeagueFightTarget } from '@/league/useLeague'
-import type { OpponentCard } from '@/league/leagueOpponents'
+import type { OpponentCard, OpponentDeck } from '@/league/leagueOpponents'
 import type { LeagueSeasonRewardView } from '@/league/ui/leagueUi'
 
 useCheats()
@@ -287,7 +290,8 @@ const {
   statsFor,
   skillHud,
   bossTraitHud,
-  refuseFrozenTap
+  refuseFrozenTap,
+  firstGameBoostActive
 } = useSpinnerGame()
 
 const {
@@ -506,7 +510,11 @@ const canvasHeight: Ref<number> = ref(0)
 const uiBtnScale = computed(() => Math.min(2, Math.max(1, canvasWidth.value / 1000)))
 // Blade stat cards: same scaling curve as the buttons but capped so the
 // visual size never exceeds 250×350px. Base card is ~85×85px → max ~2.94.
-const uiStatScale = computed(() => Math.min(250 / 85, Math.max(1, canvasWidth.value / 1000)))
+// #playtest-1-12: a landscape phone (≤ 430 css px tall) shrinks the stat cards so a trio's two
+// stacked cards plus the right card leave the 390 px arena readable.
+const uiStatScale = computed(() => canvasWidth.value > canvasHeight.value && canvasHeight.value <= 430
+  ? 0.85
+  : Math.min(250 / 85, Math.max(1, canvasWidth.value / 1000)))
 const configModalOpen: Ref<boolean> = ref(false)
 const showOptions: Ref<boolean> = ref(false)
 const coinsAwarded: Ref<boolean> = ref(false)
@@ -800,6 +808,13 @@ const startSwapTutorialIfDue = () => {
     && playerTeam.value[0]?.smasherId !== 'thumper'
 }
 
+// The win rule on tap-to-start, stages 2-5 (#playtest-1-6): trees appear at
+// stage 2 and nothing said a fight is also won by knocking out every smasher.
+const winRuleHintVisible = computed(() => showWinRuleHint(
+  currentStageId.value,
+  !pvpMode.value && !ghostMode.value && !leagueSession.value && !cheatStage.value
+))
+
 const showConfigSpotlight = computed(() =>
   !hasOpenedConfig.value && currentStageId.value === 2 && showConfigButton.value && !showReward.value
 )
@@ -1087,7 +1102,10 @@ const updateCanvasSize = () => {
   // what the user actually sees and prevents bottom-row buttons from being
   // hidden behind the browser chrome.
   const vv = window.visualViewport
-  canvasWidth.value = vv?.width ?? window.innerWidth
+  // #playtest-1-22: WIDTH comes from the layout viewport — browser chrome only ever eats height,
+  // and a visual viewport a few px narrower (overlay scrollbar, a 1.02 pinch scale) left a dark
+  // ~7 px strip of page background down the right edge of portrait battles.
+  canvasWidth.value = Math.max(window.innerWidth, vv?.width ?? 0)
   canvasHeight.value = vv?.height ?? window.innerHeight
   canvasSize.value = Math.min(canvasWidth.value, canvasHeight.value)
   // Backing store at css × dpr (render-sharpness rule: never draw below the
@@ -1180,7 +1198,7 @@ const { liftPx: dragHintLiftPx } = useDragHintPlacement(dragHintRef, computed(()
 // The "tap to start" title stays on one line and shrinks to the room between
 // the side HUD columns (ru/uk/ro overflow at 568×320 otherwise).
 const tapStartTitleRef = ref<HTMLElement | null>(null)
-useFitText(tapStartTitleRef, [() => t('spinner.tapToStart')])
+useFitText(tapStartTitleRef, [() => t(isTouchUi ? 'spinner.tapToStart' : 'spinner.clickToStart')])
 
 // ─── Pointer Event Handlers ────────────────────────────────────────────────
 
@@ -1498,7 +1516,9 @@ watch(isGameOver, (over) => {
     // bossHpRubberBandMul in useSpinnerCampaign). Win resets the streak.
     // Excludes PvP (already returned above), ghost replays, and cheat
     // stages — only the player's real campaign attempts move the dial.
-    if (!ghostMode.value && !cheatStage.value && currentStage.value.isBoss) {
+    // Since #playtest-1-15 every campaign stage counts (regular stages get a
+    // smaller cap — campaignHpRubberBandMul).
+    if (!ghostMode.value && !cheatStage.value) {
       if (gameResult.value === 'win') noteCampaignBossWin()
       else if (gameResult.value === 'lose') noteCampaignBossLoss()
     }
@@ -1628,6 +1648,34 @@ const onRouletteRewardContinue = async () => {
   initCampaignGame()
   maybeReopenBossLab()
   void armLeagueUnlockAfterWin('win', battleModeOf({ cheat: !!cheatStage.value }))
+}
+
+// Dead game_over guard (#playtest-1-8): a campaign board that is over with no
+// result surface on screen for 3 s (see resultSurfaceWatchdog.ts) is rebuilt
+// for the current stage. Everything the result granted is already saved —
+// the boss path advances and pays before its surfaces show.
+const stuckWatch = createStuckWatch()
+const checkDeadGameOver = () => {
+  const surfaces = typeof document === 'undefined' ? 1
+    : document.querySelectorAll('.reward-root, .boss-defeated').length
+  const stuck = stuckWatch.sample(performance.now(), {
+    gameOver: phase.value === 'game_over',
+    campaign: !pvpMode.value && !ghostMode.value && !(LEAGUE_BUILD && leagueSession.value),
+    surfacesInDom: surfaces,
+    otherModalOpen: configModalOpen.value || showOptions.value || leaderboardModalOpen.value
+      || surrenderModalOpen.value || anyModalOverlayOpen()
+  })
+  if (!stuck) return
+  console.warn('[result] game_over with no result surface — rebuilding the stage')
+  showReward.value = false
+  showRoulette.value = false
+  showRouletteReward.value = false
+  showBossDefeated.value = false
+  pendingBossReward.value = false
+  rouletteGrants.value = []
+  trophyGrants.value = []
+  coinsAwarded.value = false
+  initCampaignGame()
 }
 
 // The roulette only opens after a BOSS win, so its painted rim/pointer/hub are
@@ -1961,7 +2009,10 @@ function initCampaignGame() {
   initGame(
     playerTeamWithUpgrades(),
     stageNpcTeam(),
-    !hasFirstWin.value,
+    // First-fight ×2 assist: only on stage 1, the one stage a genuine
+    // first-timer can be on without a win (a restored/seeded save further
+    // in must not fight one doubled stage, then a halved one — #playtest-1-11).
+    firstFightBoostFor(hasFirstWin.value, currentStageId.value),
     currentStage.value.arenaType,
     currentStageId.value >= 2,
     undefined,
@@ -1969,11 +2020,13 @@ function initCampaignGame() {
     'circle',
     {
       ...battleSkillOptions(battleModeOf({ cheat: !!cheatStage.value })),
+      // Tutorial arc: the player opens (#playtest-1-21, campaignFirstTurn).
+      ...(cheatStage.value ? {} : { firstTurn: campaignFirstTurn(currentStageId.value) }),
       // Tree Smashers: layouts cycle by stage; towers from stage 2 on
       // (stages 1–2 are the tutorial and stay pure). 1–3 trees per side,
       // seeded by the stage id (treeCountForStage: one through the tutorial
       // arc; PvP / league / ghosts keep one).
-      terrain: { layout: layoutForStage(currentStageId.value), towers: currentStageId.value >= TOWERS_FROM_STAGE, trees: treeCountForStage(currentStageId.value) }
+      terrain: { layout: layoutForStage(currentStageId.value), towers: currentStageId.value >= TOWERS_FROM_STAGE, trees: treeCountForStage(currentStageId.value, !!currentStage.value.isBoss) }
     }
   )
 }
@@ -2305,9 +2358,28 @@ const leagueSide = (): LeaguePlayerSide => ({
   skills: sk.value?.battleSkillOptions('league').skillLoadout ?? []
 })
 
-/** The hub's `loadDeck` (null until the bridge is in). */
-const loadLeagueDeckForHub = () =>
-  leagueBridge.value?.['loadLeagueDeck'](leagueSide()) ?? Promise.resolve(null)
+/** #playtest-1-20: the deck is fetched while the HUD button is up, so the hub opens on
+ *  cards instead of ~3 s of skeletons. Keyed on everything the deck depends on (day,
+ *  fights played, LP, team + loadout); used once, so the hub's quiet-state retries refetch. */
+let leagueDeckPrefetch: { key: string; p: Promise<OpponentDeck | null> } | null = null
+const leagueDeckKey = (): string => {
+  const st = league.value?.state.value
+  return st ? JSON.stringify([st.day, st.fights, st.lp, leagueSide()]) : ''
+}
+const prefetchLeagueDeck = () => {
+  const bridge = leagueBridge.value
+  if (!LEAGUE_BUILD || !bridge || !leagueMounted.value || !leagueMenuPhase() || leagueHubOpen.value || leagueSession.value !== null) return
+  const key = leagueDeckKey()
+  if (!key || leagueDeckPrefetch?.key === key) return
+  leagueDeckPrefetch = { key, p: bridge['loadLeagueDeck'](leagueSide()).catch(() => null) }
+}
+/** The hub's `loadDeck` (null until the bridge is in): the prefetched deck when it still fits. */
+const loadLeagueDeckForHub = (): Promise<OpponentDeck | null> => {
+  const pre = leagueDeckPrefetch
+  leagueDeckPrefetch = null
+  if (pre && pre.key === leagueDeckKey()) return pre.p
+  return leagueBridge.value?.['loadLeagueDeck'](leagueSide()) ?? Promise.resolve(null)
+}
 /** The hub's `fetchTop` (online, non-kids builds; null elsewhere). */
 const fetchLeagueTopForHub = () =>
   leagueBridge.value?.['fetchLeagueTop']() ?? Promise.resolve(null)
@@ -2319,6 +2391,9 @@ function openLeagueHub() {
   if (!LEAGUE_BUILD || !leagueMounted.value || !leagueMenuPhase()) return
   leagueNotice.value = null
   leagueHubOpen.value = true
+  // #playtest-1-20: a player who entered the league from the HUD button never gets the
+  // "League unlocked!" popup afterwards (a seeded / returning save saw it 2 stages late).
+  league.value?.markUnlockSeen()
   measureLeague('hub', 'open')
 }
 
@@ -2379,6 +2454,9 @@ const onLeagueFight = async (payload: { target: LeagueFightTarget; card: Opponen
     leagueSession.value = res
     lastBattleInit = initLeagueBoard
     initLeagueBoard()
+    // #playtest-1-20: the card tap already chose the fight — no second "tap to start".
+    // beginBattle keeps every gate (due interstitial, VS intro, skills / bosses glue).
+    void nextTick(() => { if (leagueSession.value === res && phase.value === 'tap_to_start') void beginBattle() })
   } finally {
     leagueBusy.value = false
   }
@@ -2511,6 +2589,7 @@ const onLeagueSeasonClaimed = (r: { coins: number, diamonds: number }) => {
 }
 
 if (LEAGUE_BUILD) {
+  watch([leagueMounted, leagueBridge, phase, () => league.value?.state.value], prefetchLeagueDeck)
   watch(phase, (p) => {
     if (p === 'tap_to_start') tapToStartAt = performance.now()
   })
@@ -2867,7 +2946,11 @@ onMounted(() => {
   })
 
   updateSpeedBoost()
-  speedBoostIntervalId = window.setInterval(updateSpeedBoost, 1000)
+  // The same 1 s tick samples the dead-game_over guard (#playtest-1-8).
+  speedBoostIntervalId = window.setInterval(() => {
+    updateSpeedBoost()
+    checkDeadGameOver()
+  }, 1000)
 
   // The gameplay bracket is driven reactively by the `isGameplayActive`
   // watcher above (battle phase + no blocking modal) and fanned out to every
@@ -3006,9 +3089,16 @@ onUnmounted(() => {
             div.tap-start-title.font-black.uppercase.ui-outline-xl.whitespace-nowrap(
               ref="tapStartTitleRef"
               class="text-3xl sm:text-5xl mb-2"
-            ) {{ t('spinner.tapToStart') }}
+            ) {{ t(isTouchUi ? 'spinner.tapToStart' : 'spinner.clickToStart') }}
           div.tap-start-hint.ui-tag.ui-tag--ink(class="text-sm sm:text-lg")
             span.ui-outline-sm.font-black {{ t(isTouchUi ? 'spinner.startHintTap' : 'spinner.startHintClick') }}
+          //- How to win (stages 2-5, #playtest-1-6): tree OR every smasher.
+          div.win-rule-hint.ui-tag.ui-tag--ink.mt-2(
+            v-if="winRuleHintVisible"
+            class="text-xs sm:text-sm"
+            data-testid="win-rule-hint"
+          )
+            span.ui-outline-sm.font-bold {{ t('spinner.winRule') }}
 
         //- Every-10th-game countdown — rendered inside the meteor shower ring
         div(
@@ -3063,7 +3153,7 @@ onUnmounted(() => {
             data-frozen-hint
           ) {{ t('bosses.frozenHint') }}
           div.drag-hint-text.drag-hint-plate.text-cream-50.game-text.leading-tight(v-else class="text-xs sm:text-sm")
-            | {{ t('spinner.dragHint') }}
+            | {{ t(isTouchUi ? 'spinner.dragHint' : 'spinner.dragHintClick') }}
 
 
       //- Boss intro card — stage-101+ encounters, inside the meteor intro.
@@ -3127,6 +3217,14 @@ onUnmounted(() => {
           div.absolute.right-0(v-if="idx === 1" class="bottom-full mb-1")
             CombatLog
           div.blade-stat-label.game-text {{ t('spinner.spinnerLabel', { n: idx + 1 }) }}
+          //- First-fight ×2 assist (#playtest-1-11): say why the stats are doubled.
+          div.blade-stat-boost.game-text(
+            v-if="firstGameBoostActive && !bs.dead"
+            role="note"
+            :title="t('spinner.firstFightBoostHint')"
+            :aria-label="t('spinner.firstFightBoostHint')"
+            data-testid="first-fight-boost"
+          ) {{ t('spinner.firstFightBoost') }}
           //- Frozen (Frost Lock): an ice block over the card's corner.
           component.blade-stat-ice(v-if="BossTraitGlyphUi && bs.trait.frozen" :is="BossTraitGlyphUi" trait="frost" :size="18" decorative)
           div.blade-stat-grid
@@ -3324,6 +3422,14 @@ onUnmounted(() => {
               UiIcon(name="upgrade")
             //- A team slot just opened (stage 3 / 10 won): "!" until the modal shows it.
             span.ui-notify.team-slot-notify(v-if="teamSlotBadge" aria-hidden="true" data-testid="team-slot-badge") !
+            //- Says why the arena went dark (#playtest-1-9): a callout over
+            //- the one lit button, pointing at it.
+            div.config-spotlight-callout.ui-tag.ui-tag--ink(
+              v-if="showConfigSpotlight"
+              role="status"
+              data-testid="config-spotlight-callout"
+            )
+              span.ui-outline-sm.font-black {{ t('spinner.teamSpotlight') }}
 
     //- First-config spotlight — darkens everything except the team button
     Transition(name="fade")
@@ -3507,12 +3613,25 @@ onUnmounted(() => {
                 IconCoin(class="w-6 h-6 text-sun-400")
                 span.text-sun-300.font-black.game-text(class="text-xl sm:text-2xl") +{{ g.coins }}
             //- Coin multiplier reward
+            //- It is the wheel's LANDED prize, already paid — not an ad offer
+            //- (#playtest-1-14): tagged "Wheel prize" with the boss reward ×
+            //- multiplier spelled out under the total.
             template(v-else)
+              div.roulette-grant-tag.font-black.uppercase.game-text.text-sun-200(
+                v-if="i === 0"
+                class="text-xs sm:text-sm tracking-[0.04em]"
+                data-testid="roulette-wheel-prize"
+              ) {{ t('spinner.wheelPrize') }}
               div.roulette-reward-glow.flex.flex-col.items-center.gap-2
                 span.roulette-grant-mult.text-sun-400.font-black.game-text {{ g.multiplier }}x
               div.flex.items-center.gap-3(:ref="(el) => setRouletteRowRef(el, i)")
                 IconCoin(class="w-8 h-8 text-sun-400")
                 span.roulette-grant-amount.text-sun-300.font-black.game-text +{{ g.coins }}
+              div.roulette-grant-math.text-cream-50.font-bold.game-text(
+                v-if="g.multiplier && rouletteBaseCoins > 0"
+                class="text-xs sm:text-sm"
+                aria-hidden="true"
+              ) {{ rouletteBaseCoins }} × {{ g.multiplier }}
         //- Boss trophy (§3.5): the earn-only skin(s) this encounter win just
         //- unlocked — already owned, the card only celebrates it (bosses gate
         //- handle: null on a bosses100-off build, where nothing is granted).
@@ -3698,6 +3817,35 @@ onUnmounted(() => {
   background: color-mix(in srgb, var(--color-wood-900) 70%, transparent)
   pointer-events: auto
 
+.config-spotlight-callout
+  position: absolute
+  right: 0
+  bottom: calc(100% + 0.6rem)
+  width: max-content
+  max-width: min(15rem, 70vw)
+  white-space: normal
+  text-align: right
+  font-size: 0.9rem
+  pointer-events: none
+  animation: spotlight-callout-bob 1.4s ease-in-out infinite
+  &::after
+    content: ''
+    position: absolute
+    right: 0.9rem
+    top: 100%
+    border: 0.45rem solid transparent
+    border-top-color: var(--color-ink)
+
+@keyframes spotlight-callout-bob
+  0%, 100%
+    transform: translateY(0)
+  50%
+    transform: translateY(-4px)
+
+@media (prefers-reduced-motion: reduce)
+  .config-spotlight-callout
+    animation: none
+
 .fade-enter-active, .fade-leave-active
   transition: opacity 0.4s ease
 
@@ -3794,6 +3942,16 @@ onUnmounted(() => {
 .speedup-switch
   :deep(.button-wrap:last-of-type button)
     margin-right: 0.5rem
+  // #playtest-1-17: each 1× / 2× option draws ~38×29 px; an invisible ::before grows its hit area
+  // past 44 px both ways (paint-free; .switch-opt is positioned).
+  :deep(.switch-opt)::before
+    content: ''
+    position: absolute
+    inset: -10px -3px
+  :deep(.button-wrap:first-of-type .switch-opt)::before
+    left: -10px
+  :deep(.button-wrap:last-of-type .switch-opt)::before
+    right: -10px
 
 // FREE gift sticker on the speed switch: gentle pulse + a light sheen
 // sweeping across. Scales from its right edge, where it is anchored.
@@ -4042,6 +4200,30 @@ onUnmounted(() => {
 
 .blade-stat-dead
   opacity: 0.35
+
+// First-fight ×2 assist badge (#playtest-1-11): a sun pill on the card's
+// top edge, out of the stat grid so the card does not grow.
+.blade-stat-boost
+  position: absolute
+  top: -0.7rem
+  right: -0.3rem
+  padding: 0 0.3rem
+  border: 2px solid var(--color-ink)
+  border-radius: 999px
+  background: var(--color-sun-400)
+  color: var(--color-ink)
+  font-size: 0.65rem
+  font-weight: 900
+  line-height: 1.1rem
+  white-space: nowrap
+  pointer-events: none
+
+// Win-rule chip under the tap-to-start hint (#playtest-1-6).
+.win-rule-hint
+  display: inline-block
+  max-width: min(22rem, 86vw)
+  white-space: normal
+  text-wrap: balance
 
 // Team size 3 off phone portrait: card 1 bottom-left, card 2 bottom-right,
 // card 3 above card 1.
