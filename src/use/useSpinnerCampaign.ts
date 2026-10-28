@@ -28,6 +28,8 @@ export interface StageBladeConfig {
   fxSkin?: string
   isBoss?: boolean
   bossAbility?: BossAbility
+  /** Per-stage boss HP scale (BOSS_STAGE_HP_SCALE); campaign bosses only. */
+  bossHpScale?: number
   /** Stage-101+ boss mechanic (bosses-100-feature.md §4); encounters only. */
   bossTrait?: BossTrait
   /** Trait the split children inherit (Shattering Glacier). */
@@ -173,7 +175,8 @@ const BASE_STAGES: Stage[] = [
     e('cushioned', 'balanced', 0, 0, 'mountain')
   ], 110, 35),
   s(5, 'stage_5', [
-    e('star', 'speedy', 5, 5, 'tornado', 'plain')
+    // First boss: was 5/5 (8-29 % first try in the 2026-10-28 sims).
+    e('star', 'speedy', 4, 4, 'tornado', 'plain')
   ], 200, 50, { isBoss: true }),
 
   // ── Early Game (6-20) ─────────────────────────────────────────────────────
@@ -635,6 +638,37 @@ const BASE_STAGES: Stage[] = [
     e('quadratic', 'speedy', 29, 32, 'mysticaleye', 'healers')
   ], 3500, 600, { isBoss: true })
 ]
+
+// ─── Boss tuning pass (balance sims 2026-10-28, #playtest-1-2) ──────────────
+// A lone boss's parts never sit above LONE_BOSS_LEVEL_CAP × the mean part
+// level of the regular stage before it: the hand levels (child-emitter 80 at
+// 41/48, ghost 90 at 45/48 vs a ~22-25 team) plus the boss HP floor made
+// walls no HP tuning could open — their damage decided the fight.
+export const LONE_BOSS_LEVEL_CAP = 1.4
+/** Per-boss-stage HP scale on top of CAMPAIGN_NPC_TUNING.bossHpMul, fitted
+ *  by `balance-sim.mjs camp` sweeps to a ~50-60 % first-try win for the
+ *  scripted player (no loss-streak relief). Missing = 1. */
+export const BOSS_STAGE_HP_SCALE: Readonly<Record<number, number>> = Object.freeze({
+  5: 0.71, 10: 1.26, 15: 1.14, 20: 1.49, 25: 0.71, 30: 0.86, 35: 0.71,
+  40: 0.71, 45: 1.00, 50: 0.71, 55: 1.00, 60: 1.00, 65: 0.57, 70: 0.71,
+  75: 0.57, 80: 0.46, 85: 1.00, 88: 0.71, 90: 0.57, 95: 0.37, 100: 0.37
+})
+const meanPartLevel = (st: Stage): number =>
+  st.enemyTeam.reduce((n, b) => n + b.topLevel + b.bottomLevel, 0) / (2 * Math.max(1, st.enemyTeam.length))
+for (let i = 1; i < BASE_STAGES.length; i++) {
+  const st = BASE_STAGES[i]!
+  if (!st.isBoss) continue
+  const scale = BOSS_STAGE_HP_SCALE[st.id]
+  if (st.enemyTeam.length === 1) {
+    // At least +4 levels of headroom so the early bosses (stage 4's team is
+    // level ~0.5) are not flattened to level 1.
+    const ref = meanPartLevel(BASE_STAGES[i - 1]!)
+    const cap = Math.max(Math.round(LONE_BOSS_LEVEL_CAP * ref), Math.round(ref + 4))
+    const b = st.enemyTeam[0]!
+    st.enemyTeam = [{ ...b, topLevel: Math.min(b.topLevel, cap), bottomLevel: Math.min(b.bottomLevel, cap) }]
+  }
+  if (scale !== undefined && scale !== 1) st.enemyTeam = st.enemyTeam.map(b => b.isBoss ? { ...b, bossHpScale: scale } : b)
+}
 
 // ─── Infinite Campaign (stages 101 and beyond) ──────────────────────────────
 // After the 100 hand-crafted stages, the campaign loops back to stage 1

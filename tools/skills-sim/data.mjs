@@ -214,6 +214,7 @@ export const isSmasherId = (v) => typeof v === 'string' && Object.hasOwn(SMASHER
 export const SMASHER_LEVEL_SANITY_MAX = readNum(catSrc, 'SMASHER_LEVEL_SANITY_MAX', 'smasherCatalog.ts')
 export const SMASHER_TAPER_LEVEL = readNum(catSrc, 'SMASHER_TAPER_LEVEL', 'smasherCatalog.ts')
 export const SMASHER_COST_GROWTH = readNum(catSrc, 'SMASHER_COST_GROWTH', 'smasherCatalog.ts')
+export const SMASHER_COST_QUAD = readNum(catSrc, 'SMASHER_COST_QUAD', 'smasherCatalog.ts')
 export const SMASHER_TAPER_SCALE = readNum(catSrc, 'SMASHER_TAPER_SCALE', 'smasherCatalog.ts')
 export const SKILL_SLOT_LEVELS = Object.freeze(evalArray(catSrc, 'SKILL_SLOT_LEVELS'))
 /** The default team every player starts with (useSpinnerConfig.ts). */
@@ -223,7 +224,7 @@ for (const needle of [
   'topLevel: lv - 1,',
   'bottomLevel: lv - 1',
   'return Math.min(10, 1 + Math.floor((lv - open) / 2))',
-  'const extra = to > 10 ? 3 * (to - 10) * (to - 10) : 0',
+  'const extra = to > 10 ? SMASHER_COST_QUAD * (to - 10) * (to - 10) : 0',
   'const base = (100 + (to - 1) * 20 + extra) * 1.6',
   'const steep = to > SMASHER_TAPER_LEVEL ? SMASHER_COST_GROWTH ** (to - SMASHER_TAPER_LEVEL) : 1',
   'return Math.min(Number.MAX_SAFE_INTEGER, Math.round(base * steep))',
@@ -270,7 +271,7 @@ export const smasherLoadout = (config) => {
 export const smasherLevelCost = (level) => {
   if (!Number.isInteger(level) || level < 1 || level >= SMASHER_LEVEL_SANITY_MAX) return null
   const to = level + 1
-  const extra = to > 10 ? 3 * (to - 10) * (to - 10) : 0
+  const extra = to > 10 ? SMASHER_COST_QUAD * (to - 10) * (to - 10) : 0
   const base = (100 + (to - 1) * 20 + extra) * 1.6
   const steep = to > SMASHER_TAPER_LEVEL ? SMASHER_COST_GROWTH ** (to - SMASHER_TAPER_LEVEL) : 1
   return Math.min(Number.MAX_SAFE_INTEGER, Math.round(base * steep))
@@ -381,8 +382,10 @@ for (const needle of [
   "owner === 'npc' && !pvpMode.value && !isSmasherId(config.smasherId)",
   'if (isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.dmgMul',
   'const legacyNpcHpMul = isLegacyNpc(owner, config) ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2) : 1',
-  'const finalHp = stats.maxHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier',
-  'const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul : bossStats ? 2 : 1',
+  'const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier',
+  "const ref = computeStats({ ...config, topPartId: 'quadratic', bottomPartId: 'balanced' }, config.topLevel ?? 0, config.bottomLevel ?? 0)",
+  'baseHp *= campaignBossCountHpMul(npcBossCount)',
+  'const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul * (config.bossHpScale ?? 1) : bossStats ? 2 : 1',
   'const bossRadius = BLADE_RADIUS * radiusMult * disc',
   'followHeading(blade.ax, blade.ay, 0, blade)',
   'followHeading(blade.vx, blade.vy, STOP_THRESHOLD, blade)',
@@ -390,6 +393,9 @@ for (const needle of [
   'b.armor !== undefined && b.armor.back < b.armor.front ? ZONE_BACK : ZONE_FRONT',
   'if (perp < BLADE_RADIUS * ((blade.disc ?? 1) + (ally.disc ?? 1) + 1)) return true'
 ]) expectSource(gameSrc, 'useSpinnerGame.ts', needle)
+/** useSpinnerCampaign.ts campaignBossCountHpMul. */
+export const campaignBossCountHpMul = (n) => CAMPAIGN_NPC_TUNING.bossCountHpMul[Math.min(4, Math.max(1, Math.floor(n))) - 1] ?? 1
+expectSource(campSrc, 'useSpinnerCampaign.ts', 'return c[Math.min(4, Math.max(1, Math.floor(bossCount))) - 1] ?? 1')
 /** campaignNpcHpMul(level) with an optional curve override (tests / sweeps). */
 export const campaignNpcHpMul = (level, curve = CAMPAIGN_NPC_TUNING.hpCurve) => {
   const c = curve
@@ -409,7 +415,7 @@ export const campaignNpcHpMul = (level, curve = CAMPAIGN_NPC_TUNING.hpCurve) => 
 const RB_PER_STEP = readNum(campSrc, 'BOSS_HP_REDUCTION_PER_STEP', 'useSpinnerCampaign.ts')
 const RB_STEP = readNum(campSrc, 'BOSS_HP_REDUCTION_STEP', 'useSpinnerCampaign.ts')
 const RB_CAP = readNum(campSrc, 'BOSS_HP_REDUCTION_CAP', 'useSpinnerCampaign.ts')
-expectSource(campSrc, 'useSpinnerCampaign.ts', 'const reduction = Math.min(BOSS_HP_REDUCTION_CAP, tiers * BOSS_HP_REDUCTION_PER_STEP)')
+expectSource(campSrc, 'useSpinnerCampaign.ts', 'return Math.min(isBoss ? BOSS_HP_REDUCTION_CAP : STAGE_HP_REDUCTION_CAP, tiers * BOSS_HP_REDUCTION_PER_STEP)')
 /** bossHpRubberBandMul for a loss streak (the game reads the streak from storage). */
 export const bossHpRubberBandMul = (streak = 0) => {
   const tiers = Math.floor(Math.max(0, streak) / RB_STEP)

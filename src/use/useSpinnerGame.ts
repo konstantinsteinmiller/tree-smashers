@@ -2866,7 +2866,7 @@ export const useSpinnerGame = () => {
   ): SpinnerState {
     const stats = computeStats(config, config.topLevel ?? 0, config.bottomLevel ?? 0)
     // Bosses: CAMPAIGN_NPC_TUNING.bossHpMul; a lone "boss stats" enemy keeps 2×.
-    const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul : bossStats ? 2 : 1
+    const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul * (config.bossHpScale ?? 1) : bossStats ? 2 : 1
     const boostHpMultiplier = (firstGameBoost && owner === 'player') ? 2 : 1
     // Campaign-only NPC HP scaling by difficulty: EASY -10%, HARD +30%.
     // PvP and ghost fights are excluded so both modes stay authoritative.

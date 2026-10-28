@@ -21,7 +21,7 @@ const hyp = (x, y) => Math.sqrt(x * x + y * y)
 // dmgMul) exactly like createBladeState's isLegacyNpc gate; NPC bosses get the
 // rubber band for opts.bossLossStreak (or a raw opts.bossHpMul).
 import {
-  computeStats, getStageById, lockstepLevel, isSmasherId, smasherConfig, smasherLoadout, discOf, armorOf,
+  campaignBossCountHpMul, computeStats, getStageById, lockstepLevel, isSmasherId, smasherConfig, smasherLoadout, discOf, armorOf,
   ARMOR_CONE_COS, CAMPAIGN_NPC_TUNING, campaignNpcHpMul, bossHpRubberBandMul, applySkillMods,
   DEFAULT_TEAM_SMASHERS, SKILL_BLADE_SLOTS, sideSizeMul, sideStatMul
 } from './data.mjs'
@@ -190,13 +190,22 @@ export const runBattle = (opts) => {
   // createBladeState; difficulty MEDIUM -> 1, no first-game boost. Part-only
   // NPCs: campaignNpcHpMul(mean part level); NPC bosses: x rubber band
   // (opts.bossLossStreak / opts.bossHpMul, default streak 0 = full HP).
+  let npcBossCount = 1
   const createBlade = (owner, x, y, config, isBoss = false) => {
     const st = computeStats(config)
     const legacyMul = isLegacyNpc(owner, config)
       ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2, npcHpCurve)
       : 1
     const rubber = isBoss && owner === 'npc' ? bossRubberMul : 1
-    const hp = st.maxHp * legacyMul * (isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul : 1) * rubber * teamStatMul[owner]
+    // Campaign boss curve (useSpinnerGame.ts, #playtest-1-2/-3): a part-only
+    // boss never has less HP than a neutral blade at its levels; boss trios /
+    // quartets share one HP budget.
+    let baseHp = st.maxHp
+    if (isBoss && isLegacyNpc(owner, config)) {
+      if (CAMPAIGN_NPC_TUNING.bossHpFloor) baseHp = Math.max(baseHp, computeStats({ ...config, topPartId: 'quadratic', bottomPartId: 'balanced' }).maxHp)
+      baseHp *= campaignBossCountHpMul(npcBossCount)
+    }
+    const hp = baseHp * legacyMul * (isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul * (config.bossHpScale ?? 1) : 1) * rubber * teamStatMul[owner]
       * (teamStatMul[owner] !== 1 && isLegacyNpc(owner, config) ? CAMPAIGN_NPC_TUNING.soloHpMul : 1)
       * (isLegacyNpc(owner, config) ? (CAMPAIGN_NPC_TUNING.countHpMul[Math.min(4, Math.max(1, stage.enemyTeam.length)) - 1] ?? 1) : 1)
     let radiusMult = 1
@@ -361,6 +370,7 @@ export const runBattle = (opts) => {
     p.x = c.x
     p.y = c.y
   }
+  npcBossCount = Math.max(1, nTeam.filter(c => c.isBoss).length)
   nTeam.forEach((cfg, i) => npc.push(createBlade('npc', positions[i].x, positions[i].y, cfg, !!cfg.isBoss)))
   player.forEach((b, i) => {
     b.syncKey = i

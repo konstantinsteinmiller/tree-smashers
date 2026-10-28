@@ -23,6 +23,7 @@ export const stageBladeToConfig = (blade: Readonly<StageBladeConfig>): SpinnerCo
   }
   // Stage-101+ mechanics (§4): the carrier's trait and the split shards' trait.
   if (e.fxSkin !== undefined) cfg.fxSkin = e.fxSkin
+  if (e.bossHpScale !== undefined) cfg.bossHpScale = e.bossHpScale
   if (e.bossTrait !== undefined) cfg.bossTrait = e.bossTrait
   if (e.shardTrait !== undefined) cfg.shardTrait = e.shardTrait
   return cfg

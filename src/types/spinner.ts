@@ -90,6 +90,8 @@ export interface SpinnerConfig {
   fxSkin?: string
   isBoss?: boolean
   bossAbility?: BossAbility
+  /** Per-stage campaign boss HP scale (useSpinnerCampaign BOSS_STAGE_HP_SCALE). */
+  bossHpScale?: number
   /** Stage-101+ boss mechanic this blade carries (NPC bosses only). */
   bossTrait?: BossTrait
   /** Trait handed to this boss's split children (Shattering Glacier: 'chill');

@@ -106,7 +106,7 @@ export const TIER_FLOOR_POWER: Readonly<Record<LeagueTier, number>> = /* sim-fit
  * rosters; Platinum cinder_tyrant, Diamond glacier_warden, Champion
  * elemental_court use their encounter rosters. Wood has no gate (0).
  */
-export const GATEKEEPER_LEVEL: Readonly<Record<LeagueTier, number>> = /* sim-fit */ Object.freeze({ wood: 0, bronze: 2, silver: 3, gold: 10, platinum: 15, diamond: 40, champion: 17 })
+export const GATEKEEPER_LEVEL: Readonly<Record<LeagueTier, number>> = /* sim-fit */ Object.freeze({ wood: 0, bronze: 3, silver: 6, gold: 11, platinum: 17, diamond: 35, champion: 20 })
 
 /** Opponent cards aim at these expected scores (easier / even / harder). */
 export const OPPONENT_TARGET_E: readonly [number, number, number] = Object.freeze([0.65, 0.5, 0.35]) as readonly [number, number, number]
