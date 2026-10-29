@@ -17,7 +17,7 @@ import type { ArenaType } from '@/use/useSpinnerCampaign'
 import { campaignBossCountHpMul, campaignHpRubberBandMul, CAMPAIGN_NPC_TUNING, campaignNpcCountHpMul, campaignNpcHpMul, sanitizeArenaType } from '@/use/useSpinnerCampaign'
 import {
   allTreesDown, suddenDeathDecayShare, applyGround, buildTerrainLayout, collideSolids, createTowers, decideResult, pickTargetTree, inDeepCore, newGroundState, newSolidEffect,
-  terrainCircles, terrainSolidCircles, towerHitDamage, towerSpecFor, towerSpikeRecoil, towerFrontAngle, TOWER_FRONT_HALF_ARC,
+  terrainCircles, terrainSolidCircles, towerHitDamage, towerSpecFor, towerSpikeRecoil, towerFrontAngle, TOWER_FRONT_HALF_ARC, TREE_TURN_HIT_CAP,
   type GroundEffect, type GroundState, type TeamTower, type TerrainLayout
 } from '@/use/arenaTerrain'
 import { DECOR_DRAW, renderTerrainFeatures } from '@/use/arenaTerrainDraw'
@@ -1251,6 +1251,8 @@ export const useSpinnerGame = () => {
   const solidOut = newSolidEffect()
   /** Per blade→tower last contact (gameTime) for the one-hit-per-contact gate. */
   const towerContactTimes = new Map<string, number>()
+  /** HP a part-only NPC has taken off each player tree this turn (TREE_TURN_HIT_CAP). */
+  const npcTreeTurnLoss = new Map<TeamTower, number>()
   /** Destruction debris of a fallen tower (VFX only). */
   interface TowerDebris { x: number; y: number; vx: number; vy: number; rot: number; vr: number; size: number; color: string; life: number }
   const towerDebris: TowerDebris[] = []
@@ -3498,6 +3500,7 @@ export const useSpinnerGame = () => {
     // solids are the arena's only floor obstacles (MAX_SOLID_OBSTACLES).
     groundStates.clear()
     towerContactTimes.clear()
+    npcTreeTurnLoss.clear()
     spikeCalloutShown = false
     towerDebris.length = 0
     resetTowerFx(towerFx)
@@ -4674,6 +4677,16 @@ export const useSpinnerGame = () => {
           dmg *= tm
         }
       }
+      // No tree falls to one enemy turn (TREE_TURN_HIT_CAP): a part-only NPC
+      // (campaign, boss encounter, gatekeeper — never PvP) takes at most that
+      // share of a PLAYER tree's max HP per turn, so a glass-cannon boss can't
+      // fell it before the player has played.
+      if (tower.side === 'player' && isLegacyNpc(blade.owner, blade.config)) {
+        const used = npcTreeTurnLoss.get(tower) ?? 0
+        dmg = Math.min(dmg, Math.max(0, tower.maxHp * TREE_TURN_HIT_CAP - used))
+        npcTreeTurnLoss.set(tower, used + dmg)
+        if (dmg <= 0) continue
+      }
       tower.hp = Math.max(0, tower.hp - dmg)
       tower.flash = 1
       if (!FX.low) {
@@ -4736,6 +4749,7 @@ export const useSpinnerGame = () => {
   let turnHandoffs = 0
   const suddenDeathTick = () => {
     turnHandoffs++
+    npcTreeTurnLoss.clear()
     if (pvpMode.value || towers.length === 0) return
     const share = suddenDeathDecayShare(turnHandoffs)
     if (share <= 0) return

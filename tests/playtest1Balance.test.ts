@@ -36,8 +36,14 @@ describe('#playtest-1-5 sudden death: tree decay', () => {
 })
 
 describe('#playtest-1-7 multi-tree stages', () => {
-  it('2 or 3 trees hold the same total HP as one', () => {
-    for (let n = 1; n <= 3; n++) expect(TREE_COUNT_HP_SHARE[n - 1]! * n).toBeCloseTo(1, 6)
+  it('each extra tree is a smaller share, and the total tree HP of a side shrinks with the count', () => {
+    expect(TREE_COUNT_HP_SHARE[0]).toBe(1)
+    for (let n = 2; n <= 3; n++) {
+      // Smaller targets that all have to fall: less total HP keeps the tree
+      // route as quick as one tree's (balance pass 2026-10-28).
+      expect(TREE_COUNT_HP_SHARE[n - 1]! * n).toBeLessThan(TREE_COUNT_HP_SHARE[n - 2]! * (n - 1))
+      expect(TREE_COUNT_HP_SHARE[n - 1]! * n).toBeGreaterThanOrEqual(0.5)
+    }
   })
 })
 

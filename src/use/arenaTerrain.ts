@@ -167,6 +167,13 @@ export const TOWER_TUNING: { hpRatio: number; bossHpMul: number; ownBossStageHpM
   spikeRecoil: TOWER_SPIKE_RECOIL,
   spikes: TOWER_SPIKES
 }
+/** Most of a PLAYER tree's max HP a part-only NPC's hits (campaign stages,
+ *  boss encounters, gatekeepers; never PvP / ghosts' smashers) can take in ONE
+ *  enemy turn; sudden-death decay is not a hit. Balance pass 2026-10-28: the
+ *  stage-90 ghost boss (two halves, star/speedy) felled the player's tree on
+ *  its first launch in half the fights — before the player had played once
+ *  (stages 65, 81, 97 too). A tree now takes three enemy turns at the least. */
+export const TREE_TURN_HIT_CAP = 0.4
 /** Damage scale for blade → tower hits (on top of the engine's DAMAGE_SCALE). */
 export const TOWER_DAMAGE_MUL = 1
 
@@ -678,12 +685,19 @@ export const TREE_COUNT_ODDS: readonly [number, number] = [0.72, 0.95]
 export const MULTI_TREES_FROM_STAGE = 6
 /** Tree radius × this per tree count (several trees share the wall). */
 export const TREE_COUNT_RADIUS_MUL: readonly number[] = [1, 0.85, 0.75]
-/** Each tree's HP share of the single-tree HP per tree count — in total the
- *  SAME tree HP as one tree (was 1.1 / 1.2 ×; #playtest-1-7: 2–3 trees of
- *  500–1400 HP turned stages into slogs). The extra trees are smaller
- *  targets, which is cost enough. Balance-sim pending (roadmap "balance sims
- *  to run"). */
-export const TREE_COUNT_HP_SHARE: readonly number[] = [1, 0.5, 1 / 3]
+/** Each tree's HP share of the single-tree HP per tree count (balance pass
+ *  2026-10-28). Several trees are smaller targets that ALL have to fall, so
+ *  at the same total HP (1/2, 1/3 — #playtest-1-7) the tree route faded: on
+ *  the same regular stages 33 % of fights ended by a tree with one tree,
+ *  25 % with two, 19 % with three, and the fights ran 7.3 → 8.0 → 8.6
+ *  launches. With 0.45 / 0.2 per tree (0.9 / 0.6 of one tree in total) the
+ *  tree route is back to one tree's (wins by tree 33 / 32 vs 32 %, ~7.9
+ *  launches) without making a tree rush the easy route (a bot that aims at
+ *  the trees 70 % of the time wins +3 / +6 pts over the normal one, +4 on one
+ *  tree; at 0.4 for two trees it was +8). Every tree that falls is a quick
+ *  beat, and a 2–3-tree stage plays like a 1-tree one.
+ *  (balance-sim.mjs camp --trees 1|2|3, --tower-aim 0.7.) */
+export const TREE_COUNT_HP_SHARE: readonly number[] = [1, 0.45, 0.2]
 /** Minimum centre distance between two neighbouring trees of a side, × tree
  *  radius (painted sprite half width 1.2 r: the crowns do not overlap). */
 export const TREE_SPACING = 2.5
