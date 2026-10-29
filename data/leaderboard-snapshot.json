@@ -1,8 +1,8 @@
 {
   "source": "https://leaderboard-tree-smashers.hyperg8.workers.dev",
-  "fetchedAt": 1792940855575,
-  "updatedAt": 1792940855239,
-  "total": 1817,
+  "fetchedAt": 1793227890228,
+  "updatedAt": 1793227890191,
+  "total": 1820,
   "entries": [
     {
       "rank": 1,
@@ -138,471 +138,471 @@
     },
     {
       "rank": 23,
+      "name": "Vortex473495",
+      "score": 100,
+      "power": 90
+    },
+    {
+      "rank": 24,
       "name": "Cyclone781240",
       "score": 77,
       "power": 34
     },
     {
-      "rank": 24,
+      "rank": 25,
       "name": "Vortex152582",
       "score": 73,
       "power": 61
     },
     {
-      "rank": 25,
+      "rank": 26,
       "name": "Cyclone822011",
       "score": 72,
       "power": 63
     },
     {
-      "rank": 26,
+      "rank": 27,
       "name": "Blader965379",
       "score": 71,
       "power": 62
     },
     {
-      "rank": 27,
+      "rank": 28,
       "name": "Salt",
       "score": 70,
       "power": 61
     },
     {
-      "rank": 28,
+      "rank": 29,
       "name": "Vortex393300",
       "score": 69,
       "power": 58
     },
     {
-      "rank": 29,
+      "rank": 30,
       "name": "Cinder",
       "score": 68,
       "power": 56
     },
     {
       "rank": 30,
+      "name": "Striker506974",
+      "score": 68,
+      "power": 51
+    },
+    {
+      "rank": 32,
       "name": "Ikaru",
       "score": 67,
       "power": 55
     },
     {
-      "rank": 31,
+      "rank": 33,
       "name": "Rogue987781",
       "score": 66,
       "power": 58
     },
     {
-      "rank": 32,
+      "rank": 34,
       "name": "Ashen",
       "score": 65,
       "power": 57
     },
     {
-      "rank": 33,
+      "rank": 35,
       "name": "Zeph",
       "score": 64,
       "power": 57
     },
     {
-      "rank": 34,
+      "rank": 36,
       "name": "Spinner774812",
       "score": 63,
       "power": 53
     },
     {
-      "rank": 35,
+      "rank": 37,
       "name": "Blader936598",
       "score": 62,
       "power": 51
     },
     {
-      "rank": 36,
+      "rank": 38,
       "name": "Havoc733530",
       "score": 61,
       "power": 50
     },
     {
-      "rank": 37,
+      "rank": 39,
       "name": "r1ptide",
       "score": 60,
       "power": 52
     },
     {
-      "rank": 38,
+      "rank": 40,
       "name": "Halcyon",
       "score": 59,
       "power": 50
     },
     {
-      "rank": 39,
+      "rank": 41,
       "name": "Fable",
       "score": 58,
       "power": 50
     },
     {
-      "rank": 40,
+      "rank": 42,
       "name": "Vortex239031",
       "score": 57,
       "power": 51
     },
     {
-      "rank": 41,
+      "rank": 43,
       "name": "Vortex630316",
       "score": 56,
       "power": 50
     },
     {
-      "rank": 42,
+      "rank": 44,
       "name": "Palefire",
       "score": 55,
       "power": 45
     },
     {
-      "rank": 43,
+      "rank": 45,
       "name": "Havoc835193",
       "score": 54,
       "power": 46
     },
     {
-      "rank": 44,
+      "rank": 46,
       "name": "Blazer600097",
       "score": 53,
       "power": 44
     },
     {
-      "rank": 44,
+      "rank": 46,
       "name": "Cyclone828410",
       "score": 53,
       "power": 44
     },
     {
-      "rank": 46,
+      "rank": 48,
       "name": "Blader583417",
       "score": 52,
       "power": 47
     },
     {
-      "rank": 46,
+      "rank": 48,
       "name": "Rogue670388",
       "score": 52,
       "power": 45
     },
     {
-      "rank": 48,
+      "rank": 50,
       "name": "Vex",
       "score": 51,
       "power": 45
     },
     {
-      "rank": 48,
+      "rank": 50,
       "name": "Havoc743081",
       "score": 51,
       "power": 44
     },
     {
-      "rank": 50,
+      "rank": 52,
       "name": "Blazer787250",
       "score": 50,
       "power": 43
     },
     {
-      "rank": 50,
+      "rank": 52,
       "name": "Spinner140439",
       "score": 50,
       "power": 42
     },
     {
-      "rank": 52,
+      "rank": 54,
       "name": "Blazer643391",
       "score": 49,
       "power": 44
     },
     {
-      "rank": 52,
+      "rank": 54,
       "name": "Rogue737364",
       "score": 49,
       "power": 40
     },
     {
-      "rank": 54,
+      "rank": 56,
       "name": "Vortex541937",
       "score": 48,
       "power": 38
     },
     {
-      "rank": 54,
+      "rank": 56,
       "name": "sundown",
       "score": 48,
       "power": 41
     },
     {
-      "rank": 56,
+      "rank": 58,
       "name": "Striker504589",
       "score": 47,
       "power": 40
     },
     {
-      "rank": 56,
+      "rank": 58,
       "name": "Vortex412540",
       "score": 47,
       "power": 41
     },
     {
-      "rank": 58,
+      "rank": 60,
       "name": "Blader444841",
       "score": 46,
       "power": 37
     },
     {
-      "rank": 58,
+      "rank": 60,
       "name": "Ripper853001",
       "score": 46,
       "power": 41
     },
     {
-      "rank": 58,
+      "rank": 60,
       "name": "Rogue478392",
       "score": 46,
       "power": 40
     },
     {
-      "rank": 61,
+      "rank": 63,
       "name": "Rogue860901",
       "score": 45,
       "power": 37
     },
     {
-      "rank": 61,
+      "rank": 63,
       "name": "Spinner172590",
       "score": 45,
       "power": 35
     },
     {
-      "rank": 61,
+      "rank": 63,
       "name": "Blazer546646",
       "score": 45,
       "power": 39
     },
     {
-      "rank": 64,
+      "rank": 66,
       "name": "Spinner200019",
       "score": 44,
       "power": 36
     },
     {
-      "rank": 64,
+      "rank": 66,
       "name": "Ripper420100",
       "score": 44,
       "power": 39
     },
     {
-      "rank": 64,
+      "rank": 66,
       "name": "Ovid",
       "score": 44,
       "power": 39
     },
     {
-      "rank": 67,
+      "rank": 69,
       "name": "Spinner118782",
       "score": 43,
       "power": 35
     },
     {
-      "rank": 67,
+      "rank": 69,
       "name": "Ripper597769",
       "score": 43,
       "power": 39
     },
     {
-      "rank": 67,
+      "rank": 69,
       "name": "nova.",
       "score": 43,
       "power": 37
     },
     {
-      "rank": 70,
+      "rank": 72,
       "name": "Rogue107862",
       "score": 42,
       "power": 34
     },
     {
-      "rank": 70,
+      "rank": 72,
       "name": "Blader225026",
       "score": 42,
       "power": 34
     },
     {
-      "rank": 70,
+      "rank": 72,
       "name": "Blazer867117",
       "score": 42,
       "power": 37
     },
     {
-      "rank": 73,
+      "rank": 75,
       "name": "Cyclone488537",
       "score": 41,
       "power": 37
     },
     {
-      "rank": 73,
+      "rank": 75,
       "name": "Havoc416664",
       "score": 41,
       "power": 36
     },
     {
-      "rank": 73,
+      "rank": 75,
       "name": "Blader509990",
       "score": 41,
       "power": 36
     },
     {
-      "rank": 76,
+      "rank": 78,
       "name": "Striker443905",
       "score": 40,
       "power": 32
     },
     {
-      "rank": 76,
+      "rank": 78,
       "name": "Sable",
       "score": 40,
       "power": 33
     },
     {
-      "rank": 76,
+      "rank": 78,
       "name": "Blazer915596",
       "score": 40,
       "power": 35
     },
     {
-      "rank": 76,
+      "rank": 78,
       "name": "Havoc738765",
       "score": 40,
       "power": 37
     },
     {
-      "rank": 80,
+      "rank": 82,
       "name": "Striker588324",
       "score": 39,
       "power": 33
     },
     {
-      "rank": 80,
+      "rank": 82,
       "name": "Talon520342",
       "score": 39,
       "power": 31
     },
     {
-      "rank": 80,
+      "rank": 82,
       "name": "Rogue448101",
       "score": 39,
       "power": 33
     },
     {
-      "rank": 80,
+      "rank": 82,
       "name": "starfall",
       "score": 39,
       "power": 30
     },
     {
-      "rank": 84,
+      "rank": 86,
       "name": "Talon793053",
       "score": 38,
       "power": 32
     },
     {
-      "rank": 84,
+      "rank": 86,
       "name": "TopHeavy",
       "score": 38,
       "power": 32
     },
     {
-      "rank": 84,
+      "rank": 86,
       "name": "Blader467853",
       "score": 38,
       "power": 35
     },
     {
-      "rank": 84,
+      "rank": 86,
       "name": "Ripper444214",
       "score": 38,
       "power": 30
     },
     {
-      "rank": 88,
+      "rank": 90,
       "name": "aeon",
       "score": 37,
       "power": 31
     },
     {
-      "rank": 88,
+      "rank": 90,
       "name": "Cyclone232267",
       "score": 37,
       "power": 33
     },
     {
-      "rank": 88,
+      "rank": 90,
       "name": "Spinner268106",
       "score": 37,
       "power": 31
     },
     {
-      "rank": 88,
+      "rank": 90,
       "name": "Havoc141273",
       "score": 37,
       "power": 33
     },
     {
-      "rank": 92,
+      "rank": 94,
       "name": "Talon853796",
       "score": 36,
       "power": 30
     },
     {
-      "rank": 92,
+      "rank": 94,
       "name": "Ripper757435",
       "score": 36,
       "power": 30
     },
     {
-      "rank": 92,
+      "rank": 94,
       "name": "Cyclone404852",
       "score": 36,
       "power": 33
     },
     {
-      "rank": 92,
+      "rank": 94,
       "name": "Cyclone955003",
       "score": 36,
       "power": 28
     },
     {
-      "rank": 96,
+      "rank": 98,
       "name": "Talon157188",
       "score": 35,
       "power": 27
     },
     {
-      "rank": 96,
+      "rank": 98,
       "name": "Ripper548054",
       "score": 35,
       "power": 32
     },
     {
-      "rank": 96,
+      "rank": 98,
       "name": "M4verick",
       "score": 35,
       "power": 27
-    },
-    {
-      "rank": 96,
-      "name": "Quill",
-      "score": 35,
-      "power": 32
-    },
-    {
-      "rank": 96,
-      "name": "Havoc245631",
-      "score": 35,
-      "power": 32
     }
   ],
   "dist": [
@@ -695,6 +695,10 @@
       1
     ],
     [
+      100,
+      1
+    ],
+    [
       77,
       1
     ],
@@ -720,7 +724,7 @@
     ],
     [
       68,
-      1
+      2
     ],
     [
       67,
@@ -860,7 +864,7 @@
     ],
     [
       33,
-      5
+      6
     ],
     [
       32,
