@@ -22,7 +22,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // heals late from its hump reserve, spits volleys; a soft, cheeky face.
   humphrey: {
     id: 'humphrey', archetype: { top: 'triangle', bottom: 'speedy' },
-    profile: p(1.03, 0.9, 1.0, 1.05, 1.0), unlockStage: 120,
+    profile: p(1, 0.87, 1.0, 1.05, 1.0), unlockStage: 120,
     disc: 1.0, armor: { front: 1.1, back: 0.8 },
     skills: [
       sk('sand_ward', 'hazard_ward', { lava: 1.6, thunder: 1.2, chip: 1.2, shockKeep: 1.2 }),
@@ -34,7 +34,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // front — but never let anyone get behind it.
   boxa: {
     id: 'boxa', archetype: { top: 'star', bottom: 'speedy' },
-    profile: p(0.78, 1.1, 0.9, 1.15, 0.9), unlockStage: 125,
+    profile: p(0.8, 1.12, 0.9, 1.15, 0.9), unlockStage: 125,
     disc: 0.85, armor: { front: 0.85, back: 1.25 },
     skills: [
       sk('one_two', 'lucky_edge', { chance: 1.4, mult: 0.8 }),
@@ -46,7 +46,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // moon howl that freezes rammers; a thin back.
   howler: {
     id: 'howler', archetype: { top: 'star', bottom: 'balanced' },
-    profile: p(0.91, 1.05, 0.95, 1.1, 0.95), unlockStage: 130,
+    profile: p(0.96, 1.11, 0.95, 1.1, 0.95), unlockStage: 130,
     disc: 0.95, armor: { front: 0.95, back: 1.1 },
     skills: [
       sk('pack_hunt', 'momentum', { maxStacks: 1.67, perStack: 0.8 }),
@@ -70,7 +70,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // every launch and roars rammers still; its rear is exposed.
   leon: {
     id: 'leon', archetype: { top: 'round', bottom: 'speedy' },
-    profile: p(0.89, 1.02, 1.0, 1.1, 1.0), unlockStage: 140,
+    profile: p(0.92, 1.06, 1.0, 1.1, 1.0), unlockStage: 140,
     disc: 1.05, armor: { front: 0.75, back: 1.2 },
     skills: [
       sk('pride_pounce', 'momentum', { perStack: 1.15 }),
@@ -82,7 +82,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // and throws them back; slow to turn, soft behind.
   antlo: {
     id: 'antlo', archetype: { top: 'triangle', bottom: 'balanced' },
-    profile: p(0.92, 0.81, 1.05, 0.9, 1.1), unlockStage: 145,
+    profile: p(0.89, 0.78, 1.05, 0.9, 1.1), unlockStage: 145,
     disc: 1.15, armor: { front: 0.7, back: 1.2 },
     skills: [
       sk('antler_parry', 'mirror_plate', { chance: 1.3, share: 1.1 }),
@@ -94,7 +94,7 @@ export const BATCH_B: Readonly<Record<BatchBId, SmasherDefOf<BatchBId>>> = Objec
   // hardest crits of the batch, a banana break when hurt; weak back.
   gronk: {
     id: 'gronk', archetype: { top: 'quadratic', bottom: 'balanced' },
-    profile: p(1.05, 1.1, 1.0, 0.9, 1.15), unlockStage: 150,
+    profile: p(1.02, 1.07, 1.0, 0.9, 1.15), unlockStage: 150,
     disc: 1.1, armor: { front: 0.8, back: 1.25 },
     skills: [
       sk('chest_thump', 'opening_salvo', { pct: 1.3 }),

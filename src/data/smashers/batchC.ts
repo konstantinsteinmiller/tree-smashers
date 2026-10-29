@@ -33,7 +33,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // and lands giant but rare crits; folds if anyone catches it from behind.
   flamenca: {
     id: 'flamenca', archetype: { top: 'star', bottom: 'speedy' },
-    profile: p(0.9, 1.29, 0.88, 1.12, 0.85), unlockStage: 184,
+    profile: p(0.92, 1.32, 0.88, 1.12, 0.85), unlockStage: 184,
     disc: 0.8, armor: { front: 0.95, back: 1.2 },
     skills: [
       sk('pink_kick', 'lucky_edge', { chance: 0.85, mult: 1.3 }),
@@ -45,7 +45,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // front and spits them back; slowish and soft around the tail.
   gulpy: {
     id: 'gulpy', archetype: { top: 'round', bottom: 'balanced' },
-    profile: p(1.14, 0.98, 1.05, 0.95, 1.05), unlockStage: 188,
+    profile: p(1.09, 0.93, 1.05, 0.95, 1.05), unlockStage: 188,
     disc: 1.15, armor: { front: 0.8, back: 1.1 },
     skills: [
       sk('pouch_gulp', 'mirror_plate', { share: 1.3, chance: 0.85 }),
@@ -57,7 +57,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // tough side and whose cheeky face is the soft one.
   paddles: {
     id: 'paddles', archetype: { top: 'triangle', bottom: 'speedy' },
-    profile: p(0.96, 1.06, 1, 1.15, 0.9), unlockStage: 192,
+    profile: p(0.98, 1.08, 1, 1.15, 0.9), unlockStage: 192,
     disc: 0.88, armor: { front: 1.15, back: 0.85 },
     skills: [
       sk('pebble_toss', 'homing_rockets', { everyN: 0.75, frac: 0.8 }),
@@ -81,7 +81,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // turn your back on the enemy.
   pinchy: {
     id: 'pinchy', archetype: { top: 'piercer', bottom: 'tanky' },
-    profile: p(1.09, 1.09, 1.1, 0.85, 1.15), unlockStage: 200,
+    profile: p(1.06, 1.06, 1.1, 0.85, 1.15), unlockStage: 200,
     disc: 1.0, armor: { front: 0.7, back: 1.3 },
     skills: [
       sk('claw_snap', 'lucky_edge', { mult: 1.3, chance: 0.8 }),
@@ -93,7 +93,7 @@ export const BATCH_C: Readonly<Record<BatchCId, SmasherDefOf<BatchCId>>> = Objec
   // side, but heavy, slow and a poor hitter itself.
   puffton: {
     id: 'puffton', archetype: { top: 'triangle', bottom: 'tanky' },
-    profile: p(1.06, 0.81, 1.1, 0.8, 1.1), unlockStage: 204,
+    profile: p(1.02, 0.78, 1.1, 0.8, 1.1), unlockStage: 204,
     disc: 1.3, armor: { front: 0.95, back: 0.95 },
     skills: [
       sk('spike_puff', 'thorns', { share: 1.2 }),

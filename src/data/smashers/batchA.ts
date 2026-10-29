@@ -32,7 +32,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Raccoon — masked thief: frequent small crits, slips hits, guarded back.
   bandit: {
     id: 'bandit', archetype: { top: 'star', bottom: 'balanced' },
-    profile: p(0.98, 1.13, 0.95, 1.05), unlockStage: 60,
+    profile: p(1, 1.16, 0.95, 1.05), unlockStage: 60,
     disc: 0.95, armor: { front: 1.1, back: 0.85 },
     skills: [
       sk('pickpocket', 'lucky_edge', { chance: 1.25, mult: 0.9 }),
@@ -43,7 +43,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Toad — bouncy pinball: stacks on every bounce, soft wide mouth in front.
   croaky: {
     id: 'croaky', archetype: { top: 'round', bottom: 'speedy' },
-    profile: p(1.12, 1.12, 0.9, 1.15, 0.9), unlockStage: 64,
+    profile: p(1.09, 1.09, 0.9, 1.15, 0.9), unlockStage: 64,
     disc: 1.0, armor: { front: 1.15, back: 0.9 },
     skills: [
       sk('frog_leap', 'momentum', { maxStacks: 1.34, perStack: 0.9 }),
@@ -76,7 +76,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Dormouse — small sleepy ball that curls its back up and wakes up healed.
   snooze: {
     id: 'snooze', archetype: { top: 'round', bottom: 'balanced' },
-    profile: p(1.04, 1.04, 1.0, 1.1, 0.9), unlockStage: 77,
+    profile: p(1.01, 1.01, 1.0, 1.1, 0.9), unlockStage: 77,
     disc: 0.85, armor: { front: 1.0, back: 0.75 },
     skills: [
       sk('hibernate', 'second_wind', { heal: 1.5, threshold: 0.7 }),
@@ -109,7 +109,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Pill bug — rolling ball: armoured all round, light punch, many bounces.
   rolly: {
     id: 'rolly', archetype: { top: 'quadratic', bottom: 'speedy' },
-    profile: p(0.95, 0.85, 1.2, 1.1, 0.95), unlockStage: 92,
+    profile: p(0.98, 0.88, 1.2, 1.1, 0.95), unlockStage: 92,
     disc: 0.95, armor: { front: 0.8, back: 0.8 },
     skills: [
       sk('roll_up', 'guard_shell', { shield: 1.2 }),
@@ -120,7 +120,7 @@ export const BATCH_A: Readonly<Record<BatchAId, SmasherDefOf<BatchAId>>> = Objec
   // Porcupine — turns its back: quill-armoured rear, soft face, big volleys.
   prickles: {
     id: 'prickles', archetype: { top: 'triangle', bottom: 'tanky' },
-    profile: p(1, 0.83, 1.1, 0.85, 1.1), unlockStage: 98,
+    profile: p(1.02, 0.85, 1.1, 0.85, 1.1), unlockStage: 98,
     disc: 1.15, armor: { front: 1.2, back: 0.55 },
     skills: [
       sk('quill_storm', 'homing_rockets', { everyN: 1.15, frac: 1.3 }),

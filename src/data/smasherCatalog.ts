@@ -102,7 +102,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Bear cub — heavy tank that refuses to go down.
   grizzle: {
     id: 'grizzle', archetype: { top: 'round', bottom: 'tanky' },
-    profile: p(1.22, 0.93, 1.1, 0.85, 1.15), unlockStage: 3, disc: 1.2, armor: { front: 0.85, back: 1 },
+    profile: p(1.19, 0.91, 1.1, 0.85, 1.15), unlockStage: 3, disc: 1.2, armor: { front: 0.85, back: 1 },
     skills: [
       sk('honey_snack', 'second_wind', { heal: 1.3, threshold: 0.85 }),
       sk('bear_hug', 'guard_shell', { shield: 1.4 }),
@@ -112,7 +112,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Beaver — the tree smasher: big crits, a hard-hitting opener.
   chomper: {
     id: 'chomper', archetype: { top: 'piercer', bottom: 'balanced' },
-    profile: p(1.04, 1.27, 0.95, 1.0), unlockStage: 5, armor: { front: 0.8, back: 1.2 },
+    profile: p(1.07, 1.31, 0.95, 1.0), unlockStage: 5, armor: { front: 0.8, back: 1.2 },
     skills: [
       sk('timber_bite', 'lucky_edge', { mult: 1.15, chance: 0.85 }),
       sk('log_slam', 'tower_breaker', { pct: 1.2 }),
@@ -142,7 +142,7 @@ const BASE_SMASHERS: Readonly<Record<BaseSmasherId, SmasherDefOf<BaseSmasherId>>
   // Turtle — the slowest, toughest wall in the forest.
   shellby: {
     id: 'shellby', archetype: { top: 'cushioned', bottom: 'tanky' },
-    profile: p(1.38, 0.89, 1.15, 0.8, 1.25), unlockStage: 15, disc: 1.25, armor: { front: 1.15, back: 0.6 },
+    profile: p(1.32, 0.85, 1.15, 0.8, 1.25), unlockStage: 15, disc: 1.25, armor: { front: 1.15, back: 0.6 },
     skills: [
       sk('shell_block', 'guard_shell', { shield: 1.5 }),
       sk('slow_heal', 'second_wind', { threshold: 1.15, heal: 0.9 }),
