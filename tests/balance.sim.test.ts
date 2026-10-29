@@ -30,6 +30,7 @@ import { installBossPort } from './helpers/bosses100Build'
 import { SMASHER_LIST, smasherConfig, smasherLevelCost, type SmasherId } from '@/data/smasherCatalog'
 import type { SpinnerConfig } from '@/types/spinner'
 import { teamSlotsForStage } from '@/data/teamSize'
+import { SUDDEN_DEATH_FROM_TURN } from '@/use/arenaTerrain'
 
 const ON = process.env.BALANCE_SIM === '1'
 const MODE = process.env.BALANCE_MODE ?? 'ref'
@@ -124,6 +125,8 @@ const applyTuning = async () => {
   if (typeof t.ownBossTowerHp === 'number') terr.TOWER_TUNING.ownBossStageHpMul = t.ownBossTowerHp
   if (typeof t.spikeRecoil === 'number') terr.TOWER_TUNING.spikeRecoil = t.spikeRecoil
   if (t.towerSpikes === 'boss' || t.towerSpikes === 'all' || t.towerSpikes === 'none') terr.TOWER_TUNING.spikes = t.towerSpikes
+  // Per-tree HP share by tree count (TREE_COUNT_HP_SHARE, read at createTowers).
+  if (Array.isArray(t.treeShare)) (t.treeShare as number[]).forEach((v, i) => { (terr.TREE_COUNT_HP_SHARE as number[])[i] = v })
 }
 
 let game: GameModule | null = null
@@ -147,12 +150,19 @@ interface Fight {
   powerups?: boolean
   layout?: number
   towers?: boolean
+  /** Trees per side (campaign: treeCountForStage; default 1). */
+  trees?: number
+  /** Player's first-fight ×2 assist (the game: stage 1 until the first win). */
+  boost?: boolean
+  /** Forced opener (the game: the player on tutorial stages 1–3); default by seed parity. */
+  firstTurn?: 'player' | 'opponent'
 }
 
 /** Scripted player: chance per launch to aim at the enemy tower while enemy
  *  smashers still stand (BALANCE_TOWER_AIM, default 0.2; a "tower rush"
  *  policy = 0.7 — how attractive the tower route is). */
 const TOWER_AIM = Number(process.env.BALANCE_TOWER_AIM ?? 0.2)
+const CARELESS = process.env.BALANCE_POLICY === 'careless'
 
 /** How a fight ended (tower stats — the camp rows carry it as `m`). */
 interface FightStats {
@@ -165,8 +175,15 @@ interface FightStats {
   launches: number
   nFellAt: number
   frames: number
-  /** Enemy tower max hp over the enemy team's max hp at spawn. */
+  /** Enemy tower max hp over the enemy team's max hp at spawn (all trees). */
   towerRatio: number
+  /** Trees per side; turn hand-offs (both sides); sudden death reached. */
+  trees: number
+  handoffs: number
+  sd: boolean
+  /** Remaining smasher HP share of the player / enemy team at the end. */
+  pHp: number
+  nHp: number
 }
 let lastStats: FightStats | null = null
 
@@ -177,12 +194,12 @@ const battle = async (f: Fight): Promise<number> => {
   const { seed } = f
   rs = seed * 7919 + 1
   const e = g.useSpinnerGame()
-  e.initGame(f.player.map(c => ({ ...c })), f.npc.map(c => ({ ...c })), false, (f.arena ?? 'default') as never, !!f.powerups, undefined, null, 'circle', {
+  e.initGame(f.player.map(c => ({ ...c })), f.npc.map(c => ({ ...c })), !!f.boost, (f.arena ?? 'default') as never, !!f.powerups, undefined, null, 'circle', {
     seed,
     skillLoadout: [],
     enemySkillLoadout: [],
-    firstTurn: seed % 2 === 0 ? 'player' : 'opponent',
-    ...(f.terrain ? { terrain: { layout: f.layout ?? seed % 12, towers: f.towers ?? true } } : {})
+    firstTurn: f.firstTurn ?? (seed % 2 === 0 ? 'player' : 'opponent'),
+    ...(f.terrain ? { terrain: { layout: f.layout ?? seed % 12, towers: f.towers ?? true, trees: f.trees ?? 1 } } : {})
   })
   e.startMatch()
   let ps = (seed ^ 0x5ca1ab1e) >>> 0
@@ -195,13 +212,20 @@ const battle = async (f: Fight): Promise<number> => {
   let launches = 0
   let nFellAt = -1
   let fr = 0
-  const tw0 = e.towers().find(t => t.side === 'npc')
+  const nTreeHp0 = e.towers().filter(t => t.side === 'npc').reduce((s, t) => s + t.maxHp, 0)
   const nTeamHp = e.npcBlades.value.reduce((s, b) => s + b.maxHp, 0)
+  const pTeamHp = e.playerBlades.value.reduce((s, b) => s + b.maxHp, 0)
+  let handoffs = 0
+  let turnSide: string | null = null
   for (; fr < 60 * 60 * 4; fr++) {
     frame()
     if (nFellAt < 0 && e.towers().some(t => t.side === 'npc' && t.hp <= 0)) nFellAt = launches
     const p = e.phase.value
     if (p === 'game_over') break
+    if ((p === 'player_turn' || p === 'npc_turn') && p !== turnSide) {
+      if (turnSide !== null) handoffs++
+      turnSide = p
+    }
     if (p !== 'player_turn') {
       launchAt = null
       continue
@@ -214,8 +238,10 @@ const battle = async (f: Fight): Promise<number> => {
     if (mine.length && (theirs.length || tower)) {
       const me = mine[Math.floor(plan() * mine.length)]!
       const t: { x: number; y: number } = tower && (plan() < TOWER_AIM || !theirs.length) ? tower : theirs[Math.floor(plan() * theirs.length)]!
-      const ang = Math.atan2(t.y - me.y, t.x - me.x) + (plan() - 0.5) * 0.5
-      const pull = (0.55 + plan() * 0.45) * maxPull
+      // BALANCE_POLICY=careless: a first-timer who has not understood aiming
+      // yet — any direction, any pull (the onboarding floor).
+      const ang = CARELESS ? plan() * Math.PI * 2 : Math.atan2(t.y - me.y, t.x - me.x) + (plan() - 0.5) * 0.5
+      const pull = (CARELESS ? 0.3 + plan() * 0.7 : 0.55 + plan() * 0.45) * maxPull
       e.beginDrag(me.x, me.y)
       e.updateDrag(me.x - Math.cos(ang) * pull, me.y - Math.sin(ang) * pull)
       e.releaseDrag()
@@ -225,17 +251,27 @@ const battle = async (f: Fight): Promise<number> => {
   }
   const r = e.gameResult.value
   const tw = e.towers()
-  const nT = tw.find(t => t.side === 'npc')
-  const pT = tw.find(t => t.side === 'player')
-  const towerDown = tw.some(t => t.hp <= 0)
+  // Several trees per side: the side's standing HP over its total.
+  const share = (side: 'player' | 'npc'): number => {
+    const mine = tw.filter(t => t.side === side)
+    const max = mine.reduce((s, t) => s + t.maxHp, 0)
+    return max > 0 ? +(mine.reduce((s, t) => s + Math.max(0, t.hp), 0) / max).toFixed(3) : -1
+  }
+  const sideDown = (side: 'player' | 'npc') => tw.some(t => t.side === side) && tw.every(t => t.side !== side || t.hp <= 0)
+  const hpShare = (bs: readonly { hp: number }[], max: number) => (max > 0 ? +(bs.reduce((s, b) => s + Math.max(0, b.hp), 0) / max).toFixed(3) : 0)
   lastStats = {
-    end: r === null ? 'timeout' : towerDown ? 'tower' : 'ko',
-    nTower: nT ? +(nT.hp / nT.maxHp).toFixed(3) : -1,
-    pTower: pT ? +(pT.hp / pT.maxHp).toFixed(3) : -1,
+    end: r === null ? 'timeout' : sideDown('npc') || sideDown('player') ? 'tower' : 'ko',
+    nTower: share('npc'),
+    pTower: share('player'),
     launches,
     nFellAt,
     frames: fr,
-    towerRatio: tw0 && nTeamHp > 0 ? +(tw0.maxHp / nTeamHp).toFixed(3) : -1
+    towerRatio: nTreeHp0 > 0 && nTeamHp > 0 ? +(nTreeHp0 / nTeamHp).toFixed(3) : -1,
+    trees: tw.filter(t => t.side === 'npc').length,
+    handoffs,
+    sd: handoffs >= SUDDEN_DEATH_FROM_TURN,
+    pHp: hpShare(e.playerBlades.value, pTeamHp),
+    nHp: hpShare(e.npcBlades.value, nTeamHp)
   }
   e.disposePhysics()
   return r === 'win' ? 1 : r === 'lose' ? 0 : 0.5
@@ -255,6 +291,38 @@ const battle = async (f: Fight): Promise<number> => {
 //   fixed2      — two smashers everywhere (the campaign before team sizes)
 const TEAM_MODE = process.env.BALANCE_TEAM ?? 'progression'
 const TEAM_LATE = Number(process.env.BALANCE_TEAM_LATE ?? 2)
+/** BALANCE_TREES=n: every regular stage from MULTI_TREES_FROM_STAGE fields n trees per side. */
+const TREES_FORCED = Number(process.env.BALANCE_TREES ?? 0)
+const FIRST_BOOST = process.env.BALANCE_FIRST_BOOST !== '0'
+
+/** Campaign NPC HP / damage scale of a tuning run (BALANCE_TUNING
+ *  `stageHpScale` / `stageDmgScale`: { "<stage>": mul } replaces the stage's
+ *  own `hp` / `dmg`, `npcHpScale` / `npcDmgScale` multiply every stage's) —
+ *  the per-stage fitting loop (tools/balance-sim/fithp.mjs). Off without a
+ *  tuning file. */
+let scaleTuning: { hp: Record<string, number>; dmg: Record<string, number>; allHp: number; allDmg: number } | null = null
+const withStageScales = (c: SpinnerConfig, stage: number): SpinnerConfig => {
+  if (scaleTuning === null) {
+    const path = process.env.BALANCE_TUNING
+    const t = path ? JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown> : {}
+    const num = (v: unknown) => (typeof v === 'number' ? v : 1)
+    scaleTuning = {
+      hp: (t.stageHpScale as Record<string, number> | undefined) ?? {},
+      dmg: (t.stageDmgScale as Record<string, number> | undefined) ?? {},
+      allHp: num(t.npcHpScale),
+      allDmg: num(t.npcDmgScale)
+    }
+  }
+  const hp = (scaleTuning.hp[String(stage)] ?? c.stageHpScale ?? 1) * scaleTuning.allHp
+  const dmg = (scaleTuning.dmg[String(stage)] ?? c.stageDmgScale ?? 1) * scaleTuning.allDmg
+  const out = { ...c }
+  if (hp !== 1) out.stageHpScale = hp
+  else delete out.stageHpScale
+  if (dmg !== 1) out.stageDmgScale = dmg
+  else delete out.stageDmgScale
+  return out
+}
+
 const campTeamSize = (stage: number): number =>
   TEAM_MODE === 'fixed2' ? 2 : Math.min(teamSlotsForStage(stage), stage > 10 ? TEAM_LATE : 2)
 
@@ -349,22 +417,30 @@ const jobs = (): Job[] => {
       out.push({
         key: { roster, stage },
         fight: async () => {
-          const { getStageById, BASE_CAMPAIGN_LENGTH } = await import('@/use/useSpinnerCampaign')
+          const { getStageById, BASE_CAMPAIGN_LENGTH, campaignFirstTurn } = await import('@/use/useSpinnerCampaign')
           const { stageEnemyConfigs } = await import('@/use/stageBladeConfig')
-          const { layoutForStage, TOWERS_FROM_STAGE } = await import('@/use/arenaTerrain')
+          const { layoutForStage, TOWERS_FROM_STAGE, treeCountForStage, MULTI_TREES_FROM_STAGE } = await import('@/use/arenaTerrain')
           const st = getStageById(stage)
           const lv = await campLevels(stage)
           // Past the base campaign the roster keeps its stage-100 picks.
           const ids = ROSTERS[roster]!(Math.min(stage, BASE_CAMPAIGN_LENGTH))
+          // As SpinnerArena initCampaignGame: the stage's tree count (BALANCE_TREES
+          // forces one on every regular stage from MULTI_TREES_FROM_STAGE — the
+          // tree-share experiment), the tutorial opener, the stage-1 first-fight
+          // assist of a first-timer (BALANCE_FIRST_BOOST=0: off).
+          const forced = TREES_FORCED > 0 && !st.isBoss && stage >= MULTI_TREES_FROM_STAGE ? TREES_FORCED : 0
           return {
             player: lv.map((l, k) => smasherConfig(ids[k]!, l)),
-            npc: stageEnemyConfigs(st),
+            npc: stageEnemyConfigs(st).map(c => withStageScales(c, stage)),
             seed: 60000 + stage * 17 + s,
             terrain: true,
             layout: layoutForStage(stage),
             arena: st.arenaType ?? 'default',
             powerups: stage >= 2,
-            towers: stage >= TOWERS_FROM_STAGE
+            towers: stage >= TOWERS_FROM_STAGE,
+            trees: forced || treeCountForStage(stage, !!st.isBoss),
+            boost: FIRST_BOOST && stage === 1,
+            ...(campaignFirstTurn(stage) ? { firstTurn: 'player' as const } : {})
           }
         }
       })
@@ -378,7 +454,7 @@ describe.skipIf(!ON)('balance sim', () => {
     const [si, sn] = (process.env.BALANCE_SHARD ?? '0/1').split('/').map(Number) as [number, number]
     const all = jobs()
     const mine = all.filter((_, i) => i % sn === si)
-    const rows: { key: Record<string, unknown>; r: number; m?: FightStats & { boss?: boolean } }[] = []
+    const rows: { key: Record<string, unknown>; r: number; m?: FightStats & { boss?: boolean; hpS?: number; dmgS?: number } }[] = []
     const extra: Record<string, unknown> = {
       arche: Object.fromEntries(SMASHER_LIST.map(d => [d.id, `${d.archetype.top}/${d.archetype.bottom}`]))
     }
@@ -395,7 +471,8 @@ describe.skipIf(!ON)('balance sim', () => {
       // Camp rows carry the fight's end stats (tower kill vs knock-out).
       if (MODE === 'camp' && lastStats) {
         const { getStageById } = await import('@/use/useSpinnerCampaign')
-        rows.push({ key: j.key, r, m: { ...lastStats, boss: !!getStageById(j.key.stage as number).isBoss } })
+        // The stage's absolute HP / damage scale (table × tuning) — fithp.mjs pools runs on it.
+        rows.push({ key: j.key, r, m: { ...lastStats, boss: !!getStageById(j.key.stage as number).isBoss, hpS: f.npc[0]?.stageHpScale ?? 1, dmgS: f.npc[0]?.stageDmgScale ?? 1 } })
       } else rows.push({ key: j.key, r })
     }
     if (process.env.BALANCE_OUT) writeFileSync(process.env.BALANCE_OUT, JSON.stringify({ mode: MODE, rows, ...extra }))
