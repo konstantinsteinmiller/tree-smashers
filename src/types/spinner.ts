@@ -92,6 +92,11 @@ export interface SpinnerConfig {
   bossAbility?: BossAbility
   /** Per-stage campaign boss HP scale (useSpinnerCampaign BOSS_STAGE_HP_SCALE). */
   bossHpScale?: number
+  /** Campaign stage HP scale of this enemy (useSpinnerCampaign stage table,
+   *  sim-fitted); NPC side only, every other mode leaves it unset. */
+  stageHpScale?: number
+  /** Campaign stage damage scale of this enemy (stage table `dmg`); NPC side only. */
+  stageDmgScale?: number
   /** Stage-101+ boss mechanic this blade carries (NPC bosses only). */
   bossTrait?: BossTrait
   /** Trait handed to this boss's split children (Shattering Glacier: 'chill');

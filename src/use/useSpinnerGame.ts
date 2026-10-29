@@ -2079,6 +2079,8 @@ export const useSpinnerGame = () => {
     let spd = stats.speedMultiplier
     if (firstGameBoost && blade.owner === 'player') dmg *= 2
     if (isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.dmgMul
+    // Campaign stage damage scale (stage table `dmg`, sim-fitted per stage).
+    if (blade.owner === 'npc' && !pvpMode.value && blade.config.stageDmgScale !== undefined) dmg *= blade.config.stageDmgScale
     // A side of one fights boosted (team size 1: ×1.2 damage) — a lone
     // part-only campaign NPC has it offset (CAMPAIGN_NPC_TUNING.soloDmgMul).
     dmg *= teamStatMul[blade.owner]
@@ -2918,7 +2920,9 @@ export const useSpinnerGame = () => {
       }
       baseHp *= campaignBossCountHpMul(npcBossCount)
     }
-    const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier
+    // Campaign stage HP scale (stage table `hp`, sim-fitted per stage).
+    const stageHpMultiplier = owner === 'npc' && !pvpMode.value ? (config.stageHpScale ?? 1) : 1
+    const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier * stageHpMultiplier
     return {
       id: nextBladeId++,
       // Placeholder — every spawn site assigns the real peer-independent key.
