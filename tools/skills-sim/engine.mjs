@@ -160,6 +160,7 @@ export const runBattle = (opts) => {
     let def = st.defenseMultiplier
     let spd = st.speedMultiplier
     if (isLegacyNpc(b.owner, b.config)) dmg *= npcDmgMul
+    if (b.owner === 'npc' && b.config.stageDmgScale !== undefined) dmg *= b.config.stageDmgScale
     dmg *= teamStatMul[b.owner]
     if (teamStatMul[b.owner] !== 1 && isLegacyNpc(b.owner, b.config)) dmg *= CAMPAIGN_NPC_TUNING.soloDmgMul
     let weightMul = 1
@@ -208,6 +209,7 @@ export const runBattle = (opts) => {
     const hp = baseHp * legacyMul * (isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul * (config.bossHpScale ?? 1) : 1) * rubber * teamStatMul[owner]
       * (teamStatMul[owner] !== 1 && isLegacyNpc(owner, config) ? CAMPAIGN_NPC_TUNING.soloHpMul : 1)
       * (isLegacyNpc(owner, config) ? (CAMPAIGN_NPC_TUNING.countHpMul[Math.min(4, Math.max(1, stage.enemyTeam.length)) - 1] ?? 1) : 1)
+      * (owner === 'npc' ? (config.stageHpScale ?? 1) : 1)
     let radiusMult = 1
     if (isBoss) radiusMult = config.bossAbility === 'healers' ? HEALER_RADIUS_MULT : BOSS_RADIUS_MULT
     const disc = discOf(config) * teamSizeMul[owner]

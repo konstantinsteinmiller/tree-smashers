@@ -101,8 +101,15 @@ const e = (top, bot, tl, bl, modelId, ability) => {
   return cfg
 }
 const s = (id, name, enemyTeam, rewardWin, rewardLose, opts = {}) => {
-  const arenaType = opts.arenaType ?? (opts.isBoss ? 'boss' : undefined)
-  return { id, name, enemyTeam, rewardWin, rewardLose, ...opts, arenaType }
+  const { hp, dmg, ...rest } = opts
+  const arenaType = rest.arenaType ?? (rest.isBoss ? 'boss' : undefined)
+  // Stage `hp` / `dmg` scales (useSpinnerCampaign.ts s()): on every enemy.
+  const team = enemyTeam.map(b => ({
+    ...b,
+    ...(hp !== undefined && hp !== 1 ? { stageHpScale: hp } : {}),
+    ...(dmg !== undefined && dmg !== 1 ? { stageDmgScale: dmg } : {})
+  }))
+  return { id, name, enemyTeam: team, rewardWin, rewardLose, ...rest, arenaType }
 }
 const bsStart = campSrc.indexOf('const BASE_STAGES: Stage[] = [')
 const bsOpen = campSrc.indexOf('[', campSrc.indexOf('=', bsStart))
@@ -117,6 +124,31 @@ for (; bsEnd < campSrc.length; bsEnd++) {
 }
 export const BASE_STAGES = new Function('e', 's', `return ${campSrc.slice(bsOpen, bsEnd + 1)}`)(e, s)
 if (BASE_STAGES.length !== 100) throw new Error('expected 100 base stages')
+// Boss tuning post-pass (useSpinnerCampaign.ts, after BASE_STAGES): the lone-boss
+// level cap and the per-boss-stage HP scale, copied; the source is checked below.
+const LONE_BOSS_LEVEL_CAP = Number(/export const LONE_BOSS_LEVEL_CAP = ([\d.]+)/.exec(campSrc)[1])
+const BOSS_STAGE_HP_SCALE = new Function(`return ${/BOSS_STAGE_HP_SCALE: Readonly<Record<number, number>> = Object\.freeze\((\{[^}]*\})\)/.exec(campSrc)[1]}`)()
+for (const needle of [
+  'const cap = Math.max(Math.round(LONE_BOSS_LEVEL_CAP * ref), Math.round(ref + 4))',
+  'st.enemyTeam = [{ ...b, topLevel: Math.min(b.topLevel, cap), bottomLevel: Math.min(b.bottomLevel, cap) }]',
+  "if (scale !== undefined && scale !== 1) st.enemyTeam = st.enemyTeam.map(b => b.isBoss ? { ...b, bossHpScale: scale } : b)",
+  'enemyTeam: base.enemyTeam.map(({ stageHpScale: _hp, stageDmgScale: _dmg, ...cfg }) => ({'
+]) if (!campSrc.includes(needle)) throw new Error(`useSpinnerCampaign.ts changed — the sim copies: ${needle}`)
+{
+  const meanPartLevel = (st) => st.enemyTeam.reduce((n, b) => n + b.topLevel + b.bottomLevel, 0) / (2 * Math.max(1, st.enemyTeam.length))
+  for (let i = 1; i < BASE_STAGES.length; i++) {
+    const st = BASE_STAGES[i]
+    if (!st.isBoss) continue
+    const scale = BOSS_STAGE_HP_SCALE[st.id]
+    if (st.enemyTeam.length === 1) {
+      const ref = meanPartLevel(BASE_STAGES[i - 1])
+      const cap = Math.max(Math.round(LONE_BOSS_LEVEL_CAP * ref), Math.round(ref + 4))
+      const b = st.enemyTeam[0]
+      st.enemyTeam = [{ ...b, topLevel: Math.min(b.topLevel, cap), bottomLevel: Math.min(b.bottomLevel, cap) }]
+    }
+    if (scale !== undefined && scale !== 1) st.enemyTeam = st.enemyTeam.map(b => b.isBoss ? { ...b, bossHpScale: scale } : b)
+  }
+}
 
 // Mid-game trim + cycle scaling (useSpinnerCampaign.ts tightenMidGame/scaleStage)
 const MID_TRIM_REG = Number(/MID_TRIM_REG = ([\d.]+)/.exec(campSrc)[1])
@@ -129,7 +161,7 @@ export const getStageById = (id) => {
   if (cycle <= 0) return { ...base, id }
   return {
     ...base, id,
-    enemyTeam: base.enemyTeam.map(c => ({
+    enemyTeam: base.enemyTeam.map(({ stageHpScale: _hp, stageDmgScale: _dmg, ...c }) => ({
       ...c,
       topLevel: c.topLevel + cycle * 22,
       bottomLevel: c.bottomLevel + cycle * 22
@@ -382,7 +414,9 @@ for (const needle of [
   "owner === 'npc' && !pvpMode.value && !isSmasherId(config.smasherId)",
   'if (isLegacyNpc(blade.owner, blade.config)) dmg *= CAMPAIGN_NPC_TUNING.dmgMul',
   'const legacyNpcHpMul = isLegacyNpc(owner, config) ? campaignNpcHpMul(((config.topLevel ?? 0) + (config.bottomLevel ?? 0)) / 2) : 1',
-  'const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier',
+  'const finalHp = baseHp * legacyNpcHpMul * bossHpMultiplier * boostHpMultiplier * difficultyHpMultiplier * rubberBandHpMultiplier * teamHpMultiplier * stageHpMultiplier',
+  "const stageHpMultiplier = owner === 'npc' && !pvpMode.value ? (config.stageHpScale ?? 1) : 1",
+  "if (blade.owner === 'npc' && !pvpMode.value && blade.config.stageDmgScale !== undefined) dmg *= blade.config.stageDmgScale",
   "const ref = computeStats({ ...config, topPartId: 'quadratic', bottomPartId: 'balanced' }, config.topLevel ?? 0, config.bottomLevel ?? 0)",
   'baseHp *= campaignBossCountHpMul(npcBossCount)',
   'const bossHpMultiplier = isBoss ? CAMPAIGN_NPC_TUNING.bossHpMul * (config.bossHpScale ?? 1) : bossStats ? 2 : 1',
